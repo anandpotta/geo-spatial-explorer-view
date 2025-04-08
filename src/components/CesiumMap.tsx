@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import { API_CONFIG } from '@/config/api-config';
 import { Location } from '@/utils/geo-utils';
@@ -18,17 +18,29 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const entityRef = useRef<Cesium.Entity | null>(null);
+  const [terrainProvider, setTerrainProvider] = useState<Cesium.TerrainProvider | undefined>(undefined);
+  
+  // Initialize terrain provider
+  useEffect(() => {
+    Cesium.createWorldTerrainAsync()
+      .then(terrainProvider => {
+        setTerrainProvider(terrainProvider);
+      })
+      .catch(error => {
+        console.error('Error creating terrain provider:', error);
+      });
+  }, []);
 
   // Initialize Cesium viewer
   useEffect(() => {
-    if (!cesiumContainer.current) return;
+    if (!cesiumContainer.current || !terrainProvider) return;
 
     // Configure Cesium to use local assets
     (window as any).CESIUM_BASE_URL = '/';
 
     // Create the Cesium viewer
     const viewer = new Cesium.Viewer(cesiumContainer.current, {
-      terrainProvider: Cesium.createWorldTerrainAsync(),
+      terrainProvider: terrainProvider,
       geocoder: false,
       homeButton: false,
       sceneModePicker: true,
@@ -62,7 +74,7 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
         viewer.destroy();
       }
     };
-  }, [onMapReady]);
+  }, [terrainProvider, onMapReady]);
 
   // Handle location changes
   useEffect(() => {

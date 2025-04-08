@@ -112,7 +112,7 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
         center={position} 
         zoom={zoom} 
         className="w-full h-full"
-        whenReady={(map) => handleSetMapRef(map.target)}
+        whenReady={(mapEvent) => handleSetMapRef(mapEvent.target)}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
