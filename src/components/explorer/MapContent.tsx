@@ -11,18 +11,20 @@ interface MapContentProps {
   selectedLocation: Location | undefined;
   onMapReady: () => void;
   onFlyComplete: () => void;
+  onLocationSelect: (location: Location) => void;
 }
 
 const MapContent = ({ 
   currentView, 
   selectedLocation, 
   onMapReady, 
-  onFlyComplete 
+  onFlyComplete,
+  onLocationSelect 
 }: MapContentProps) => {
   return (
     <div className="flex-1 relative">
       {/* The actual search component positioned absolutely on top of the map */}
-      <LocationSearch onLocationSelect={(location) => {}} />
+      <LocationSearch onLocationSelect={onLocationSelect} />
       
       {/* Map container */}
       <div className="w-full h-full relative">
@@ -34,7 +36,7 @@ const MapContent = ({
           />
         )}
         
-        {currentView === 'leaflet' && selectedLocation && (
+        {currentView === 'leaflet' && (
           <LeafletMap selectedLocation={selectedLocation} />
         )}
         

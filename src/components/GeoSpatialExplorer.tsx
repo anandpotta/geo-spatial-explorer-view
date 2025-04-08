@@ -4,7 +4,6 @@ import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
-import LocationSearch from './LocationSearch';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
@@ -62,15 +61,13 @@ const GeoSpatialExplorer = () => {
       
       {/* Right Panel - Map View */}
       <div className="flex-1 relative">
-        {/* The actual search component positioned absolutely on top of the map */}
-        <LocationSearch onLocationSelect={handleLocationSelect} />
-        
         {/* Map content */}
         <MapContent 
           currentView={currentView}
           selectedLocation={selectedLocation}
           onMapReady={() => setIsMapReady(true)}
           onFlyComplete={handleFlyComplete}
+          onLocationSelect={handleLocationSelect}
         />
       </div>
     </div>
