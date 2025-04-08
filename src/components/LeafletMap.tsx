@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -81,15 +81,17 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   return (
     <div className="w-full h-full relative">
       <MapContainer 
+        key={`map-${position.join('-')}`}
         center={position}
         zoom={zoom}
         className="w-full h-full"
-        whenCreated={handleSetMapRef}
+        ref={(map) => map && handleSetMapRef(map)}
+        attributionControl={false}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
+        <AttributionControl position="bottomright" prefix={false} />
         
         {/* User-created markers */}
         {markers.map((marker) => (
