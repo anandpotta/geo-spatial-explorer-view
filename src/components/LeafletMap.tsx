@@ -84,7 +84,7 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
         center={position}
         zoom={zoom}
         className="w-full h-full"
-        whenReady={(map) => handleSetMapRef(map.target)}
+        whenCreated={handleSetMapRef}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
