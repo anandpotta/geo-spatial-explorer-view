@@ -28,17 +28,17 @@ const MapContent = ({
       
       {/* Map container */}
       <div className="w-full h-full relative">
-        {currentView === 'cesium' && (
+        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
           <CesiumMap 
             selectedLocation={selectedLocation}
             onMapReady={onMapReady}
             onFlyComplete={onFlyComplete}
           />
-        )}
+        </div>
         
-        {currentView === 'leaflet' && (
+        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
           <LeafletMap selectedLocation={selectedLocation} />
-        )}
+        </div>
         
         {/* Drawing tools displayed only in leaflet view */}
         {currentView === 'leaflet' && (

@@ -22,6 +22,8 @@ const GeoSpatialExplorer = () => {
   const handleLocationSelect = (location: Location) => {
     console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
+    
+    // Always force cesium view when selecting a new location
     setCurrentView('cesium');
     setFlyCompleted(false);
     
@@ -58,7 +60,7 @@ const GeoSpatialExplorer = () => {
   };
   
   return (
-    <div className="w-full h-screen flex bg-background">
+    <div className="w-full h-screen flex bg-background overflow-hidden">
       {/* Left Panel */}
       <ExplorerSidebar 
         selectedLocation={selectedLocation}

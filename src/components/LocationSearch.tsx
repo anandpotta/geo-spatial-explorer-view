@@ -34,6 +34,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   }, [query]);
 
   const handleSelect = (location: Location) => {
+    console.log('Location selected in search component:', location);
     setSelectedLocation(location);
     setQuery(location.label);
     onLocationSelect(location);
@@ -50,14 +51,16 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedLocation) {
+      console.log('Submitting selected location:', selectedLocation);
       onLocationSelect(selectedLocation);
     } else if (results.length > 0) {
+      console.log('Submitting first result:', results[0]);
       handleSelect(results[0]);
     }
   };
 
   return (
-    <div className="map-search-panel p-3">
+    <div className="map-search-panel p-3 z-10 absolute top-0 left-0 right-0 bg-background/80 backdrop-blur-sm">
       <form onSubmit={handleSubmit} className="relative">
         <div className="flex gap-2">
           <div className="relative flex-1">

@@ -27,15 +27,22 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
   useEffect(() => {
     if (!cesiumContainer.current) return;
 
-    // Configure Cesium to use local assets
-    (window as any).CESIUM_BASE_URL = '/';
+    // Clean up any previous viewer
+    if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+      console.log("Destroying previous Cesium viewer");
+      viewerRef.current.destroy();
+      viewerRef.current = null;
+    }
 
     try {
       console.log("Initializing Cesium viewer...");
+      
+      // Configure Cesium to use local assets
+      (window as any).CESIUM_BASE_URL = '/';
+
       // Create the Cesium viewer with basic settings
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
-        // Use async terrain provider and handle the promise
-        terrainProvider: undefined, // Initially set to undefined
+        terrainProvider: Cesium.createWorldTerrain(),
         geocoder: false,
         homeButton: false,
         sceneModePicker: true,
@@ -45,28 +52,19 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
         timeline: false,
         fullscreenButton: false,
         vrButton: false,
+        infoBox: false,
+        selectionIndicator: false,
         requestRenderMode: false, // Render continuously
         maximumRenderTimeChange: Infinity, // Force rendering
-      });
-
-      // Add terrain asynchronously
-      Cesium.createWorldTerrainAsync({
-        requestVertexNormals: true,
-        requestWaterMask: true
-      }).then(terrain => {
-        if (viewer && !viewer.isDestroyed()) {
-          viewer.terrainProvider = terrain;
-          console.log("Terrain loaded successfully");
-        }
-      }).catch(error => {
-        console.error('Error loading terrain:', error);
       });
       
       // Enable lighting based on sun/moon positions
       viewer.scene.globe.enableLighting = true;
+      viewer.scene.globe.depthTestAgainstTerrain = true;
       
       // Show the earth in space
       viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.globe.showGroundAtmosphere = true;
       
       // Set the initial view to show the whole Earth
       viewer.camera.flyHome(0);
@@ -77,18 +75,18 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
       // Force a render to ensure the globe appears
       viewer.scene.requestRender();
       
+      console.log("Cesium map initialized, triggering onMapReady");
       setIsInitialized(true);
       setIsLoadingMap(false);
       
       if (onMapReady) {
-        console.log("Cesium map initialized, triggering onMapReady");
         onMapReady();
       }
       
       // Clean up on unmount
       return () => {
         if (viewer && !viewer.isDestroyed()) {
-          console.log("Destroying Cesium viewer");
+          console.log("Destroying Cesium viewer on unmount");
           viewer.destroy();
         }
       };
@@ -99,16 +97,17 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     }
   }, [onMapReady]);
 
-  // Handle location changes
+  // Handle location changes - this effect should run when selectedLocation changes
   useEffect(() => {
-    if (!viewerRef.current || !selectedLocation || mapError || isFlying || !isInitialized) {
+    const viewer = viewerRef.current;
+    
+    if (!viewer || !selectedLocation || mapError || isFlying || !isInitialized) {
       if (!isInitialized && selectedLocation) {
         console.log("Waiting for Cesium to initialize before flying...");
       }
       return;
     }
     
-    const viewer = viewerRef.current;
     setIsFlying(true);
     console.log('Flying to location in Cesium:', selectedLocation);
     
@@ -141,36 +140,31 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     
     entityRef.current = entity;
     
-    // Zoom out to see the earth first, then fly to the location
+    // First zoom out to see the Earth from space
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(-98.0, 40.0, 10000000.0),
+      destination: Cesium.Cartesian3.fromDegrees(0, 0, 25000000.0), // Far out in space
       duration: 1.0,
       complete: function() {
-        // Now fly to the selected location
+        console.log('Zoomed out to space view, now flying to target location');
+        
+        // Then fly to the selected location
         viewer.flyTo(entity, {
-          duration: 3,
+          duration: 4.0, // Longer duration for a more dramatic effect
           offset: new Cesium.HeadingPitchRange(
             Cesium.Math.toRadians(0), // heading
-            Cesium.Math.toRadians(-45), // pitch
-            10000 // range in meters
+            Cesium.Math.toRadians(-50), // pitch - looking more downward
+            10000 // range in meters - closer than before
           ),
-        }).then(() => {
-          setIsFlying(false);
-          if (onFlyComplete) {
-            console.log('Fly complete in Cesium, triggering callback');
-            onFlyComplete();
-          }
-        }).catch(error => {
-          console.error('Error flying to location:', error);
-          setIsFlying(false);
-          // Still trigger fly complete to switch to 2D map as fallback
-          if (onFlyComplete) {
-            onFlyComplete();
+          complete: function() {
+            setIsFlying(false);
+            if (onFlyComplete) {
+              console.log('Fly complete in Cesium, triggering callback');
+              onFlyComplete();
+            }
           }
         });
       }
     });
-    
   }, [selectedLocation, onFlyComplete, mapError, isFlying, isInitialized]);
   
   // If there's an error loading the map, display an error message
