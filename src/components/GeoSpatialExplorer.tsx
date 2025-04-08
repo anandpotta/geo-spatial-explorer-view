@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
@@ -11,6 +11,13 @@ const GeoSpatialExplorer = () => {
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
   const { toast } = useToast();
+  
+  // Effect to handle initial map load
+  useEffect(() => {
+    if (isMapReady) {
+      console.log('Map is ready for interactions');
+    }
+  }, [isMapReady]);
   
   const handleLocationSelect = (location: Location) => {
     console.log('Location selected in Explorer:', location);
