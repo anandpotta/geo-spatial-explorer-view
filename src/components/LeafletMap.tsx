@@ -82,11 +82,14 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
     <div className="w-full h-full relative">
       <MapContainer 
         key={`map-${position.join('-')}`}
-        zoom={zoom}
         className="w-full h-full"
-        ref={(map) => map && handleSetMapRef(map)}
         attributionControl={false}
-        center={position as any} // Type assertion to bypass the type error
+        whenCreated={handleSetMapRef}
+        // Use a type cast to overcome the type mismatch with react-leaflet's types
+        {...{
+          center: position,
+          zoom: zoom
+        } as any}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
