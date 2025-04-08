@@ -24,11 +24,11 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     if (!cesiumContainer.current) return;
 
     // Configure Cesium to use local assets
-    window.CESIUM_BASE_URL = '/';
+    (window as any).CESIUM_BASE_URL = '/';
 
     // Create the Cesium viewer
     const viewer = new Cesium.Viewer(cesiumContainer.current, {
-      terrainProvider: Cesium.createWorldTerrain(),
+      terrainProvider: Cesium.createWorldTerrainAsync(),
       geocoder: false,
       homeButton: false,
       sceneModePicker: true,
@@ -107,7 +107,10 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
         Cesium.Math.toRadians(-45), // pitch
         10000 // range in meters
       ),
-      complete: onFlyComplete
+    }).then(() => {
+      if (onFlyComplete) {
+        onFlyComplete();
+      }
     });
     
   }, [selectedLocation, onFlyComplete]);

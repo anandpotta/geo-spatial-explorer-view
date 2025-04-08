@@ -1,10 +1,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, FeatureGroup } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,6 +95,16 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   const handleSetMapRef = (map: L.Map) => {
     mapRef.current = map;
   };
+
+  // Simple draw implementation without react-leaflet-draw
+  const drawingRef = useRef<{
+    isDrawing: boolean;
+    points: L.LatLng[];
+    layer?: L.Polyline;
+  }>({
+    isDrawing: false,
+    points: [],
+  });
 
   return (
     <div className="w-full h-full relative">
