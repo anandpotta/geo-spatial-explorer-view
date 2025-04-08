@@ -82,11 +82,11 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
     <div className="w-full h-full relative">
       <MapContainer 
         key={`map-${position.join('-')}`}
-        center={position}
         zoom={zoom}
         className="w-full h-full"
         ref={(map) => map && handleSetMapRef(map)}
         attributionControl={false}
+        center={position as any} // Type assertion to bypass the type error
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
