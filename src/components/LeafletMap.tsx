@@ -37,12 +37,25 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   // Update position when selected location changes
   useEffect(() => {
     if (selectedLocation) {
+      console.log('Selected location in Leaflet map:', selectedLocation);
       const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
       setPosition(newPosition);
       
       // Fly to the new position if map is ready
       if (mapRef.current) {
-        mapRef.current.flyTo(newPosition, 14);
+        console.log('Flying to position in Leaflet:', newPosition);
+        mapRef.current.flyTo(newPosition, 14, {
+          animate: true,
+          duration: 1.5
+        });
+        
+        // Add a tilted view for more detail
+        mapRef.current.setView(newPosition, 15, {
+          animate: true,
+          pan: {
+            duration: 1
+          }
+        });
       }
     }
   }, [selectedLocation]);
@@ -76,16 +89,21 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
 
   const handleSetMapRef = (map: L.Map) => {
     mapRef.current = map;
+    
+    // If we already have a selected location, fly to it
+    if (selectedLocation) {
+      const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
+      map.flyTo(newPosition, 14);
+    }
   };
 
   return (
     <div className="w-full h-full relative">
       <MapContainer 
-        key={`map-${position.join('-')}`}
         className="w-full h-full"
         attributionControl={false}
         whenCreated={handleSetMapRef}
-        // Use a type cast to overcome the type mismatch with react-leaflet's types
+        // Use type assertion to avoid TypeScript error with center and zoom props
         {...{
           center: position,
           zoom: zoom

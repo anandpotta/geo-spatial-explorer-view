@@ -20,6 +20,7 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
   const entityRef = useRef<Cesium.Entity | null>(null);
   const [isLoadingMap, setIsLoadingMap] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [isFlying, setIsFlying] = useState(false);
   
   // Initialize Cesium viewer
   useEffect(() => {
@@ -89,9 +90,11 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
 
   // Handle location changes
   useEffect(() => {
-    if (!viewerRef.current || !selectedLocation || mapError) return;
+    if (!viewerRef.current || !selectedLocation || mapError || isFlying) return;
     
     const viewer = viewerRef.current;
+    setIsFlying(true);
+    console.log('Flying to location in Cesium:', selectedLocation);
     
     // Remove old entity if it exists
     if (entityRef.current) {
@@ -131,18 +134,21 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
         10000 // range in meters
       ),
     }).then(() => {
+      setIsFlying(false);
       if (onFlyComplete) {
+        console.log('Fly complete in Cesium, triggering callback');
         onFlyComplete();
       }
     }).catch(error => {
       console.error('Error flying to location:', error);
+      setIsFlying(false);
       // Still trigger fly complete to switch to 2D map as fallback
       if (onFlyComplete) {
         onFlyComplete();
       }
     });
     
-  }, [selectedLocation, onFlyComplete, mapError]);
+  }, [selectedLocation, onFlyComplete, mapError, isFlying]);
   
   // If there's an error loading the map, display an error message
   if (mapError) {

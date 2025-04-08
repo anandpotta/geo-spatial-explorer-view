@@ -13,6 +13,7 @@ const GeoSpatialExplorer = () => {
   const { toast } = useToast();
   
   const handleLocationSelect = (location: Location) => {
+    console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
     setCurrentView('cesium');
     setFlyCompleted(false);
@@ -25,6 +26,7 @@ const GeoSpatialExplorer = () => {
   };
   
   const handleFlyComplete = () => {
+    console.log('Fly complete in Explorer, switching to leaflet view');
     setFlyCompleted(true);
     setCurrentView('leaflet');
     
