@@ -81,10 +81,10 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   return (
     <div className="w-full h-full relative">
       <MapContainer 
-        center={position} 
-        zoom={zoom} 
+        center={position}
+        zoom={zoom}
         className="w-full h-full"
-        whenCreated={handleSetMapRef}
+        whenReady={(map) => handleSetMapRef(map.target)}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
