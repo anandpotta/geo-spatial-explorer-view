@@ -29,12 +29,10 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     (window as any).CESIUM_BASE_URL = '/';
 
     try {
-      // Create the Cesium viewer with basic settings, without waiting for terrain
+      // Create the Cesium viewer with basic settings
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
-        terrainProvider: Cesium.createWorldTerrainAsync({ // Using createWorldTerrainAsync instead of createWorldTerrain
-          requestVertexNormals: true,
-          requestWaterMask: true
-        }),
+        // Use async terrain provider and handle the promise
+        terrainProvider: undefined, // Initially set to undefined
         geocoder: false,
         homeButton: false,
         sceneModePicker: true,
@@ -46,6 +44,18 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
         vrButton: false,
       });
 
+      // Add terrain asynchronously
+      Cesium.createWorldTerrainAsync({
+        requestVertexNormals: true,
+        requestWaterMask: true
+      }).then(terrain => {
+        if (viewer && !viewer.isDestroyed()) {
+          viewer.terrainProvider = terrain;
+        }
+      }).catch(error => {
+        console.error('Error loading terrain:', error);
+      });
+      
       // Enable lighting based on sun/moon positions
       viewer.scene.globe.enableLighting = true;
       

@@ -1,39 +1,21 @@
 
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { setupLeafletIcons } from './map/LeafletMapIcons';
+import MapEvents from './map/MapEvents';
+import UserMarker from './map/UserMarker';
+import TempMarker from './map/TempMarker';
 
-// Fix Leaflet icon issues
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+// Initialize leaflet icons
+setupLeafletIcons();
 
 interface LeafletMapProps {
   selectedLocation?: Location;
 }
-
-// Custom map events component
-const MapEvents = ({ onMapClick }: { onMapClick: (latlng: L.LatLng) => void }) => {
-  useMapEvents({
-    click: (e) => {
-      onMapClick(e.latlng);
-    },
-  });
-  return null;
-};
 
 const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   const [position, setPosition] = useState<[number, number]>(
@@ -96,23 +78,13 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
     mapRef.current = map;
   };
 
-  // Simple draw implementation without react-leaflet-draw
-  const drawingRef = useRef<{
-    isDrawing: boolean;
-    points: L.LatLng[];
-    layer?: L.Polyline;
-  }>({
-    isDrawing: false,
-    points: [],
-  });
-
   return (
     <div className="w-full h-full relative">
       <MapContainer 
-        defaultCenter={position} 
-        defaultZoom={zoom} 
+        center={position} 
+        zoom={zoom} 
         className="w-full h-full"
-        ref={handleSetMapRef}
+        whenCreated={handleSetMapRef}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -121,78 +93,23 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
         
         {/* User-created markers */}
         {markers.map((marker) => (
-          <Marker key={marker.id} position={marker.position}>
-            <Popup>
-              <div className="p-1">
-                <h3 className="font-medium">{marker.name}</h3>
-                <p className="text-xs text-muted-foreground">{marker.type}</p>
-                <p className="text-xs">
-                  {marker.position[0].toFixed(6)}, {marker.position[1].toFixed(6)}
-                </p>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={() => handleDeleteMarker(marker.id)}
-                >
-                  <Trash2 size={14} className="mr-1" /> Remove
-                </Button>
-              </div>
-            </Popup>
-          </Marker>
+          <UserMarker 
+            key={marker.id} 
+            marker={marker} 
+            onDelete={handleDeleteMarker} 
+          />
         ))}
         
         {/* Temporary marker for new pins */}
         {tempMarker && (
-          <Marker position={tempMarker}>
-            <Popup>
-              <div className="p-2">
-                <Input 
-                  type="text"
-                  placeholder="Location name"
-                  value={markerName}
-                  onChange={(e) => setMarkerName(e.target.value)}
-                  className="mb-2"
-                />
-                <div className="flex mb-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={markerType === 'pin' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setMarkerType('pin')}
-                  >
-                    Pin
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={markerType === 'area' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setMarkerType('area')}
-                  >
-                    Area
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={markerType === 'building' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setMarkerType('building')}
-                  >
-                    Building
-                  </Button>
-                </div>
-                <Button 
-                  onClick={handleSaveMarker}
-                  disabled={!markerName.trim()}
-                  className="w-full"
-                >
-                  Save Location
-                </Button>
-              </div>
-            </Popup>
-          </Marker>
+          <TempMarker 
+            position={tempMarker}
+            markerName={markerName}
+            setMarkerName={setMarkerName}
+            markerType={markerType}
+            setMarkerType={setMarkerType}
+            onSave={handleSaveMarker}
+          />
         )}
         
         <MapEvents onMapClick={handleMapClick} />
