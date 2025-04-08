@@ -31,7 +31,7 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     try {
       // Create the Cesium viewer with basic settings, without waiting for terrain
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
-        terrainProvider: Cesium.createWorldTerrain({
+        terrainProvider: Cesium.createWorldTerrainAsync({ // Using createWorldTerrainAsync instead of createWorldTerrain
           requestVertexNormals: true,
           requestWaterMask: true
         }),

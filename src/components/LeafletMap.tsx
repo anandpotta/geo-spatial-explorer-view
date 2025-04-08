@@ -109,16 +109,14 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   return (
     <div className="w-full h-full relative">
       <MapContainer 
-        center={position} 
-        zoom={zoom} 
+        defaultCenter={position} 
+        defaultZoom={zoom} 
         className="w-full h-full"
-        ref={(map) => {
-          if (map) handleSetMapRef(map);
-        }}
+        ref={handleSetMapRef}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution={'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
         {/* User-created markers */}
