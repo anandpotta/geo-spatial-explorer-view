@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Cross, MapPin, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 // Fix Leaflet icon issues
@@ -112,11 +112,13 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
         center={position} 
         zoom={zoom} 
         className="w-full h-full"
-        whenCreated={handleSetMapRef} 
+        ref={(map) => {
+          if (map) handleSetMapRef(map);
+        }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
         />
         
         {/* User-created markers */}

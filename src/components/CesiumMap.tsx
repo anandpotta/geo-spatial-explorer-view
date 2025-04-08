@@ -18,67 +18,68 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const entityRef = useRef<Cesium.Entity | null>(null);
-  const [terrainProvider, setTerrainProvider] = useState<Cesium.TerrainProvider | undefined>(undefined);
+  const [isLoadingMap, setIsLoadingMap] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   
-  // Initialize terrain provider
-  useEffect(() => {
-    Cesium.createWorldTerrainAsync()
-      .then(terrainProvider => {
-        setTerrainProvider(terrainProvider);
-      })
-      .catch(error => {
-        console.error('Error creating terrain provider:', error);
-      });
-  }, []);
-
   // Initialize Cesium viewer
   useEffect(() => {
-    if (!cesiumContainer.current || !terrainProvider) return;
+    if (!cesiumContainer.current) return;
 
     // Configure Cesium to use local assets
     (window as any).CESIUM_BASE_URL = '/';
 
-    // Create the Cesium viewer
-    const viewer = new Cesium.Viewer(cesiumContainer.current, {
-      terrainProvider: terrainProvider,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: true,
-      baseLayerPicker: false,
-      navigationHelpButton: false,
-      animation: false,
-      timeline: false,
-      fullscreenButton: false,
-      vrButton: false,
-    });
+    try {
+      // Create the Cesium viewer with basic settings, without waiting for terrain
+      const viewer = new Cesium.Viewer(cesiumContainer.current, {
+        terrainProvider: Cesium.createWorldTerrain({
+          requestVertexNormals: true,
+          requestWaterMask: true
+        }),
+        geocoder: false,
+        homeButton: false,
+        sceneModePicker: true,
+        baseLayerPicker: false,
+        navigationHelpButton: false,
+        animation: false,
+        timeline: false,
+        fullscreenButton: false,
+        vrButton: false,
+      });
 
-    // Enable lighting based on sun/moon positions
-    viewer.scene.globe.enableLighting = true;
-    
-    // Show the earth in space
-    viewer.scene.skyAtmosphere.show = true;
-    
-    // Set the initial view to show the whole Earth
-    viewer.camera.flyHome(0);
-    
-    // Save the viewer reference
-    viewerRef.current = viewer;
-    
-    if (onMapReady) {
-      onMapReady();
-    }
-    
-    // Clean up on unmount
-    return () => {
-      if (viewer && !viewer.isDestroyed()) {
-        viewer.destroy();
+      // Enable lighting based on sun/moon positions
+      viewer.scene.globe.enableLighting = true;
+      
+      // Show the earth in space
+      viewer.scene.skyAtmosphere.show = true;
+      
+      // Set the initial view to show the whole Earth
+      viewer.camera.flyHome(0);
+      
+      // Save the viewer reference
+      viewerRef.current = viewer;
+      
+      if (onMapReady) {
+        onMapReady();
       }
-    };
-  }, [terrainProvider, onMapReady]);
+      
+      setIsLoadingMap(false);
+      
+      // Clean up on unmount
+      return () => {
+        if (viewer && !viewer.isDestroyed()) {
+          viewer.destroy();
+        }
+      };
+    } catch (error) {
+      console.error('Error initializing Cesium viewer:', error);
+      setMapError('Failed to initialize 3D globe. Please try again later.');
+      setIsLoadingMap(false);
+    }
+  }, [onMapReady]);
 
   // Handle location changes
   useEffect(() => {
-    if (!viewerRef.current || !selectedLocation) return;
+    if (!viewerRef.current || !selectedLocation || mapError) return;
     
     const viewer = viewerRef.current;
     
@@ -123,9 +124,40 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
       if (onFlyComplete) {
         onFlyComplete();
       }
+    }).catch(error => {
+      console.error('Error flying to location:', error);
+      // Still trigger fly complete to switch to 2D map as fallback
+      if (onFlyComplete) {
+        onFlyComplete();
+      }
     });
     
-  }, [selectedLocation, onFlyComplete]);
+  }, [selectedLocation, onFlyComplete, mapError]);
+  
+  // If there's an error loading the map, display an error message
+  if (mapError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white">
+        <div className="text-center p-4">
+          <h3 className="text-xl font-bold mb-2">Cesium Map Error</h3>
+          <p>{mapError}</p>
+          <p className="text-sm mt-4">Falling back to 2D map view...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Loading state
+  if (isLoadingMap) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white">
+        <div className="text-center p-4">
+          <h3 className="text-xl font-bold mb-2">Loading 3D Globe</h3>
+          <p>Please wait while we initialize the map...</p>
+        </div>
+      </div>
+    );
+  }
   
   return <div ref={cesiumContainer} className="w-full h-full" />;
 };
