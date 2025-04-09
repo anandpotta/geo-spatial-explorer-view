@@ -60,17 +60,18 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   };
 
   return (
-    <div className="map-search-panel p-3 z-10 absolute top-0 left-0 right-0 bg-background/80 backdrop-blur-sm">
+    <div className="map-search-panel p-3 z-10 absolute top-0 left-0 right-0 bg-background/80 backdrop-blur-sm shadow-md">
       <form onSubmit={handleSubmit} className="relative">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Input
               type="text"
-              placeholder="Search for a location..."
+              placeholder="Search for a building address..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pr-8"
+              className="pr-8 pl-10"
             />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             {query && (
               <button 
                 type="button" 
@@ -91,9 +92,10 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             {results.map((location) => (
               <li 
                 key={location.id} 
-                className="px-3 py-2 hover:bg-accent cursor-pointer"
+                className="px-3 py-2 hover:bg-accent cursor-pointer flex items-center"
                 onClick={() => handleSelect(location)}
               >
+                <Search size={14} className="mr-2 text-muted-foreground" />
                 {location.label}
               </li>
             ))}

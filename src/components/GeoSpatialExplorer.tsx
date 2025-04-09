@@ -29,7 +29,7 @@ const GeoSpatialExplorer = () => {
     
     toast({
       title: 'Location selected',
-      description: location.label,
+      description: `Navigating to ${location.label}`,
       duration: 3000,
     });
   };
@@ -37,13 +37,16 @@ const GeoSpatialExplorer = () => {
   const handleFlyComplete = () => {
     console.log('Fly complete in Explorer, switching to leaflet view');
     setFlyCompleted(true);
-    setCurrentView('leaflet');
     
-    toast({
-      title: 'Navigation complete',
-      description: 'Switched to detailed map view',
-      duration: 3000,
-    });
+    // Short delay before switching to leaflet view for a smoother transition
+    setTimeout(() => {
+      setCurrentView('leaflet');
+      toast({
+        title: 'Navigation complete',
+        description: 'You can now draw building boundaries on the map',
+        duration: 5000,
+      });
+    }, 500);
   };
   
   const handleSavedLocationSelect = (position: [number, number]) => {
@@ -56,7 +59,8 @@ const GeoSpatialExplorer = () => {
     };
     
     setSelectedLocation(location);
-    setCurrentView('leaflet'); // Go directly to leaflet view for saved locations
+    setCurrentView('cesium'); // Start with Cesium view for the full experience
+    setFlyCompleted(false);
   };
   
   return (

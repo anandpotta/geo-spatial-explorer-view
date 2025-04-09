@@ -70,10 +70,9 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
           viewer.scene.skyAtmosphere.show = true;
           viewer.scene.globe.showGroundAtmosphere = true;
           
-          // Set the initial view to show the Earth from space
-          // Position the camera far out in space to see the globe
+          // Start with a clear view of Earth from space - much higher altitude for a true space view
           viewer.camera.setView({
-            destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0), // Higher altitude for space view
             orientation: {
               heading: 0.0,
               pitch: -Cesium.Math.PI_OVER_TWO,
@@ -163,32 +162,64 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     
     entityRef.current = entity;
     
-    // First zoom out to see the Earth from space
+    // Create a multi-step flight animation to simulate real navigation from space
+    // Step 1: First ensure we're viewing from far space
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(0, 0, 25000000.0), // Far out in space
+      destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0), // Very high altitude
       duration: 1.0,
       complete: function() {
-        console.log('Zoomed out to space view, now flying to target location');
+        console.log('Starting from space view');
         
-        // Then fly to the selected location
+        // Step 2: Fly to position above target location but still high up
         viewer.camera.flyTo({
           destination: Cesium.Cartesian3.fromDegrees(
             selectedLocation.x,
             selectedLocation.y,
-            10000 // range in meters
+            5000000.0 // High altitude above location
           ),
-          orientation: {
-            heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-50),
-            roll: 0
-          },
-          duration: 4.0,
+          duration: 3.0,
           complete: function() {
-            setIsFlying(false);
-            if (onFlyComplete) {
-              console.log('Fly complete in Cesium, triggering callback');
-              onFlyComplete();
-            }
+            console.log('Approaching target from high altitude');
+            
+            // Step 3: Zoom in closer to the target location
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(
+                selectedLocation.x,
+                selectedLocation.y,
+                100000.0 // Closer view
+              ),
+              orientation: {
+                heading: Cesium.Math.toRadians(0),
+                pitch: Cesium.Math.toRadians(-45), // Angled view
+                roll: 0
+              },
+              duration: 2.0,
+              complete: function() {
+                console.log('Getting closer to target');
+                
+                // Step 4: Final approach - close aerial view
+                viewer.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(
+                    selectedLocation.x,
+                    selectedLocation.y,
+                    1000 // Final close aerial view
+                  ),
+                  orientation: {
+                    heading: Cesium.Math.toRadians(0),
+                    pitch: Cesium.Math.toRadians(-50), // More steep angle for building view
+                    roll: 0
+                  },
+                  duration: 2.0,
+                  complete: function() {
+                    setIsFlying(false);
+                    if (onFlyComplete) {
+                      console.log('Fly complete in Cesium, triggering callback');
+                      onFlyComplete();
+                    }
+                  }
+                });
+              }
+            });
           }
         });
       }

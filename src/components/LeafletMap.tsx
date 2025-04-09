@@ -21,11 +21,11 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   const [position, setPosition] = useState<[number, number]>(
     selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
   );
-  const [zoom, setZoom] = useState(13);
+  const [zoom, setZoom] = useState(18); // Increase default zoom level for building view
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
   const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
   const [markerName, setMarkerName] = useState('');
-  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('pin');
+  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building'); // Set building as default
   const mapRef = useRef<L.Map | null>(null);
 
   // Load saved markers on mount
@@ -44,17 +44,9 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
       // Fly to the new position if map is ready
       if (mapRef.current) {
         console.log('Flying to position in Leaflet:', newPosition);
-        mapRef.current.flyTo(newPosition, 14, {
+        mapRef.current.flyTo(newPosition, 18, { // Higher zoom for building level detail
           animate: true,
           duration: 1.5
-        });
-        
-        // Add a tilted view for more detail
-        mapRef.current.setView(newPosition, 15, {
-          animate: true,
-          pan: {
-            duration: 1
-          }
         });
       }
     }
@@ -62,7 +54,7 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
 
   const handleMapClick = (latlng: L.LatLng) => {
     setTempMarker([latlng.lat, latlng.lng]);
-    setMarkerName('');
+    setMarkerName(selectedLocation?.label || 'New Building');
   };
 
   const handleSaveMarker = () => {
@@ -93,7 +85,7 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
     // If we already have a selected location, fly to it
     if (selectedLocation) {
       const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
-      map.flyTo(newPosition, 14);
+      map.flyTo(newPosition, 18); // Higher zoom for building level detail
     }
   };
 
@@ -137,6 +129,13 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
         
         <MapEvents onMapClick={handleMapClick} />
       </MapContainer>
+
+      <div className="absolute bottom-24 right-4 bg-background/80 backdrop-blur-sm p-3 rounded-md shadow-md z-[1000]">
+        <h3 className="font-medium text-sm mb-2">Draw Building Boundary</h3>
+        <p className="text-xs text-muted-foreground mb-2">
+          Click on the map to start marking building boundaries
+        </p>
+      </div>
     </div>
   );
 };
