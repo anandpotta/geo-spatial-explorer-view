@@ -4,8 +4,8 @@ import * as Cesium from 'cesium';
 import { API_CONFIG } from '@/config/api-config';
 import { toast } from '@/components/ui/use-toast';
 
-// Initialize the Cesium Ion access token
-Cesium.Ion.defaultAccessToken = API_CONFIG.CESIUM_ION_TOKEN;
+// Do not set the Ion token globally here, we'll handle it differently
+// to avoid the 401 errors
 
 interface UseCesiumMapResult {
   viewerRef: React.MutableRefObject<Cesium.Viewer | null>;
@@ -42,8 +42,8 @@ export const useCesiumMap = (
       // Configure Cesium to use local assets
       (window as any).CESIUM_BASE_URL = '/';
 
-      // Create the Cesium viewer with basic settings - WITHOUT requiring terrain or imagery
-      // This ensures we get at least a basic globe even if token is invalid
+      // Create the Cesium viewer with basic settings - WITH FALLBACK OPTIONS
+      // This ensures we get at least a basic globe without requiring Ion services
       const viewer = new Cesium.Viewer(cesiumContainer.current!, {
         geocoder: false,
         homeButton: false,
@@ -56,12 +56,11 @@ export const useCesiumMap = (
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
-        terrainProvider: undefined, // Start with default ellipsoid terrain
         requestRenderMode: false, // Render continuously
         maximumRenderTimeChange: Infinity, // Force rendering
       });
       
-      // Create basic globe appearance regardless of Ion token status
+      // Create basic globe appearance
       viewer.scene.globe.enableLighting = true;
       viewer.scene.skyAtmosphere.show = true;
       viewer.scene.globe.showGroundAtmosphere = true;
@@ -77,6 +76,14 @@ export const useCesiumMap = (
         }
       });
       
+      // Immediately add OpenStreetMap as the base layer
+      // This ensures we have at least some imagery without needing Ion
+      const osmProvider = new Cesium.OpenStreetMapImageryProvider({
+        url: 'https://a.tile.openstreetmap.org/'
+      });
+      viewer.imageryLayers.addImageryProvider(osmProvider);
+      console.log("Added OpenStreetMap as base imagery layer");
+      
       // Make sure the scene is properly rendered at startup
       viewer.scene.requestRender();
       
@@ -88,52 +95,7 @@ export const useCesiumMap = (
       // Save the viewer reference
       viewerRef.current = viewer;
       
-      // Try to load Cesium World Terrain asynchronously
-      // If it fails, we'll still have a basic viewer with the default ellipsoid
-      if (!API_CONFIG.USE_ION_FALLBACK) {
-        Cesium.createWorldTerrainAsync()
-          .then(terrainProvider => {
-            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-              viewerRef.current.terrainProvider = terrainProvider;
-              viewerRef.current.scene.globe.depthTestAgainstTerrain = true;
-              console.log("Terrain loaded successfully");
-            }
-          })
-          .catch(error => {
-            console.warn("Terrain loading failed, using basic globe instead:", error);
-            // Already using basic globe, so no need to handle this error specially
-          });
-        
-        // Try to load Cesium World Imagery asynchronously
-        Cesium.createWorldImageryAsync()
-          .then(imageryProvider => {
-            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-              viewerRef.current.imageryLayers.addImageryProvider(imageryProvider);
-              console.log("Imagery loaded successfully");
-            }
-          })
-          .catch(error => {
-            console.warn("Imagery loading failed, using basic globe instead:", error);
-            
-            // Add OpenStreetMap as fallback if Cesium imagery fails
-            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-              const osmProvider = new Cesium.OpenStreetMapImageryProvider({
-                url: 'https://a.tile.openstreetmap.org/'
-              });
-              viewerRef.current.imageryLayers.addImageryProvider(osmProvider);
-              console.log("Added OpenStreetMap as fallback imagery");
-            }
-          });
-      } else {
-        // When using fallback mode, directly use OpenStreetMap
-        const osmProvider = new Cesium.OpenStreetMapImageryProvider({
-          url: 'https://a.tile.openstreetmap.org/'
-        });
-        viewer.imageryLayers.addImageryProvider(osmProvider);
-        console.log("Using OpenStreetMap imagery (fallback mode)");
-      }
-      
-      console.log("Cesium map initialized with space view");
+      console.log("Cesium map initialized with space view and OpenStreetMap imagery");
       setIsInitialized(true);
       setIsLoadingMap(false);
       
