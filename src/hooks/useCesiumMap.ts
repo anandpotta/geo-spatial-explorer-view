@@ -59,15 +59,23 @@ export const useCesiumMap = (
         maximumRenderTimeChange: Infinity,
         // Disable terrain to avoid Ion requests
         terrain: undefined,
-        skyBox: false, // Disable sky box to avoid errors with image loading
+        imageryProvider: new Cesium.OpenStreetMapImageryProvider({
+          url: 'https://a.tile.openstreetmap.org/'
+        }),
+        // Use simple blue globe rendering to avoid image loading issues
+        skyBox: undefined,
+        skyAtmosphere: new Cesium.SkyAtmosphere(),
       });
       
       // Disable depth testing for a solid color background
       viewer.scene.globe.depthTestAgainstTerrain = false;
       
-      // Create basic globe appearance
+      // Create basic globe appearance with a simpler approach
       viewer.scene.skyAtmosphere.show = true;
       viewer.scene.globe.showGroundAtmosphere = true;
+      
+      // Set the globe base color for when imagery is not loaded
+      viewer.scene.globe.baseColor = Cesium.Color.BLUE;
       
       // Always start with a view from deep space
       viewer.camera.setView({
@@ -78,13 +86,6 @@ export const useCesiumMap = (
           roll: 0.0
         }
       });
-      
-      // Add OpenStreetMap as the base layer
-      const osmProvider = new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://a.tile.openstreetmap.org/'
-      });
-      viewer.imageryLayers.addImageryProvider(osmProvider);
-      console.log("Added OpenStreetMap as base imagery layer");
       
       // Force immediate rendering
       viewer.scene.requestRender();
