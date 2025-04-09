@@ -56,8 +56,8 @@ export const useCesiumMap = (
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
-        imageryProvider: false, // Don't load imagery automatically
-        terrainProvider: undefined, // Use undefined instead of false for terrainProvider
+        // Remove the imageryProvider property as it's not supported in the type
+        terrainProvider: undefined, // Use undefined for terrainProvider
         requestRenderMode: false, // Render continuously
         maximumRenderTimeChange: Infinity, // Force rendering
       });
