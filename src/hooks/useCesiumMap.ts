@@ -42,8 +42,8 @@ export const useCesiumMap = (
       // Configure Cesium to use local assets
       (window as any).CESIUM_BASE_URL = '/';
 
-      // Create the Cesium viewer with basic settings
-      // We'll create a simple viewer without terrain first as the main approach
+      // Create the Cesium viewer with basic settings - WITHOUT requiring terrain or imagery
+      // This ensures we get at least a basic globe even if token is invalid
       const viewer = new Cesium.Viewer(cesiumContainer.current!, {
         geocoder: false,
         homeButton: false,
@@ -56,21 +56,18 @@ export const useCesiumMap = (
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
-        // Remove the imageryProvider property as it's not supported in the type
-        terrainProvider: undefined, // Use undefined for terrainProvider
+        terrainProvider: undefined, // Start with default ellipsoid terrain
         requestRenderMode: false, // Render continuously
         maximumRenderTimeChange: Infinity, // Force rendering
       });
       
-      // Enable lighting based on sun/moon positions
+      // Create basic globe appearance regardless of Ion token status
       viewer.scene.globe.enableLighting = true;
-      
-      // Show the earth in space
       viewer.scene.skyAtmosphere.show = true;
       viewer.scene.globe.showGroundAtmosphere = true;
+      viewer.scene.skyBox.show = true;
       
       // Always start with a view from deep space
-      // Use a much higher altitude (40,000,000 meters) for a true space view
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, 40000000.0),
         orientation: {
@@ -83,9 +80,6 @@ export const useCesiumMap = (
       // Make sure the scene is properly rendered at startup
       viewer.scene.requestRender();
       
-      // Add a basic stars background
-      viewer.scene.skyBox.show = true;
-      
       // Force a full render cycle immediately
       setTimeout(() => {
         viewer.scene.requestRender();
@@ -95,32 +89,49 @@ export const useCesiumMap = (
       viewerRef.current = viewer;
       
       // Try to load Cesium World Terrain asynchronously
-      // If it fails, we'll still have a basic viewer
-      Cesium.createWorldTerrainAsync()
-        .then(terrainProvider => {
-          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-            viewerRef.current.terrainProvider = terrainProvider;
-            viewerRef.current.scene.globe.depthTestAgainstTerrain = true;
-            console.log("Terrain loaded successfully");
-          }
-        })
-        .catch(error => {
-          console.warn("Terrain loading failed, using basic globe instead:", error);
-          // No need to handle this error specifically - we already have a basic viewer
+      // If it fails, we'll still have a basic viewer with the default ellipsoid
+      if (!API_CONFIG.USE_ION_FALLBACK) {
+        Cesium.createWorldTerrainAsync()
+          .then(terrainProvider => {
+            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+              viewerRef.current.terrainProvider = terrainProvider;
+              viewerRef.current.scene.globe.depthTestAgainstTerrain = true;
+              console.log("Terrain loaded successfully");
+            }
+          })
+          .catch(error => {
+            console.warn("Terrain loading failed, using basic globe instead:", error);
+            // Already using basic globe, so no need to handle this error specially
+          });
+        
+        // Try to load Cesium World Imagery asynchronously
+        Cesium.createWorldImageryAsync()
+          .then(imageryProvider => {
+            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+              viewerRef.current.imageryLayers.addImageryProvider(imageryProvider);
+              console.log("Imagery loaded successfully");
+            }
+          })
+          .catch(error => {
+            console.warn("Imagery loading failed, using basic globe instead:", error);
+            
+            // Add OpenStreetMap as fallback if Cesium imagery fails
+            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+              const osmProvider = new Cesium.OpenStreetMapImageryProvider({
+                url: 'https://a.tile.openstreetmap.org/'
+              });
+              viewerRef.current.imageryLayers.addImageryProvider(osmProvider);
+              console.log("Added OpenStreetMap as fallback imagery");
+            }
+          });
+      } else {
+        // When using fallback mode, directly use OpenStreetMap
+        const osmProvider = new Cesium.OpenStreetMapImageryProvider({
+          url: 'https://a.tile.openstreetmap.org/'
         });
-      
-      // Try to load Cesium World Imagery asynchronously
-      Cesium.createWorldImageryAsync()
-        .then(imageryProvider => {
-          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-            viewerRef.current.imageryLayers.addImageryProvider(imageryProvider);
-            console.log("Imagery loaded successfully");
-          }
-        })
-        .catch(error => {
-          console.warn("Imagery loading failed, using basic globe instead:", error);
-          // No need to handle this error specifically - we already have a basic viewer
-        });
+        viewer.imageryLayers.addImageryProvider(osmProvider);
+        console.log("Using OpenStreetMap imagery (fallback mode)");
+      }
       
       console.log("Cesium map initialized with space view");
       setIsInitialized(true);
