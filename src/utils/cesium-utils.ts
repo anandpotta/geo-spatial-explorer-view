@@ -6,7 +6,7 @@ export interface FlightOptions {
   onComplete?: () => void;
 }
 
-// Create a multi-step flight animation to simulate real navigation from space
+// Create a simplified flight animation to avoid rendering issues
 export const flyToLocation = (
   viewer: Cesium.Viewer, 
   selectedLocation: Location,
@@ -45,35 +45,19 @@ export const flyToLocation = (
     
     entityRef.current = entity;
     
-    // Simplify the flight animation to be more reliable
+    // Simple one-step flight to avoid rendering issues
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(
         selectedLocation.x,
         selectedLocation.y,
-        1000000.0 // Higher altitude first
+        1000000.0
       ),
-      duration: 4.0,
+      duration: 3.0,
       complete: function() {
-        // Once at high altitude, descend to the final position
-        viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(
-            selectedLocation.x,
-            selectedLocation.y,
-            10000.0 // Final closer view
-          ),
-          orientation: {
-            heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-45), // Angled view
-            roll: 0
-          },
-          duration: 2.0,
-          complete: function() {
-            console.log('Fly complete in Cesium, triggering callback');
-            if (options.onComplete) {
-              options.onComplete();
-            }
-          }
-        });
+        console.log('Fly complete in Cesium, triggering callback');
+        if (options.onComplete) {
+          options.onComplete();
+        }
       }
     });
   } catch (error) {

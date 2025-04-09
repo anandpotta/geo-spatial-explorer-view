@@ -42,11 +42,6 @@ export const useCesiumMap = (
       // Make sure Ion is completely disabled
       Cesium.Ion.defaultAccessToken = '';
       
-      // Create the imagery provider directly
-      const osmProvider = new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://a.tile.openstreetmap.org/'
-      });
-      
       // Create the Cesium viewer with basic settings - WITHOUT using Ion
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
         geocoder: false,
@@ -60,27 +55,17 @@ export const useCesiumMap = (
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
-        requestRenderMode: false,
+        requestRenderMode: true,
         maximumRenderTimeChange: Infinity,
         terrain: undefined,
-        skyBox: undefined,
-        skyAtmosphere: new Cesium.SkyAtmosphere(),
+        skyBox: false,
+        skyAtmosphere: false,
       });
-      
-      // Set the imagery provider after viewer creation
-      viewer.imageryLayers.addImageryProvider(osmProvider);
-      
-      // Disable depth testing for a solid color background
-      viewer.scene.globe.depthTestAgainstTerrain = false;
-      
-      // Create basic globe appearance with a simpler approach
-      viewer.scene.skyAtmosphere.show = true;
-      viewer.scene.globe.showGroundAtmosphere = true;
-      
-      // Set the globe base color for when imagery is not loaded
+
+      // Add a simple blue color as the base layer
       viewer.scene.globe.baseColor = Cesium.Color.BLUE;
       
-      // Always start with a view from deep space
+      // Set up a simple view without imagery to avoid image loading errors
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
         orientation: {
@@ -96,7 +81,7 @@ export const useCesiumMap = (
       // Save the viewer reference
       viewerRef.current = viewer;
       
-      console.log("Cesium map initialized with space view and OpenStreetMap imagery");
+      console.log("Cesium map initialized with space view");
       setIsInitialized(true);
       setIsLoadingMap(false);
       
