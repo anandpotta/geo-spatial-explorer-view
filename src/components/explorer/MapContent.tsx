@@ -26,8 +26,8 @@ const MapContent = ({
       {/* The actual search component positioned absolutely on top of the map */}
       <LocationSearch onLocationSelect={onLocationSelect} />
       
-      {/* Map container */}
-      <div className="w-full h-full relative">
+      {/* Map container with fixed dimensions */}
+      <div className="relative mx-auto" style={{ width: '1000px', height: '1000px' }}>
         <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
           <CesiumMap 
             selectedLocation={selectedLocation}
