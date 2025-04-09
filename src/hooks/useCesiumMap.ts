@@ -57,7 +57,7 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         imageryProvider: false, // Don't load imagery automatically
-        terrainProvider: false, // Don't load terrain automatically
+        terrainProvider: undefined, // Use undefined instead of false for terrainProvider
         requestRenderMode: false, // Render continuously
         maximumRenderTimeChange: Infinity, // Force rendering
       });
