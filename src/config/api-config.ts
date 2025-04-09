@@ -1,10 +1,10 @@
 
 export const API_CONFIG = {
-  // Since the token is invalid, we'll disable Cesium Ion completely
+  // Completely disable Cesium Ion integration
   CESIUM_ION_TOKEN: "",
   
-  // Always use fallback rendering
-  USE_ION_FALLBACK: true,
+  // Always use direct CesiumJS rendering
+  USE_ION_FALLBACK: false,
   
   // Local development doesn't require API keys
   USE_LOCAL: true,

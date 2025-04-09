@@ -34,12 +34,12 @@ export const useCesiumMap = (
     }
 
     try {
-      console.log("Initializing Cesium viewer...");
+      console.log("Initializing Cesium viewer with pure CesiumJS...");
       
       // Configure Cesium to use local assets
       (window as any).CESIUM_BASE_URL = '/';
       
-      // Disable Ion completely
+      // Make sure Ion is completely disabled
       Cesium.Ion.defaultAccessToken = '';
       
       // Create the imagery provider directly
