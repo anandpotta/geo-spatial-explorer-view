@@ -41,7 +41,6 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
       (window as any).CESIUM_BASE_URL = '/';
 
       // Create the Cesium viewer with basic settings
-      // Updated to use createWorldTerrainAsync instead of createWorldTerrain
       const createTerrainProvider = async () => {
         try {
           const terrainProvider = await Cesium.createWorldTerrainAsync();
@@ -71,14 +70,22 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
           viewer.scene.skyAtmosphere.show = true;
           viewer.scene.globe.showGroundAtmosphere = true;
           
-          // Set the initial view to show the whole Earth
-          viewer.camera.flyHome(0);
-          
-          // Save the viewer reference
-          viewerRef.current = viewer;
+          // Set the initial view to show the Earth from space
+          // Position the camera far out in space to see the globe
+          viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
+            orientation: {
+              heading: 0.0,
+              pitch: -Cesium.Math.PI_OVER_TWO,
+              roll: 0.0
+            }
+          });
           
           // Force a render to ensure the globe appears
           viewer.scene.requestRender();
+          
+          // Save the viewer reference
+          viewerRef.current = viewer;
           
           console.log("Cesium map initialized, triggering onMapReady");
           setIsInitialized(true);
@@ -160,12 +167,10 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(0, 0, 25000000.0), // Far out in space
       duration: 1.0,
-      // Using a callback function instead of complete property
-      complete: () => {
+      complete: function() {
         console.log('Zoomed out to space view, now flying to target location');
         
         // Then fly to the selected location
-        // Using flyTo with completion callback instead of using the complete property
         viewer.camera.flyTo({
           destination: Cesium.Cartesian3.fromDegrees(
             selectedLocation.x,
@@ -178,7 +183,7 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
             roll: 0
           },
           duration: 4.0,
-          complete: () => {
+          complete: function() {
             setIsFlying(false);
             if (onFlyComplete) {
               console.log('Fly complete in Cesium, triggering callback');
