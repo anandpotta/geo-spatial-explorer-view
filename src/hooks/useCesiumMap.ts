@@ -71,9 +71,10 @@ export const useCesiumMap = (
           viewer.scene.skyAtmosphere.show = true;
           viewer.scene.globe.showGroundAtmosphere = true;
           
-          // Start with a clear view of Earth from space - much higher altitude for a true space view
+          // Always start with a view from deep space
+          // Use a much higher altitude (40,000,000 meters) for a true space view
           viewer.camera.setView({
-            destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0), // Higher altitude for space view
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 40000000.0),
             orientation: {
               heading: 0.0,
               pitch: -Cesium.Math.PI_OVER_TWO,
@@ -81,13 +82,21 @@ export const useCesiumMap = (
             }
           });
           
-          // Force a render to ensure the globe appears
+          // Make sure the scene is properly rendered at startup
           viewer.scene.requestRender();
+          
+          // Add a basic stars background
+          viewer.scene.skyBox.show = true;
+          
+          // Force a full render cycle immediately
+          setTimeout(() => {
+            viewer.scene.requestRender();
+          }, 100);
           
           // Save the viewer reference
           viewerRef.current = viewer;
           
-          console.log("Cesium map initialized, triggering onMapReady");
+          console.log("Cesium map initialized with space view");
           setIsInitialized(true);
           setIsLoadingMap(false);
           
@@ -96,7 +105,49 @@ export const useCesiumMap = (
           }
         } catch (error) {
           console.error('Error creating terrain provider:', error);
-          throw error;
+          
+          // Fallback to a basic viewer without terrain if the terrain provider fails
+          console.log('Falling back to basic Cesium viewer without terrain');
+          
+          const basicViewer = new Cesium.Viewer(cesiumContainer.current!, {
+            geocoder: false,
+            homeButton: false,
+            sceneModePicker: true,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            vrButton: false,
+            infoBox: false,
+            selectionIndicator: false,
+          });
+          
+          // Set space view for the basic viewer
+          basicViewer.scene.skyAtmosphere.show = true;
+          basicViewer.scene.skyBox.show = true;
+          
+          // Set the view to deep space
+          basicViewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(0, 0, 40000000.0),
+            orientation: {
+              heading: 0.0,
+              pitch: -Cesium.Math.PI_OVER_TWO,
+              roll: 0.0
+            }
+          });
+          
+          basicViewer.scene.requestRender();
+          
+          // Save reference to fallback viewer
+          viewerRef.current = basicViewer;
+          
+          setIsInitialized(true);
+          setIsLoadingMap(false);
+          
+          if (onMapReady) {
+            onMapReady();
+          }
         }
       };
       
