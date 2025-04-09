@@ -41,7 +41,6 @@ export const useCesiumMap = (
       
       // Force disable Ion completely
       Cesium.Ion.defaultAccessToken = '';
-      Cesium.buildModuleUrl.setBaseUrl('/');
       
       // Disable all credit display to prevent any network requests
       Cesium.CreditDisplay.cesiumCredit = new Cesium.Credit('');
@@ -60,11 +59,13 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
-        imageryProvider: false as any, // Force no imagery provider
-        terrainProvider: undefined,
+        // Remove the incorrect imageryProvider property
         requestRenderMode: true,
         targetFrameRate: 30,
       });
+      
+      // Disable all imagery provider to prevent network requests
+      viewer.imageryLayers.removeAll();
       
       // Disable all features that might cause network requests
       viewer.scene.globe.enableLighting = false;
