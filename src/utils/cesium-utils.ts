@@ -6,7 +6,7 @@ export interface FlightOptions {
   onComplete?: () => void;
 }
 
-// Create a simplified flight animation to avoid rendering issues
+// Create a very basic flight animation without any network requests
 export const flyToLocation = (
   viewer: Cesium.Viewer, 
   selectedLocation: Location,
@@ -22,41 +22,31 @@ export const flyToLocation = (
       entityRef.current = null;
     }
     
-    // Create a new entity at the selected location
+    // Create a simple entity at the target location
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(selectedLocation.x, selectedLocation.y),
       point: {
-        pixelSize: 10,
+        pixelSize: 15,
         color: Cesium.Color.RED,
         outlineColor: Cesium.Color.WHITE,
-        outlineWidth: 2
-      },
-      label: {
-        text: selectedLocation.label,
-        font: '14px sans-serif',
-        fillColor: Cesium.Color.WHITE,
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 2,
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        pixelOffset: new Cesium.Cartesian2(0, -10)
+        outlineWidth: 3
       }
     });
     
     entityRef.current = entity;
     
-    // Simple one-step flight to avoid rendering issues
+    // Very simple camera movement with minimal options
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(
         selectedLocation.x,
         selectedLocation.y,
-        1000000.0
+        500000.0
       ),
-      duration: 3.0,
+      duration: 2.0,
       complete: function() {
         console.log('Fly complete in Cesium, triggering callback');
         if (options.onComplete) {
-          options.onComplete();
+          setTimeout(options.onComplete, 500);
         }
       }
     });
@@ -64,7 +54,7 @@ export const flyToLocation = (
     console.error('Error during flight animation:', error);
     // Still trigger the completion callback even if there's an error
     if (options.onComplete) {
-      options.onComplete();
+      setTimeout(options.onComplete, 0);
     }
   }
 };

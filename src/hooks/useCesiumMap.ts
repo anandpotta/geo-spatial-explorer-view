@@ -34,19 +34,23 @@ export const useCesiumMap = (
     }
 
     try {
-      console.log("Initializing Cesium viewer with pure CesiumJS...");
+      console.log("Initializing Cesium viewer in offline mode...");
       
       // Configure Cesium to use local assets
       (window as any).CESIUM_BASE_URL = '/';
       
-      // Make sure Ion is completely disabled
+      // Force disable Ion completely
       Cesium.Ion.defaultAccessToken = '';
+      Cesium.buildModuleUrl.setBaseUrl('/');
       
-      // Create the Cesium viewer with basic settings - WITHOUT using Ion
+      // Disable all credit display to prevent any network requests
+      Cesium.CreditDisplay.cesiumCredit = new Cesium.Credit('');
+      
+      // Create the Cesium viewer with minimal settings to avoid network requests
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
         geocoder: false,
         homeButton: false,
-        sceneModePicker: true,
+        sceneModePicker: false,
         baseLayerPicker: false,
         navigationHelpButton: false,
         animation: false,
@@ -55,17 +59,26 @@ export const useCesiumMap = (
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
+        creditContainer: document.createElement('div'), // Hide credits
+        imageryProvider: false as any, // Force no imagery provider
+        terrainProvider: undefined,
         requestRenderMode: true,
-        maximumRenderTimeChange: Infinity,
-        terrain: undefined,
-        skyBox: false,
-        skyAtmosphere: false,
+        targetFrameRate: 30,
       });
-
-      // Add a simple blue color as the base layer
-      viewer.scene.globe.baseColor = Cesium.Color.BLUE;
       
-      // Set up a simple view without imagery to avoid image loading errors
+      // Disable all features that might cause network requests
+      viewer.scene.globe.enableLighting = false;
+      viewer.scene.skyAtmosphere.show = false;
+      viewer.scene.fog.enabled = false;
+      viewer.scene.sun.show = false;
+      viewer.scene.moon.show = false;
+      viewer.scene.skyBox.show = false;
+      
+      // Set background color
+      viewer.scene.backgroundColor = Cesium.Color.BLACK;
+      viewer.scene.globe.baseColor = Cesium.Color.DARKBLUE;
+      
+      // Set up a simple view
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
         orientation: {
@@ -81,7 +94,7 @@ export const useCesiumMap = (
       // Save the viewer reference
       viewerRef.current = viewer;
       
-      console.log("Cesium map initialized with space view");
+      console.log("Cesium map initialized in offline mode");
       setIsInitialized(true);
       setIsLoadingMap(false);
       
