@@ -4,9 +4,6 @@ import * as Cesium from 'cesium';
 import { API_CONFIG } from '@/config/api-config';
 import { toast } from '@/components/ui/use-toast';
 
-// Do not set the Ion token globally here, we'll handle it differently
-// to avoid the 401 errors
-
 interface UseCesiumMapResult {
   viewerRef: React.MutableRefObject<Cesium.Viewer | null>;
   entityRef: React.MutableRefObject<Cesium.Entity | null>;
@@ -41,10 +38,12 @@ export const useCesiumMap = (
       
       // Configure Cesium to use local assets
       (window as any).CESIUM_BASE_URL = '/';
-
-      // Create the Cesium viewer with basic settings - WITH FALLBACK OPTIONS
-      // This ensures we get at least a basic globe without requiring Ion services
-      const viewer = new Cesium.Viewer(cesiumContainer.current!, {
+      
+      // Disable Ion completely
+      Cesium.Ion.defaultAccessToken = '';
+      
+      // Create the Cesium viewer with basic settings - WITHOUT using Ion
+      const viewer = new Cesium.Viewer(cesiumContainer.current, {
         geocoder: false,
         homeButton: false,
         sceneModePicker: true,
@@ -56,19 +55,23 @@ export const useCesiumMap = (
         vrButton: false,
         infoBox: false,
         selectionIndicator: false,
-        requestRenderMode: false, // Render continuously
-        maximumRenderTimeChange: Infinity, // Force rendering
+        requestRenderMode: false,
+        maximumRenderTimeChange: Infinity,
+        // Disable terrain to avoid Ion requests
+        terrain: undefined,
+        skyBox: false, // Disable sky box to avoid errors with image loading
       });
       
+      // Disable depth testing for a solid color background
+      viewer.scene.globe.depthTestAgainstTerrain = false;
+      
       // Create basic globe appearance
-      viewer.scene.globe.enableLighting = true;
       viewer.scene.skyAtmosphere.show = true;
       viewer.scene.globe.showGroundAtmosphere = true;
-      viewer.scene.skyBox.show = true;
       
       // Always start with a view from deep space
       viewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(0, 0, 40000000.0),
+        destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
         orientation: {
           heading: 0.0,
           pitch: -Cesium.Math.PI_OVER_TWO,
@@ -76,21 +79,15 @@ export const useCesiumMap = (
         }
       });
       
-      // Immediately add OpenStreetMap as the base layer
-      // This ensures we have at least some imagery without needing Ion
+      // Add OpenStreetMap as the base layer
       const osmProvider = new Cesium.OpenStreetMapImageryProvider({
         url: 'https://a.tile.openstreetmap.org/'
       });
       viewer.imageryLayers.addImageryProvider(osmProvider);
       console.log("Added OpenStreetMap as base imagery layer");
       
-      // Make sure the scene is properly rendered at startup
+      // Force immediate rendering
       viewer.scene.requestRender();
-      
-      // Force a full render cycle immediately
-      setTimeout(() => {
-        viewer.scene.requestRender();
-      }, 100);
       
       // Save the viewer reference
       viewerRef.current = viewer;

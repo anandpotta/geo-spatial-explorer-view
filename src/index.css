@@ -98,16 +98,28 @@
 
   body {
     @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
   }
 }
 
 /* Cesium specific styles */
 .cesium-viewer-cesiumWidgetContainer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .cesium-viewer-toolbar {
@@ -116,14 +128,27 @@
 }
 
 .cesium-widget canvas {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+.cesium-widget, .cesium-viewer {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* Leaflet specific styles */
 .leaflet-container {
-  height: 100%;
-  width: 100%;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Map container fixes */
+.map-wrapper, .map-container {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* Custom Map UI */

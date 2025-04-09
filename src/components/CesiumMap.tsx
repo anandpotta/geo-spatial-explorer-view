@@ -50,10 +50,14 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
   }, [selectedLocation, onFlyComplete, mapError, isFlying, isInitialized, viewerRef, entityRef]);
   
   return (
-    <>
+    <div className="w-full h-full relative">
       <CesiumMapLoading isLoading={isLoadingMap} mapError={mapError} />
-      <div ref={cesiumContainer} className="w-full h-full" />
-    </>
+      <div 
+        ref={cesiumContainer} 
+        className="w-full h-full"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+    </div>
   );
 };
 
