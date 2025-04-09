@@ -42,6 +42,11 @@ export const useCesiumMap = (
       // Disable Ion completely
       Cesium.Ion.defaultAccessToken = '';
       
+      // Create the imagery provider directly
+      const osmProvider = new Cesium.OpenStreetMapImageryProvider({
+        url: 'https://a.tile.openstreetmap.org/'
+      });
+      
       // Create the Cesium viewer with basic settings - WITHOUT using Ion
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
         geocoder: false,
@@ -57,15 +62,13 @@ export const useCesiumMap = (
         selectionIndicator: false,
         requestRenderMode: false,
         maximumRenderTimeChange: Infinity,
-        // Disable terrain to avoid Ion requests
         terrain: undefined,
-        imageryProvider: new Cesium.OpenStreetMapImageryProvider({
-          url: 'https://a.tile.openstreetmap.org/'
-        }),
-        // Use simple blue globe rendering to avoid image loading issues
         skyBox: undefined,
         skyAtmosphere: new Cesium.SkyAtmosphere(),
       });
+      
+      // Set the imagery provider after viewer creation
+      viewer.imageryLayers.addImageryProvider(osmProvider);
       
       // Disable depth testing for a solid color background
       viewer.scene.globe.depthTestAgainstTerrain = false;
