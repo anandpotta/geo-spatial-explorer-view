@@ -22,12 +22,12 @@ const MapContent = ({
   onLocationSelect 
 }: MapContentProps) => {
   return (
-    <div className="flex-1 relative">
+    <div className="flex-1 relative w-full h-full overflow-hidden">
       {/* The actual search component positioned absolutely on top of the map */}
       <LocationSearch onLocationSelect={onLocationSelect} />
       
-      {/* Map container with fixed dimensions */}
-      <div className="relative mx-auto" style={{ width: '1000px', height: '1000px' }}>
+      {/* Map container with responsive dimensions */}
+      <div className="relative w-full h-full">
         <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
           <CesiumMap 
             selectedLocation={selectedLocation}

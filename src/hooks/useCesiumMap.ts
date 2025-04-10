@@ -78,17 +78,9 @@ export const useCesiumMap = (
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
       viewer.scene.globe.baseColor = Cesium.Color.DARKBLUE;
       
-      // Add a starry background
-      viewer.scene.skyBox = new Cesium.SkyBox({
-        sources: {
-          positiveX: '/assets/starfield/starfield_px.png',
-          negativeX: '/assets/starfield/starfield_nx.png',
-          positiveY: '/assets/starfield/starfield_py.png',
-          negativeY: '/assets/starfield/starfield_ny.png',
-          positiveZ: '/assets/starfield/starfield_pz.png',
-          negativeZ: '/assets/starfield/starfield_nz.png',
-        }
-      });
+      // Removing the starry background to fix decoding error
+      // Instead of loading external images, we'll just set a dark background
+      viewer.scene.skyBox.show = false;
       
       // Set up initial view from space
       viewer.camera.setView({
