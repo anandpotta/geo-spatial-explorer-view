@@ -59,7 +59,6 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
-        // Remove the incorrect imageryProvider property
         requestRenderMode: true,
         targetFrameRate: 30,
       });
@@ -69,7 +68,7 @@ export const useCesiumMap = (
       
       // Disable all features that might cause network requests
       viewer.scene.globe.enableLighting = false;
-      viewer.scene.skyAtmosphere.show = false;
+      viewer.scene.skyAtmosphere.show = true; // Keep atmosphere for better visuals
       viewer.scene.fog.enabled = false;
       viewer.scene.sun.show = false;
       viewer.scene.moon.show = false;
@@ -79,7 +78,19 @@ export const useCesiumMap = (
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
       viewer.scene.globe.baseColor = Cesium.Color.DARKBLUE;
       
-      // Set up a simple view
+      // Add a starry background
+      viewer.scene.skyBox = new Cesium.SkyBox({
+        sources: {
+          positiveX: '/assets/starfield/starfield_px.png',
+          negativeX: '/assets/starfield/starfield_nx.png',
+          positiveY: '/assets/starfield/starfield_py.png',
+          negativeY: '/assets/starfield/starfield_ny.png',
+          positiveZ: '/assets/starfield/starfield_pz.png',
+          negativeZ: '/assets/starfield/starfield_nz.png',
+        }
+      });
+      
+      // Set up initial view from space
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
         orientation: {

@@ -10,9 +10,15 @@ interface CesiumMapProps {
   selectedLocation?: Location;
   onMapReady?: () => void;
   onFlyComplete?: () => void;
+  cinematicFlight?: boolean;
 }
 
-const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapProps) => {
+const CesiumMap = ({ 
+  selectedLocation, 
+  onMapReady, 
+  onFlyComplete, 
+  cinematicFlight = true 
+}: CesiumMapProps) => {
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const [isFlying, setIsFlying] = useState(false);
   
@@ -37,17 +43,20 @@ const CesiumMap = ({ selectedLocation, onMapReady, onFlyComplete }: CesiumMapPro
     }
     
     setIsFlying(true);
+    console.log("Starting cinematic flight to location:", selectedLocation.label);
     
-    // Use the extracted flight animation function
+    // Use the enhanced flight animation function
     flyToLocation(viewer, selectedLocation, entityRef, {
+      cinematic: cinematicFlight,
       onComplete: () => {
+        console.log("Flight complete, transitioning to map view");
         setIsFlying(false);
         if (onFlyComplete) {
           onFlyComplete();
         }
       }
     });
-  }, [selectedLocation, onFlyComplete, mapError, isFlying, isInitialized, viewerRef, entityRef]);
+  }, [selectedLocation, onFlyComplete, mapError, isFlying, isInitialized, viewerRef, entityRef, cinematicFlight]);
   
   return (
     <div className="w-full h-full relative">

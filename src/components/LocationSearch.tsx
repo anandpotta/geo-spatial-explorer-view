@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { Location, searchLocations } from '@/utils/geo-utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, X } from 'lucide-react';
+import { Loader2, Search, X, Navigation } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;
@@ -15,6 +16,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
@@ -37,8 +39,17 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     console.log('Location selected in search component:', location);
     setSelectedLocation(location);
     setQuery(location.label);
-    onLocationSelect(location);
     setShowResults(false);
+    
+    // Add toast notification
+    toast({
+      title: "Starting navigation",
+      description: `Traveling to ${location.label}`,
+      duration: 3000,
+    });
+    
+    // Trigger the location selection
+    onLocationSelect(location);
   };
 
   const handleClear = () => {
@@ -53,9 +64,30 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     if (selectedLocation) {
       console.log('Submitting selected location:', selectedLocation);
       onLocationSelect(selectedLocation);
+      
+      toast({
+        title: "Starting navigation",
+        description: `Traveling to ${selectedLocation.label}`,
+        duration: 3000,
+      });
     } else if (results.length > 0) {
       console.log('Submitting first result:', results[0]);
       handleSelect(results[0]);
+    } else if (query.length >= 3) {
+      // If no results but query is valid, show loading and start search
+      setIsLoading(true);
+      searchLocations(query).then(locations => {
+        setIsLoading(false);
+        if (locations.length > 0) {
+          handleSelect(locations[0]);
+        } else {
+          toast({
+            title: "No locations found",
+            description: "Try entering a more specific address",
+            variant: "destructive"
+          });
+        }
+      });
     }
   };
 
@@ -66,7 +98,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           <div className="relative flex-1">
             <Input
               type="text"
-              placeholder="Search for a building address..."
+              placeholder="Enter address to navigate from space..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pr-8 pl-10"
@@ -83,7 +115,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             )}
           </div>
           <Button type="submit" size="icon" variant="default">
-            {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Search size={18} />}
+            {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
           </Button>
         </div>
         

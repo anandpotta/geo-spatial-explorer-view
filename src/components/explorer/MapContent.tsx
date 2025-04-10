@@ -33,6 +33,7 @@ const MapContent = ({
             selectedLocation={selectedLocation}
             onMapReady={onMapReady}
             onFlyComplete={onFlyComplete}
+            cinematicFlight={true}
           />
         </div>
         
