@@ -52,6 +52,7 @@ export const useCesiumMap = (
       const terrainProvider = new Cesium.EllipsoidTerrainProvider();
       
       // Create viewer with absolutely minimal configuration
+      // Remove unsupported properties like imageryProvider from constructor
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
         terrainProvider: terrainProvider,
         baseLayerPicker: false,
@@ -68,9 +69,7 @@ export const useCesiumMap = (
         creditContainer: document.createElement('div'), // Hide credits
         requestRenderMode: true, // Only render when needed
         maximumRenderTimeChange: Infinity, // Don't render based on time change
-        // Completely disable any imagery providers
-        imageryProvider: undefined,
-        // Disable shadows and lighting
+        // Disable shadows - this is supported
         shadows: false
       });
       
