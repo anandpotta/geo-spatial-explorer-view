@@ -5,12 +5,12 @@ import * as Cesium from 'cesium';
  * Creates minimal viewer options for offline Cesium usage
  */
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
-  // Create a simple grid imagery provider with proper parameters
+  // Create a simple grid imagery provider with more visible parameters
   const gridImageryProvider = new Cesium.GridImageryProvider({
-    cells: 2,
-    color: Cesium.Color.BLUE,
-    glowColor: Cesium.Color.BLUE.withAlpha(0.1),
-    backgroundColor: Cesium.Color.BLACK
+    cells: 4,
+    color: Cesium.Color.CORNFLOWERBLUE,
+    glowColor: Cesium.Color.WHITE.withAlpha(0.2),
+    backgroundColor: Cesium.Color.DARKBLUE.withAlpha(0.7)
   });
 
   return {
@@ -54,11 +54,12 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
     // 1. Configure globe appearance 
     if (viewer.scene && viewer.scene.globe) {
       const globe = viewer.scene.globe;
-      // Disable all globe features that might request data
+      // Make the globe more visible with enhanced appearance
       globe.enableLighting = false;
       globe.showWaterEffect = false;
       globe.showGroundAtmosphere = false;
-      globe.baseColor = Cesium.Color.BLUE.withAlpha(0.7); // Simple blue globe
+      globe.baseColor = Cesium.Color.CORNFLOWERBLUE.withAlpha(0.8); // Clearer blue globe
+      globe.translucency.enabled = false;
       
       // Disable terrain
       globe.depthTestAgainstTerrain = false;
@@ -69,6 +70,7 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
     
     // 2. Disable all automatic asset loading features - with safety checks
     if (viewer.scene) {
+      // Disable atmospheric effects which might cause errors
       if (viewer.scene.skyAtmosphere) {
         viewer.scene.skyAtmosphere.show = false;
       }
@@ -89,34 +91,37 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
         viewer.scene.skyBox.show = false;
       }
       
-      // 3. Set background color
-      viewer.scene.backgroundColor = Cesium.Color.BLACK;
-      
-      // 4. Use type assertion to access private properties safely
-      try {
-        if (viewer.scene.globe) {
-          // Access private properties using type assertion
-          const globeAny = viewer.scene.globe as any;
-          if (globeAny && globeAny._surface && globeAny._surface._tileProvider) {
-            if (globeAny._surface._tileProvider._debug) {
-              globeAny._surface._tileProvider._debug.wireframe = true;
-            }
-          }
-        }
-      } catch (e) {
-        console.log('Could not access internal globe properties, continuing anyway');
+      // Disable post processing that might rely on web requests
+      if (viewer.scene.postProcessStages) {
+        viewer.scene.postProcessStages.enabled = false;
       }
+      
+      // Set background color
+      viewer.scene.backgroundColor = Cesium.Color.BLACK;
+
+      // Disable sun/moon lighting calculations which may trigger network requests
+      if ((viewer.scene as any)._environmentState) {
+        (viewer.scene as any)._environmentState.isSunVisible = false;
+        (viewer.scene as any)._environmentState.isMoonVisible = false;
+      }
+      
+      // Force immediate rendering
+      viewer.scene.requestRender();
     }
     
-    // 5. Force the globe to be visible
+    // 3. Force the globe to be visible
     if (viewer.scene && viewer.scene.globe) {
       viewer.scene.globe.show = true;
     }
 
-    // 6. Make sure we're in 3D mode
+    // 4. Make sure we're in 3D mode
     if (viewer.scene) {
       viewer.scene.mode = Cesium.SceneMode.SCENE3D;
     }
+    
+    // 5. Disable frame rate throttling to ensure continuous rendering
+    viewer.targetFrameRate = 60;
+    viewer.useDefaultRenderLoop = true;
   } catch (e) {
     console.error('Error configuring offline viewer:', e);
   }

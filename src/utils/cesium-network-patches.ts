@@ -7,6 +7,49 @@ import * as Cesium from 'cesium';
  */
 export function patchCesiumToPreventNetworkRequests() {
   try {
+    // Block IAU2006XysData which is causing the errors
+    if ((Cesium as any).Iau2006XysData) {
+      const xysData = (Cesium as any).Iau2006XysData;
+      xysData.prototype.preload = function() {
+        return Promise.resolve();
+      };
+      
+      // Return dummy data instead of making network requests
+      xysData.prototype.computeXysRadians = function() {
+        return {
+          x: 0,
+          y: 0,
+          s: 0
+        };
+      };
+    }
+    
+    // Block Transforms class methods that trigger IAU2006XysData loading
+    if ((Cesium as any).Transforms) {
+      const transforms = (Cesium as any).Transforms;
+      const origComputeIcrfToFixedMatrix = transforms.computeIcrfToFixedMatrix;
+      
+      transforms.computeIcrfToFixedMatrix = function(date, result) {
+        // Return identity matrix to avoid errors
+        if (!result) {
+          result = new Cesium.Matrix3();
+        }
+        Cesium.Matrix3.clone(Cesium.Matrix3.IDENTITY, result);
+        return result;
+      };
+      
+      const origComputeFixedToIcrfMatrix = transforms.computeFixedToIcrfMatrix;
+      
+      transforms.computeFixedToIcrfMatrix = function(date, result) {
+        // Return identity matrix to avoid errors
+        if (!result) {
+          result = new Cesium.Matrix3();
+        }
+        Cesium.Matrix3.clone(Cesium.Matrix3.IDENTITY, result);
+        return result;
+      };
+    }
+    
     // 1. Patch Resource to prevent network requests
     if (Cesium.Resource) {
       const originalFetch = Cesium.Resource.prototype.fetch;
