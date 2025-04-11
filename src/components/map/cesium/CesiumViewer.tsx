@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -15,7 +14,6 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const [canvasVisible, setCanvasVisible] = useState(false);
   const forceRenderCount = useRef(0);
-  const globeImageryLoadedRef = useRef(false);
   const renderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use the Cesium map hook
@@ -30,56 +28,47 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       onMapReady();
     }
     
-    // Set a more aggressive rendering schedule to ensure the globe appears
+    // Set a more conservative rendering schedule to ensure the globe appears
+    // without causing reference errors
     if (renderIntervalRef.current) {
       clearInterval(renderIntervalRef.current);
+      renderIntervalRef.current = null;
     }
     
-    renderIntervalRef.current = setInterval(() => {
-      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-        viewerRef.current.resize(); // Force resize
-        viewerRef.current.scene.requestRender();
-        console.log("Scheduled render to ensure globe visibility");
-        
-        // Ensure globe is visible with increasingly vibrant color
-        if (viewerRef.current.scene && viewerRef.current.scene.globe) {
-          viewerRef.current.scene.globe.show = true;
-          
-          // Set increasingly vibrant colors over time
-          const colorIntensity = Math.min(1.0, 0.6 + (forceRenderCount.current * 0.05));
-          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, colorIntensity, 1.0, 1.0);
-          
-          if (!globeImageryLoadedRef.current) {
-            globeImageryLoadedRef.current = true;
+    // Use setTimeout instead of interval to reduce the risk of errors
+    const scheduleRender = (iteration: number, maxIterations: number = 20) => {
+      if (iteration >= maxIterations) return;
+      
+      setTimeout(() => {
+        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+          try {
+            // Force resize
+            viewerRef.current.resize();
+            viewerRef.current.scene.requestRender();
+            
+            // Ensure globe is visible with proper color
+            if (viewerRef.current.scene && viewerRef.current.scene.globe) {
+              viewerRef.current.scene.globe.show = true;
+              const colorIntensity = Math.min(1.0, 0.6 + (iteration * 0.02));
+              viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, colorIntensity, 1.0, 1.0);
+            }
+            
+            // Schedule next render if viewer still exists
+            if (!viewerRef.current.isDestroyed()) {
+              scheduleRender(iteration + 1, maxIterations);
+            }
+          } catch (e) {
+            console.error("Error during scheduled render:", e);
           }
         }
-        
-        // Make the canvas visible after ensuring renders
-        setCanvasVisible(true);
-        
-        // Stop after sufficient renders
-        forceRenderCount.current++;
-        if (forceRenderCount.current > 40) { // Increased render cycles
-          clearInterval(renderIntervalRef.current);
-          renderIntervalRef.current = null;
-        }
-      } else {
-        clearInterval(renderIntervalRef.current);
-        renderIntervalRef.current = null;
-      }
-    }, 75); // More frequent renders
+      }, 75 + (iteration * 25)); // Gradually increase delay
+    };
+    
+    // Start the render scheduling with iteration 0
+    scheduleRender(0);
     
     // Immediately make canvas visible when initialized
     setCanvasVisible(true);
-    
-    // Create a fallback timer to ensure we don't get stuck if rendering fails
-    setTimeout(() => {
-      if (renderIntervalRef.current) {
-        clearInterval(renderIntervalRef.current);
-        renderIntervalRef.current = null;
-      }
-      setCanvasVisible(true);
-    }, 2000);
   });
 
   // Clean up render interval on unmount
@@ -97,15 +86,13 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     if (viewerRef.current && onViewerReady && isInitialized) {
       onViewerReady(viewerRef.current);
       
-      // Force immediate renders when viewer is available
-      for (let i = 0; i < 30; i++) { // Increased render cycles
-        viewerRef.current.scene.requestRender();
-      }
-      
-      // Set initial camera view again to ensure proper positioning
-      if (viewerRef.current.scene && viewerRef.current.scene.globe) {
-        viewerRef.current.scene.globe.show = true;
-        viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
+      // Force immediate renders when viewer is available - but keep it minimal
+      try {
+        for (let i = 0; i < 3; i++) {
+          viewerRef.current.scene.requestRender();
+        }
+      } catch (e) {
+        console.error("Error requesting renders:", e);
       }
     }
   }, [isInitialized, onViewerReady]);
@@ -121,16 +108,18 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     // Make globe visible regardless of flight status
     setCanvasVisible(true);
     
-    // Additional renders to ensure visibility
-    viewer.resize();
-    for (let i = 0; i < 10; i++) { // Increased render cycles
+    try {
+      // Additional renders to ensure visibility - keep it minimal
+      viewer.resize();
       viewer.scene.requestRender();
-    }
-    
-    // Ensure globe is visible
-    if (viewer.scene && viewer.scene.globe) {
-      viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
+      
+      // Ensure globe is visible
+      if (viewer.scene && viewer.scene.globe) {
+        viewer.scene.globe.show = true;
+        viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
+      }
+    } catch (e) {
+      console.error("Error in flight effect handler:", e);
     }
   }, [isInitialized, isFlying]);
   

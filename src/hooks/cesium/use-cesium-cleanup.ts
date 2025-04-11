@@ -11,23 +11,44 @@ export function destroyViewer(viewerRef: React.MutableRefObject<Cesium.Viewer | 
       // First clear any entities which might cause errors
       viewerRef.current.entities.removeAll();
       
-      // Safely handle skyAtmosphere before destroying viewer
-      if (viewerRef.current.scene && viewerRef.current.scene.skyAtmosphere) {
-        // Check if destroy method exists before calling it
-        if (typeof viewerRef.current.scene.skyAtmosphere.destroy === 'function') {
-          viewerRef.current.scene.skyAtmosphere.destroy();
-        } else {
-          // If no destroy method, just set to undefined
-          viewerRef.current.scene.skyAtmosphere = undefined;
-        }
+      // Stop any ongoing camera flights
+      if (viewerRef.current.camera && typeof viewerRef.current.camera.cancelFlight === 'function') {
+        viewerRef.current.camera.cancelFlight();
       }
       
-      // Safely destroy viewer
-      viewerRef.current.destroy();
+      // Disable animation to prevent ticking errors during destruction
+      if (viewerRef.current.clock) {
+        viewerRef.current.clock.shouldAnimate = false;
+        viewerRef.current.clock.onTick.removeAll();
+      }
+      
+      // Unsubscribe from all event handlers
+      if (viewerRef.current.scene) {
+        viewerRef.current.scene.preRender.removeAll();
+        viewerRef.current.scene.postRender.removeAll();
+      }
+      
+      // Reset render loop to prevent updates after destruction
+      if (viewerRef.current.scene) {
+        viewerRef.current.scene.requestRenderMode = true;
+      }
+      
+      // Destroy the viewer with a small delay to allow pending operations to complete
+      setTimeout(() => {
+        try {
+          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+            viewerRef.current.destroy();
+          }
+        } catch (e) {
+          console.error("Error in delayed viewer destruction:", e);
+        }
+        viewerRef.current = null;
+      }, 50);
     } catch (e) {
       console.error("Error destroying viewer:", e);
+      // Still ensure we null out the reference
+      viewerRef.current = null;
     }
-    viewerRef.current = null;
   }
 }
 
@@ -41,12 +62,15 @@ export function cleanupTimeouts(
 ): void {
   if (initTimeoutRef.current) {
     clearTimeout(initTimeoutRef.current);
+    initTimeoutRef.current = null;
   }
   if (renderTimeoutRef.current) {
     clearTimeout(renderTimeoutRef.current);
+    renderTimeoutRef.current = null;
   }
   if (checkRenderIntervalRef.current) {
     clearInterval(checkRenderIntervalRef.current);
+    checkRenderIntervalRef.current = null;
   }
 }
 

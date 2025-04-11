@@ -30,11 +30,6 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       // Force the globe to be visible with a bright pure blue color
       viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
       viewer.scene.globe.show = true;
-      
-      // Request renders to ensure atmosphere is visible
-      for (let i = 0; i < 30; i++) { // Increased render cycles
-        viewer.scene.requestRender();
-      }
     }
   } catch (e) {
     console.error('Error configuring atmosphere:', e);
@@ -50,40 +45,30 @@ export function configureRendering(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Remove post-processing which may rely on network resources
-    if (viewer.scene.postProcessStages && typeof viewer.scene.postProcessStages.removeAll === 'function') {
-      viewer.scene.postProcessStages.removeAll();
-    }
-    
-    // Enhanced globe visibility settings
-    if (viewer.scene.globe) {
-      // Make sure globe is shown
-      viewer.scene.globe.show = true;
+    // Only request renders if the scene is valid and not destroyed
+    if (viewer.scene && !viewer.isDestroyed()) {
+      // Set a vibrant blue color for the globe if available
+      if (viewer.scene.globe) {
+        // Make sure globe is shown
+        viewer.scene.globe.show = true;
+        viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
+      }
       
-      // Set a vibrant blue color for the globe
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
-    }
-    
-    // Force multiple render cycles to ensure the globe appears
-    for (let i = 0; i < 90; i++) { // Increased render cycles
-      viewer.scene.requestRender();
-    }
-    
-    // Schedule additional renders to ensure visibility
-    const renderIntervals = [25, 50, 100, 150, 200, 300, 400, 500, 750, 1000, 1500]; // More frequent renders
-    renderIntervals.forEach(interval => {
-      setTimeout(() => {
-        if (!viewer.isDestroyed() && viewer.scene && viewer.scene.globe) {
-          viewer.scene.globe.show = true;
-          viewer.scene.requestRender();
-          
-          // Force resize occasionally
-          if (interval % 200 === 0) {
-            viewer.forceResize();
+      // Force multiple render cycles to ensure the globe appears
+      for (let i = 0; i < 5; i++) {
+        viewer.scene.requestRender();
+      }
+      
+      // Schedule additional renders to ensure visibility with fewer intervals
+      const renderIntervals = [25, 50, 100, 200]; // Reduced intervals to minimize errors
+      renderIntervals.forEach(interval => {
+        setTimeout(() => {
+          if (!viewer.isDestroyed() && viewer.scene) {
+            viewer.scene.requestRender();
           }
-        }
-      }, interval);
-    });
+        }, interval);
+      });
+    }
   } catch (e) {
     console.error('Error configuring rendering:', e);
   }
