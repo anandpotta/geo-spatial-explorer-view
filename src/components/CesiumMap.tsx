@@ -1,5 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
+import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { Location } from '@/utils/geo-utils';
 import CesiumMapLoading from './map/CesiumMapLoading';
