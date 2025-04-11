@@ -74,22 +74,28 @@ export const useCesiumMap = (
       // Configure for offline mode
       configureOfflineViewer(viewer);
       
-      // Set initial earth view
+      // Set initial earth view - force the camera to look at Earth from space
       setDefaultCameraView(viewer);
-      
-      // Force a render cycle
-      viewer.scene.requestRender();
+
+      // Force a few render cycles to ensure the globe is visible
+      for (let i = 0; i < 3; i++) {
+        viewer.scene.requestRender();
+      }
       
       // Save the viewer reference
       viewerRef.current = viewer;
       
       console.log("Cesium map initialized in offline mode");
-      setIsInitialized(true);
-      setIsLoadingMap(false);
       
-      if (onMapReady) {
-        onMapReady();
-      }
+      // Small delay before setting isInitialized to ensure rendering has time to complete
+      setTimeout(() => {
+        setIsInitialized(true);
+        setIsLoadingMap(false);
+        
+        if (onMapReady) {
+          onMapReady();
+        }
+      }, 300);
     } catch (error) {
       console.error('Error initializing Cesium viewer:', error);
       initializationAttempts.current += 1;
@@ -118,8 +124,8 @@ export const useCesiumMap = (
   };
 
   useEffect(() => {
-    // Initialize the viewer with a delay to ensure the container is ready
-    initTimeoutRef.current = setTimeout(initializeViewer, 300);
+    // Give the container a moment to be fully rendered before initializing
+    initTimeoutRef.current = setTimeout(initializeViewer, 500);
 
     return () => {
       // Clean up on component unmount

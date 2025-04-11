@@ -25,6 +25,7 @@ const CesiumMap = ({
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const [isFlying, setIsFlying] = useState(false);
   const pendingLocationRef = useRef<Location | undefined>(selectedLocation);
+  const [viewerReady, setViewerReady] = useState(false);
   
   // Use the extracted Cesium map hook
   const { 
@@ -33,14 +34,22 @@ const CesiumMap = ({
     isLoadingMap, 
     mapError,
     isInitialized
-  } = useCesiumMap(cesiumContainer, onMapReady);
+  } = useCesiumMap(cesiumContainer, () => {
+    if (onMapReady) {
+      onMapReady();
+    }
+    // Add a small delay to ensure the globe is rendered before considering it "ready"
+    setTimeout(() => {
+      setViewerReady(true);
+    }, 500);
+  });
 
   // Pass the viewer reference to parent component when available
   useEffect(() => {
-    if (viewerRef.current && onViewerReady && isInitialized) {
+    if (viewerRef.current && onViewerReady && viewerReady) {
       onViewerReady(viewerRef.current);
     }
-  }, [viewerRef.current, onViewerReady, isInitialized]);
+  }, [viewerReady, onViewerReady]);
 
   // Store the latest selectedLocation in a ref to avoid race conditions
   useEffect(() => {
@@ -53,7 +62,7 @@ const CesiumMap = ({
     const location = pendingLocationRef.current;
     
     // Only proceed if we have all the necessary conditions met
-    if (!isInitialized || isFlying || mapError) {
+    if (!isInitialized || !viewerReady || isFlying || mapError) {
       if (!isInitialized && location) {
         console.log("Waiting for Cesium to initialize before flying...");
       }
@@ -79,7 +88,7 @@ const CesiumMap = ({
         }
       });
     }
-  }, [isInitialized, isFlying, mapError, viewerRef.current]); // Dependency on viewerRef.current to detect when it changes
+  }, [isInitialized, viewerReady, isFlying, mapError, viewerRef.current]); 
   
   return (
     <div className="w-full h-full relative">

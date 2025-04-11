@@ -7,9 +7,9 @@ import * as Cesium from 'cesium';
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
   // Create a simple grid imagery provider with more visible parameters
   const gridImageryProvider = new Cesium.GridImageryProvider({
-    cells: 4,
-    color: Cesium.Color.CORNFLOWERBLUE,
-    glowColor: Cesium.Color.WHITE.withAlpha(0.2),
+    cells: 2,  // Smaller cells for more visible grid
+    color: Cesium.Color.CORNFLOWERBLUE.withAlpha(0.8),
+    glowColor: Cesium.Color.WHITE.withAlpha(0.4),
     backgroundColor: Cesium.Color.DARKBLUE.withAlpha(0.7)
   });
 
@@ -29,9 +29,9 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     // Use the correct property name for the imagery provider based on Cesium's type definitions
     baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-    requestRenderMode: true,
+    requestRenderMode: false,  // Changed to false to ensure continuous rendering initially
     maximumRenderTimeChange: Infinity,
-    targetFrameRate: 30, // Increased for smoother rotation
+    targetFrameRate: 60, // Increased for smoother rotation
     shadows: false,
     skyBox: false as any, // Disable skybox
     skyAtmosphere: false as any, // Disable atmosphere
@@ -58,7 +58,7 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
       globe.enableLighting = false;
       globe.showWaterEffect = false;
       globe.showGroundAtmosphere = false;
-      globe.baseColor = Cesium.Color.CORNFLOWERBLUE.withAlpha(0.8); // Clearer blue globe
+      globe.baseColor = Cesium.Color.CORNFLOWERBLUE.withAlpha(0.9); // More opaque blue globe
       globe.translucency.enabled = false;
       
       // Disable terrain
@@ -109,8 +109,10 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
         (viewer.scene as any)._environmentState.isMoonVisible = false;
       }
       
-      // Force immediate rendering
-      viewer.scene.requestRender();
+      // Force multiple render cycles to ensure the globe appears
+      for (let i = 0; i < 5; i++) {
+        viewer.scene.requestRender();
+      }
     }
     
     // 3. Force the globe to be visible
@@ -121,6 +123,15 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
     // 4. Make sure we're in 3D mode
     if (viewer.scene) {
       viewer.scene.mode = Cesium.SceneMode.SCENE3D;
+      
+      // Add camera control to prevent issues with initial view
+      if (viewer.scene.screenSpaceCameraController) {
+        viewer.scene.screenSpaceCameraController.enableRotate = true;
+        viewer.scene.screenSpaceCameraController.enableTranslate = true;
+        viewer.scene.screenSpaceCameraController.enableZoom = true;
+        viewer.scene.screenSpaceCameraController.enableTilt = true;
+        viewer.scene.screenSpaceCameraController.enableLook = true;
+      }
     }
     
     // 5. Disable frame rate throttling to ensure continuous rendering

@@ -21,7 +21,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   try {
     // Position the camera far out in space to see the full Earth globe
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000.0), // Increased height for better view
+      destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0), // Adjusted height for better initial view
       orientation: {
         heading: 0.0,
         pitch: -Cesium.Math.PI_OVER_TWO,
@@ -31,9 +31,12 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     
     // Turn on Earth rotation for more dynamic view
     viewer.clock.shouldAnimate = true;
+    viewer.clock.multiplier = 1000; // Make rotation more visible
     
-    // Force immediate rendering
-    viewer.scene.requestRender();
+    // Force immediate rendering with multiple render requests
+    for (let i = 0; i < 3; i++) {
+      viewer.scene.requestRender();
+    }
     console.log('Default Earth view from space set successfully');
   } catch (error) {
     console.error('Failed to set default camera view:', error);
