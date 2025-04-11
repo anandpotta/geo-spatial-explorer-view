@@ -40,21 +40,13 @@ export const useCesiumMap = (
       // This must happen BEFORE creating any Cesium objects
       Cesium.Ion.defaultAccessToken = '';
       
-      // Override default resource fetching behavior
-      // @ts-ignore - Access private API to completely disable network
-      Cesium.Resource.supportsImageBitmapOptions = false;
-      
-      // @ts-ignore - Disable asset loading
-      Cesium._deprecationWarning = function() {};
-      
-      // Disable automatic imagery provider creation
-      // @ts-ignore - Access internal property
-      Cesium.createWorldImagery = function() {
+      // Instead of trying to modify Cesium objects directly, provide our own implementations
+      // that don't require network requests
+      const createEmptyImageryProvider = function() {
         return undefined;
       };
       
-      // @ts-ignore - Access internal property 
-      Cesium.createWorldTerrain = function() {
+      const createSimpleTerrainProvider = function() {
         return new Cesium.EllipsoidTerrainProvider();
       };
       
@@ -105,20 +97,20 @@ export const useCesiumMap = (
       viewer.scene.globe.depthTestAgainstTerrain = false;
       
       // Disable tile loading verification
-      // @ts-ignore - Access private API
-      if (viewer.scene.globe._surface) {
-        // @ts-ignore - Access private API
-        viewer.scene.globe._surface._tileProvider._debug.wireframe = true;
+      if (viewer.scene.globe._surface && viewer.scene.globe._surface._tileProvider) {
+        // Try to access these properties safely without modifying the objects
+        try {
+          const tileProvider = viewer.scene.globe._surface._tileProvider;
+          if (tileProvider._debug) {
+            tileProvider._debug.wireframe = true;
+          }
+        } catch (e) {
+          console.log('Could not set wireframe debug mode, continuing anyway');
+        }
       }
       
       // Set background color
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
-      
-      // More aggressive disabling of network requests
-      // @ts-ignore - Access internal API
-      Cesium.RequestScheduler.maximumRequestsPerServer = 0;
-      // @ts-ignore - Access internal API
-      Cesium.RequestScheduler.throttleRequests = true;
       
       // Set initial view 
       viewer.camera.setView({

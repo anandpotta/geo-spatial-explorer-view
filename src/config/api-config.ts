@@ -21,5 +21,16 @@ export const API_CONFIG = {
   FORCE_OFFLINE: true,
   
   // Maximum attempts to make any requests
-  MAX_REQUEST_ATTEMPTS: 0
+  MAX_REQUEST_ATTEMPTS: 0,
+  
+  // Flags for asset loading
+  ASSETS_ENABLED: false,
+  
+  // Feature flags
+  FEATURES: {
+    IMAGERY: false,
+    TERRAIN: false,
+    ATMOSPHERE: false,
+    LIGHTING: false
+  }
 };
