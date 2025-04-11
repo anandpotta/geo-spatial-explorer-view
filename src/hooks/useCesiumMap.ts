@@ -39,11 +39,9 @@ export const useCesiumMap = (
       // Disable Ion authentication completely
       Cesium.Ion.defaultAccessToken = '';
       
-      // Force disable Ion services
-      const originalIonCreateResource = Cesium.Ion.createResource;
-      Cesium.Ion.createResource = function() {
-        throw new Error('Ion is disabled in offline mode');
-      };
+      // Set asset loading to offline mode
+      // Instead of trying to override Ion.createResource which doesn't exist in type definitions
+      // We'll set up the viewer to avoid any network requests entirely
       
       // Configure Cesium to use local assets
       (window as any).CESIUM_BASE_URL = '/';
