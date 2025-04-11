@@ -31,6 +31,7 @@ const MapContent = ({
             onMapReady={onMapReady}
             onFlyComplete={onFlyComplete}
             cinematicFlight={true}
+            key="cesium-map-instance" // Force re-render on issues
           />
         </div>
         

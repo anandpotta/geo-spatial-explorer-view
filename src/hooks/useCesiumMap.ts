@@ -36,11 +36,17 @@ export const useCesiumMap = (
     try {
       console.log("Initializing Cesium viewer in offline mode...");
       
+      // Disable Ion authentication completely
+      Cesium.Ion.defaultAccessToken = '';
+      
+      // Force disable Ion services
+      const originalIonCreateResource = Cesium.Ion.createResource;
+      Cesium.Ion.createResource = function() {
+        throw new Error('Ion is disabled in offline mode');
+      };
+      
       // Configure Cesium to use local assets
       (window as any).CESIUM_BASE_URL = '/';
-      
-      // Force disable Ion completely
-      Cesium.Ion.defaultAccessToken = '';
       
       // Disable all credit display to prevent any network requests
       Cesium.CreditDisplay.cesiumCredit = new Cesium.Credit('');
@@ -61,6 +67,14 @@ export const useCesiumMap = (
         creditContainer: document.createElement('div'), // Hide credits
         requestRenderMode: true,
         targetFrameRate: 30,
+        contextOptions: {
+          webgl: {
+            alpha: true,
+            antialias: true,
+            preserveDrawingBuffer: true,
+            failIfMajorPerformanceCaveat: false
+          }
+        }
       });
       
       // Disable all imagery provider to prevent network requests
@@ -72,15 +86,13 @@ export const useCesiumMap = (
       viewer.scene.fog.enabled = false;
       viewer.scene.sun.show = false;
       viewer.scene.moon.show = false;
+      
+      // Explicitly disable the skyBox to prevent image loading errors
       viewer.scene.skyBox.show = false;
       
       // Set background color
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
       viewer.scene.globe.baseColor = Cesium.Color.DARKBLUE;
-      
-      // Removing the starry background to fix decoding error
-      // Instead of loading external images, we'll just set a dark background
-      viewer.scene.skyBox.show = false;
       
       // Set up initial view from space
       viewer.camera.setView({
