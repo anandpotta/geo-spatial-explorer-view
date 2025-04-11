@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import { API_CONFIG } from '@/config/api-config';
@@ -66,9 +65,7 @@ export const useCesiumMap = (
         skyBox: false as any, // Disable skybox
         skyAtmosphere: false as any, // Disable atmosphere
         globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
-        scene3DOnly: true, // Optimize for 3D only
-        // Critical: Explicitly create empty imagery layer collection
-        imageryLayers: new Cesium.ImageryLayerCollection()
+        scene3DOnly: true // Optimize for 3D only
       };
       
       // 4. Create viewer with minimal options
