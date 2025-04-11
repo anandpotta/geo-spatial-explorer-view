@@ -191,20 +191,3 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
   // 6. Set background color
   viewer.scene.backgroundColor = Cesium.Color.BLACK;
 }
-
-/**
- * Sets an initial default view for the Cesium camera
- */
-export function setDefaultCameraView(viewer: Cesium.Viewer): void {
-  viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
-    orientation: {
-      heading: 0.0,
-      pitch: -Cesium.Math.PI_OVER_TWO,
-      roll: 0.0
-    }
-  });
-  
-  // Force immediate rendering
-  viewer.scene.requestRender();
-}

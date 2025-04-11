@@ -6,9 +6,9 @@ import { toast } from '@/components/ui/use-toast';
 import { 
   patchCesiumToPreventNetworkRequests, 
   createOfflineCesiumViewerOptions,
-  configureOfflineViewer,
-  setDefaultCameraView
+  configureOfflineViewer
 } from '@/utils/cesium-patch-utils';
+import { setDefaultCameraView } from '@/utils/cesium-camera-utils';
 
 interface UseCesiumMapResult {
   viewerRef: React.MutableRefObject<Cesium.Viewer | null>;
