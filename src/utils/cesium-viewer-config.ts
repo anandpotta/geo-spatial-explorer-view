@@ -1,16 +1,15 @@
-
 import * as Cesium from 'cesium';
 
 /**
  * Creates minimal viewer options for offline Cesium usage
  */
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
-  // Create a simple grid imagery provider with more visible parameters
+  // Create a simple grid imagery provider with earth-like appearance
   const gridImageryProvider = new Cesium.GridImageryProvider({
-    cells: 2,  // Smaller cells for more visible grid
-    color: Cesium.Color.CORNFLOWERBLUE, // Full opacity
-    glowColor: Cesium.Color.WHITE.withAlpha(0.6),
-    backgroundColor: Cesium.Color.DARKBLUE.withAlpha(0.85)
+    cells: 8,  // Larger cells for continent-like appearance
+    color: Cesium.Color.WHITE.withAlpha(0.1), // Subtle grid lines
+    glowColor: Cesium.Color.WHITE.withAlpha(0.2),
+    backgroundColor: Cesium.Color.TRANSPARENT // Allow globe color to show through
   });
 
   return {
@@ -26,19 +25,21 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     infoBox: false,
     selectionIndicator: false,
     creditContainer: document.createElement('div'), // Hide credits
-    // Use the correct property name for the imagery provider based on Cesium's type definitions
+    // Use the correct property name for the imagery provider
     baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
-    terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+    terrainProvider: new Cesium.EllipsoidTerrainProvider({
+      ellipsoid: Cesium.Ellipsoid.WGS84
+    }),
     requestRenderMode: false,  // Always render continuously 
     maximumRenderTimeChange: Infinity,
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
-    skyBox: false as any, // Disable skybox
-    skyAtmosphere: false as any, // Disable atmosphere
+    skyBox: false, // We'll handle atmosphere separately
+    skyAtmosphere: true, // Enable atmosphere for Earth glow
     globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
-    orderIndependentTranslucency: false // Disable OIT for better performance
+    orderIndependentTranslucency: true // Enable for better atmospheric effects
   };
 }
 
@@ -55,89 +56,70 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
     // 1. Configure globe appearance 
     if (viewer.scene && viewer.scene.globe) {
       const globe = viewer.scene.globe;
-      // Make the globe more visible with enhanced appearance
-      globe.enableLighting = false;
-      globe.showWaterEffect = false;
-      globe.showGroundAtmosphere = false;
-      globe.baseColor = Cesium.Color.BLUE; // Fully opaque blue globe
-      globe.translucency.enabled = false;
       
-      // Disable terrain
+      // Make the globe blue like Earth
+      globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0);
+      
+      // Enable lighting for better 3D appearance
+      globe.enableLighting = true;
+      
+      // Disable water effects which require network resources
+      globe.showWaterEffect = false;
+      
+      // Enable atmosphere glow
+      globe.showGroundAtmosphere = true;
+      
+      // Disable terrain depth testing which can interfere with flat globe
       globe.depthTestAgainstTerrain = false;
       
       // Make sure the globe is visible
       globe.show = true;
       
-      // Explicitly configure globe to be solid and visible
+      // Explicitly configure globe to be solid
       (globe as any)._surface._tileProvider._debug.wireframe = false;
+      
+      // Set a dark space background
+      viewer.scene.backgroundColor = Cesium.Color.BLACK;
     }
     
-    // 2. Disable all automatic asset loading features - with safety checks
+    // 2. Configure atmosphere for the Earth glow effect
+    if (viewer.scene && viewer.scene.skyAtmosphere) {
+      viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.skyAtmosphere.hueShift = 0.0;
+      viewer.scene.skyAtmosphere.saturationShift = 0.1;
+      viewer.scene.skyAtmosphere.brightnessShift = 0.8;
+    }
+    
+    // 3. Disable celestial bodies but keep atmosphere
     if (viewer.scene) {
-      // Disable atmospheric effects which might cause errors
-      if (viewer.scene.skyAtmosphere) {
-        viewer.scene.skyAtmosphere.show = false;
-      }
-      
+      // Disable fog which can interfere with visibility
       if (viewer.scene.fog) {
         viewer.scene.fog.enabled = false;
       }
       
+      // Hide moon
       if (viewer.scene.moon) {
         viewer.scene.moon.show = false;
       }
       
+      // Hide sun but keep its lighting effects
       if (viewer.scene.sun) {
         viewer.scene.sun.show = false;
       }
       
+      // Hide skybox stars
       if (viewer.scene.skyBox) {
         viewer.scene.skyBox.show = false;
       }
       
-      // Fix: Use hasOwnProperty check before accessing 'enabled' property on postProcessStages
+      // Remove post-processing which may rely on network resources
       if (viewer.scene.postProcessStages) {
-        // Check if the appropriate method exists instead of directly setting the property
         if (typeof viewer.scene.postProcessStages.removeAll === 'function') {
           viewer.scene.postProcessStages.removeAll();
         }
       }
       
-      // Set background color
-      viewer.scene.backgroundColor = Cesium.Color.BLACK;
-
-      // Disable sun/moon lighting calculations which may trigger network requests
-      if ((viewer.scene as any)._environmentState) {
-        (viewer.scene as any)._environmentState.isSunVisible = false;
-        (viewer.scene as any)._environmentState.isMoonVisible = false;
-      }
-      
-      // Force multiple render cycles to ensure the globe appears
-      for (let i = 0; i < 15; i++) {  // Increased render requests
-        viewer.scene.requestRender();
-      }
-    }
-    
-    // 3. Force the globe to be visible with additional setup
-    if (viewer.scene && viewer.scene.globe) {
-      viewer.scene.globe.show = true;
-      
-      // Request extra renders after a short delay
-      setTimeout(() => {
-        if (viewer && !viewer.isDestroyed()) {
-          for (let i = 0; i < 10; i++) {
-            viewer.scene.requestRender();
-          }
-          console.log('Additional renders requested to ensure globe visibility');
-        }
-      }, 200);
-    }
-
-    // 4. Make sure we're in 3D mode
-    if (viewer.scene) {
-      viewer.scene.mode = Cesium.SceneMode.SCENE3D;
-      
-      // Add camera control to prevent issues with initial view
+      // Set camera control options for better navigation
       if (viewer.scene.screenSpaceCameraController) {
         viewer.scene.screenSpaceCameraController.enableRotate = true;
         viewer.scene.screenSpaceCameraController.enableTranslate = true;
@@ -145,13 +127,14 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
         viewer.scene.screenSpaceCameraController.enableTilt = true;
         viewer.scene.screenSpaceCameraController.enableLook = true;
       }
+      
+      // Force multiple render cycles to ensure the globe appears
+      for (let i = 0; i < 15; i++) {
+        viewer.scene.requestRender();
+      }
     }
     
-    // 5. Disable frame rate throttling to ensure continuous rendering
-    viewer.targetFrameRate = 60;
-    viewer.useDefaultRenderLoop = true;
-    
-    // 6. Ensure canvas has proper dimensions
+    // 4. Ensure canvas has proper dimensions
     if (viewer.canvas) {
       viewer.canvas.style.width = '100%';
       viewer.canvas.style.height = '100%';
@@ -161,6 +144,11 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
         if (viewer && !viewer.isDestroyed()) {
           viewer.resize();
           console.log('Viewer resized to ensure proper canvas dimensions');
+          
+          // Force additional renders after resize
+          for (let i = 0; i < 10; i++) {
+            viewer.scene.requestRender();
+          }
         }
       }, 100);
     }

@@ -19,45 +19,60 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   }
 
   try {
-    // Position the camera to see a good view of Earth
+    // Position the camera to show North America view similar to the reference image
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0, 0, 15000000.0), // Closer view than before
+      destination: Cesium.Cartesian3.fromDegrees(-115.0, 35.0, 20000000.0), // Position over North America
       orientation: {
         heading: 0.0,
-        pitch: -0.5, // Less extreme angle to see more of the globe
+        pitch: -0.5,  // Look down at the globe
         roll: 0.0
       }
     });
     
-    // Ensure Earth rotation is on but slower for stability
+    // Ensure Earth rotation is on but at a reasonable speed
     viewer.clock.shouldAnimate = true;
-    viewer.clock.multiplier = 500; // Slower rotation
+    viewer.clock.multiplier = 100; // Slower rotation speed
     
-    // Force immediate rendering with more render requests
-    for (let i = 0; i < 10; i++) {
-      viewer.scene.requestRender();
-    }
-
+    // Set the scene background to black for space effect
+    viewer.scene.backgroundColor = Cesium.Color.BLACK;
+    
     // Make sure globe is visible with explicit settings
     if (viewer.scene && viewer.scene.globe) {
       viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(0.95); // More visible blue color
       
-      // Disable things that might interfere with visibility
-      viewer.scene.globe.enableLighting = false;
+      // Configure globe appearance to match the reference image
+      viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0); // Solid blue base color
+      
+      // Add atmosphere effect for the blue glow on the edges
+      if (viewer.scene.skyAtmosphere) {
+        viewer.scene.skyAtmosphere.show = true;
+        viewer.scene.skyAtmosphere.hueShift = 0.0;
+        viewer.scene.skyAtmosphere.saturationShift = 0.1;
+        viewer.scene.skyAtmosphere.brightnessShift = 0.8;
+      }
+      
+      // Disable fog which can interfere with visibility
       viewer.scene.fog.enabled = false;
+      
+      // Enhanced lighting for better terrain visibility
+      viewer.scene.globe.enableLighting = true;
     }
     
-    console.log('Default Earth view set successfully at height: 15000000.0m');
+    console.log('Default North America view set successfully at height: 20000000.0m');
     
-    // Schedule additional renders after a delay
+    // Force additional renders to ensure the globe appears
+    for (let i = 0; i < 20; i++) {
+      viewer.scene.requestRender();
+    }
+    
+    // Schedule additional renders after a delay to ensure the globe is fully loaded
     setTimeout(() => {
       if (viewer && !viewer.isDestroyed()) {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
           viewer.scene.requestRender();
         }
       }
-    }, 300);
+    }, 500);
   } catch (error) {
     console.error('Failed to set default camera view:', error);
   }
