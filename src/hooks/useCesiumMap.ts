@@ -49,7 +49,7 @@ export const useCesiumMap = (
       // Create the viewer without any imagery or external services
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
         terrainProvider: terrainProvider,
-        imageryProvider: false,
+        // Fix: Remove imageryProvider option as it's not in the type definition
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
