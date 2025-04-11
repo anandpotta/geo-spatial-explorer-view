@@ -91,9 +91,13 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
         viewer.scene.skyBox.show = false;
       }
       
-      // Disable post processing that might rely on web requests
+      // Fix: Use hasOwnProperty check before accessing 'enabled' property on postProcessStages
       if (viewer.scene.postProcessStages) {
-        viewer.scene.postProcessStages.enabled = false;
+        // Check if the appropriate method exists instead of directly setting the property
+        if (typeof viewer.scene.postProcessStages.removeAll === 'function') {
+          viewer.scene.postProcessStages.removeAll();
+        }
+        // Or alternatively, just leave it alone and don't try to disable it
       }
       
       // Set background color
