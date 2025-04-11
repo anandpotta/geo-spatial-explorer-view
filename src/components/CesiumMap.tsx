@@ -26,6 +26,7 @@ const CesiumMap = ({
   const [isFlying, setIsFlying] = useState(false);
   const pendingLocationRef = useRef<Location | undefined>(selectedLocation);
   const [viewerReady, setViewerReady] = useState(false);
+  const [canvasVisible, setCanvasVisible] = useState(false);
   const forceRenderCount = useRef(0);
   
   // Use the extracted Cesium map hook
@@ -43,17 +44,30 @@ const CesiumMap = ({
     // Add a delay to ensure the globe is rendered before considering it "ready"
     setTimeout(() => {
       setViewerReady(true);
-    }, 800);
+      
+      // After a short delay, make sure the canvas is visible
+      setTimeout(() => {
+        setCanvasVisible(true);
+        
+        // Force additional renders to ensure the globe appears
+        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+          for (let i = 0; i < 10; i++) {
+            viewerRef.current.scene.requestRender();
+          }
+          console.log('Canvas made visible, additional renders requested');
+        }
+      }, 400);
+    }, 600);
     
     // Force additional renders to ensure the globe appears
     const renderInterval = setInterval(() => {
-      if (viewerRef.current && !viewerRef.current.isDestroyed() && forceRenderCount.current < 10) {
+      if (viewerRef.current && !viewerRef.current.isDestroyed() && forceRenderCount.current < 20) {
         viewerRef.current.scene.requestRender();
         forceRenderCount.current++;
       } else {
         clearInterval(renderInterval);
       }
-    }, 200);
+    }, 150);
   });
 
   // Pass the viewer reference to parent component when available
@@ -114,7 +128,7 @@ const CesiumMap = ({
       <CesiumMapLoading isLoading={isLoadingMap} mapError={mapError} />
       <div 
         ref={cesiumContainer} 
-        className="w-full h-full cesium-container"
+        className={`w-full h-full cesium-container ${canvasVisible ? 'opacity-100' : 'opacity-0'}`}
         style={{ 
           width: '100%', 
           height: '100%', 
@@ -124,7 +138,8 @@ const CesiumMap = ({
           zIndex: 1,
           visibility: isLoadingMap ? 'hidden' : 'visible',
           minHeight: '400px',
-          display: 'block'
+          display: 'block',
+          transition: 'opacity 0.5s ease-in-out'
         }}
         data-cesium-container="true"
       />

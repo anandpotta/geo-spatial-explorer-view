@@ -19,31 +19,45 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   }
 
   try {
-    // Position the camera far out in space to see the full Earth globe
+    // Position the camera to see a good view of Earth
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0), // Full Earth view
+      destination: Cesium.Cartesian3.fromDegrees(0, 0, 15000000.0), // Closer view than before
       orientation: {
         heading: 0.0,
-        pitch: -Cesium.Math.PI_OVER_TWO,
+        pitch: -0.5, // Less extreme angle to see more of the globe
         roll: 0.0
       }
     });
     
-    // Ensure Earth rotation is on
+    // Ensure Earth rotation is on but slower for stability
     viewer.clock.shouldAnimate = true;
-    viewer.clock.multiplier = 1000; // Make rotation more visible
+    viewer.clock.multiplier = 500; // Slower rotation
     
-    // Force immediate rendering with multiple render requests
-    for (let i = 0; i < 5; i++) {
+    // Force immediate rendering with more render requests
+    for (let i = 0; i < 10; i++) {
       viewer.scene.requestRender();
     }
 
-    // Make sure globe is visible
+    // Make sure globe is visible with explicit settings
     if (viewer.scene && viewer.scene.globe) {
       viewer.scene.globe.show = true;
+      viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(0.95); // More visible blue color
+      
+      // Disable things that might interfere with visibility
+      viewer.scene.globe.enableLighting = false;
+      viewer.scene.fog.enabled = false;
     }
     
-    console.log('Default Earth view from space set successfully');
+    console.log('Default Earth view set successfully at height: 15000000.0m');
+    
+    // Schedule additional renders after a delay
+    setTimeout(() => {
+      if (viewer && !viewer.isDestroyed()) {
+        for (let i = 0; i < 5; i++) {
+          viewer.scene.requestRender();
+        }
+      }
+    }, 300);
   } catch (error) {
     console.error('Failed to set default camera view:', error);
   }

@@ -30,6 +30,7 @@ export const useCesiumMap = (
   const initializationAttempts = useRef(0);
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const checkRenderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Clean up function to destroy the viewer safely
   const destroyViewer = () => {
@@ -42,6 +43,14 @@ export const useCesiumMap = (
       }
       viewerRef.current = null;
     }
+  };
+
+  // Check if we have a valid container and viewer
+  const checkViewerStatus = () => {
+    if (viewerRef.current && !viewerRef.current.isDestroyed() && cesiumContainer.current) {
+      return true;
+    }
+    return false;
   };
 
   // Initialize the Cesium viewer
@@ -84,7 +93,7 @@ export const useCesiumMap = (
       setDefaultCameraView(viewer);
 
       // Force multiple render cycles to ensure the globe is visible
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 15; i++) {
         viewer.scene.requestRender();
       }
       
@@ -93,7 +102,48 @@ export const useCesiumMap = (
       
       console.log("Cesium map initialized in offline mode");
       
-      // Ensure globe is rendered before signaling ready
+      // Start checking if the canvas is properly rendered
+      if (checkRenderIntervalRef.current) {
+        clearInterval(checkRenderIntervalRef.current);
+      }
+      
+      checkRenderIntervalRef.current = setInterval(() => {
+        if (viewer && !viewer.isDestroyed()) {
+          const canvas = viewer.canvas;
+          if (canvas && canvas.width > 0 && canvas.height > 0) {
+            console.log(`Canvas rendering confirmed: ${canvas.width}x${canvas.height}`);
+            
+            // Clear the interval once we've confirmed rendering
+            if (checkRenderIntervalRef.current) {
+              clearInterval(checkRenderIntervalRef.current);
+            }
+            
+            // Force resize to ensure dimensions are correct
+            viewer.resize();
+            
+            // Force additional renders
+            for (let i = 0; i < 10; i++) {
+              viewer.scene.requestRender();
+            }
+            
+            // Set initialized state after a delay
+            setTimeout(() => {
+              setIsInitialized(true);
+              setIsLoadingMap(false);
+              
+              if (onMapReady) {
+                onMapReady();
+              }
+            }, 300);
+          }
+        } else {
+          if (checkRenderIntervalRef.current) {
+            clearInterval(checkRenderIntervalRef.current);
+          }
+        }
+      }, 100);
+      
+      // Ensure globe is rendered before signaling ready with a fallback timeout
       if (renderTimeoutRef.current) {
         clearTimeout(renderTimeoutRef.current);
       }
@@ -101,18 +151,21 @@ export const useCesiumMap = (
       renderTimeoutRef.current = setTimeout(() => {
         // Force additional renders after a delay
         if (viewer && !viewer.isDestroyed()) {
-          for (let i = 0; i < 5; i++) {
+          for (let i = 0; i < 10; i++) {
             viewer.scene.requestRender();
           }
           
-          setIsInitialized(true);
-          setIsLoadingMap(false);
-          
-          if (onMapReady) {
-            onMapReady();
+          // Even if we didn't detect canvas rendering, proceed after timeout
+          if (!isInitialized) {
+            setIsInitialized(true);
+            setIsLoadingMap(false);
+            
+            if (onMapReady) {
+              onMapReady();
+            }
           }
         }
-      }, 500);
+      }, 1500); // Longer timeout as fallback
     } catch (error) {
       console.error('Error initializing Cesium viewer:', error);
       initializationAttempts.current += 1;
@@ -151,6 +204,9 @@ export const useCesiumMap = (
       }
       if (renderTimeoutRef.current) {
         clearTimeout(renderTimeoutRef.current);
+      }
+      if (checkRenderIntervalRef.current) {
+        clearInterval(checkRenderIntervalRef.current);
       }
       destroyViewer();
     };
