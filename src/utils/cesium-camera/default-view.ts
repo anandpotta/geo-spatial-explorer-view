@@ -13,17 +13,17 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   try {
     // Position the camera to show a more prominent Earth view - closer to Earth
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 12000000.0), // Closer view of Earth
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 10000000.0), // Closer view of Earth
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-30.0), // Slightly higher angle for better perspective
+        pitch: Cesium.Math.toRadians(-45.0), // Steeper angle for better Earth visibility
         roll: 0.0
       }
     });
     
-    // Ensure Earth rotation is on but at a moderate speed
-    viewer.clock.shouldAnimate = true;
-    viewer.clock.multiplier = 3; // Moderate rotation speed
+    // Set more aggressive camera movement settings
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000; // Don't let users zoom in too close
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 25000000; // Don't let users zoom out too far
     
     // Set a pure black background for better contrast
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
@@ -33,17 +33,14 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       // Make sure the globe is visible
       viewer.scene.globe.show = true;
       
-      // Configure globe appearance with vibrant blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // More vibrant blue
+      // Configure globe appearance with more vibrant blue color
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0); // More vibrant blue
       
       // Enhanced atmosphere effect
       viewer.scene.globe.showGroundAtmosphere = true;
       
       // Enhanced lighting for better terrain visibility
       viewer.scene.globe.enableLighting = true;
-      
-      // Disable terrain depth testing to improve visibility
-      viewer.scene.globe.depthTestAgainstTerrain = false;
     }
     
     // Disable fog for clearer view
@@ -53,14 +50,10 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     
     console.log('Enhanced Earth view set with improved colors and visibility');
     
-    // Force immediate renders - more renders for better visibility
-    for (let i = 0; i < 120; i++) { // Doubled render requests
+    // Force immediate renders
+    for (let i = 0; i < 5; i++) {
       viewer.scene.requestRender();
     }
-    
-    // Request additional renders to ensure the globe appears properly
-    requestProgressiveRenders(viewer);
-    
   } catch (error) {
     console.error('Failed to set default camera view:', error);
   }
@@ -73,10 +66,9 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
   if (!viewer || viewer.isDestroyed()) return;
   
   // Schedule additional renders at strategic intervals for progressive loading
-  // More frequent renders at the beginning with more intervals
-  const renderIntervals = [10, 20, 30, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000]; // More intervals
+  const renderIntervals = [10, 50, 100, 250, 500, 1000];
   
-  renderIntervals.forEach((interval, index) => {
+  renderIntervals.forEach((interval) => {
     setTimeout(() => {
       if (viewer && !viewer.isDestroyed()) {
         console.log(`Rendering globe at ${interval}ms interval`);
@@ -84,16 +76,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
         
         // Force globe visibility at each interval
         if (viewer.scene && viewer.scene.globe) {
-          // Make globe visible
           viewer.scene.globe.show = true;
-          
-          // Refresh globe appearance at different stages with increasing intensity
-          const intensity = Math.min(0.7 + (index * 0.02), 1.0); // Gradually increase intensity
-          viewer.scene.globe.baseColor = new Cesium.Color(0.0, intensity, 1.0, 1.0);
-          
-          if (index % 3 === 0) { // Every third interval - force resize
-            viewer.forceResize();
-          }
         }
       }
     }, interval);

@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -28,76 +29,42 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       onMapReady();
     }
     
-    // Set a more conservative rendering schedule to ensure the globe appears
-    // without causing reference errors
-    if (renderIntervalRef.current) {
-      clearInterval(renderIntervalRef.current);
-      renderIntervalRef.current = null;
-    }
-    
-    // Use setTimeout instead of interval to reduce the risk of errors
-    const scheduleRender = (iteration: number, maxIterations: number = 20) => {
-      if (iteration >= maxIterations) return;
-      
-      setTimeout(() => {
-        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-          try {
-            // Force resize
-            viewerRef.current.resize();
-            viewerRef.current.scene.requestRender();
-            
-            // Ensure globe is visible with proper color
-            if (viewerRef.current.scene && viewerRef.current.scene.globe) {
-              viewerRef.current.scene.globe.show = true;
-              const colorIntensity = Math.min(1.0, 0.6 + (iteration * 0.02));
-              viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, colorIntensity, 1.0, 1.0);
-            }
-            
-            // Schedule next render if viewer still exists
-            if (!viewerRef.current.isDestroyed()) {
-              scheduleRender(iteration + 1, maxIterations);
-            }
-          } catch (e) {
-            console.error("Error during scheduled render:", e);
-          }
-        }
-      }, 75 + (iteration * 25)); // Gradually increase delay
-    };
-    
-    // Start the render scheduling with iteration 0
-    scheduleRender(0);
-    
     // Immediately make canvas visible when initialized
     setCanvasVisible(true);
-  });
-
-  // Clean up render interval on unmount
-  useEffect(() => {
-    return () => {
-      if (renderIntervalRef.current) {
-        clearInterval(renderIntervalRef.current);
-        renderIntervalRef.current = null;
+    
+    // Force a few renders to ensure the globe appears
+    if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+      try {
+        viewerRef.current.resize();
+        
+        // Schedule limited renders with increasing delay
+        const renderTimes = [10, 50, 100, 300, 600];
+        renderTimes.forEach((time, index) => {
+          setTimeout(() => {
+            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+              viewerRef.current.scene.requestRender();
+              
+              // Ensure globe is visible
+              if (viewerRef.current.scene && viewerRef.current.scene.globe) {
+                viewerRef.current.scene.globe.show = true;
+              }
+            }
+          }, time);
+        });
+      } catch (e) {
+        console.error("Error scheduling renders:", e);
       }
-    };
-  }, []);
+    }
+  });
 
   // Pass the viewer reference to parent component when available
   useEffect(() => {
     if (viewerRef.current && onViewerReady && isInitialized) {
       onViewerReady(viewerRef.current);
-      
-      // Force immediate renders when viewer is available - but keep it minimal
-      try {
-        for (let i = 0; i < 3; i++) {
-          viewerRef.current.scene.requestRender();
-        }
-      } catch (e) {
-        console.error("Error requesting renders:", e);
-      }
     }
   }, [isInitialized, onViewerReady]);
 
-  // Additional rendering for better globe visibility during and after flights
+  // Additional rendering for better globe visibility
   useEffect(() => {
     const viewer = viewerRef.current;
     
@@ -109,19 +76,21 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     setCanvasVisible(true);
     
     try {
-      // Additional renders to ensure visibility - keep it minimal
-      viewer.resize();
+      // Request a single render after flight status changes
       viewer.scene.requestRender();
-      
-      // Ensure globe is visible
-      if (viewer.scene && viewer.scene.globe) {
-        viewer.scene.globe.show = true;
-        viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
-      }
     } catch (e) {
       console.error("Error in flight effect handler:", e);
     }
   }, [isInitialized, isFlying]);
+  
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (renderIntervalRef.current) {
+        clearInterval(renderIntervalRef.current);
+      }
+    };
+  }, []);
   
   return (
     <>
@@ -136,11 +105,11 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           top: 0, 
           left: 0,
           zIndex: 1,
-          visibility: 'visible', // Always keep visible for better renders
+          visibility: 'visible', // Always keep the container visible
           minHeight: '400px',
           display: 'block',
           opacity: canvasVisible ? 1 : 0,
-          transition: 'opacity 0.3s ease-in-out' // Faster transition
+          transition: 'opacity 0.3s ease-in-out'
         }}
         data-cesium-container="true"
       />

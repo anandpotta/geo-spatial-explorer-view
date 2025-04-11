@@ -5,17 +5,17 @@ import * as Cesium from 'cesium';
  * Creates minimal viewer options for offline Cesium usage
  */
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
-  // Create a grid imagery provider with earth-like appearance
+  // Create a more visible grid imagery provider
   const gridImageryProvider = new Cesium.GridImageryProvider({
-    cells: 4,  // Smaller cells for more visible grid
-    color: Cesium.Color.WHITE.withAlpha(0.3), // More visible grid lines
-    glowColor: Cesium.Color.WHITE.withAlpha(0.4),
-    backgroundColor: Cesium.Color.BLUE.withAlpha(0.5) // More intense blue tint for better visibility
+    cells: 8,  // Smaller cells for more visible grid
+    color: Cesium.Color.WHITE.withAlpha(0.4), // More visible grid lines
+    glowColor: Cesium.Color.WHITE.withAlpha(0.5),
+    backgroundColor: Cesium.Color.BLUE.withAlpha(0.6) // More intense blue tint for better visibility
   });
 
   // Create the globe instance with proper configuration
   const globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84);
-  globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0); // Brighter and more intense blue for visibility
+  globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0); // Brighter blue for visibility
   globe.showGroundAtmosphere = true;
   globe.enableLighting = true;
   globe.translucency.enabled = false; // Disable translucency which could cause visibility issues
@@ -57,11 +57,8 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
         alpha: false, // Disable transparency for better performance
         antialias: true, // Enable antialiasing for smoother edges
         powerPreference: 'high-performance',
-        failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
-        preserveDrawingBuffer: true // Preserve drawing buffer for screenshots
+        failIfMajorPerformanceCaveat: false // Don't fail on performance issues
       }
-    },
-    // Force immediate rendering
-    useBrowserRecommendedResolution: false
+    }
   };
 }

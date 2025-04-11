@@ -18,7 +18,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       if ('hueShift' in viewer.scene.skyAtmosphere) {
         viewer.scene.skyAtmosphere.hueShift = 0.0;
         viewer.scene.skyAtmosphere.saturationShift = 0.1;
-        viewer.scene.skyAtmosphere.brightnessShift = 1.0; // Increased brightness
+        viewer.scene.skyAtmosphere.brightnessShift = 1.0;
       }
     }
     
@@ -28,7 +28,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       viewer.scene.globe.showGroundAtmosphere = true;
       
       // Force the globe to be visible with a bright pure blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
       viewer.scene.globe.show = true;
     }
   } catch (e) {
@@ -45,29 +45,22 @@ export function configureRendering(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Only request renders if the scene is valid and not destroyed
-    if (viewer.scene && !viewer.isDestroyed()) {
-      // Set a vibrant blue color for the globe if available
-      if (viewer.scene.globe) {
-        // Make sure globe is shown
-        viewer.scene.globe.show = true;
-        viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
-      }
-      
-      // Force multiple render cycles to ensure the globe appears
-      for (let i = 0; i < 5; i++) {
-        viewer.scene.requestRender();
-      }
-      
-      // Schedule additional renders to ensure visibility with fewer intervals
-      const renderIntervals = [25, 50, 100, 200]; // Reduced intervals to minimize errors
-      renderIntervals.forEach(interval => {
-        setTimeout(() => {
-          if (!viewer.isDestroyed() && viewer.scene) {
-            viewer.scene.requestRender();
-          }
-        }, interval);
-      });
+    // Set a vibrant blue color for the globe if available
+    if (viewer.scene.globe) {
+      // Make sure globe is shown
+      viewer.scene.globe.show = true;
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+    }
+    
+    // Force multiple render cycles to ensure the globe appears
+    for (let i = 0; i < 3; i++) {
+      viewer.scene.requestRender();
+    }
+    
+    // Set up globe automatic rotation if not already rotating
+    if (!viewer.clock.shouldAnimate) {
+      viewer.clock.shouldAnimate = true;
+      viewer.clock.multiplier = 2.0; // Speed of rotation
     }
   } catch (e) {
     console.error('Error configuring rendering:', e);
