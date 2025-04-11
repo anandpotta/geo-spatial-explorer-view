@@ -20,34 +20,17 @@ export function destroyViewer(viewerRef: React.MutableRefObject<Cesium.Viewer | 
       if (viewerRef.current.clock) {
         viewerRef.current.clock.shouldAnimate = false;
         
-        // Remove event listeners safely - Cesium Event doesn't have removeAll
-        if (viewerRef.current.clock.onTick) {
-          // Use the appropriate method based on what's available
-          if (typeof viewerRef.current.clock.onTick.removeAllListeners === 'function') {
-            viewerRef.current.clock.onTick.removeAllListeners();
-          } else {
-            // Alternative approach if removeAllListeners doesn't exist
-            // Just note that we can't remove listeners but continue with destruction
-            console.log("Note: Could not remove clock tick listeners - continuing with viewer destruction");
-          }
-        }
+        // Note: Cesium Event doesn't have a direct way to remove all listeners
+        // We'll just note this and continue with destruction
+        console.log("Note: Continuing with viewer destruction - clock events will be cleaned up when the viewer is destroyed");
       }
       
       // Unsubscribe from all event handlers safely
       if (viewerRef.current.scene) {
-        // Handle preRender event
-        if (viewerRef.current.scene.preRender) {
-          if (typeof viewerRef.current.scene.preRender.removeAllListeners === 'function') {
-            viewerRef.current.scene.preRender.removeAllListeners();
-          }
-        }
-        
-        // Handle postRender event
-        if (viewerRef.current.scene.postRender) {
-          if (typeof viewerRef.current.scene.postRender.removeAllListeners === 'function') {
-            viewerRef.current.scene.postRender.removeAllListeners();
-          }
-        }
+        // Handle scene events
+        // Note: Cesium doesn't provide a direct way to remove all event listeners
+        // These will be cleaned up when the viewer is destroyed
+        console.log("Note: Scene events will be cleaned up when the viewer is destroyed");
         
         // Reset render loop to prevent updates after destruction
         viewerRef.current.scene.requestRenderMode = true;
