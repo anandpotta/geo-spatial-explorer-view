@@ -36,60 +36,15 @@ export const useCesiumMap = (
     try {
       console.log("Initializing Cesium viewer in offline mode...");
       
-      // CRITICAL: Completely block all network requests from Cesium
-      // Override the Resource constructor to prevent network requests
-      const originalResource = Cesium.Resource;
-      
-      try {
-        // Create a mock Resource class that prevents all network requests
-        const MockResource: any = function(options: any) {
-          this._url = '';
-          this.request = function() {
-            return Promise.reject(new Error('Network requests are disabled'));
-          };
-          this.fetchImage = function() {
-            return Promise.reject(new Error('Network requests are disabled'));
-          };
-          this.fetchJson = function() {
-            return Promise.reject(new Error('Network requests are disabled'));
-          };
-          this.fetchXML = function() {
-            return Promise.reject(new Error('Network requests are disabled'));
-          };
-          this.fetchText = function() {
-            return Promise.reject(new Error('Network requests are disabled'));
-          };
-          this.fetchArrayBuffer = function() {
-            return Promise.reject(new Error('Network requests are disabled'));
-          };
-          this.fetchBlob = function() {
-            return Promise.reject(new Error('Network requests are disabled'));
-          };
-        };
-        
-        MockResource.prototype.clone = function() {
-          return new MockResource({});
-        };
-        
-        // Temporarily replace Resource with our mock version
-        // @ts-ignore - This is a deliberate override
-        Cesium.Resource = MockResource;
-      } catch (e) {
-        console.log('Could not override Resource class, continuing anyway');
-      }
-      
-      // CRITICAL: Disable Ion and all network requests
+      // We need to disable the whole system before Cesium even tries to initialize
+      // 1. Disable Ion completely
       Cesium.Ion.defaultAccessToken = '';
       
-      // Create an empty imagery provider
-      const emptyImageryProvider = undefined;
+      // 2. Use our own patching mechanism to prevent network requests
+      patchCesiumToPreventNetworkRequests();
       
-      // Create simple terrain provider
-      const terrainProvider = new Cesium.EllipsoidTerrainProvider();
-      
-      // Create viewer with absolutely minimal configuration
-      const viewerOptions = {
-        terrainProvider: terrainProvider,
+      // 3. Create viewer with absolutely minimal configuration
+      const viewerOptions: Cesium.Viewer.ConstructorOptions = {
         baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
@@ -102,61 +57,65 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
-        imageryProvider: emptyImageryProvider,
+        imageryProvider: false as any, // Explicitly disable default imagery provider
+        terrainProvider: new Cesium.EllipsoidTerrainProvider(),
         requestRenderMode: true,
         maximumRenderTimeChange: Infinity,
         targetFrameRate: 10, // Lower frame rate to reduce resources
-        shadows: false
+        shadows: false,
+        skyBox: false as any, // Disable skybox
+        skyAtmosphere: false as any, // Disable atmosphere
+        globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
+        scene3DOnly: true // Optimize for 3D only
       };
       
-      // Create viewer with minimal options
+      // 4. Create viewer with minimal options
       const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
       
-      // CRITICAL: Immediately remove ALL imagery layers
-      viewer.imageryLayers.removeAll();
+      // 5. Clean up any auto-created layers
+      if (viewer.imageryLayers) {
+        viewer.imageryLayers.removeAll();
+      }
       
-      // Disable all automatic asset loading
-      viewer.scene.globe.enableLighting = false;
-      viewer.scene.globe.showWaterEffect = false;
+      // 6. Configure globe appearance 
+      const globe = viewer.scene.globe;
       
-      // Blue globe appearance
-      viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(0.7);
+      // Disable all globe features that might request data
+      globe.enableLighting = false;
+      globe.showWaterEffect = false;
+      globe.showGroundAtmosphere = false;
+      globe.baseColor = Cesium.Color.BLUE.withAlpha(0.7); // Simple blue globe
       
-      // Disable atmospheric features
+      // 7. Disable all automatic asset loading features
       viewer.scene.skyAtmosphere.show = false;
       viewer.scene.fog.enabled = false;
       viewer.scene.moon.show = false;
       viewer.scene.sun.show = false;
-      viewer.scene.skyBox.show = false;
       
-      // Disable terrain
+      if (viewer.scene.skyBox) {
+        viewer.scene.skyBox.show = false;
+      }
+      
+      // 8. Disable terrain
       viewer.scene.globe.depthTestAgainstTerrain = false;
       
-      // Handle internal properties safely using type casting and try/catch
+      // 9. Use type assertion to access private properties safely
       try {
-        // Use type assertion to access private properties
-        const globe = viewer.scene.globe as any;
-        if (globe._surface && globe._surface._tileProvider && globe._surface._tileProvider._debug) {
-          globe._surface._tileProvider._debug.wireframe = true;
+        // Access private properties using type assertion
+        const globeAny = globe as any;
+        if (globeAny._surface && globeAny._surface._tileProvider) {
+          if (globeAny._surface._tileProvider._debug) {
+            globeAny._surface._tileProvider._debug.wireframe = true;
+          }
         }
       } catch (e) {
         console.log('Could not access internal globe properties, continuing anyway');
       }
       
-      // Disable request scheduler if it exists
-      try {
-        if ((Cesium as any).RequestScheduler) {
-          (Cesium as any).RequestScheduler.requestsByServer = {};
-          (Cesium as any).RequestScheduler.maximumRequestsPerServer = 0;
-        }
-      } catch (e) {
-        console.log('Could not disable request scheduler, continuing anyway');
-      }
-      
-      // Set background color
+      // 10. Set background color
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
       
-      // Set initial view 
+      // 11. Set initial view
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
         orientation: {
@@ -166,19 +125,11 @@ export const useCesiumMap = (
         }
       });
       
-      // Force immediate rendering
+      // 12. Force immediate rendering
       viewer.scene.requestRender();
       
-      // Save the viewer reference
+      // 13. Save the viewer reference
       viewerRef.current = viewer;
-      
-      // Reset the Resource class back to original
-      try {
-        // @ts-ignore - This is a deliberate override
-        Cesium.Resource = originalResource;
-      } catch (e) {
-        console.log('Could not restore Resource class, continuing anyway');
-      }
       
       console.log("Cesium map initialized in offline mode");
       setIsInitialized(true);
@@ -217,3 +168,108 @@ export const useCesiumMap = (
     isInitialized
   };
 };
+
+// Helper function to patch Cesium methods that make network requests
+function patchCesiumToPreventNetworkRequests() {
+  try {
+    // 1. Patch Resource to prevent network requests
+    if (Cesium.Resource) {
+      const originalFetch = Cesium.Resource.prototype.fetch;
+      Cesium.Resource.prototype.fetch = function(...args: any[]) {
+        console.log('Blocked network request to:', this._url);
+        return Promise.reject(new Error('Network requests are disabled'));
+      };
+      
+      const originalFetchImage = Cesium.Resource.prototype.fetchImage;
+      Cesium.Resource.prototype.fetchImage = function(...args: any[]) {
+        console.log('Blocked image request to:', this._url);
+        return Promise.reject(new Error('Network requests are disabled'));
+      };
+      
+      const originalFetchJson = Cesium.Resource.prototype.fetchJson;
+      Cesium.Resource.prototype.fetchJson = function(...args: any[]) {
+        console.log('Blocked JSON request to:', this._url);
+        return Promise.reject(new Error('Network requests are disabled'));
+      };
+      
+      const originalFetchXML = Cesium.Resource.prototype.fetchXML;
+      Cesium.Resource.prototype.fetchXML = function(...args: any[]) {
+        console.log('Blocked XML request to:', this._url);
+        return Promise.reject(new Error('Network requests are disabled'));
+      };
+      
+      const originalFetchText = Cesium.Resource.prototype.fetchText;
+      Cesium.Resource.prototype.fetchText = function(...args: any[]) {
+        console.log('Blocked text request to:', this._url);
+        return Promise.reject(new Error('Network requests are disabled'));
+      };
+    }
+    
+    // 2. Disable RequestScheduler
+    if ((Cesium as any).RequestScheduler) {
+      try {
+        const scheduler = (Cesium as any).RequestScheduler;
+        if (scheduler.maximumRequestsPerServer) {
+          scheduler.maximumRequestsPerServer = 0;
+        }
+        if (scheduler.requestsByServer) {
+          scheduler.requestsByServer = {};
+        }
+      } catch (e) {
+        console.log('Could not disable RequestScheduler, continuing anyway');
+      }
+    }
+    
+    // 3. Patch ImageryProvider and TerrainProvider related functionality
+    try {
+      // Block IonImageryProvider
+      if (Cesium.IonImageryProvider) {
+        Cesium.IonImageryProvider.fromAssetId = function(...args: any[]) {
+          console.log('Blocked IonImageryProvider.fromAssetId');
+          return Promise.reject(new Error('Network requests are disabled'));
+        };
+      }
+      
+      // Block createWorldImagery
+      if (Cesium.createWorldImagery) {
+        Cesium.createWorldImagery = function(...args: any[]) {
+          console.log('Blocked createWorldImagery');
+          return Promise.reject(new Error('Network requests are disabled'));
+        };
+      }
+      
+      // Block ImageryLayer.fromWorldImagery
+      if (Cesium.ImageryLayer && Cesium.ImageryLayer.fromWorldImagery) {
+        Cesium.ImageryLayer.fromWorldImagery = function(...args: any[]) {
+          console.log('Blocked ImageryLayer.fromWorldImagery');
+          return null;
+        };
+      }
+    } catch (e) {
+      console.log('Could not patch imagery providers, continuing anyway');
+    }
+    
+    // 4. Block terrain-related functionality
+    try {
+      if (Cesium.CesiumTerrainProvider) {
+        Cesium.CesiumTerrainProvider.fromUrl = function(...args: any[]) {
+          console.log('Blocked CesiumTerrainProvider.fromUrl');
+          return Promise.reject(new Error('Network requests are disabled'));
+        };
+      }
+      
+      if (Cesium.createWorldTerrain) {
+        Cesium.createWorldTerrain = function(...args: any[]) {
+          console.log('Blocked createWorldTerrain');
+          return new Cesium.EllipsoidTerrainProvider();
+        };
+      }
+    } catch (e) {
+      console.log('Could not patch terrain providers, continuing anyway');
+    }
+    
+    console.log('Successfully patched Cesium to prevent network requests');
+  } catch (e) {
+    console.error('Error patching Cesium:', e);
+  }
+}

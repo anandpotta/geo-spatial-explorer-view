@@ -7,7 +7,7 @@ export interface FlightOptions {
   cinematic?: boolean;
 }
 
-// Create a simplified flight animation that won't trigger any network requests
+// Create a completely offline flight animation
 export const flyToLocation = (
   viewer: Cesium.Viewer, 
   selectedLocation: Location,
@@ -43,9 +43,9 @@ export const flyToLocation = (
     
     entityRef.current = entity;
     
-    // Skip animation and just set the camera directly
+    // Skip animation for reliable behavior
     if (!options.cinematic) {
-      // Direct camera setting without animation
+      // Directly set the camera position without animation
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(
           selectedLocation.x,
@@ -62,7 +62,7 @@ export const flyToLocation = (
         setTimeout(options.onComplete, 100);
       }
     } else {
-      // Simplified single-stage animation with minimal properties
+      // Simplified animation with minimal properties
       viewer.camera.flyTo({
         destination: Cesium.Cartesian3.fromDegrees(
           selectedLocation.x,
@@ -70,7 +70,8 @@ export const flyToLocation = (
           500000.0
         ),
         duration: 2.0,
-        complete: options.onComplete
+        complete: options.onComplete,
+        easingFunction: Cesium.EasingFunction.LINEAR_NONE // Simplest easing function
       });
     }
   } catch (error) {
