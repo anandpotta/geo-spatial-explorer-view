@@ -29,6 +29,7 @@ const CesiumMap = ({
   const [canvasVisible, setCanvasVisible] = useState(false);
   const forceRenderCount = useRef(0);
   const globeImageryLoadedRef = useRef(false);
+  const renderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use the extracted Cesium map hook
   const { 
@@ -43,44 +44,65 @@ const CesiumMap = ({
     }
     
     // Set a more aggressive rendering schedule to ensure the globe appears
-    const renderScheduler = setInterval(() => {
+    if (renderIntervalRef.current) {
+      clearInterval(renderIntervalRef.current);
+    }
+    
+    renderIntervalRef.current = setInterval(() => {
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
         viewerRef.current.resize(); // Force resize
         viewerRef.current.scene.requestRender();
         console.log("Scheduled render to ensure globe visibility");
         
-        // Ensure globe is visible
+        // Ensure globe is visible with increasingly vibrant color
         if (viewerRef.current.scene && viewerRef.current.scene.globe) {
           viewerRef.current.scene.globe.show = true;
           
           // Set increasingly vibrant colors over time
+          const colorIntensity = Math.min(0.9, 0.3 + (forceRenderCount.current * 0.05));
+          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, colorIntensity, 0.9, 1.0);
+          
           if (!globeImageryLoadedRef.current) {
-            viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.9, 1.0);
             globeImageryLoadedRef.current = true;
           }
         }
         
-        // Stop after 15 renders
+        // Stop after sufficient renders
         forceRenderCount.current++;
-        if (forceRenderCount.current > 15) {
-          clearInterval(renderScheduler);
+        if (forceRenderCount.current > 20) {
+          clearInterval(renderIntervalRef.current);
+          renderIntervalRef.current = null;
           
           // Make the canvas visible after ensuring renders
           setCanvasVisible(true);
           setViewerReady(true);
         }
       } else {
-        clearInterval(renderScheduler);
+        clearInterval(renderIntervalRef.current);
+        renderIntervalRef.current = null;
       }
-    }, 200);
+    }, 150); // More frequent renders
     
-    // Create a timer to ensure we don't get stuck if rendering fails
+    // Create a fallback timer to ensure we don't get stuck if rendering fails
     setTimeout(() => {
-      clearInterval(renderScheduler);
+      if (renderIntervalRef.current) {
+        clearInterval(renderIntervalRef.current);
+        renderIntervalRef.current = null;
+      }
       setCanvasVisible(true);
       setViewerReady(true);
     }, 3000);
   });
+
+  // Clean up render interval on unmount
+  useEffect(() => {
+    return () => {
+      if (renderIntervalRef.current) {
+        clearInterval(renderIntervalRef.current);
+        renderIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Pass the viewer reference to parent component when available
   useEffect(() => {
