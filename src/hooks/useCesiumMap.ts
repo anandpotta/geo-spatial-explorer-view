@@ -220,7 +220,7 @@ function patchCesiumToPreventNetworkRequests() {
       }
     }
     
-    // 3. Patch ImageryProvider and TerrainProvider related functionality
+    // 3. Patch IonImageryProvider and ImageryLayer related functionality
     try {
       // Block IonImageryProvider
       if (Cesium.IonImageryProvider) {
@@ -230,26 +230,24 @@ function patchCesiumToPreventNetworkRequests() {
         };
       }
       
-      // Update to use createWorldImageryAsync instead of createWorldImagery
-      if (Cesium.createWorldImageryAsync) {
-        Cesium.createWorldImageryAsync = function(...args: any[]) {
-          console.log('Blocked createWorldImageryAsync');
-          return Promise.reject(new Error('Network requests are disabled'));
-        };
+      // Patch createWorldImageryAsync by monkey-patching the prototype before it's called
+      if (Cesium.ImageryLayer) {
+        // Instead of modifying the read-only function, intercept its usage in ImageryLayer.fromWorldImagery
+        const original = Cesium.ImageryLayer.fromWorldImagery;
+        Object.defineProperty(Cesium.ImageryLayer, 'fromWorldImagery', {
+          value: function() {
+            console.log('Blocked ImageryLayer.fromWorldImagery');
+            return null;
+          },
+          writable: true
+        });
       }
       
-      // Block ImageryLayer.fromWorldImagery
-      if (Cesium.ImageryLayer && Cesium.ImageryLayer.fromWorldImagery) {
-        Cesium.ImageryLayer.fromWorldImagery = function(...args: any[]) {
-          console.log('Blocked ImageryLayer.fromWorldImagery');
-          return null;
-        };
-      }
     } catch (e) {
       console.log('Could not patch imagery providers, continuing anyway');
     }
     
-    // 4. Block terrain-related functionality - update to use createWorldTerrainAsync
+    // 4. Block terrain-related functionality - using a different approach for read-only properties
     try {
       if (Cesium.CesiumTerrainProvider) {
         Cesium.CesiumTerrainProvider.fromUrl = function(...args: any[]) {
@@ -258,10 +256,19 @@ function patchCesiumToPreventNetworkRequests() {
         };
       }
       
-      if (Cesium.createWorldTerrainAsync) {
-        Cesium.createWorldTerrainAsync = function(...args: any[]) {
-          console.log('Blocked createWorldTerrainAsync');
-          return Promise.resolve(new Cesium.EllipsoidTerrainProvider());
+      // Intercept ApproximateTerrainHeights.initialize which uses createWorldTerrainAsync
+      if ((Cesium as any).ApproximateTerrainHeights) {
+        const ath = (Cesium as any).ApproximateTerrainHeights;
+        ath.initialize = function() {
+          console.log('Blocked ApproximateTerrainHeights.initialize');
+          return Promise.resolve();
+        };
+        
+        // Pre-populate with dummy values to prevent further initialization attempts
+        ath._initialized = true;
+        ath._terrainHeights = {
+          minimumTerrainHeight: -100,
+          maximumTerrainHeight: 100
         };
       }
     } catch (e) {
