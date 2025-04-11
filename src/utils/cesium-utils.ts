@@ -10,16 +10,25 @@ export interface FlightOptions extends CameraFlightOptions {
 
 // Enhanced flyToLocation that manages both entity creation and camera movement
 export const flyToLocation = (
-  viewer: Cesium.Viewer, 
+  viewer: Cesium.Viewer | null | undefined, 
   selectedLocation: Location,
   entityRef: React.MutableRefObject<Cesium.Entity | null>,
   options: FlightOptions = {}
 ): void => {
   console.log('Flying to location in Cesium:', selectedLocation);
   
+  // If viewer is undefined, call the completion callback immediately and return
+  if (!viewer) {
+    console.error('Cannot fly to location: Viewer is undefined or destroyed');
+    if (options.onComplete) {
+      setTimeout(options.onComplete, 0);
+    }
+    return;
+  }
+  
   try {
-    if (!viewer || viewer.isDestroyed()) {
-      console.error('Cannot fly to location: Viewer is undefined or destroyed');
+    if (viewer.isDestroyed()) {
+      console.error('Cannot fly to location: Viewer is destroyed');
       if (options.onComplete) {
         setTimeout(options.onComplete, 0);
       }

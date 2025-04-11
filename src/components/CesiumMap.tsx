@@ -24,6 +24,7 @@ const CesiumMap = ({
 }: CesiumMapProps) => {
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const [isFlying, setIsFlying] = useState(false);
+  const pendingLocationRef = useRef<Location | undefined>(selectedLocation);
   
   // Use the extracted Cesium map hook
   const { 
@@ -41,32 +42,44 @@ const CesiumMap = ({
     }
   }, [viewerRef.current, onViewerReady, isInitialized]);
 
-  // Handle location changes - this effect should run when selectedLocation changes
+  // Store the latest selectedLocation in a ref to avoid race conditions
+  useEffect(() => {
+    pendingLocationRef.current = selectedLocation;
+  }, [selectedLocation]);
+
+  // Handle location changes - only initiate flights when the viewer is ready
   useEffect(() => {
     const viewer = viewerRef.current;
+    const location = pendingLocationRef.current;
     
-    if (!viewer || !selectedLocation || mapError || isFlying || !isInitialized) {
-      if (!isInitialized && selectedLocation) {
+    // Only proceed if we have all the necessary conditions met
+    if (!isInitialized || isFlying || mapError) {
+      if (!isInitialized && location) {
         console.log("Waiting for Cesium to initialize before flying...");
       }
       return;
     }
     
-    setIsFlying(true);
-    console.log("Starting cinematic flight to location:", selectedLocation.label);
-    
-    // Use the enhanced flight animation function
-    flyToLocation(viewer, selectedLocation, entityRef, {
-      cinematic: cinematicFlight,
-      onComplete: () => {
-        console.log("Flight complete, transitioning to map view");
-        setIsFlying(false);
-        if (onFlyComplete) {
-          onFlyComplete();
+    // If we have a pending location, fly to it
+    if (location) {
+      setIsFlying(true);
+      console.log("Starting cinematic flight to location:", location.label);
+      
+      // Use the enhanced flight animation function
+      flyToLocation(viewer, location, entityRef, {
+        cinematic: cinematicFlight,
+        onComplete: () => {
+          console.log("Flight complete, transitioning to map view");
+          setIsFlying(false);
+          // Clear the pending location after flying to it
+          pendingLocationRef.current = undefined;
+          if (onFlyComplete) {
+            onFlyComplete();
+          }
         }
-      }
-    });
-  }, [selectedLocation, onFlyComplete, mapError, isFlying, isInitialized, viewerRef, entityRef, cinematicFlight]);
+      });
+    }
+  }, [isInitialized, isFlying, mapError, viewerRef.current]); // Dependency on viewerRef.current to detect when it changes
   
   return (
     <div className="w-full h-full relative">
