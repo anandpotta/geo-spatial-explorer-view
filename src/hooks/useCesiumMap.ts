@@ -57,7 +57,7 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
-        imageryProvider: false as any, // Explicitly disable default imagery provider
+        // Remove imageryProvider property as it doesn't exist in ConstructorOptions
         terrainProvider: new Cesium.EllipsoidTerrainProvider(),
         requestRenderMode: true,
         maximumRenderTimeChange: Infinity,
@@ -230,10 +230,10 @@ function patchCesiumToPreventNetworkRequests() {
         };
       }
       
-      // Block createWorldImagery
-      if (Cesium.createWorldImagery) {
-        Cesium.createWorldImagery = function(...args: any[]) {
-          console.log('Blocked createWorldImagery');
+      // Update to use createWorldImageryAsync instead of createWorldImagery
+      if (Cesium.createWorldImageryAsync) {
+        Cesium.createWorldImageryAsync = function(...args: any[]) {
+          console.log('Blocked createWorldImageryAsync');
           return Promise.reject(new Error('Network requests are disabled'));
         };
       }
@@ -249,7 +249,7 @@ function patchCesiumToPreventNetworkRequests() {
       console.log('Could not patch imagery providers, continuing anyway');
     }
     
-    // 4. Block terrain-related functionality
+    // 4. Block terrain-related functionality - update to use createWorldTerrainAsync
     try {
       if (Cesium.CesiumTerrainProvider) {
         Cesium.CesiumTerrainProvider.fromUrl = function(...args: any[]) {
@@ -258,10 +258,10 @@ function patchCesiumToPreventNetworkRequests() {
         };
       }
       
-      if (Cesium.createWorldTerrain) {
-        Cesium.createWorldTerrain = function(...args: any[]) {
-          console.log('Blocked createWorldTerrain');
-          return new Cesium.EllipsoidTerrainProvider();
+      if (Cesium.createWorldTerrainAsync) {
+        Cesium.createWorldTerrainAsync = function(...args: any[]) {
+          console.log('Blocked createWorldTerrainAsync');
+          return Promise.resolve(new Cesium.EllipsoidTerrainProvider());
         };
       }
     } catch (e) {
