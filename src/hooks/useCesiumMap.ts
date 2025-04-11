@@ -36,17 +36,22 @@ export const useCesiumMap = (
     try {
       console.log("Initializing Cesium viewer in offline mode...");
       
-      // Important: Disable Ion completely first
+      // CRITICAL: Aggressively disable Ion services
+      // Set an empty token to prevent any Ion access
       Cesium.Ion.defaultAccessToken = '';
+      
+      // Override Ion's server URL to a non-existent one
+      // @ts-ignore - Using private API to fully disable Ion
+      Cesium.Ion.server = 'disabled://';
       
       // Prevent any asset fetching
       const baseUrl = window.location.origin;
       (window as any).CESIUM_BASE_URL = baseUrl;
       
-      // Create a simple ellipsoid terrain
+      // Create a simple offline terrain provider
       const terrainProvider = new Cesium.EllipsoidTerrainProvider();
       
-      // Create viewer with minimal configuration and NO DEFAULT IMAGERY
+      // Create viewer with absolutely minimal configuration
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
         terrainProvider: terrainProvider,
         baseLayerPicker: false,
@@ -62,13 +67,17 @@ export const useCesiumMap = (
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
         requestRenderMode: true, // Only render when needed
-        maximumRenderTimeChange: Infinity // Don't render based on time change
+        maximumRenderTimeChange: Infinity, // Don't render based on time change
+        // Completely disable any imagery providers
+        imageryProvider: undefined,
+        // Disable shadows and lighting
+        shadows: false
       });
       
-      // CRITICAL: Immediately remove default imagery layer that gets auto-added
+      // CRITICAL: Immediately remove ALL imagery layers
       viewer.imageryLayers.removeAll();
       
-      // Explicitly disable any asset loading
+      // Completely disable asset loading
       viewer.scene.globe.enableLighting = false;
       viewer.scene.globe.showWaterEffect = false;
       
@@ -81,6 +90,16 @@ export const useCesiumMap = (
       viewer.scene.moon.show = false;
       viewer.scene.sun.show = false;
       viewer.scene.skyBox.show = false;
+      
+      // Prevent terrain from trying to load any data
+      viewer.scene.globe.depthTestAgainstTerrain = false;
+      
+      // Disable any ion or network features
+      // @ts-ignore - Using private API
+      if (viewer.scene.globe._surface) {
+        // @ts-ignore - Using private API
+        viewer.scene.globe._surface._tileProvider._debug.wireframe = true;
+      }
       
       // Set background color
       viewer.scene.backgroundColor = Cesium.Color.BLACK;

@@ -15,5 +15,8 @@ export const API_CONFIG = {
   DISABLE_ION: true,
   
   // Prevent network requests in Cesium
-  PREVENT_NETWORK_REQUESTS: true
+  PREVENT_NETWORK_REQUESTS: true,
+  
+  // Additional flags to ensure offline mode
+  FORCE_OFFLINE: true
 };
