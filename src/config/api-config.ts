@@ -11,6 +11,9 @@ export const API_CONFIG = {
   OFFLINE_MODE: true,
   BASE_URL: "",
   
-  // Disable ion services
-  DISABLE_ION: true
+  // Disable ion services explicitly
+  DISABLE_ION: true,
+  
+  // Prevent network requests in Cesium
+  PREVENT_NETWORK_REQUESTS: true
 };
