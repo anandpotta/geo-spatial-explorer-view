@@ -66,9 +66,9 @@ const CesiumMap = ({
         viewerRef.current.scene.requestRender();
         forceRenderCount.current++;
         
-        // Force globe update with each render
+        // Force globe visibility with each render
         if (viewerRef.current.scene && viewerRef.current.scene.globe) {
-          viewerRef.current.scene.globe.update(viewerRef.current.clock.currentTime);
+          viewerRef.current.scene.globe.show = true;
         }
       } else {
         clearInterval(renderInterval);

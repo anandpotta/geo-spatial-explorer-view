@@ -38,9 +38,13 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
       // Safely ignore if this property isn't available
     }
     
-    // Force the globe to be visible and update
+    // Force the globe to be visible
     globe.show = true;
-    globe.update(viewer.clock.currentTime);
+    
+    // Request a render to update the globe
+    if (viewer.scene) {
+      viewer.scene.requestRender();
+    }
   } catch (e) {
     console.error('Error configuring globe appearance:', e);
   }

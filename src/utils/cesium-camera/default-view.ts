@@ -81,9 +81,9 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
         console.log(`Rendering globe at ${interval}ms interval`);
         viewer.scene.requestRender();
         
-        // Force update of globe
+        // Force globe visibility at each interval
         if (viewer.scene && viewer.scene.globe) {
-          viewer.scene.globe.update(viewer.clock.currentTime);
+          viewer.scene.globe.show = true;
         }
       }
     }, interval);
