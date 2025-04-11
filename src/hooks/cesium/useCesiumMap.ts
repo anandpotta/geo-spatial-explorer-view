@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { flyToLocation } from '@/utils/cesium-utils';
 import { useCesiumViewer } from './useCesiumViewer';

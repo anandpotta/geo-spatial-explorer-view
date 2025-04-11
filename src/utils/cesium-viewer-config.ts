@@ -35,7 +35,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    skyAtmosphere: true, // Use boolean instead of creating an instance
+    skyAtmosphere: false, // Use boolean (false) instead of creating an instance or using true
     globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
