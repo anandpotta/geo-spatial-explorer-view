@@ -23,9 +23,6 @@ const MapContent = ({
 }: MapContentProps) => {
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden">
-      {/* The actual search component positioned absolutely on top of the map */}
-      <LocationSearch onLocationSelect={onLocationSelect} />
-      
       {/* Map container with responsive dimensions */}
       <div className="relative w-full h-full">
         <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
@@ -50,6 +47,11 @@ const MapContent = ({
             onReset={() => console.log('Reset view')}
           />
         )}
+      </div>
+      
+      {/* The search component positioned absolutely on top of the map with higher z-index */}
+      <div className="absolute top-4 left-4 right-4 z-20">
+        <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
     </div>
   );
