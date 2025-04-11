@@ -30,59 +30,72 @@ export const useCesiumMap = (
 
   // Initialize Cesium viewer
   useEffect(() => {
-    if (!cesiumContainer.current) return;
-
-    // Clean up any previous viewer
-    if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-      console.log("Destroying previous Cesium viewer");
-      viewerRef.current.destroy();
-      viewerRef.current = null;
+    // Check if container is available
+    if (!cesiumContainer.current) {
+      console.log("No container element available for Cesium viewer");
+      return;
     }
 
-    try {
-      console.log("Initializing Cesium viewer in offline mode...");
-      
-      // 1. Disable Ion completely
-      Cesium.Ion.defaultAccessToken = '';
-      
-      // 2. Use our patching mechanism to prevent network requests
-      patchCesiumToPreventNetworkRequests();
-      
-      // 3. Create viewer with offline configuration
-      const viewerOptions = createOfflineCesiumViewerOptions();
-      const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
-      
-      // 4. Configure viewer for offline mode
-      configureOfflineViewer(viewer);
-      
-      // 5. Set initial camera view
-      setDefaultCameraView(viewer);
-      
-      // 6. Save the viewer reference
-      viewerRef.current = viewer;
-      
-      console.log("Cesium map initialized in offline mode");
-      setIsInitialized(true);
-      setIsLoadingMap(false);
-      
-      if (onMapReady) {
-        onMapReady();
+    // Wait a brief moment to ensure DOM is fully rendered
+    const initTimeout = setTimeout(() => {
+      // Clean up any previous viewer
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        console.log("Destroying previous Cesium viewer");
+        viewerRef.current.destroy();
+        viewerRef.current = null;
       }
-    } catch (error) {
-      console.error('Error initializing Cesium viewer:', error);
-      setMapError('Failed to initialize 3D globe. Please try again later.');
-      setIsLoadingMap(false);
-      
-      // Show error toast
-      toast({
-        title: "Map Error",
-        description: "Failed to initialize 3D globe. Falling back to 2D view.",
-        variant: "destructive"
-      });
-    }
+
+      try {
+        console.log("Initializing Cesium viewer in offline mode...");
+        
+        // 1. Disable Ion completely
+        Cesium.Ion.defaultAccessToken = '';
+        
+        // 2. Use our patching mechanism to prevent network requests
+        patchCesiumToPreventNetworkRequests();
+        
+        // Verify container dimensions
+        if (cesiumContainer.current.clientWidth === 0 || cesiumContainer.current.clientHeight === 0) {
+          console.warn("Container has zero width/height, Cesium may fail to initialize properly");
+        }
+        
+        // 3. Create viewer with offline configuration
+        const viewerOptions = createOfflineCesiumViewerOptions();
+        const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
+        
+        // 4. Configure viewer for offline mode
+        configureOfflineViewer(viewer);
+        
+        // 5. Set initial camera view
+        setDefaultCameraView(viewer);
+        
+        // 6. Save the viewer reference
+        viewerRef.current = viewer;
+        
+        console.log("Cesium map initialized in offline mode");
+        setIsInitialized(true);
+        setIsLoadingMap(false);
+        
+        if (onMapReady) {
+          onMapReady();
+        }
+      } catch (error) {
+        console.error('Error initializing Cesium viewer:', error);
+        setMapError('Failed to initialize 3D globe. Please try again later.');
+        setIsLoadingMap(false);
+        
+        // Show error toast
+        toast({
+          title: "Map Error",
+          description: "Failed to initialize 3D globe. Falling back to 2D view.",
+          variant: "destructive"
+        });
+      }
+    }, 100); // Give the DOM a moment to render
     
     // Clean up on unmount
     return () => {
+      clearTimeout(initTimeout);
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
         console.log("Destroying Cesium viewer on unmount");
         viewerRef.current.destroy();
