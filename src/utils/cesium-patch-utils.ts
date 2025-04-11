@@ -1,4 +1,3 @@
-
 import * as Cesium from 'cesium';
 
 /**
@@ -132,6 +131,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     infoBox: false,
     selectionIndicator: false,
     creditContainer: document.createElement('div'), // Hide credits
+    imageryProvider: new Cesium.GridImageryProvider(), // Use a simple grid imagery provider
     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     requestRenderMode: true,
     maximumRenderTimeChange: Infinity,
@@ -148,12 +148,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
  * Configures a Cesium viewer for offline mode by disabling all network-dependent features
  */
 export function configureOfflineViewer(viewer: Cesium.Viewer): void {
-  // 1. Clean up any auto-created layers
-  if (viewer.imageryLayers) {
-    viewer.imageryLayers.removeAll();
-  }
-  
-  // 2. Configure globe appearance 
+  // 1. Configure globe appearance 
   const globe = viewer.scene.globe;
   
   // Disable all globe features that might request data
