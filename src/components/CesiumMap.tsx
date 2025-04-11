@@ -4,7 +4,7 @@ import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { Location } from '@/utils/geo-utils';
 import CesiumMapLoading from './map/CesiumMapLoading';
-import { useCesiumMap } from '@/hooks/useCesiumMap';
+import { useCesiumMap } from '@/hooks/cesium';
 import { flyToLocation } from '@/utils/cesium-utils';
 
 interface CesiumMapProps {
