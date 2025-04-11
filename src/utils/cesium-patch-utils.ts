@@ -1,3 +1,4 @@
+
 import * as Cesium from 'cesium';
 
 /**
@@ -118,6 +119,14 @@ export function patchCesiumToPreventNetworkRequests() {
  * Creates minimal viewer options for offline Cesium usage
  */
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
+  // Create a simple grid imagery provider with proper parameters
+  const gridImageryProvider = new Cesium.GridImageryProvider({
+    cells: 2,
+    color: Cesium.Color.BLUE,
+    glowColor: Cesium.Color.BLUE.withAlpha(0.1),
+    backgroundColor: Cesium.Color.BLACK
+  });
+
   return {
     baseLayerPicker: false,
     geocoder: false,
@@ -131,7 +140,8 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     infoBox: false,
     selectionIndicator: false,
     creditContainer: document.createElement('div'), // Hide credits
-    imageryProvider: new Cesium.GridImageryProvider(), // Use a simple grid imagery provider
+    // Use a different approach to set the imagery provider
+    baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     requestRenderMode: true,
     maximumRenderTimeChange: Infinity,
