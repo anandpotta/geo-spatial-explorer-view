@@ -10,8 +10,14 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     cells: 8,  // Larger cells for continent-like appearance
     color: Cesium.Color.WHITE.withAlpha(0.2), // More visible grid lines
     glowColor: Cesium.Color.WHITE.withAlpha(0.3),
-    backgroundColor: Cesium.Color.TRANSPARENT // Allow globe color to show through
+    backgroundColor: Cesium.Color.BLUE.withAlpha(0.1) // Slight blue tint
   });
+
+  // Create the globe instance with proper configuration
+  const globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84);
+  globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0);
+  globe.showGroundAtmosphere = true;
+  globe.enableLighting = true;
 
   return {
     baseLayerPicker: false,
@@ -37,7 +43,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
     skyAtmosphere: new Cesium.SkyAtmosphere(), // Use the proper type
-    globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
+    globe: globe, // Use our preconfigured globe
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
     orderIndependentTranslucency: true, // Enable for better atmospheric effects

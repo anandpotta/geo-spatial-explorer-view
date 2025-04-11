@@ -28,6 +28,7 @@ const CesiumMap = ({
   const [viewerReady, setViewerReady] = useState(false);
   const [canvasVisible, setCanvasVisible] = useState(false);
   const forceRenderCount = useRef(0);
+  const globeImageryLoadedRef = useRef(false);
   
   // Use the extracted Cesium map hook
   const { 
@@ -41,39 +42,44 @@ const CesiumMap = ({
       onMapReady();
     }
     
-    // Add a delay to ensure the globe is rendered before considering it "ready"
-    setTimeout(() => {
-      setViewerReady(true);
-      
-      // After a short delay, make sure the canvas is visible
-      setTimeout(() => {
-        setCanvasVisible(true);
-        
-        // Force additional renders to ensure the globe appears
-        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-          viewerRef.current.resize(); // Force resize
-          for (let i = 0; i < 15; i++) {
-            viewerRef.current.scene.requestRender();
-          }
-          console.log('Canvas made visible, additional renders requested');
-        }
-      }, 200);  // Shorter delay for better visibility
-    }, 300);  // Shorter delay for faster loading
-    
-    // Force additional renders to ensure the globe appears
-    const renderInterval = setInterval(() => {
-      if (viewerRef.current && !viewerRef.current.isDestroyed() && forceRenderCount.current < 30) {
+    // Set a more aggressive rendering schedule to ensure the globe appears
+    const renderScheduler = setInterval(() => {
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        viewerRef.current.resize(); // Force resize
         viewerRef.current.scene.requestRender();
-        forceRenderCount.current++;
+        console.log("Scheduled render to ensure globe visibility");
         
-        // Force globe visibility with each render
+        // Ensure globe is visible
         if (viewerRef.current.scene && viewerRef.current.scene.globe) {
           viewerRef.current.scene.globe.show = true;
+          
+          // Set increasingly vibrant colors over time
+          if (!globeImageryLoadedRef.current) {
+            viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.9, 1.0);
+            globeImageryLoadedRef.current = true;
+          }
+        }
+        
+        // Stop after 15 renders
+        forceRenderCount.current++;
+        if (forceRenderCount.current > 15) {
+          clearInterval(renderScheduler);
+          
+          // Make the canvas visible after ensuring renders
+          setCanvasVisible(true);
+          setViewerReady(true);
         }
       } else {
-        clearInterval(renderInterval);
+        clearInterval(renderScheduler);
       }
-    }, 100); // Faster interval for more frequent renders
+    }, 200);
+    
+    // Create a timer to ensure we don't get stuck if rendering fails
+    setTimeout(() => {
+      clearInterval(renderScheduler);
+      setCanvasVisible(true);
+      setViewerReady(true);
+    }, 3000);
   });
 
   // Pass the viewer reference to parent component when available

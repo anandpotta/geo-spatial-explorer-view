@@ -25,6 +25,11 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
         skyAtmosphere.brightnessShift = 0.8;
       }
     }
+    
+    // Ensure lighting for dramatic effect
+    if (viewer.scene.globe) {
+      viewer.scene.globe.enableLighting = true;
+    }
   } catch (e) {
     console.error('Error configuring atmosphere:', e);
   }
@@ -44,8 +49,17 @@ export function configureRendering(viewer: Cesium.Viewer): void {
       viewer.scene.postProcessStages.removeAll();
     }
     
+    // Enhanced globe visibility settings
+    if (viewer.scene.globe) {
+      // Make sure globe is shown
+      viewer.scene.globe.show = true;
+      
+      // Set a rich blue color for the globe
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.2, 0.9, 1.0);
+    }
+    
     // Force multiple render cycles to ensure the globe appears
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 30; i++) {
       viewer.scene.requestRender();
     }
     
@@ -58,3 +72,4 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     console.error('Error configuring rendering:', e);
   }
 }
+
