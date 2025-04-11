@@ -1,4 +1,3 @@
-
 import * as Cesium from 'cesium';
 import { Location } from './geo-utils';
 
@@ -13,17 +12,28 @@ export interface CameraFlightOptions {
  * Sets an initial default view for the Cesium camera
  */
 export function setDefaultCameraView(viewer: Cesium.Viewer): void {
-  viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
-    orientation: {
-      heading: 0.0,
-      pitch: -Cesium.Math.PI_OVER_TWO,
-      roll: 0.0
-    }
-  });
-  
-  // Force immediate rendering
-  viewer.scene.requestRender();
+  if (!viewer || !viewer.camera) {
+    console.warn('Invalid viewer or camera for default view');
+    return;
+  }
+
+  try {
+    // Position the camera far out in space to see the full globe
+    viewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
+      orientation: {
+        heading: 0.0,
+        pitch: -Cesium.Math.PI_OVER_TWO,
+        roll: 0.0
+      }
+    });
+    
+    // Force immediate rendering
+    viewer.scene.requestRender();
+    console.log('Default Earth view set successfully');
+  } catch (error) {
+    console.error('Failed to set default camera view:', error);
+  }
 }
 
 /**

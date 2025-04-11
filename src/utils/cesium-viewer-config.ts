@@ -27,16 +27,17 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     selectionIndicator: false,
     creditContainer: document.createElement('div'), // Hide credits
     // Use a different approach to set the imagery provider
-    baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
+    imageryProvider: gridImageryProvider,
     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     requestRenderMode: true,
     maximumRenderTimeChange: Infinity,
-    targetFrameRate: 10, // Lower frame rate to reduce resources
+    targetFrameRate: 30, // Increased for smoother rotation
     shadows: false,
     skyBox: false as any, // Disable skybox
     skyAtmosphere: false as any, // Disable atmosphere
     globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
-    scene3DOnly: true // Optimize for 3D only
+    scene3DOnly: true, // Optimize for 3D only
+    shouldAnimate: true // Ensure the globe is animating
   };
 }
 

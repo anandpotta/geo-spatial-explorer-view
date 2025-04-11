@@ -1,4 +1,5 @@
 
+import * as Cesium from 'cesium';
 import { patchCesiumToPreventNetworkRequests, patchCesiumProviders } from './cesium-network-patches';
 import { createOfflineCesiumViewerOptions, configureOfflineViewer } from './cesium-viewer-config';
 
@@ -8,7 +9,6 @@ import { createOfflineCesiumViewerOptions, configureOfflineViewer } from './cesi
 export function setupCesiumOfflineMode(): void {
   // Disable Ion completely
   try {
-    // @ts-ignore - Setting token to empty string
     Cesium.Ion.defaultAccessToken = '';
   } catch (e) {
     console.error('Could not set Ion token:', e);

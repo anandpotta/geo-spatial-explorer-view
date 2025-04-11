@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import { API_CONFIG } from '@/config/api-config';
@@ -34,6 +35,7 @@ export const useCesiumMap = (
       return;
     }
 
+    // Ensure we're not re-initializing too quickly
     const initTimeout = setTimeout(() => {
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
         console.log("Destroying previous Cesium viewer");
@@ -46,25 +48,34 @@ export const useCesiumMap = (
       }
 
       try {
-        console.log("Initializing Cesium viewer in offline mode...");
+        console.log("Initializing Cesium viewer in offline mode...", Cesium.VERSION);
         
         if (cesiumContainer.current.clientWidth === 0 || cesiumContainer.current.clientHeight === 0) {
           console.warn("Container has zero width/height, forcing dimensions");
           cesiumContainer.current.style.width = '100%';
           cesiumContainer.current.style.height = '100%';
           cesiumContainer.current.style.minHeight = '400px';
+          cesiumContainer.current.style.display = 'block';
         }
         
+        // Setup for offline mode
         setupCesiumOfflineMode();
         
+        // Create the viewer with offline options
         const viewerOptions = createOfflineCesiumViewerOptions();
         
         const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
         
+        // Configure for offline mode
         configureOfflineViewer(viewer);
         
+        // Set initial earth view
         setDefaultCameraView(viewer);
         
+        // Force a render cycle
+        viewer.scene.requestRender();
+        
+        // Save the viewer reference
         viewerRef.current = viewer;
         
         console.log("Cesium map initialized in offline mode");
