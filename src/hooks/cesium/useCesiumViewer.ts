@@ -1,8 +1,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
-import { destroyViewer, cleanupTimeouts } from './use-cesium-cleanup';
-import { initializeViewer } from './use-cesium-initialization';
+import { initializeCesiumViewer } from './viewer-initialization-hook';
+import { cleanupTimeouts, destroyViewer } from './use-cesium-cleanup';
 
 interface UseCesiumViewerResult {
   viewerRef: React.MutableRefObject<Cesium.Viewer | null>;
@@ -28,9 +28,9 @@ export const useCesiumViewer = (
   const checkRenderIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Give the container a moment to be fully rendered before initializing
+    // Initialize the viewer with a slight delay
     initTimeoutRef.current = setTimeout(() => {
-      initializeViewer({
+      initializeCesiumViewer({
         cesiumContainer,
         viewerRef,
         initializationAttempts,
