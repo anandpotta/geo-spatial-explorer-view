@@ -19,17 +19,37 @@ export function destroyViewer(viewerRef: React.MutableRefObject<Cesium.Viewer | 
       // Disable animation to prevent ticking errors during destruction
       if (viewerRef.current.clock) {
         viewerRef.current.clock.shouldAnimate = false;
-        viewerRef.current.clock.onTick.removeAll();
+        
+        // Remove event listeners safely - Cesium Event doesn't have removeAll
+        if (viewerRef.current.clock.onTick) {
+          // Use the appropriate method based on what's available
+          if (typeof viewerRef.current.clock.onTick.removeAllListeners === 'function') {
+            viewerRef.current.clock.onTick.removeAllListeners();
+          } else {
+            // Alternative approach if removeAllListeners doesn't exist
+            // Just note that we can't remove listeners but continue with destruction
+            console.log("Note: Could not remove clock tick listeners - continuing with viewer destruction");
+          }
+        }
       }
       
-      // Unsubscribe from all event handlers
+      // Unsubscribe from all event handlers safely
       if (viewerRef.current.scene) {
-        viewerRef.current.scene.preRender.removeAll();
-        viewerRef.current.scene.postRender.removeAll();
-      }
-      
-      // Reset render loop to prevent updates after destruction
-      if (viewerRef.current.scene) {
+        // Handle preRender event
+        if (viewerRef.current.scene.preRender) {
+          if (typeof viewerRef.current.scene.preRender.removeAllListeners === 'function') {
+            viewerRef.current.scene.preRender.removeAllListeners();
+          }
+        }
+        
+        // Handle postRender event
+        if (viewerRef.current.scene.postRender) {
+          if (typeof viewerRef.current.scene.postRender.removeAllListeners === 'function') {
+            viewerRef.current.scene.postRender.removeAllListeners();
+          }
+        }
+        
+        // Reset render loop to prevent updates after destruction
         viewerRef.current.scene.requestRenderMode = true;
       }
       
