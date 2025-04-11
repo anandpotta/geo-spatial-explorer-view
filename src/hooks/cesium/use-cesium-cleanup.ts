@@ -11,6 +11,17 @@ export function destroyViewer(viewerRef: React.MutableRefObject<Cesium.Viewer | 
       // First clear any entities which might cause errors
       viewerRef.current.entities.removeAll();
       
+      // Safely handle skyAtmosphere before destroying viewer
+      if (viewerRef.current.scene && viewerRef.current.scene.skyAtmosphere) {
+        // Check if destroy method exists before calling it
+        if (typeof viewerRef.current.scene.skyAtmosphere.destroy === 'function') {
+          viewerRef.current.scene.skyAtmosphere.destroy();
+        } else {
+          // If no destroy method, just set to undefined
+          viewerRef.current.scene.skyAtmosphere = undefined;
+        }
+      }
+      
       // Safely destroy viewer
       viewerRef.current.destroy();
     } catch (e) {

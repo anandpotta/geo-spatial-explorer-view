@@ -10,16 +10,19 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     cells: 4,  // Smaller cells for more visible grid
     color: Cesium.Color.WHITE.withAlpha(0.3), // More visible grid lines
     glowColor: Cesium.Color.WHITE.withAlpha(0.4),
-    backgroundColor: Cesium.Color.BLUE.withAlpha(0.2) // More noticeable blue tint
+    backgroundColor: Cesium.Color.BLUE.withAlpha(0.3) // More noticeable blue tint
   });
 
   // Create the globe instance with proper configuration
   const globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84);
-  globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0);
+  globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0); // Brighter blue for better visibility
   globe.showGroundAtmosphere = true;
   globe.enableLighting = true;
   globe.translucency.enabled = false; // Disable translucency which could cause visibility issues
+  globe.show = true; // Explicitly ensure globe is visible
 
+  const skyAtmosphere = new Cesium.SkyAtmosphere();
+  
   return {
     baseLayerPicker: false,
     geocoder: false,
@@ -43,7 +46,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    skyAtmosphere: new Cesium.SkyAtmosphere(), // Create a SkyAtmosphere instance instead of using 'true'
+    skyAtmosphere: skyAtmosphere, // Use our preconfigured skyAtmosphere
     globe: globe, // Use our preconfigured globe
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating

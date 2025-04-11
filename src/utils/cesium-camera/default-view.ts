@@ -13,10 +13,10 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   try {
     // Position the camera to show a more prominent Earth view - much closer to Earth
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(-98.0, 39.5, 4000000.0), // Much closer view of Earth
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0), // Centered view of Earth
       orientation: {
-        heading: Cesium.Math.toRadians(0.0),  // North-up orientation
-        pitch: Cesium.Math.toRadians(-25.0),  // Look down at less extreme angle
+        heading: Cesium.Math.toRadians(0.0),
+        pitch: Cesium.Math.toRadians(-25.0),
         roll: 0.0
       }
     });
@@ -34,7 +34,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       viewer.scene.globe.show = true;
       
       // Configure globe appearance with vibrant blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.4, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
       
       // Enhanced atmosphere effect
       viewer.scene.globe.showGroundAtmosphere = true;
@@ -88,19 +88,10 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
           viewer.scene.globe.show = true;
           
           // Refresh globe appearance at different stages with increasing intensity
-          const intensity = Math.min(0.9, 0.4 + (index * 0.03));
-          viewer.scene.globe.baseColor = new Cesium.Color(0.0, intensity, 1.0, 1.0);
+          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
           
           if (index % 3 === 0) { // Every third interval - force resize
-            viewer.resize(); 
-          }
-          
-          if (index === 7) { // Around 300ms - force resize
-            viewer.resize(); 
-          }
-          
-          if (index === 12) { // Around 1500ms - force another resize
-            viewer.resize(); 
+            viewer.forceResize();
           }
         }
       }
