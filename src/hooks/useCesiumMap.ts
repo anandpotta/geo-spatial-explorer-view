@@ -96,17 +96,15 @@ export const useCesiumMap = (
       // Disable terrain
       viewer.scene.globe.depthTestAgainstTerrain = false;
       
-      // Disable tile loading verification
-      if (viewer.scene.globe._surface && viewer.scene.globe._surface._tileProvider) {
-        // Try to access these properties safely without modifying the objects
-        try {
-          const tileProvider = viewer.scene.globe._surface._tileProvider;
-          if (tileProvider._debug) {
-            tileProvider._debug.wireframe = true;
-          }
-        } catch (e) {
-          console.log('Could not set wireframe debug mode, continuing anyway');
+      // Handle internal properties safely using type casting and try/catch
+      try {
+        // Use type assertion to access private properties
+        const globe = viewer.scene.globe as any;
+        if (globe._surface && globe._surface._tileProvider && globe._surface._tileProvider._debug) {
+          globe._surface._tileProvider._debug.wireframe = true;
         }
+      } catch (e) {
+        console.log('Could not access internal globe properties, continuing anyway');
       }
       
       // Set background color
