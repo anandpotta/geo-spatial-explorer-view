@@ -1,11 +1,10 @@
-
 import React, { useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
 import LeafletMap from '../LeafletMap';
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
-import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera-utils';
+import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
@@ -25,17 +24,14 @@ const MapContent = ({
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<any>(null);
 
-  // Handler to capture CesiumMap viewer reference
   const handleCesiumViewerRef = (viewer: any) => {
     cesiumViewerRef.current = viewer;
   };
 
-  // Handler to capture LeafletMap map reference
   const handleLeafletMapRef = (map: any) => {
     leafletMapRef.current = map;
   };
 
-  // Handlers for map tools
   const handleZoomIn = () => {
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       zoomIn(cesiumViewerRef.current);
@@ -68,7 +64,6 @@ const MapContent = ({
 
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden">
-      {/* Map container with responsive dimensions */}
       <div className="relative w-full h-full">
         <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
           <CesiumMap 
@@ -76,7 +71,7 @@ const MapContent = ({
             onMapReady={onMapReady}
             onFlyComplete={onFlyComplete}
             cinematicFlight={true}
-            key="cesium-map-instance" // Force re-render on issues
+            key="cesium-map-instance"
             onViewerReady={handleCesiumViewerRef}
           />
         </div>
@@ -88,7 +83,6 @@ const MapContent = ({
           />
         </div>
         
-        {/* Drawing tools displayed on both views */}
         <DrawingTools 
           onToolSelect={handleToolSelect}
           onZoomIn={handleZoomIn}
@@ -97,7 +91,6 @@ const MapContent = ({
         />
       </div>
       
-      {/* The search component positioned absolutely on top of the map with higher z-index */}
       <div className="absolute top-4 left-4 right-4 z-20">
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
