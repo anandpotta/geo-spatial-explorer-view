@@ -66,7 +66,9 @@ export const useCesiumMap = (
         skyBox: false as any, // Disable skybox
         skyAtmosphere: false as any, // Disable atmosphere
         globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
-        scene3DOnly: true // Optimize for 3D only
+        scene3DOnly: true, // Optimize for 3D only
+        // Critical: Explicitly create empty imagery layer collection
+        imageryLayers: new Cesium.ImageryLayerCollection()
       };
       
       // 4. Create viewer with minimal options
