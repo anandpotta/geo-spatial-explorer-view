@@ -7,10 +7,10 @@ import * as Cesium from 'cesium';
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
   // Create a grid imagery provider with earth-like appearance
   const gridImageryProvider = new Cesium.GridImageryProvider({
-    cells: 8,  // Larger cells for continent-like appearance
-    color: Cesium.Color.WHITE.withAlpha(0.2), // More visible grid lines
-    glowColor: Cesium.Color.WHITE.withAlpha(0.3),
-    backgroundColor: Cesium.Color.BLUE.withAlpha(0.1) // Slight blue tint
+    cells: 4,  // Smaller cells for more visible grid
+    color: Cesium.Color.WHITE.withAlpha(0.3), // More visible grid lines
+    glowColor: Cesium.Color.WHITE.withAlpha(0.4),
+    backgroundColor: Cesium.Color.BLUE.withAlpha(0.2) // More noticeable blue tint
   });
 
   // Create the globe instance with proper configuration
@@ -18,6 +18,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0);
   globe.showGroundAtmosphere = true;
   globe.enableLighting = true;
+  globe.translucency.enabled = false; // Disable translucency which could cause visibility issues
 
   return {
     baseLayerPicker: false,
@@ -42,7 +43,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    skyAtmosphere: new Cesium.SkyAtmosphere(), // Use the proper type
+    skyAtmosphere: true, // Use the proper type
     globe: globe, // Use our preconfigured globe
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
@@ -51,8 +52,12 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
       webgl: {
         alpha: false, // Disable transparency for better performance
         antialias: true, // Enable antialiasing for smoother edges
-        powerPreference: 'high-performance'
+        powerPreference: 'high-performance',
+        failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
+        preserveDrawingBuffer: true // Preserve drawing buffer for screenshots
       }
-    }
+    },
+    // Force immediate rendering
+    useBrowserRecommendedResolution: false
   };
 }

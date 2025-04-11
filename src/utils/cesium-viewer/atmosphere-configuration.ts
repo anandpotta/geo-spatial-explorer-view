@@ -20,9 +20,10 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       }
       
       if ('hueShift' in skyAtmosphere) {
-        skyAtmosphere.hueShift = 0.0;
-        skyAtmosphere.saturationShift = 0.1;
-        skyAtmosphere.brightnessShift = 0.8;
+        // Enhanced blue atmosphere for better visibility
+        skyAtmosphere.hueShift = 0.1;
+        skyAtmosphere.saturationShift = 0.5;
+        skyAtmosphere.brightnessShift = 1.0;
       }
     }
     
@@ -30,12 +31,12 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
     if (viewer.scene.globe) {
       viewer.scene.globe.enableLighting = true;
       
-      // Force the globe to be visible with a vibrant blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+      // Force the globe to be visible with a bright pure blue color
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.4, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
       // Request renders to ensure atmosphere is visible
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 20; i++) {
         viewer.scene.requestRender();
       }
     }
@@ -63,12 +64,12 @@ export function configureRendering(viewer: Cesium.Viewer): void {
       // Make sure globe is shown
       viewer.scene.globe.show = true;
       
-      // Set a rich blue color for the globe
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+      // Set a vibrant blue color for the globe - more vibrant than before
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.4, 1.0, 1.0);
     }
     
-    // Force multiple render cycles to ensure the globe appears
-    for (let i = 0; i < 30; i++) {
+    // Force multiple render cycles to ensure the globe appears - increased number
+    for (let i = 0; i < 40; i++) {
       viewer.scene.requestRender();
     }
     
@@ -78,13 +79,19 @@ export function configureRendering(viewer: Cesium.Viewer): void {
       viewer.canvas.style.height = '100%';
     }
     
-    // Schedule additional renders to ensure visibility
-    const renderIntervals = [100, 500, 1000, 2000];
+    // Schedule additional renders to ensure visibility - more frequent than before
+    const renderIntervals = [50, 100, 200, 300, 500, 700, 1000, 1500, 2000];
     renderIntervals.forEach(interval => {
       setTimeout(() => {
         if (!viewer.isDestroyed() && viewer.scene && viewer.scene.globe) {
           viewer.scene.globe.show = true;
+          
+          // Gradually make the globe color more vibrant with each render
+          const intensity = Math.min(1.0, 0.4 + (interval / 5000));
+          viewer.scene.globe.baseColor = new Cesium.Color(0.0, intensity, 1.0, 1.0);
+          
           viewer.scene.requestRender();
+          console.log(`Additional render at ${interval}ms with color intensity ${intensity}`);
         }
       }, interval);
     });
@@ -92,4 +99,3 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     console.error('Error configuring rendering:', e);
   }
 }
-
