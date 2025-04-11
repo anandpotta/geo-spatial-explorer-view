@@ -26,8 +26,8 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     infoBox: false,
     selectionIndicator: false,
     creditContainer: document.createElement('div'), // Hide credits
-    // Use a different approach to set the imagery provider
-    imageryProvider: gridImageryProvider,
+    // Use the correct property name for the imagery provider based on Cesium's type definitions
+    baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     requestRenderMode: true,
     maximumRenderTimeChange: Infinity,

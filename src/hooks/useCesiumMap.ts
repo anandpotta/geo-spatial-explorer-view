@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import { API_CONFIG } from '@/config/api-config';
@@ -48,7 +47,7 @@ export const useCesiumMap = (
       }
 
       try {
-        console.log("Initializing Cesium viewer in offline mode...", Cesium.VERSION);
+        console.log("Initializing Cesium viewer in offline mode...");
         
         if (cesiumContainer.current.clientWidth === 0 || cesiumContainer.current.clientHeight === 0) {
           console.warn("Container has zero width/height, forcing dimensions");
