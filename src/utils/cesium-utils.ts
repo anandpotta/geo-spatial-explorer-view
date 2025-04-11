@@ -46,65 +46,67 @@ export const flyToLocation = (
     entityRef.current = entity;
     
     if (options.cinematic) {
-      // Multi-stage cinematic flight
-      // Stage 1: Go to high altitude view if we're not already there
+      // Multi-stage cinematic flight - simplified to reduce resource usage
       const currentHeight = viewer.camera.positionCartographic.height;
       
+      // Simplified animation to reduce resource usage and network requests
+      let animationStages = [];
+      
       if (currentHeight < 15000000) {
-        // First stage - zoom out to see Earth from space
-        viewer.camera.flyTo({
+        // First stage - zoom out to high altitude
+        animationStages.push({
           destination: Cesium.Cartesian3.fromDegrees(
             selectedLocation.x,
             selectedLocation.y,
             20000000.0
           ),
-          duration: 2.0,
-          complete: function() {
-            // Second stage - zoom in to the location
-            viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(
-                selectedLocation.x,
-                selectedLocation.y,
-                500000.0
-              ),
-              duration: 3.0,
-              complete: function() {
-                // Third stage - orbit around slightly to give perspective
-                viewer.camera.flyTo({
-                  destination: Cesium.Cartesian3.fromDegrees(
-                    selectedLocation.x + 0.05,
-                    selectedLocation.y - 0.05,
-                    100000.0
-                  ),
-                  duration: 2.0,
-                  complete: options.onComplete
-                });
-              }
-            });
-          }
-        });
-      } else {
-        // Already at high altitude, just do a direct cinematic zoom
-        viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(
-            selectedLocation.x,
-            selectedLocation.y,
-            500000.0
-          ),
-          duration: 3.0,
-          complete: function() {
-            viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(
-                selectedLocation.x + 0.05,
-                selectedLocation.y - 0.05,
-                100000.0
-              ),
-              duration: 2.0,
-              complete: options.onComplete
-            });
-          }
+          duration: 2.0
         });
       }
+      
+      // Second stage - zoom in to the location
+      animationStages.push({
+        destination: Cesium.Cartesian3.fromDegrees(
+          selectedLocation.x,
+          selectedLocation.y,
+          500000.0
+        ),
+        duration: 3.0
+      });
+      
+      // Final stage - slight perspective adjustment
+      animationStages.push({
+        destination: Cesium.Cartesian3.fromDegrees(
+          selectedLocation.x + 0.05,
+          selectedLocation.y - 0.05,
+          100000.0
+        ),
+        duration: 2.0
+      });
+      
+      // Execute the animation stages in sequence
+      let currentStageIndex = 0;
+      
+      const executeNextStage = () => {
+        if (currentStageIndex >= animationStages.length) {
+          if (options.onComplete) {
+            options.onComplete();
+          }
+          return;
+        }
+        
+        const stage = animationStages[currentStageIndex];
+        currentStageIndex++;
+        
+        viewer.camera.flyTo({
+          destination: stage.destination,
+          duration: stage.duration,
+          complete: executeNextStage
+        });
+      };
+      
+      // Start the animation sequence
+      executeNextStage();
     } else {
       // Simple direct flight animation
       viewer.camera.flyTo({

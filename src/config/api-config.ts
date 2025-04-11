@@ -18,5 +18,8 @@ export const API_CONFIG = {
   PREVENT_NETWORK_REQUESTS: true,
   
   // Additional flags to ensure offline mode
-  FORCE_OFFLINE: true
+  FORCE_OFFLINE: true,
+  
+  // Maximum attempts to make any requests
+  MAX_REQUEST_ATTEMPTS: 0
 };

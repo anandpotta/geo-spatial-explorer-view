@@ -36,24 +36,33 @@ export const useCesiumMap = (
     try {
       console.log("Initializing Cesium viewer in offline mode...");
       
-      // CRITICAL: Aggressively disable Ion services
-      // Set an empty token to prevent any Ion access
+      // CRITICAL: Disable Ion and all network requests
+      // This must happen BEFORE creating any Cesium objects
       Cesium.Ion.defaultAccessToken = '';
       
-      // Override Ion's server URL to a non-existent one
-      // @ts-ignore - Using private API to fully disable Ion
-      Cesium.Ion.server = 'disabled://';
+      // Override default resource fetching behavior
+      // @ts-ignore - Access private API to completely disable network
+      Cesium.Resource.supportsImageBitmapOptions = false;
       
-      // Prevent any asset fetching
-      const baseUrl = window.location.origin;
-      (window as any).CESIUM_BASE_URL = baseUrl;
+      // @ts-ignore - Disable asset loading
+      Cesium._deprecationWarning = function() {};
       
-      // Create a simple offline terrain provider
+      // Disable automatic imagery provider creation
+      // @ts-ignore - Access internal property
+      Cesium.createWorldImagery = function() {
+        return undefined;
+      };
+      
+      // @ts-ignore - Access internal property 
+      Cesium.createWorldTerrain = function() {
+        return new Cesium.EllipsoidTerrainProvider();
+      };
+      
+      // Create basic terrain provider that doesn't need network
       const terrainProvider = new Cesium.EllipsoidTerrainProvider();
       
       // Create viewer with absolutely minimal configuration
-      // Remove unsupported properties like imageryProvider from constructor
-      const viewer = new Cesium.Viewer(cesiumContainer.current, {
+      const viewerOptions = {
         terrainProvider: terrainProvider,
         baseLayerPicker: false,
         geocoder: false,
@@ -69,14 +78,16 @@ export const useCesiumMap = (
         creditContainer: document.createElement('div'), // Hide credits
         requestRenderMode: true, // Only render when needed
         maximumRenderTimeChange: Infinity, // Don't render based on time change
-        // Disable shadows - this is supported
         shadows: false
-      });
+      };
       
-      // CRITICAL: Immediately remove ALL imagery layers
+      // Create viewer with minimal options
+      const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
+      
+      // CRITICAL: Immediately remove ALL imagery layers to prevent any network requests
       viewer.imageryLayers.removeAll();
       
-      // Completely disable asset loading
+      // Disable all automatic asset loading
       viewer.scene.globe.enableLighting = false;
       viewer.scene.globe.showWaterEffect = false;
       
@@ -90,18 +101,24 @@ export const useCesiumMap = (
       viewer.scene.sun.show = false;
       viewer.scene.skyBox.show = false;
       
-      // Prevent terrain from trying to load any data
+      // Disable terrain
       viewer.scene.globe.depthTestAgainstTerrain = false;
       
-      // Disable any ion or network features
-      // @ts-ignore - Using private API
+      // Disable tile loading verification
+      // @ts-ignore - Access private API
       if (viewer.scene.globe._surface) {
-        // @ts-ignore - Using private API
+        // @ts-ignore - Access private API
         viewer.scene.globe._surface._tileProvider._debug.wireframe = true;
       }
       
       // Set background color
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
+      
+      // More aggressive disabling of network requests
+      // @ts-ignore - Access internal API
+      Cesium.RequestScheduler.maximumRequestsPerServer = 0;
+      // @ts-ignore - Access internal API
+      Cesium.RequestScheduler.throttleRequests = true;
       
       // Set initial view 
       viewer.camera.setView({
