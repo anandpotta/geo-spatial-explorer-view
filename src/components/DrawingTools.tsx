@@ -35,7 +35,7 @@ const DrawingTools = ({
   };
   
   return (
-    <div className="map-toolbar">
+    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md z-20">
       <TooltipProvider>
         {/* Drawing Tools */}
         <Tooltip>

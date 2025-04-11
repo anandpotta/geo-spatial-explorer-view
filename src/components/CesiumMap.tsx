@@ -11,13 +11,15 @@ interface CesiumMapProps {
   onMapReady?: () => void;
   onFlyComplete?: () => void;
   cinematicFlight?: boolean;
+  onViewerReady?: (viewer: Cesium.Viewer) => void;
 }
 
 const CesiumMap = ({ 
   selectedLocation, 
   onMapReady, 
   onFlyComplete, 
-  cinematicFlight = true 
+  cinematicFlight = true,
+  onViewerReady
 }: CesiumMapProps) => {
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const [isFlying, setIsFlying] = useState(false);
@@ -30,6 +32,13 @@ const CesiumMap = ({
     mapError,
     isInitialized
   } = useCesiumMap(cesiumContainer, onMapReady);
+
+  // Pass the viewer reference to parent component when available
+  useEffect(() => {
+    if (viewerRef.current && onViewerReady && isInitialized) {
+      onViewerReady(viewerRef.current);
+    }
+  }, [viewerRef.current, onViewerReady, isInitialized]);
 
   // Handle location changes - this effect should run when selectedLocation changes
   useEffect(() => {

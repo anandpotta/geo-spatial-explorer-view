@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
+import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,11 +13,25 @@ import TempMarker from './map/TempMarker';
 // Initialize leaflet icons
 setupLeafletIcons();
 
+// Custom component to get map instance
+const MapRef = ({ onMapReady }: { onMapReady: (map: L.Map) => void }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (map && onMapReady) {
+      onMapReady(map);
+    }
+  }, [map, onMapReady]);
+  
+  return null;
+};
+
 interface LeafletMapProps {
   selectedLocation?: Location;
+  onMapReady?: (map: L.Map) => void;
 }
 
-const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
+const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
   const [position, setPosition] = useState<[number, number]>(
     selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
   );
@@ -82,6 +96,11 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
   const handleSetMapRef = (map: L.Map) => {
     mapRef.current = map;
     
+    // Pass map reference to parent if callback provided
+    if (onMapReady) {
+      onMapReady(map);
+    }
+    
     // If we already have a selected location, fly to it
     if (selectedLocation) {
       const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
@@ -94,13 +113,13 @@ const LeafletMap = ({ selectedLocation }: LeafletMapProps) => {
       <MapContainer 
         className="w-full h-full"
         attributionControl={false}
-        whenCreated={handleSetMapRef}
         // Use type assertion to avoid TypeScript error with center and zoom props
         {...{
           center: position,
           zoom: zoom
         } as any}
       >
+        <MapRef onMapReady={handleSetMapRef} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />

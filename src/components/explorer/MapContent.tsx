@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
 import LeafletMap from '../LeafletMap';
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
+import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera-utils';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
@@ -21,6 +22,50 @@ const MapContent = ({
   onFlyComplete,
   onLocationSelect 
 }: MapContentProps) => {
+  const cesiumViewerRef = useRef<any>(null);
+  const leafletMapRef = useRef<any>(null);
+
+  // Handler to capture CesiumMap viewer reference
+  const handleCesiumViewerRef = (viewer: any) => {
+    cesiumViewerRef.current = viewer;
+  };
+
+  // Handler to capture LeafletMap map reference
+  const handleLeafletMapRef = (map: any) => {
+    leafletMapRef.current = map;
+  };
+
+  // Handlers for map tools
+  const handleZoomIn = () => {
+    if (currentView === 'cesium' && cesiumViewerRef.current) {
+      zoomIn(cesiumViewerRef.current);
+    } else if (currentView === 'leaflet' && leafletMapRef.current) {
+      leafletMapRef.current.zoomIn();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (currentView === 'cesium' && cesiumViewerRef.current) {
+      zoomOut(cesiumViewerRef.current);
+    } else if (currentView === 'leaflet' && leafletMapRef.current) {
+      leafletMapRef.current.zoomOut();
+    }
+  };
+
+  const handleResetView = () => {
+    if (currentView === 'cesium' && cesiumViewerRef.current) {
+      resetCamera(cesiumViewerRef.current);
+    } else if (currentView === 'leaflet' && leafletMapRef.current) {
+      leafletMapRef.current.setView([51.505, -0.09], 13);
+    }
+  };
+
+  const handleToolSelect = (tool: string) => {
+    console.log(`Tool selected: ${tool}`);
+    // Implement tool logic based on the selected tool
+    // This will be more complex and depends on your app's requirements
+  };
+
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden">
       {/* Map container with responsive dimensions */}
@@ -32,22 +77,24 @@ const MapContent = ({
             onFlyComplete={onFlyComplete}
             cinematicFlight={true}
             key="cesium-map-instance" // Force re-render on issues
+            onViewerReady={handleCesiumViewerRef}
           />
         </div>
         
         <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
-          <LeafletMap selectedLocation={selectedLocation} />
+          <LeafletMap 
+            selectedLocation={selectedLocation} 
+            onMapReady={handleLeafletMapRef}
+          />
         </div>
         
-        {/* Drawing tools displayed only in leaflet view */}
-        {currentView === 'leaflet' && (
-          <DrawingTools 
-            onToolSelect={(tool) => console.log('Selected tool:', tool)}
-            onZoomIn={() => console.log('Zoom in')}
-            onZoomOut={() => console.log('Zoom out')}
-            onReset={() => console.log('Reset view')}
-          />
-        )}
+        {/* Drawing tools displayed on both views */}
+        <DrawingTools 
+          onToolSelect={handleToolSelect}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onReset={handleResetView}
+        />
       </div>
       
       {/* The search component positioned absolutely on top of the map with higher z-index */}
