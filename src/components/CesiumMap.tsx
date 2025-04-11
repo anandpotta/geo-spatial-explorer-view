@@ -26,6 +26,7 @@ const CesiumMap = ({
   const [isFlying, setIsFlying] = useState(false);
   const pendingLocationRef = useRef<Location | undefined>(selectedLocation);
   const [viewerReady, setViewerReady] = useState(false);
+  const forceRenderCount = useRef(0);
   
   // Use the extracted Cesium map hook
   const { 
@@ -38,10 +39,21 @@ const CesiumMap = ({
     if (onMapReady) {
       onMapReady();
     }
-    // Add a small delay to ensure the globe is rendered before considering it "ready"
+    
+    // Add a delay to ensure the globe is rendered before considering it "ready"
     setTimeout(() => {
       setViewerReady(true);
-    }, 500);
+    }, 800);
+    
+    // Force additional renders to ensure the globe appears
+    const renderInterval = setInterval(() => {
+      if (viewerRef.current && !viewerRef.current.isDestroyed() && forceRenderCount.current < 10) {
+        viewerRef.current.scene.requestRender();
+        forceRenderCount.current++;
+      } else {
+        clearInterval(renderInterval);
+      }
+    }, 200);
   });
 
   // Pass the viewer reference to parent component when available
@@ -62,11 +74,18 @@ const CesiumMap = ({
     const location = pendingLocationRef.current;
     
     // Only proceed if we have all the necessary conditions met
-    if (!isInitialized || !viewerReady || isFlying || mapError) {
+    if (!isInitialized || !viewerReady || isFlying || mapError || !viewer) {
       if (!isInitialized && location) {
         console.log("Waiting for Cesium to initialize before flying...");
       }
       return;
+    }
+    
+    // Force additional renders to ensure the globe is visible before flying
+    if (viewer && !viewer.isDestroyed()) {
+      for (let i = 0; i < 5; i++) {
+        viewer.scene.requestRender();
+      }
     }
     
     // If we have a pending location, fly to it
@@ -88,7 +107,7 @@ const CesiumMap = ({
         }
       });
     }
-  }, [isInitialized, viewerReady, isFlying, mapError, viewerRef.current]); 
+  }, [isInitialized, viewerReady, isFlying, mapError]); 
   
   return (
     <div className="w-full h-full relative">

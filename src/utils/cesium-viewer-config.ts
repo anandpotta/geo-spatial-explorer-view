@@ -29,9 +29,9 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     // Use the correct property name for the imagery provider based on Cesium's type definitions
     baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
     terrainProvider: new Cesium.EllipsoidTerrainProvider(),
-    requestRenderMode: false,  // Changed to false to ensure continuous rendering initially
+    requestRenderMode: false,  // Always render continuously 
     maximumRenderTimeChange: Infinity,
-    targetFrameRate: 60, // Increased for smoother rotation
+    targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false as any, // Disable skybox
     skyAtmosphere: false as any, // Disable atmosphere
@@ -58,7 +58,7 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
       globe.enableLighting = false;
       globe.showWaterEffect = false;
       globe.showGroundAtmosphere = false;
-      globe.baseColor = Cesium.Color.CORNFLOWERBLUE.withAlpha(0.9); // More opaque blue globe
+      globe.baseColor = Cesium.Color.BLUE.withAlpha(0.9); // More opaque blue globe
       globe.translucency.enabled = false;
       
       // Disable terrain
@@ -110,7 +110,7 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
       }
       
       // Force multiple render cycles to ensure the globe appears
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 10; i++) {  // Increased render requests
         viewer.scene.requestRender();
       }
     }

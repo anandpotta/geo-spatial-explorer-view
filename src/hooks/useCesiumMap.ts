@@ -29,6 +29,7 @@ export const useCesiumMap = (
   const [isInitialized, setIsInitialized] = useState(false);
   const initializationAttempts = useRef(0);
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Clean up function to destroy the viewer safely
   const destroyViewer = () => {
@@ -47,6 +48,10 @@ export const useCesiumMap = (
   const initializeViewer = () => {
     if (!cesiumContainer.current) {
       console.log("No container element available for Cesium viewer");
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
+      initTimeoutRef.current = setTimeout(initializeViewer, 200);
       return;
     }
     
@@ -55,6 +60,7 @@ export const useCesiumMap = (
     try {
       console.log("Initializing Cesium viewer in offline mode...");
       
+      // Force container dimensions if needed
       if (cesiumContainer.current.clientWidth === 0 || cesiumContainer.current.clientHeight === 0) {
         console.warn("Container has zero width/height, forcing dimensions");
         cesiumContainer.current.style.width = '100%';
@@ -74,11 +80,11 @@ export const useCesiumMap = (
       // Configure for offline mode
       configureOfflineViewer(viewer);
       
-      // Set initial earth view - force the camera to look at Earth from space
+      // Set initial earth view
       setDefaultCameraView(viewer);
 
-      // Force a few render cycles to ensure the globe is visible
-      for (let i = 0; i < 3; i++) {
+      // Force multiple render cycles to ensure the globe is visible
+      for (let i = 0; i < 10; i++) {
         viewer.scene.requestRender();
       }
       
@@ -87,15 +93,26 @@ export const useCesiumMap = (
       
       console.log("Cesium map initialized in offline mode");
       
-      // Small delay before setting isInitialized to ensure rendering has time to complete
-      setTimeout(() => {
-        setIsInitialized(true);
-        setIsLoadingMap(false);
-        
-        if (onMapReady) {
-          onMapReady();
+      // Ensure globe is rendered before signaling ready
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current);
+      }
+      
+      renderTimeoutRef.current = setTimeout(() => {
+        // Force additional renders after a delay
+        if (viewer && !viewer.isDestroyed()) {
+          for (let i = 0; i < 5; i++) {
+            viewer.scene.requestRender();
+          }
+          
+          setIsInitialized(true);
+          setIsLoadingMap(false);
+          
+          if (onMapReady) {
+            onMapReady();
+          }
         }
-      }, 300);
+      }, 500);
     } catch (error) {
       console.error('Error initializing Cesium viewer:', error);
       initializationAttempts.current += 1;
@@ -125,12 +142,15 @@ export const useCesiumMap = (
 
   useEffect(() => {
     // Give the container a moment to be fully rendered before initializing
-    initTimeoutRef.current = setTimeout(initializeViewer, 500);
+    initTimeoutRef.current = setTimeout(initializeViewer, 200);
 
     return () => {
       // Clean up on component unmount
       if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current);
+      }
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current);
       }
       destroyViewer();
     };
