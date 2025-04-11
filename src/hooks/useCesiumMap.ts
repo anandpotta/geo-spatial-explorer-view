@@ -61,7 +61,6 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
-        imageryLayers: false, // Explicitly disable imagery layers
         requestRenderMode: true, // Only render when needed
         maximumRenderTimeChange: Infinity // Don't render based on time change
       });
