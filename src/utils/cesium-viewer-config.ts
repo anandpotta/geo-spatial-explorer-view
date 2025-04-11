@@ -1,3 +1,4 @@
+
 import * as Cesium from 'cesium';
 
 /**
@@ -35,7 +36,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    skyAtmosphere: true, // Enable atmosphere for Earth glow
+    skyAtmosphere: new Cesium.SkyAtmosphere(), // Create a SkyAtmosphere instance instead of boolean
     globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
