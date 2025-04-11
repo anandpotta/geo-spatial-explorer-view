@@ -63,7 +63,7 @@ const CesiumMap = ({
       <CesiumMapLoading isLoading={isLoadingMap} mapError={mapError} />
       <div 
         ref={cesiumContainer} 
-        className="w-full h-full"
+        className="w-full h-full cesium-container"
         style={{ 
           width: '100%', 
           height: '100%', 
@@ -71,8 +71,11 @@ const CesiumMap = ({
           top: 0, 
           left: 0,
           zIndex: 1,
-          visibility: isLoadingMap ? 'hidden' : 'visible'
+          visibility: isLoadingMap ? 'hidden' : 'visible',
+          minHeight: '400px',
+          display: 'block'
         }}
+        data-cesium-container="true"
       />
     </div>
   );

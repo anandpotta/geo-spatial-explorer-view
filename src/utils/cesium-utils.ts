@@ -18,12 +18,22 @@ export const flyToLocation = (
   console.log('Flying to location in Cesium:', selectedLocation);
   
   try {
+    if (!viewer || viewer.isDestroyed()) {
+      console.error('Cannot fly to location: Viewer is undefined or destroyed');
+      if (options.onComplete) {
+        setTimeout(options.onComplete, 0);
+      }
+      return;
+    }
+
     // Remove old entity if it exists
     removeEntity(viewer, entityRef);
     
     // Create a new entity at the target location
     const entity = createLocationEntity(viewer, selectedLocation);
-    entityRef.current = entity;
+    if (entity) {
+      entityRef.current = entity;
+    }
     
     // Fly camera to the location
     flyCameraToLocation(viewer, selectedLocation, {
@@ -33,6 +43,11 @@ export const flyToLocation = (
     }).then(() => {
       if (options.onComplete) {
         options.onComplete();
+      }
+    }).catch(err => {
+      console.error('Camera flight error:', err);
+      if (options.onComplete) {
+        setTimeout(options.onComplete, 0);
       }
     });
   } catch (error) {

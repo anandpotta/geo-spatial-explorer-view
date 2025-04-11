@@ -1,4 +1,3 @@
-
 import * as Cesium from 'cesium';
 
 /**
@@ -158,60 +157,66 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
  * Configures a Cesium viewer for offline mode by disabling all network-dependent features
  */
 export function configureOfflineViewer(viewer: Cesium.Viewer): void {
-  if (!viewer || !viewer.scene) {
+  if (!viewer) {
     console.warn('Invalid viewer object provided to configureOfflineViewer');
     return;
   }
   
-  // 1. Configure globe appearance 
-  const globe = viewer.scene.globe;
-  if (globe) {
-    // Disable all globe features that might request data
-    globe.enableLighting = false;
-    globe.showWaterEffect = false;
-    globe.showGroundAtmosphere = false;
-    globe.baseColor = Cesium.Color.BLUE.withAlpha(0.7); // Simple blue globe
-    
-    // Disable terrain
-    globe.depthTestAgainstTerrain = false;
-  }
-  
-  // 3. Disable all automatic asset loading features - with safety checks
-  if (viewer.scene.skyAtmosphere) {
-    viewer.scene.skyAtmosphere.show = false;
-  }
-  
-  if (viewer.scene.fog) {
-    viewer.scene.fog.enabled = false;
-  }
-  
-  if (viewer.scene.moon) {
-    viewer.scene.moon.show = false;
-  }
-  
-  if (viewer.scene.sun) {
-    viewer.scene.sun.show = false;
-  }
-  
-  if (viewer.scene.skyBox) {
-    viewer.scene.skyBox.show = false;
-  }
-  
-  // 5. Use type assertion to access private properties safely
   try {
-    // Access private properties using type assertion
-    const globeAny = globe as any;
-    if (globeAny && globeAny._surface && globeAny._surface._tileProvider) {
-      if (globeAny._surface._tileProvider._debug) {
-        globeAny._surface._tileProvider._debug.wireframe = true;
+    // 1. Configure globe appearance 
+    if (viewer.scene && viewer.scene.globe) {
+      const globe = viewer.scene.globe;
+      // Disable all globe features that might request data
+      globe.enableLighting = false;
+      globe.showWaterEffect = false;
+      globe.showGroundAtmosphere = false;
+      globe.baseColor = Cesium.Color.BLUE.withAlpha(0.7); // Simple blue globe
+      
+      // Disable terrain
+      globe.depthTestAgainstTerrain = false;
+    }
+    
+    // 3. Disable all automatic asset loading features - with safety checks
+    if (viewer.scene) {
+      if (viewer.scene.skyAtmosphere) {
+        viewer.scene.skyAtmosphere.show = false;
+      }
+      
+      if (viewer.scene.fog) {
+        viewer.scene.fog.enabled = false;
+      }
+      
+      if (viewer.scene.moon) {
+        viewer.scene.moon.show = false;
+      }
+      
+      if (viewer.scene.sun) {
+        viewer.scene.sun.show = false;
+      }
+      
+      if (viewer.scene.skyBox) {
+        viewer.scene.skyBox.show = false;
+      }
+      
+      // 6. Set background color
+      viewer.scene.backgroundColor = Cesium.Color.BLACK;
+      
+      // 5. Use type assertion to access private properties safely
+      try {
+        if (viewer.scene.globe) {
+          // Access private properties using type assertion
+          const globeAny = viewer.scene.globe as any;
+          if (globeAny && globeAny._surface && globeAny._surface._tileProvider) {
+            if (globeAny._surface._tileProvider._debug) {
+              globeAny._surface._tileProvider._debug.wireframe = true;
+            }
+          }
+        }
+      } catch (e) {
+        console.log('Could not access internal globe properties, continuing anyway');
       }
     }
   } catch (e) {
-    console.log('Could not access internal globe properties, continuing anyway');
-  }
-  
-  // 6. Set background color
-  if (viewer.scene) {
-    viewer.scene.backgroundColor = Cesium.Color.BLACK;
+    console.error('Error configuring offline viewer:', e);
   }
 }

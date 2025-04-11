@@ -27,6 +27,7 @@ export const useCesiumMap = (
   const [isLoadingMap, setIsLoadingMap] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const initializationAttempts = useRef(0);
 
   // Initialize Cesium viewer
   useEffect(() => {
@@ -36,17 +37,29 @@ export const useCesiumMap = (
       return;
     }
 
-    // Wait a brief moment to ensure DOM is fully rendered
+    // Wait a moment to ensure DOM is fully rendered
     const initTimeout = setTimeout(() => {
       // Clean up any previous viewer
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
         console.log("Destroying previous Cesium viewer");
-        viewerRef.current.destroy();
+        try {
+          viewerRef.current.destroy();
+        } catch (e) {
+          console.error("Error destroying viewer:", e);
+        }
         viewerRef.current = null;
       }
 
       try {
         console.log("Initializing Cesium viewer in offline mode...");
+        
+        // Check container dimensions
+        if (cesiumContainer.current.clientWidth === 0 || cesiumContainer.current.clientHeight === 0) {
+          console.warn("Container has zero width/height, forcing dimensions");
+          cesiumContainer.current.style.width = '100%';
+          cesiumContainer.current.style.height = '100%';
+          cesiumContainer.current.style.minHeight = '400px';
+        }
         
         // 1. Disable Ion completely
         Cesium.Ion.defaultAccessToken = '';
@@ -54,13 +67,10 @@ export const useCesiumMap = (
         // 2. Use our patching mechanism to prevent network requests
         patchCesiumToPreventNetworkRequests();
         
-        // Verify container dimensions
-        if (cesiumContainer.current.clientWidth === 0 || cesiumContainer.current.clientHeight === 0) {
-          console.warn("Container has zero width/height, Cesium may fail to initialize properly");
-        }
-        
         // 3. Create viewer with offline configuration
         const viewerOptions = createOfflineCesiumViewerOptions();
+        
+        // Creating the viewer
         const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
         
         // 4. Configure viewer for offline mode
@@ -81,27 +91,41 @@ export const useCesiumMap = (
         }
       } catch (error) {
         console.error('Error initializing Cesium viewer:', error);
-        setMapError('Failed to initialize 3D globe. Please try again later.');
-        setIsLoadingMap(false);
+        initializationAttempts.current += 1;
         
-        // Show error toast
-        toast({
-          title: "Map Error",
-          description: "Failed to initialize 3D globe. Falling back to 2D view.",
-          variant: "destructive"
-        });
+        // After multiple attempts, give up and show error
+        if (initializationAttempts.current >= 3) {
+          setMapError('Failed to initialize 3D globe. Please try again later.');
+          setIsLoadingMap(false);
+          
+          // Show error toast
+          toast({
+            title: "Map Error",
+            description: "Failed to initialize 3D globe. Falling back to 2D view.",
+            variant: "destructive"
+          });
+        } else {
+          // Try again after a short delay
+          setTimeout(() => {
+            setIsLoadingMap(true);
+          }, 1000);
+        }
       }
-    }, 100); // Give the DOM a moment to render
+    }, 300); // Give the DOM more time to render
     
     // Clean up on unmount
     return () => {
       clearTimeout(initTimeout);
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
         console.log("Destroying Cesium viewer on unmount");
-        viewerRef.current.destroy();
+        try {
+          viewerRef.current.destroy();
+        } catch (e) {
+          console.error("Error destroying viewer:", e);
+        }
       }
     };
-  }, [cesiumContainer, onMapReady]);
+  }, [cesiumContainer, onMapReady, isLoadingMap]);
 
   return {
     viewerRef,
