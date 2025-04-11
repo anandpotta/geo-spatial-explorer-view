@@ -36,25 +36,24 @@ export const useCesiumMap = (
     try {
       console.log("Initializing Cesium viewer in offline mode...");
       
-      // Disable Ion authentication completely
+      // Completely disable Ion - critical to prevent authentication errors
       Cesium.Ion.defaultAccessToken = '';
       
-      // Set asset loading to offline mode
-      // Instead of trying to override Ion.createResource which doesn't exist in type definitions
-      // We'll set up the viewer to avoid any network requests entirely
+      // Force disable all network requests for Ion services
+      const baseUrl = window.location.origin;
+      (window as any).CESIUM_BASE_URL = baseUrl;
       
-      // Configure Cesium to use local assets
-      (window as any).CESIUM_BASE_URL = '/';
+      // Create a custom terrain provider that's just a simple ellipsoid (no network requests)
+      const terrainProvider = new Cesium.EllipsoidTerrainProvider();
       
-      // Disable all credit display to prevent any network requests
-      Cesium.CreditDisplay.cesiumCredit = new Cesium.Credit('');
-      
-      // Create the Cesium viewer with minimal settings to avoid network requests
+      // Create the viewer without any imagery or external services
       const viewer = new Cesium.Viewer(cesiumContainer.current, {
+        terrainProvider: terrainProvider,
+        imageryProvider: false,
+        baseLayerPicker: false,
         geocoder: false,
         homeButton: false,
         sceneModePicker: false,
-        baseLayerPicker: false,
         navigationHelpButton: false,
         animation: false,
         timeline: false,
@@ -63,8 +62,6 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
-        requestRenderMode: true,
-        targetFrameRate: 30,
         contextOptions: {
           webgl: {
             alpha: true,
@@ -75,24 +72,27 @@ export const useCesiumMap = (
         }
       });
       
-      // Disable all imagery provider to prevent network requests
+      // Remove any default imagery layer that might have been created
       viewer.imageryLayers.removeAll();
       
-      // Disable all features that might cause network requests
-      viewer.scene.globe.enableLighting = false;
-      viewer.scene.skyAtmosphere.show = true; // Keep atmosphere for better visuals
+      // Set up simple blue globe appearance
+      viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(0.7);
+      
+      // Disable atmosphere to avoid potential network requests for atmosphere assets
+      viewer.scene.skyAtmosphere.show = false;
+      
+      // Disable fog, sun, moon, stars
       viewer.scene.fog.enabled = false;
       viewer.scene.sun.show = false;
       viewer.scene.moon.show = false;
       
-      // Explicitly disable the skyBox to prevent image loading errors
+      // Make sure the skybox is disabled to avoid image loading errors
       viewer.scene.skyBox.show = false;
       
       // Set background color
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
-      viewer.scene.globe.baseColor = Cesium.Color.DARKBLUE;
       
-      // Set up initial view from space
+      // Set initial view 
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000.0),
         orientation: {

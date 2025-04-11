@@ -1,6 +1,6 @@
 
 export const API_CONFIG = {
-  // Disable Cesium Ion integration completely
+  // Completely disable Cesium Ion integration
   CESIUM_ION_TOKEN: "",
   
   // Disable all external services
