@@ -36,21 +36,55 @@ export const useCesiumMap = (
     try {
       console.log("Initializing Cesium viewer in offline mode...");
       
+      // CRITICAL: Completely block all network requests from Cesium
+      // Override the Resource constructor to prevent network requests
+      const originalResource = Cesium.Resource;
+      
+      try {
+        // Create a mock Resource class that prevents all network requests
+        const MockResource: any = function(options: any) {
+          this._url = '';
+          this.request = function() {
+            return Promise.reject(new Error('Network requests are disabled'));
+          };
+          this.fetchImage = function() {
+            return Promise.reject(new Error('Network requests are disabled'));
+          };
+          this.fetchJson = function() {
+            return Promise.reject(new Error('Network requests are disabled'));
+          };
+          this.fetchXML = function() {
+            return Promise.reject(new Error('Network requests are disabled'));
+          };
+          this.fetchText = function() {
+            return Promise.reject(new Error('Network requests are disabled'));
+          };
+          this.fetchArrayBuffer = function() {
+            return Promise.reject(new Error('Network requests are disabled'));
+          };
+          this.fetchBlob = function() {
+            return Promise.reject(new Error('Network requests are disabled'));
+          };
+        };
+        
+        MockResource.prototype.clone = function() {
+          return new MockResource({});
+        };
+        
+        // Temporarily replace Resource with our mock version
+        // @ts-ignore - This is a deliberate override
+        Cesium.Resource = MockResource;
+      } catch (e) {
+        console.log('Could not override Resource class, continuing anyway');
+      }
+      
       // CRITICAL: Disable Ion and all network requests
-      // This must happen BEFORE creating any Cesium objects
       Cesium.Ion.defaultAccessToken = '';
       
-      // Instead of trying to modify Cesium objects directly, provide our own implementations
-      // that don't require network requests
-      const createEmptyImageryProvider = function() {
-        return undefined;
-      };
+      // Create an empty imagery provider
+      const emptyImageryProvider = undefined;
       
-      const createSimpleTerrainProvider = function() {
-        return new Cesium.EllipsoidTerrainProvider();
-      };
-      
-      // Create basic terrain provider that doesn't need network
+      // Create simple terrain provider
       const terrainProvider = new Cesium.EllipsoidTerrainProvider();
       
       // Create viewer with absolutely minimal configuration
@@ -68,15 +102,17 @@ export const useCesiumMap = (
         infoBox: false,
         selectionIndicator: false,
         creditContainer: document.createElement('div'), // Hide credits
-        requestRenderMode: true, // Only render when needed
-        maximumRenderTimeChange: Infinity, // Don't render based on time change
+        imageryProvider: emptyImageryProvider,
+        requestRenderMode: true,
+        maximumRenderTimeChange: Infinity,
+        targetFrameRate: 10, // Lower frame rate to reduce resources
         shadows: false
       };
       
       // Create viewer with minimal options
       const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
       
-      // CRITICAL: Immediately remove ALL imagery layers to prevent any network requests
+      // CRITICAL: Immediately remove ALL imagery layers
       viewer.imageryLayers.removeAll();
       
       // Disable all automatic asset loading
@@ -86,7 +122,7 @@ export const useCesiumMap = (
       // Blue globe appearance
       viewer.scene.globe.baseColor = Cesium.Color.BLUE.withAlpha(0.7);
       
-      // Disable all features that might trigger network requests
+      // Disable atmospheric features
       viewer.scene.skyAtmosphere.show = false;
       viewer.scene.fog.enabled = false;
       viewer.scene.moon.show = false;
@@ -107,6 +143,16 @@ export const useCesiumMap = (
         console.log('Could not access internal globe properties, continuing anyway');
       }
       
+      // Disable request scheduler if it exists
+      try {
+        if ((Cesium as any).RequestScheduler) {
+          (Cesium as any).RequestScheduler.requestsByServer = {};
+          (Cesium as any).RequestScheduler.maximumRequestsPerServer = 0;
+        }
+      } catch (e) {
+        console.log('Could not disable request scheduler, continuing anyway');
+      }
+      
       // Set background color
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
       
@@ -125,6 +171,14 @@ export const useCesiumMap = (
       
       // Save the viewer reference
       viewerRef.current = viewer;
+      
+      // Reset the Resource class back to original
+      try {
+        // @ts-ignore - This is a deliberate override
+        Cesium.Resource = originalResource;
+      } catch (e) {
+        console.log('Could not restore Resource class, continuing anyway');
+      }
       
       console.log("Cesium map initialized in offline mode");
       setIsInitialized(true);

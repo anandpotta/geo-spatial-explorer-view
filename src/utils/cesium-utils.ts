@@ -7,7 +7,7 @@ export interface FlightOptions {
   cinematic?: boolean;
 }
 
-// Create a multi-stage cinematic flight animation
+// Create a simplified flight animation that won't trigger any network requests
 export const flyToLocation = (
   viewer: Cesium.Viewer, 
   selectedLocation: Location,
@@ -23,7 +23,7 @@ export const flyToLocation = (
       entityRef.current = null;
     }
     
-    // Create a simple entity at the target location
+    // Create a simple entity at the target location with minimal resources
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(selectedLocation.x, selectedLocation.y),
       point: {
@@ -35,80 +35,34 @@ export const flyToLocation = (
       label: {
         text: selectedLocation.label.split(',')[0], // First part of the address
         font: '14pt sans-serif',
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL,
         verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        pixelOffset: new Cesium.Cartesian2(0, -10),
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
+        pixelOffset: new Cesium.Cartesian2(0, -10)
       }
     });
     
     entityRef.current = entity;
     
-    if (options.cinematic) {
-      // Multi-stage cinematic flight - simplified to reduce resource usage
-      const currentHeight = viewer.camera.positionCartographic.height;
-      
-      // Simplified animation to reduce resource usage and network requests
-      let animationStages = [];
-      
-      if (currentHeight < 15000000) {
-        // First stage - zoom out to high altitude
-        animationStages.push({
-          destination: Cesium.Cartesian3.fromDegrees(
-            selectedLocation.x,
-            selectedLocation.y,
-            20000000.0
-          ),
-          duration: 2.0
-        });
-      }
-      
-      // Second stage - zoom in to the location
-      animationStages.push({
+    // Skip animation and just set the camera directly
+    if (!options.cinematic) {
+      // Direct camera setting without animation
+      viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(
           selectedLocation.x,
           selectedLocation.y,
           500000.0
-        ),
-        duration: 3.0
+        )
       });
       
-      // Final stage - slight perspective adjustment
-      animationStages.push({
-        destination: Cesium.Cartesian3.fromDegrees(
-          selectedLocation.x + 0.05,
-          selectedLocation.y - 0.05,
-          100000.0
-        ),
-        duration: 2.0
-      });
+      // Force render
+      viewer.scene.requestRender();
       
-      // Execute the animation stages in sequence
-      let currentStageIndex = 0;
-      
-      const executeNextStage = () => {
-        if (currentStageIndex >= animationStages.length) {
-          if (options.onComplete) {
-            options.onComplete();
-          }
-          return;
-        }
-        
-        const stage = animationStages[currentStageIndex];
-        currentStageIndex++;
-        
-        viewer.camera.flyTo({
-          destination: stage.destination,
-          duration: stage.duration,
-          complete: executeNextStage
-        });
-      };
-      
-      // Start the animation sequence
-      executeNextStage();
+      // Call the completion callback immediately
+      if (options.onComplete) {
+        setTimeout(options.onComplete, 100);
+      }
     } else {
-      // Simple direct flight animation
+      // Simplified single-stage animation with minimal properties
       viewer.camera.flyTo({
         destination: Cesium.Cartesian3.fromDegrees(
           selectedLocation.x,

@@ -26,11 +26,19 @@ export const API_CONFIG = {
   // Flags for asset loading
   ASSETS_ENABLED: false,
   
+  // Network request settings
+  NETWORK: {
+    ENABLED: false,
+    TIMEOUT: 0,
+    RETRY_ATTEMPTS: 0
+  },
+  
   // Feature flags
   FEATURES: {
     IMAGERY: false,
     TERRAIN: false,
     ATMOSPHERE: false,
-    LIGHTING: false
+    LIGHTING: false,
+    GLOBE_EFFECTS: false
   }
 };
