@@ -6,7 +6,7 @@ import {
   createOfflineCesiumViewerOptions,
   configureOfflineViewer
 } from '@/utils/cesium-offline-mode';
-import { setDefaultCameraView } from '@/utils/cesium-camera-utils';
+import { setDefaultCameraView } from '@/utils/cesium-camera';
 import { destroyViewer } from './use-cesium-cleanup';
 
 export interface ViewerInitializationOptions {

@@ -1,7 +1,7 @@
 
 import * as Cesium from 'cesium';
 import { patchCesiumToPreventNetworkRequests, patchCesiumProviders } from './cesium-network-patches';
-import { createOfflineCesiumViewerOptions, configureOfflineViewer } from './cesium-viewer-config';
+import { createOfflineCesiumViewerOptions, configureOfflineViewer } from './cesium-viewer';
 
 /**
  * Prepares Cesium for offline mode by applying all necessary patches
