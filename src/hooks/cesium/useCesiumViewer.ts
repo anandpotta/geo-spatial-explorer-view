@@ -37,6 +37,10 @@ export const useCesiumViewer = (
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
       console.log("Destroying previous Cesium viewer");
       try {
+        // First clear any entities which might cause errors
+        viewerRef.current.entities.removeAll();
+        
+        // Safely destroy viewer
         viewerRef.current.destroy();
       } catch (e) {
         console.error("Error destroying viewer:", e);

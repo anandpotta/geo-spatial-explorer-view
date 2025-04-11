@@ -1,4 +1,3 @@
-
 import * as Cesium from 'cesium';
 
 /**
@@ -36,7 +35,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    skyAtmosphere: new Cesium.SkyAtmosphere(), // Create a SkyAtmosphere instance instead of boolean
+    skyAtmosphere: true, // Use boolean instead of creating an instance
     globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
@@ -77,7 +76,11 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
       globe.show = true;
       
       // Explicitly configure globe to be solid
-      (globe as any)._surface._tileProvider._debug.wireframe = false;
+      try {
+        (globe as any)._surface._tileProvider._debug.wireframe = false;
+      } catch (e) {
+        // Safely ignore if this property isn't available
+      }
       
       // Set a dark space background
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
@@ -85,10 +88,18 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
     
     // 2. Configure atmosphere for the Earth glow effect
     if (viewer.scene && viewer.scene.skyAtmosphere) {
-      viewer.scene.skyAtmosphere.show = true;
-      viewer.scene.skyAtmosphere.hueShift = 0.0;
-      viewer.scene.skyAtmosphere.saturationShift = 0.1;
-      viewer.scene.skyAtmosphere.brightnessShift = 0.8;
+      // Check if skyAtmosphere is an object and not just a boolean
+      if (typeof viewer.scene.skyAtmosphere === 'object') {
+        // Only set properties if it's an object with properties
+        if ('show' in viewer.scene.skyAtmosphere) {
+          viewer.scene.skyAtmosphere.show = true;
+        }
+        if ('hueShift' in viewer.scene.skyAtmosphere) {
+          viewer.scene.skyAtmosphere.hueShift = 0.0;
+          viewer.scene.skyAtmosphere.saturationShift = 0.1;
+          viewer.scene.skyAtmosphere.brightnessShift = 0.8;
+        }
+      }
     }
     
     // 3. Disable celestial bodies but keep atmosphere

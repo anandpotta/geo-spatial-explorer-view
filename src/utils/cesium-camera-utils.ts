@@ -1,3 +1,4 @@
+
 import * as Cesium from 'cesium';
 import { Location } from './geo-utils';
 
@@ -44,10 +45,13 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       
       // Enhance atmosphere effect for better edge glow
       if (viewer.scene.skyAtmosphere) {
-        viewer.scene.skyAtmosphere.show = true;
-        viewer.scene.skyAtmosphere.hueShift = 0.0;
-        viewer.scene.skyAtmosphere.saturationShift = 0.1;
-        viewer.scene.skyAtmosphere.brightnessShift = 0.95; // Slightly brighter atmosphere
+        // Check if skyAtmosphere is an object and not a boolean
+        if (typeof viewer.scene.skyAtmosphere === 'object') {
+          viewer.scene.skyAtmosphere.show = true;
+          viewer.scene.skyAtmosphere.hueShift = 0.0;
+          viewer.scene.skyAtmosphere.saturationShift = 0.1;
+          viewer.scene.skyAtmosphere.brightnessShift = 0.95; // Slightly brighter atmosphere
+        }
       }
       
       // Disable fog for clearer continental view
