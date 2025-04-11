@@ -44,6 +44,3 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
     console.error('Error configuring offline viewer:', e);
   }
 }
-
-// Include this in the exports
-export { configureOfflineViewer };
