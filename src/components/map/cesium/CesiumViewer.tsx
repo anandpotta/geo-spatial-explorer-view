@@ -30,9 +30,6 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       onMapReady();
     }
     
-    // Immediately make canvas visible when initialized
-    setCanvasVisible(true);
-    
     // Set a more aggressive rendering schedule to ensure the globe appears
     if (renderIntervalRef.current) {
       clearInterval(renderIntervalRef.current);
@@ -49,7 +46,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           viewerRef.current.scene.globe.show = true;
           
           // Set increasingly vibrant colors over time
-          const colorIntensity = Math.min(1.0, 0.4 + (forceRenderCount.current * 0.05));
+          const colorIntensity = Math.min(1.0, 0.6 + (forceRenderCount.current * 0.05));
           viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, colorIntensity, 1.0, 1.0);
           
           if (!globeImageryLoadedRef.current) {
@@ -57,20 +54,23 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           }
         }
         
+        // Make the canvas visible after ensuring renders
+        setCanvasVisible(true);
+        
         // Stop after sufficient renders
         forceRenderCount.current++;
-        if (forceRenderCount.current > 30) {
+        if (forceRenderCount.current > 40) { // Increased render cycles
           clearInterval(renderIntervalRef.current);
           renderIntervalRef.current = null;
-          
-          // Make the canvas visible after ensuring renders
-          setCanvasVisible(true);
         }
       } else {
         clearInterval(renderIntervalRef.current);
         renderIntervalRef.current = null;
       }
-    }, 100); // More frequent renders
+    }, 75); // More frequent renders
+    
+    // Immediately make canvas visible when initialized
+    setCanvasVisible(true);
     
     // Create a fallback timer to ensure we don't get stuck if rendering fails
     setTimeout(() => {
@@ -98,14 +98,14 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       onViewerReady(viewerRef.current);
       
       // Force immediate renders when viewer is available
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 30; i++) { // Increased render cycles
         viewerRef.current.scene.requestRender();
       }
       
       // Set initial camera view again to ensure proper positioning
       if (viewerRef.current.scene && viewerRef.current.scene.globe) {
         viewerRef.current.scene.globe.show = true;
-        viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+        viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
       }
     }
   }, [isInitialized, onViewerReady]);
@@ -123,14 +123,14 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     
     // Additional renders to ensure visibility
     viewer.resize();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) { // Increased render cycles
       viewer.scene.requestRender();
     }
     
     // Ensure globe is visible
     if (viewer.scene && viewer.scene.globe) {
       viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // Brighter blue
     }
   }, [isInitialized, isFlying]);
   
@@ -151,7 +151,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           minHeight: '400px',
           display: 'block',
           opacity: canvasVisible ? 1 : 0,
-          transition: 'opacity 0.5s ease-in-out'
+          transition: 'opacity 0.3s ease-in-out' // Faster transition
         }}
         data-cesium-container="true"
       />

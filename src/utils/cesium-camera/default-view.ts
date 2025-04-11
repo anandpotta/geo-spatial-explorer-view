@@ -11,19 +11,19 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   }
 
   try {
-    // Position the camera to show a more prominent Earth view - much closer to Earth
+    // Position the camera to show a more prominent Earth view - closer to Earth
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0), // Centered view of Earth
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 12000000.0), // Closer view of Earth
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-25.0),
+        pitch: Cesium.Math.toRadians(-30.0), // Slightly higher angle for better perspective
         roll: 0.0
       }
     });
     
     // Ensure Earth rotation is on but at a moderate speed
     viewer.clock.shouldAnimate = true;
-    viewer.clock.multiplier = 3; // Slower rotation for better initial visibility
+    viewer.clock.multiplier = 3; // Moderate rotation speed
     
     // Set a pure black background for better contrast
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
@@ -34,7 +34,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       viewer.scene.globe.show = true;
       
       // Configure globe appearance with vibrant blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.7, 1.0, 1.0); // More vibrant blue
       
       // Enhanced atmosphere effect
       viewer.scene.globe.showGroundAtmosphere = true;
@@ -54,7 +54,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     console.log('Enhanced Earth view set with improved colors and visibility');
     
     // Force immediate renders - more renders for better visibility
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 120; i++) { // Doubled render requests
       viewer.scene.requestRender();
     }
     
@@ -74,7 +74,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
   
   // Schedule additional renders at strategic intervals for progressive loading
   // More frequent renders at the beginning with more intervals
-  const renderIntervals = [25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 3000];
+  const renderIntervals = [10, 20, 30, 50, 75, 100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000]; // More intervals
   
   renderIntervals.forEach((interval, index) => {
     setTimeout(() => {
@@ -88,7 +88,8 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
           viewer.scene.globe.show = true;
           
           // Refresh globe appearance at different stages with increasing intensity
-          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+          const intensity = Math.min(0.7 + (index * 0.02), 1.0); // Gradually increase intensity
+          viewer.scene.globe.baseColor = new Cesium.Color(0.0, intensity, 1.0, 1.0);
           
           if (index % 3 === 0) { // Every third interval - force resize
             viewer.forceResize();

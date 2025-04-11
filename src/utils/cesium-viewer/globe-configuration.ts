@@ -13,8 +13,8 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
   try {
     const globe = viewer.scene.globe;
     
-    // Make the globe blue like Earth
-    globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0);
+    // Make the globe blue like Earth - with more vibrant color
+    globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0).brighten(0.5, new Cesium.Color());
     
     // Enable lighting for better 3D appearance
     globe.enableLighting = true;
@@ -41,9 +41,11 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
     // Force the globe to be visible
     globe.show = true;
     
-    // Request a render to update the globe
+    // Request a render to update the globe - multiple times
     if (viewer.scene) {
-      viewer.scene.requestRender();
+      for (let i = 0; i < 20; i++) {
+        viewer.scene.requestRender();
+      }
     }
   } catch (e) {
     console.error('Error configuring globe appearance:', e);
@@ -67,21 +69,23 @@ export function configureSceneBackground(viewer: Cesium.Viewer): void {
       viewer.scene.fog.enabled = false;
     }
     
-    // Hide celestial bodies
+    // Hide celestial bodies to focus on the globe
     if (viewer.scene.moon) {
       viewer.scene.moon.show = false;
     }
     
     if (viewer.scene.sun) {
-      viewer.scene.sun.show = false;
+      viewer.scene.sun.show = true; // Keep sun for better lighting
     }
     
     if (viewer.scene.skyBox) {
       viewer.scene.skyBox.show = false;
     }
     
-    // Force scene to render
-    viewer.scene.requestRender();
+    // Force scene to render multiple times
+    for (let i = 0; i < 15; i++) {
+      viewer.scene.requestRender();
+    }
   } catch (e) {
     console.error('Error configuring scene background:', e);
   }
@@ -102,6 +106,10 @@ export function configureCameraControls(viewer: Cesium.Viewer): void {
     controller.enableZoom = true;
     controller.enableTilt = true;
     controller.enableLook = true;
+    
+    // Set minimum and maximum zoom distances for better user experience
+    controller.minimumZoomDistance = 100000; // Don't let users zoom in too close
+    controller.maximumZoomDistance = 25000000; // Don't let users zoom out too far
   } catch (e) {
     console.error('Error configuring camera controls:', e);
   }
