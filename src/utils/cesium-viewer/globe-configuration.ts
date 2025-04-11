@@ -37,6 +37,10 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
     } catch (e) {
       // Safely ignore if this property isn't available
     }
+    
+    // Force the globe to be visible and update
+    globe.show = true;
+    globe.update(viewer.clock.currentTime);
   } catch (e) {
     console.error('Error configuring globe appearance:', e);
   }
@@ -71,6 +75,9 @@ export function configureSceneBackground(viewer: Cesium.Viewer): void {
     if (viewer.scene.skyBox) {
       viewer.scene.skyBox.show = false;
     }
+    
+    // Force scene to render
+    viewer.scene.requestRender();
   } catch (e) {
     console.error('Error configuring scene background:', e);
   }

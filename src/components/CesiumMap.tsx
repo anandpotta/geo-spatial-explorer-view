@@ -51,23 +51,29 @@ const CesiumMap = ({
         
         // Force additional renders to ensure the globe appears
         if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-          for (let i = 0; i < 10; i++) {
+          viewerRef.current.resize(); // Force resize
+          for (let i = 0; i < 15; i++) {
             viewerRef.current.scene.requestRender();
           }
           console.log('Canvas made visible, additional renders requested');
         }
-      }, 400);
-    }, 600);
+      }, 200);  // Shorter delay for better visibility
+    }, 300);  // Shorter delay for faster loading
     
     // Force additional renders to ensure the globe appears
     const renderInterval = setInterval(() => {
-      if (viewerRef.current && !viewerRef.current.isDestroyed() && forceRenderCount.current < 20) {
+      if (viewerRef.current && !viewerRef.current.isDestroyed() && forceRenderCount.current < 30) {
         viewerRef.current.scene.requestRender();
         forceRenderCount.current++;
+        
+        // Force globe update with each render
+        if (viewerRef.current.scene && viewerRef.current.scene.globe) {
+          viewerRef.current.scene.globe.update(viewerRef.current.clock.currentTime);
+        }
       } else {
         clearInterval(renderInterval);
       }
-    }, 150);
+    }, 100); // Faster interval for more frequent renders
   });
 
   // Pass the viewer reference to parent component when available
@@ -97,7 +103,8 @@ const CesiumMap = ({
     
     // Force additional renders to ensure the globe is visible before flying
     if (viewer && !viewer.isDestroyed()) {
-      for (let i = 0; i < 5; i++) {
+      viewer.resize(); // Force resize
+      for (let i = 0; i < 10; i++) {
         viewer.scene.requestRender();
       }
     }
@@ -136,7 +143,7 @@ const CesiumMap = ({
           top: 0, 
           left: 0,
           zIndex: 1,
-          visibility: isLoadingMap ? 'hidden' : 'visible',
+          visibility: 'visible', // Always keep visible for better renders
           minHeight: '400px',
           display: 'block',
           transition: 'opacity 0.5s ease-in-out'

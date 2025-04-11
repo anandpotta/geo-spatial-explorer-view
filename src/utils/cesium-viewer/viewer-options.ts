@@ -5,11 +5,11 @@ import * as Cesium from 'cesium';
  * Creates minimal viewer options for offline Cesium usage
  */
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
-  // Create a simple grid imagery provider with earth-like appearance
+  // Create a grid imagery provider with earth-like appearance
   const gridImageryProvider = new Cesium.GridImageryProvider({
     cells: 8,  // Larger cells for continent-like appearance
-    color: Cesium.Color.WHITE.withAlpha(0.1), // Subtle grid lines
-    glowColor: Cesium.Color.WHITE.withAlpha(0.2),
+    color: Cesium.Color.WHITE.withAlpha(0.2), // More visible grid lines
+    glowColor: Cesium.Color.WHITE.withAlpha(0.3),
     backgroundColor: Cesium.Color.TRANSPARENT // Allow globe color to show through
   });
 
@@ -36,10 +36,17 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    skyAtmosphere: false, // Use boolean (false) instead of creating an instance or using true
+    skyAtmosphere: true, // Enable atmosphere for globe edge effect
     globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84),
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
-    orderIndependentTranslucency: true // Enable for better atmospheric effects
+    orderIndependentTranslucency: true, // Enable for better atmospheric effects
+    contextOptions: {
+      webgl: {
+        alpha: false, // Disable transparency for better performance
+        antialias: true, // Enable antialiasing for smoother edges
+        powerPreference: 'high-performance'
+      }
+    }
   };
 }

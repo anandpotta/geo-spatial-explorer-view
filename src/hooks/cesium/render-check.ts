@@ -23,6 +23,18 @@ export function setupRenderChecks({
   setIsLoadingMap,
   onMapReady
 }: RenderCheckOptions): void {
+  // Force multiple renders right away
+  if (viewer) {
+    // Request multiple renders immediately
+    for (let i = 0; i < 15; i++) {
+      viewer.scene.requestRender();
+    }
+    
+    // Force resize to ensure proper dimensions
+    viewer.resize();
+    console.log("Forced multiple renders and resize for globe visibility");
+  }
+
   // Start checking if the canvas is properly rendered
   if (checkRenderIntervalRef.current) {
     clearInterval(checkRenderIntervalRef.current);
@@ -43,7 +55,7 @@ export function setupRenderChecks({
         viewer.resize();
         
         // Force additional renders
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 15; i++) {
           viewer.scene.requestRender();
         }
         
@@ -72,7 +84,9 @@ export function setupRenderChecks({
   renderTimeoutRef.current = setTimeout(() => {
     // Force additional renders after a delay
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-      for (let i = 0; i < 10; i++) {
+      viewer.resize(); // Force resize again
+      
+      for (let i = 0; i < 15; i++) {
         viewerRef.current.scene.requestRender();
       }
       
