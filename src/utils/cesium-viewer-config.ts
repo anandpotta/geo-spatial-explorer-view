@@ -62,6 +62,9 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
       
       // Disable terrain
       globe.depthTestAgainstTerrain = false;
+      
+      // Make sure the globe is visible
+      globe.show = true;
     }
     
     // 2. Disable all automatic asset loading features - with safety checks
@@ -103,6 +106,16 @@ export function configureOfflineViewer(viewer: Cesium.Viewer): void {
       } catch (e) {
         console.log('Could not access internal globe properties, continuing anyway');
       }
+    }
+    
+    // 5. Force the globe to be visible
+    if (viewer.scene && viewer.scene.globe) {
+      viewer.scene.globe.show = true;
+    }
+
+    // 6. Make sure we're in 3D mode
+    if (viewer.scene) {
+      viewer.scene.mode = Cesium.SceneMode.SCENE3D;
     }
   } catch (e) {
     console.error('Error configuring offline viewer:', e);
