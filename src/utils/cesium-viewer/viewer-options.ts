@@ -7,10 +7,10 @@ import * as Cesium from 'cesium';
 export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOptions {
   // Create a more visible grid imagery provider
   const gridImageryProvider = new Cesium.GridImageryProvider({
-    cells: 8,  // Smaller cells for more visible grid
-    color: Cesium.Color.WHITE.withAlpha(0.4), // More visible grid lines
-    glowColor: Cesium.Color.WHITE.withAlpha(0.5),
-    backgroundColor: Cesium.Color.BLUE.withAlpha(0.6) // More intense blue tint for better visibility
+    cells: 4,  // Smaller cells for more visible grid
+    color: Cesium.Color.WHITE.withAlpha(0.8), // More visible grid lines
+    glowColor: Cesium.Color.WHITE.withAlpha(0.7),
+    backgroundColor: Cesium.Color.BLUE.withAlpha(0.7) // More intense blue tint for better visibility
   });
 
   // Create the globe instance with proper configuration
@@ -23,6 +23,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   globe.depthTestAgainstTerrain = false; // Disable depth testing for better visibility
 
   const skyAtmosphere = new Cesium.SkyAtmosphere();
+  skyAtmosphere.show = true;
   
   return {
     baseLayerPicker: false,
@@ -57,8 +58,11 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
         alpha: false, // Disable transparency for better performance
         antialias: true, // Enable antialiasing for smoother edges
         powerPreference: 'high-performance',
-        failIfMajorPerformanceCaveat: false // Don't fail on performance issues
+        failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
+        preserveDrawingBuffer: true // Ensure rendering is preserved
       }
-    }
+    },
+    useDefaultRenderLoop: true, // Use the default render loop for consistent rendering
+    sceneMode: Cesium.SceneMode.SCENE3D // Force 3D mode
   };
 }

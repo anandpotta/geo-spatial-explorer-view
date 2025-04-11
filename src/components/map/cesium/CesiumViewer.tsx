@@ -1,9 +1,9 @@
-
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import CesiumMapLoading from '@/components/map/CesiumMapLoading';
 import { useCesiumMap } from '@/hooks/cesium';
+import { forceGlobeVisibility } from '@/utils/cesium-viewer';
 
 interface CesiumViewerProps {
   isFlying: boolean;
@@ -32,35 +32,32 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     // Immediately make canvas visible when initialized
     setCanvasVisible(true);
     
-    // Force a few renders to ensure the globe appears
+    // Force globe visibility when initialized
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-      try {
-        viewerRef.current.resize();
-        
-        // Schedule limited renders with increasing delay
-        const renderTimes = [10, 50, 100, 300, 600];
-        renderTimes.forEach((time, index) => {
-          setTimeout(() => {
-            if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-              viewerRef.current.scene.requestRender();
-              
-              // Ensure globe is visible
-              if (viewerRef.current.scene && viewerRef.current.scene.globe) {
-                viewerRef.current.scene.globe.show = true;
-              }
-            }
-          }, time);
-        });
-      } catch (e) {
-        console.error("Error scheduling renders:", e);
-      }
+      forceGlobeVisibility(viewerRef.current);
     }
+    
+    // Schedule progressive renders with strategic timing
+    const renderTimes = [10, 50, 100, 300, 600, 1000, 2000];
+    renderTimes.forEach((time) => {
+      setTimeout(() => {
+        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+          viewerRef.current.scene.requestRender();
+          
+          // Force globe visibility at each interval
+          forceGlobeVisibility(viewerRef.current);
+        }
+      }, time);
+    });
   });
 
   // Pass the viewer reference to parent component when available
   useEffect(() => {
     if (viewerRef.current && onViewerReady && isInitialized) {
       onViewerReady(viewerRef.current);
+      
+      // Force globe visibility when passing viewer reference
+      forceGlobeVisibility(viewerRef.current);
     }
   }, [isInitialized, onViewerReady]);
 
@@ -75,22 +72,44 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     // Make globe visible regardless of flight status
     setCanvasVisible(true);
     
-    try {
-      // Request a single render after flight status changes
-      viewer.scene.requestRender();
-    } catch (e) {
-      console.error("Error in flight effect handler:", e);
+    // Clear any previous render interval
+    if (renderIntervalRef.current) {
+      clearInterval(renderIntervalRef.current);
     }
-  }, [isInitialized, isFlying]);
-  
-  // Clean up on unmount
-  useEffect(() => {
+    
+    // Force globe visibility
+    forceGlobeVisibility(viewer);
+    
+    // Set up a short interval to keep forcing visibility for a few seconds
+    let renderCount = 0;
+    renderIntervalRef.current = setInterval(() => {
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        forceGlobeVisibility(viewerRef.current);
+        renderCount++;
+        
+        if (renderCount >= 10) {
+          // Stop after 10 attempts
+          if (renderIntervalRef.current) {
+            clearInterval(renderIntervalRef.current);
+            renderIntervalRef.current = null;
+          }
+        }
+      } else {
+        // Stop if viewer is destroyed
+        if (renderIntervalRef.current) {
+          clearInterval(renderIntervalRef.current);
+          renderIntervalRef.current = null;
+        }
+      }
+    }, 500);
+    
     return () => {
       if (renderIntervalRef.current) {
         clearInterval(renderIntervalRef.current);
+        renderIntervalRef.current = null;
       }
     };
-  }, []);
+  }, [isInitialized, isFlying]);
   
   return (
     <>

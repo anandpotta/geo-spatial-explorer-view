@@ -1,5 +1,6 @@
 
 import * as Cesium from 'cesium';
+import { forceGlobeVisibility } from '@/utils/cesium-viewer';
 
 interface RenderCheckOptions {
   viewer: Cesium.Viewer;
@@ -25,8 +26,17 @@ export function setupRenderChecks({
 }: RenderCheckOptions): void {
   // Force multiple renders right away
   if (viewer) {
+    // Make sure the canvas is properly set up
+    if (viewer.canvas) {
+      viewer.canvas.style.visibility = 'visible';
+      viewer.canvas.style.display = 'block';
+    }
+    
+    // Force globe visibility
+    forceGlobeVisibility(viewer);
+    
     // Request multiple renders immediately
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 20; i++) {
       viewer.scene.requestRender();
     }
     
@@ -54,15 +64,16 @@ export function setupRenderChecks({
         // Force resize to ensure dimensions are correct
         viewer.resize();
         
-        // Force additional renders
-        for (let i = 0; i < 15; i++) {
-          viewer.scene.requestRender();
-        }
+        // Force globe visibility again
+        forceGlobeVisibility(viewer);
         
         // Set initialized state after a delay
         setTimeout(() => {
           setIsInitialized(true);
           setIsLoadingMap(false);
+          
+          // Force one more visibility check
+          forceGlobeVisibility(viewer);
           
           if (onMapReady) {
             onMapReady();
@@ -76,6 +87,16 @@ export function setupRenderChecks({
     }
   }, 100);
   
+  // Schedule additional visibility checks at strategic intervals
+  const checkTimes = [500, 1000, 2000, 3000];
+  checkTimes.forEach(time => {
+    setTimeout(() => {
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        forceGlobeVisibility(viewerRef.current);
+      }
+    }, time);
+  });
+  
   // Ensure globe is rendered before signaling ready with a fallback timeout
   if (renderTimeoutRef.current) {
     clearTimeout(renderTimeoutRef.current);
@@ -86,9 +107,8 @@ export function setupRenderChecks({
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
       viewer.resize(); // Force resize again
       
-      for (let i = 0; i < 15; i++) {
-        viewerRef.current.scene.requestRender();
-      }
+      // Force globe visibility one more time
+      forceGlobeVisibility(viewerRef.current);
       
       // Even if we didn't detect canvas rendering, proceed after timeout
       setIsInitialized(true);
