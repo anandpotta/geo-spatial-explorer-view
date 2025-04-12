@@ -11,47 +11,44 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   }
 
   try {
-    // Force a bright, visible blue globe
+    // Force a bright, visible blue globe with improved settings
     if (viewer.scene && viewer.scene.globe) {
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+      // Use a brighter, more vibrant blue
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
-      // Force the globe to be visible with multiple settings
+      // Force globe visibility with enhanced settings
       viewer.scene.globe.showGroundAtmosphere = true;
       viewer.scene.globe.enableLighting = true;
       viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.fog.enabled = false; // Disable fog for better visibility
     }
     
-    // Position the camera to show a full Earth view from distance
+    // Position closer to the camera with adjusted pitch for better visibility
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 12000000.0), // Closer position for better visibility
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 10000000.0), // Closer position
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-30.0), // Adjusted angle to see more of globe
+        pitch: Cesium.Math.toRadians(-25.0), // Better angle for globe visibility
         roll: 0.0
       }
     });
     
-    // Set more aggressive camera movement settings
-    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000; // Don't let users zoom in too close
-    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 25000000; // Don't let users zoom out too far
+    // Set camera movement settings for better control
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000;
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 25000000;
     
-    // Set a pure black background for better contrast
+    // Pure black background for better contrast
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
     
-    // Disable fog for clearer view
-    if (viewer.scene && viewer.scene.fog) {
-      viewer.scene.fog.enabled = false;
-    }
-
-    // Force immediate renders
-    for (let i = 0; i < 40; i++) {
+    // Force immediate renders with multiple calls
+    for (let i = 0; i < 50; i++) {
       viewer.scene.requestRender();
     }
     
     console.log('Enhanced Earth view set with improved colors and visibility');
     
-    // Schedule progressive renders for better loading
+    // Schedule strategic renders for better loading
     requestProgressiveRenders(viewer);
   } catch (error) {
     console.error('Failed to set default camera view:', error);
@@ -64,8 +61,8 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
 function requestProgressiveRenders(viewer: Cesium.Viewer): void {
   if (!viewer || viewer.isDestroyed()) return;
   
-  // Schedule additional renders at strategic intervals for progressive loading
-  const renderIntervals = [10, 50, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 5000];
+  // More frequent intervals for the first few seconds
+  const renderIntervals = [10, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000];
   
   renderIntervals.forEach((interval) => {
     setTimeout(() => {
@@ -73,17 +70,18 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
         console.log(`Rendering globe at ${interval}ms interval`);
         viewer.scene.requestRender();
         
-        // Force globe visibility at each interval
+        // Force globe visibility at each interval with brighter color
         if (viewer.scene && viewer.scene.globe) {
           viewer.scene.globe.show = true;
-          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
         }
         
-        // Set canvas style to ensure visibility
+        // Ensure canvas is visible with high z-index
         if (viewer.canvas) {
           viewer.canvas.style.visibility = 'visible';
           viewer.canvas.style.display = 'block';
           viewer.canvas.style.opacity = '1';
+          viewer.canvas.style.zIndex = '1000'; // Higher z-index
         }
       }
     }, interval);

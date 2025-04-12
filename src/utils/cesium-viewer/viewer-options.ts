@@ -15,7 +15,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
 
   // Create the globe instance with proper configuration
   const globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84);
-  globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0); // Brighter blue for visibility
+  globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0); // Vibrant blue color
   globe.showGroundAtmosphere = true;
   globe.enableLighting = true;
   globe.translucency.enabled = false; // Disable translucency which could cause visibility issues

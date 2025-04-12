@@ -15,9 +15,9 @@ interface CesiumViewerProps {
 const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps) => {
   const cesiumContainer = useRef<HTMLDivElement>(null);
   const [canvasVisible, setCanvasVisible] = useState(true); // Always true by default
-  const forceRenderCount = useRef(0);
   const renderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoRotationActive = useRef(true);
+  const hasInitializedRef = useRef(false);
   
   // Use the Cesium map hook
   const { 
@@ -37,23 +37,32 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     // Force globe visibility when initialized
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
       forceGlobeVisibility(viewerRef.current);
+      
+      // Force resize to ensure proper dimensions
+      viewerRef.current.resize();
     }
     
-    // Schedule progressive renders with strategic timing
-    const renderTimes = [10, 50, 100, 300, 600, 1000, 2000, 3000];
+    // Schedule aggressive renders with more frequent timing
+    const renderTimes = [10, 30, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000];
     renderTimes.forEach((time) => {
       setTimeout(() => {
         if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+          // Force a render
           viewerRef.current.scene.requestRender();
           
-          // Force globe visibility at each interval
+          // Force globe visibility
           forceGlobeVisibility(viewerRef.current);
+          
+          // Force resize periodically
+          if (time % 500 === 0) {
+            viewerRef.current.resize();
+          }
         }
       }, time);
     });
   });
 
-  // Pass the viewer reference to parent component when available
+  // Pass the viewer reference to parent when available
   useEffect(() => {
     if (viewerRef.current && onViewerReady && isInitialized) {
       onViewerReady(viewerRef.current);
@@ -61,7 +70,9 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       // Force globe visibility when passing viewer reference
       forceGlobeVisibility(viewerRef.current);
       
-      // Add console logs for debugging
+      // Force resize to ensure proper dimensions
+      viewerRef.current.resize();
+      
       console.log('Viewer ready and passed to parent, canvas: ', 
         viewerRef.current.canvas ? 
         `${viewerRef.current.canvas.width}x${viewerRef.current.canvas.height}` : 
@@ -69,7 +80,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     }
   }, [isInitialized, onViewerReady]);
 
-  // Additional rendering for better globe visibility
+  // Additional rendering cycle to ensure visibility
   useEffect(() => {
     const viewer = viewerRef.current;
     
@@ -95,8 +106,12 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
         forceGlobeVisibility(viewerRef.current);
         renderCount++;
         
-        if (renderCount >= 50) { // Increased to 50 attempts
-          // Stop after many attempts
+        // For the first several renders, also force resize
+        if (renderCount < 20) {
+          viewerRef.current.resize();
+        }
+        
+        if (renderCount >= 60) { // Keep trying longer
           if (renderIntervalRef.current) {
             clearInterval(renderIntervalRef.current);
             renderIntervalRef.current = null;
@@ -109,7 +124,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           renderIntervalRef.current = null;
         }
       }
-    }, 100);
+    }, 100); // More frequent checks
     
     return () => {
       if (renderIntervalRef.current) {
@@ -119,16 +134,16 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     };
   }, [isInitialized, isFlying]);
 
-  // Setup auto-rotation for the globe
+  // Setup auto-rotation for more dynamic globe
   useEffect(() => {
     if (isInitialized && viewerRef.current && !viewerRef.current.isDestroyed()) {
-      // Enable auto-rotation for the globe
+      // Enable auto-rotation
       viewerRef.current.clock.shouldAnimate = true;
       viewerRef.current.scene.screenSpaceCameraController.enableRotate = true;
       
-      // Add automated camera rotation for a more dynamic view
+      // Add automated camera rotation with increased speed
       let lastTime = Date.now();
-      const rotationSpeed = 0.7; // degrees per second - increased for more visible rotation
+      const rotationSpeed = 1.0; // Increased speed for more noticeable rotation
       
       const autoRotateListener = viewerRef.current.clock.onTick.addEventListener(() => {
         if (viewerRef.current && !viewerRef.current.isDestroyed() && autoRotationActive.current) {
@@ -136,7 +151,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           const delta = (now - lastTime) / 1000; // seconds
           lastTime = now;
           
-          // Rotate the camera slowly around the globe
+          // Rotate the camera around the globe
           viewerRef.current.scene.camera.rotate(
             Cesium.Cartesian3.UNIT_Z,
             Cesium.Math.toRadians(rotationSpeed * delta)
@@ -167,16 +182,17 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     }
   }, [isFlying]);
   
-  // Add DOM manipulation to ensure Cesium container is visible
+  // Force visibility on container and all canvas elements
   useEffect(() => {
+    // Initial setup for container
     if (cesiumContainer.current) {
       cesiumContainer.current.style.visibility = 'visible';
       cesiumContainer.current.style.display = 'block';
       cesiumContainer.current.style.opacity = '1';
-      cesiumContainer.current.style.zIndex = '999';
+      cesiumContainer.current.style.zIndex = '1000'; // Increased z-index
     }
     
-    // Get all canvases within cesium container and make sure they're visible
+    // Function to check and fix canvas visibility
     const checkCanvases = () => {
       if (cesiumContainer.current) {
         const canvases = cesiumContainer.current.querySelectorAll('canvas');
@@ -184,15 +200,16 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           canvas.style.visibility = 'visible';
           canvas.style.display = 'block';
           canvas.style.opacity = '1';
+          canvas.style.zIndex = '1000'; // Higher z-index for visibility
         });
       }
     };
     
-    // Check repeatedly for canvases
+    // Check repeatedly and for longer duration
     const canvasInterval = setInterval(checkCanvases, 100);
     setTimeout(() => {
       clearInterval(canvasInterval);
-    }, 5000);
+    }, 10000); // Check for longer (10 seconds)
     
     return () => {
       clearInterval(canvasInterval);
@@ -211,13 +228,13 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           position: 'absolute', 
           top: 0, 
           left: 0,
-          zIndex: 999, // Increased z-index for better layering
-          visibility: canvasVisible ? 'visible' : 'hidden',
-          opacity: canvasVisible ? 1 : 0,
+          zIndex: 1000, // Increased z-index
+          visibility: 'visible', // Always visible
+          opacity: 1,
           transition: 'opacity 0.3s ease-in-out',
-          minHeight: '500px', // Increased minimum height
+          minHeight: '500px',
           display: 'block',
-          background: 'black' // Add black background for better visibility
+          background: 'black' // Black background for contrast
         }}
         data-cesium-container="true"
       />

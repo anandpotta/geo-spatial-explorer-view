@@ -10,35 +10,35 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Ensure skyAtmosphere is configured properly
+    // Configure skyAtmosphere for better visibility
     if (viewer.scene.skyAtmosphere) {
       viewer.scene.skyAtmosphere.show = true;
       
-      // Set atmospheric properties if available
+      // Set atmospheric properties for better visibility
       if ('hueShift' in viewer.scene.skyAtmosphere) {
         viewer.scene.skyAtmosphere.hueShift = 0.0;
         viewer.scene.skyAtmosphere.saturationShift = 0.1;
-        viewer.scene.skyAtmosphere.brightnessShift = 2.5;
+        viewer.scene.skyAtmosphere.brightnessShift = 3.0; // Increased brightness
       }
     }
     
-    // Ensure lighting for dramatic effect
+    // Enhance globe lighting
     if (viewer.scene.globe) {
       viewer.scene.globe.enableLighting = true;
       viewer.scene.globe.showGroundAtmosphere = true;
       
-      // Force the globe to be visible with a bright pure blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+      // Set a more vibrant blue color
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
-      // Force the scene to use translucency
+      // Disable translucency which can cause visibility issues
       if ('translucency' in viewer.scene.globe) {
         viewer.scene.globe.translucency.enabled = false;
       }
     }
     
-    // Force rendering update
-    for (let i = 0; i < 20; i++) {
+    // Force multiple renders
+    for (let i = 0; i < 30; i++) {
       viewer.scene.requestRender();
     }
   } catch (e) {
@@ -47,7 +47,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
 }
 
 /**
- * Configures post-processing and rendering
+ * Configures rendering for better globe visibility
  */
 export function configureRendering(viewer: Cesium.Viewer): void {
   if (!viewer || !viewer.scene) {
@@ -55,16 +55,13 @@ export function configureRendering(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Set a vibrant blue color for the globe
+    // Set vibrant blue color for the globe
     if (viewer.scene.globe) {
-      // Make sure globe is shown
       viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
-      
-      // Force the globe to be visible by applying additional settings
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
       viewer.scene.globe.depthTestAgainstTerrain = false;
       
-      // Make sure the globe's surface is rendered
+      // Force the globe's surface to be correctly rendered
       const tileset = (viewer.scene.globe as any)._surface._tileProvider;
       if (tileset) {
         tileset._debug.wireframe = false;
@@ -77,34 +74,35 @@ export function configureRendering(viewer: Cesium.Viewer): void {
       }
     }
     
-    // Force multiple render cycles to ensure the globe appears
-    for (let i = 0; i < 20; i++) {
+    // Force multiple render cycles
+    for (let i = 0; i < 30; i++) {
       viewer.scene.requestRender();
     }
     
-    // Set up globe automatic rotation if not already rotating
-    if (!viewer.clock.shouldAnimate) {
-      viewer.clock.shouldAnimate = true;
-      viewer.clock.multiplier = 2.0; // Speed of rotation
-    }
+    // Enable animation for globe rotation
+    viewer.clock.shouldAnimate = true;
+    viewer.clock.multiplier = 2.0; // Faster rotation
     
-    // Update the canvas visibility
+    // Make canvas fully visible with high z-index
     if (viewer.canvas) {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
       viewer.canvas.style.opacity = '1';
-      viewer.canvas.style.zIndex = '999'; // Higher z-index to ensure visibility
+      viewer.canvas.style.zIndex = '1000'; // Higher z-index
     }
     
-    // Force resize for proper canvas dimensions
+    // Force a resize for proper dimensions
     viewer.resize();
     
-    // Delay additional renders to ensure the globe appears after initial setup
+    // Schedule additional renders after setup
     setTimeout(() => {
       if (!viewer.isDestroyed()) {
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 20; i++) {
           viewer.scene.requestRender();
         }
+        
+        // One more resize after renders
+        viewer.resize();
       }
     }, 500);
   } catch (e) {
@@ -113,7 +111,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
 }
 
 /**
- * Forces immediate rendering of the globe with additional visibility checks
+ * Forces immediate rendering of the globe with enhanced visibility
  */
 export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   if (!viewer || !viewer.scene || !viewer.scene.globe) {
@@ -121,65 +119,65 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Make absolutely sure the globe is visible with a bright vibrant color
+    // Make sure the globe is visible with vibrant blue color
     viewer.scene.globe.show = true;
-    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
     
-    // Make sure fog is disabled which can interfere with visibility
+    // Disable fog for clearer view
     if (viewer.scene.fog) {
       viewer.scene.fog.enabled = false;
     }
     
-    // Force the scene to update and render
+    // Force immediate render
     viewer.scene.requestRender();
     
-    // Make sure the canvas element is properly displayed with high z-index
+    // Ensure canvas is fully visible with high z-index
     if (viewer.canvas) {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
       viewer.canvas.style.opacity = '1';
-      viewer.canvas.style.zIndex = '999'; // Higher z-index
+      viewer.canvas.style.zIndex = '1000';
     }
     
-    // Set a black background color for the scene
+    // Set black background for better contrast
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
     
-    // Make sure the camera is set to see the globe
+    // Adjust camera if needed to see the globe
     if (viewer.camera) {
-      // Only adjust camera if too far out
+      // Only adjust if too far out
       const distance = Cesium.Cartesian3.magnitude(viewer.camera.position);
-      if (distance > 30000000) {
+      if (distance > 25000000) {
         viewer.camera.lookAt(
           Cesium.Cartesian3.ZERO,
-          new Cesium.Cartesian3(0, 0, 20000000)
+          new Cesium.Cartesian3(0, 0, 15000000) // Closer look
         );
       }
     }
     
-    // Force another render after adjusting camera
+    // Force another render
     viewer.scene.requestRender();
     
-    // Find and force visibility on all Cesium-related elements
+    // Force visibility on all Cesium-related elements
     const cesiumContainer = document.querySelector('[data-cesium-container="true"]');
     if (cesiumContainer) {
       (cesiumContainer as HTMLElement).style.visibility = 'visible';
       (cesiumContainer as HTMLElement).style.display = 'block';
       (cesiumContainer as HTMLElement).style.opacity = '1';
-      (cesiumContainer as HTMLElement).style.zIndex = '999';
+      (cesiumContainer as HTMLElement).style.zIndex = '1000';
     }
     
-    // Also ensure the cesium-widget and cesium-widget canvas are visible
+    // Ensure the cesium-widget and canvas are visible
     const cesiumWidget = document.querySelector('.cesium-widget');
     if (cesiumWidget) {
       (cesiumWidget as HTMLElement).style.visibility = 'visible';
       (cesiumWidget as HTMLElement).style.display = 'block';
       (cesiumWidget as HTMLElement).style.opacity = '1';
-      (cesiumWidget as HTMLElement).style.zIndex = '999';
+      (cesiumWidget as HTMLElement).style.zIndex = '1000';
     }
     
-    // Force a resize and additional renders
+    // Force resize and multiple renders
     viewer.resize();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       viewer.scene.requestRender();
     }
   } catch (e) {
