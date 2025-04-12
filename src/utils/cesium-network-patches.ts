@@ -66,13 +66,13 @@ export function patchCesiumToPreventNetworkRequests() {
         return createDummyResponse();
       };
       
+      // FIX: Return HTMLImageElement for fetchImage instead of canvas
       Cesium.Resource.prototype.fetchImage = function() {
         console.log('Blocked image request:', this._url);
-        // Create a tiny transparent image
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        return Promise.resolve(canvas);
+        // Create a tiny transparent image element instead of canvas
+        const img = new Image(1, 1);
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // transparent GIF
+        return Promise.resolve(img);
       };
       
       Cesium.Resource.prototype.fetchJson = function() {
@@ -80,9 +80,12 @@ export function patchCesiumToPreventNetworkRequests() {
         return Promise.resolve({});
       };
       
+      // FIX: Return XMLDocument for fetchXML instead of HTMLDivElement
       Cesium.Resource.prototype.fetchXML = function() {
         console.log('Blocked XML request:', this._url);
-        return Promise.resolve(document.createElement('div'));
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString('<root></root>', 'text/xml');
+        return Promise.resolve(xmlDoc);
       };
       
       Cesium.Resource.prototype.fetchText = function() {
