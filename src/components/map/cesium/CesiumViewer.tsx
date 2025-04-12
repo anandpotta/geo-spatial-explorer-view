@@ -14,7 +14,7 @@ interface CesiumViewerProps {
 
 const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps) => {
   const cesiumContainer = useRef<HTMLDivElement>(null);
-  const [canvasVisible, setCanvasVisible] = useState(false);
+  const [canvasVisible, setCanvasVisible] = useState(true); // Set to true by default
   const forceRenderCount = useRef(0);
   const renderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoRotationActive = useRef(true);
@@ -71,7 +71,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       return;
     }
     
-    // Make globe visible regardless of flight status
+    // Make absolutely sure the globe is visible
     setCanvasVisible(true);
     
     // Clear any previous render interval
@@ -89,8 +89,8 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
         forceGlobeVisibility(viewerRef.current);
         renderCount++;
         
-        if (renderCount >= 15) {
-          // Stop after 15 attempts
+        if (renderCount >= 30) { // Increased to 30 attempts
+          // Stop after many attempts
           if (renderIntervalRef.current) {
             clearInterval(renderIntervalRef.current);
             renderIntervalRef.current = null;
@@ -103,7 +103,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           renderIntervalRef.current = null;
         }
       }
-    }, 300);
+    }, 200);
     
     return () => {
       if (renderIntervalRef.current) {
@@ -122,7 +122,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       
       // Add automated camera rotation for a more dynamic view
       let lastTime = Date.now();
-      const rotationSpeed = 0.1; // degrees per second - increased for more visible rotation
+      const rotationSpeed = 0.2; // degrees per second - increased for more visible rotation
       
       const autoRotateListener = viewerRef.current.clock.onTick.addEventListener(() => {
         if (viewerRef.current && !viewerRef.current.isDestroyed() && autoRotationActive.current) {
@@ -174,11 +174,12 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           top: 0, 
           left: 0,
           zIndex: 1,
-          visibility: 'visible', // Always keep the container visible
+          visibility: canvasVisible ? 'visible' : 'hidden',
           opacity: canvasVisible ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',
-          minHeight: '400px',
-          display: 'block'
+          minHeight: '500px', // Increased minimum height
+          display: 'block',
+          background: 'black' // Add black background for better visibility
         }}
         data-cesium-container="true"
       />

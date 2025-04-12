@@ -8,14 +8,14 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   // Create a more visible grid imagery provider
   const gridImageryProvider = new Cesium.GridImageryProvider({
     cells: 2,  // Larger cells for better visibility
-    color: Cesium.Color.WHITE.withAlpha(0.9), // More visible grid lines
-    glowColor: Cesium.Color.WHITE.withAlpha(0.8),
-    backgroundColor: Cesium.Color.BLUE.withAlpha(0.8) // More intense blue tint for better visibility
+    color: Cesium.Color.WHITE.withAlpha(0.7), // More visible grid lines
+    glowColor: Cesium.Color.WHITE.withAlpha(0.7),
+    backgroundColor: Cesium.Color.BLUE.withAlpha(0.5) // Blue tint for better visibility
   });
 
   // Create the globe instance with proper configuration
   const globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84);
-  globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0); // Brighter blue for visibility
+  globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0); // Brighter blue for visibility
   globe.showGroundAtmosphere = true;
   globe.enableLighting = true;
   globe.translucency.enabled = false; // Disable translucency which could cause visibility issues
@@ -42,6 +42,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     terrainProvider: new Cesium.EllipsoidTerrainProvider({
       ellipsoid: Cesium.Ellipsoid.WGS84
     }),
+    imageryProvider: undefined, // Explicitly set to undefined to prevent default loading
     requestRenderMode: false,  // Always render continuously for better visibility
     maximumRenderTimeChange: Infinity,
     targetFrameRate: 60, // Higher framerate for smoother rotation
@@ -54,7 +55,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     orderIndependentTranslucency: true, // Enable for better atmospheric effects
     contextOptions: {
       webgl: {
-        alpha: false, // Disable transparency for better performance
+        alpha: true, // Enable transparency for better blending
         antialias: true, // Enable antialiasing for smoother edges
         powerPreference: 'high-performance',
         failIfMajorPerformanceCaveat: false, // Don't fail on performance issues

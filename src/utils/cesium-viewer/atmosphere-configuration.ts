@@ -18,7 +18,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       if ('hueShift' in viewer.scene.skyAtmosphere) {
         viewer.scene.skyAtmosphere.hueShift = 0.0;
         viewer.scene.skyAtmosphere.saturationShift = 0.1;
-        viewer.scene.skyAtmosphere.brightnessShift = 2.5; // Further increase brightness for better visibility
+        viewer.scene.skyAtmosphere.brightnessShift = 2.5;
       }
     }
     
@@ -28,26 +28,17 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       viewer.scene.globe.showGroundAtmosphere = true;
       
       // Force the globe to be visible with a bright pure blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
       viewer.scene.globe.show = true;
       
       // Force the scene to use translucency
       if ('translucency' in viewer.scene.globe) {
         viewer.scene.globe.translucency.enabled = false;
       }
-      
-      // Make sure the globe is not transparent
-      if ('material' in viewer.scene.globe) {
-        try {
-          (viewer.scene.globe as any).material = undefined;
-        } catch (e) {
-          console.log('Could not reset globe material');
-        }
-      }
     }
     
     // Force rendering update
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       viewer.scene.requestRender();
     }
   } catch (e) {
@@ -68,7 +59,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     if (viewer.scene.globe) {
       // Make sure globe is shown
       viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
       
       // Force the globe to be visible by applying additional settings
       viewer.scene.globe.depthTestAgainstTerrain = false;
@@ -131,7 +122,7 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   try {
     // Make absolutely sure the globe is visible
     viewer.scene.globe.show = true;
-    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
     
     // Make sure fog is disabled which can interfere with visibility
     if (viewer.scene.fog) {
@@ -148,7 +139,25 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       viewer.canvas.style.opacity = '1';
     }
     
-    // Find the cesiumWidgetContainer and make sure it's visible
+    // Set a black background color for the scene
+    viewer.scene.backgroundColor = Cesium.Color.BLACK;
+    
+    // Make sure the camera is set to see the globe
+    if (viewer.camera) {
+      // Only adjust camera if too far out
+      const distance = Cesium.Cartesian3.magnitude(viewer.camera.position);
+      if (distance > 30000000) {
+        viewer.camera.lookAt(
+          Cesium.Cartesian3.ZERO,
+          new Cesium.Cartesian3(0, 0, 20000000)
+        );
+      }
+    }
+    
+    // Force another render after adjusting camera
+    viewer.scene.requestRender();
+    
+    // Find and force visibility on all Cesium-related elements
     const cesiumContainer = document.querySelector('[data-cesium-container="true"]');
     if (cesiumContainer) {
       (cesiumContainer as HTMLElement).style.visibility = 'visible';
@@ -164,20 +173,11 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       (cesiumWidget as HTMLElement).style.opacity = '1';
     }
     
-    // Log the canvas state for debugging
-    if (viewer.canvas) {
-      console.log('Canvas dimensions:', viewer.canvas.width, 'x', viewer.canvas.height);
-      console.log('Canvas visibility:', viewer.canvas.style.visibility);
-      console.log('Canvas display:', viewer.canvas.style.display);
+    // Force a resize and additional renders
+    viewer.resize();
+    for (let i = 0; i < 5; i++) {
+      viewer.scene.requestRender();
     }
-    
-    // Force another resize after a short delay
-    setTimeout(() => {
-      if (!viewer.isDestroyed()) {
-        viewer.resize();
-        viewer.scene.requestRender();
-      }
-    }, 100);
   } catch (e) {
     console.error('Error in forceGlobeVisibility:', e);
   }

@@ -13,7 +13,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   try {
     // Force a bright, visible blue globe
     if (viewer.scene && viewer.scene.globe) {
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
       viewer.scene.globe.show = true;
       
       // Force the globe to be visible with multiple settings
@@ -24,17 +24,17 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     
     // Position the camera to show a full Earth view from distance
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 25000000.0), // Further back for full globe view
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 20000000.0), // Position for better view
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-20.0), // Shallower angle to see more of globe
+        pitch: Cesium.Math.toRadians(-30.0), // Adjusted angle to see more of globe
         roll: 0.0
       }
     });
     
     // Set more aggressive camera movement settings
     viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000; // Don't let users zoom in too close
-    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 30000000; // Don't let users zoom out too far
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 25000000; // Don't let users zoom out too far
     
     // Set a pure black background for better contrast
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
@@ -44,12 +44,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       viewer.scene.fog.enabled = false;
     }
 
-    // Emphasize Earth brightness for visibility
-    if (viewer.scene && viewer.scene.globe) {
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0); // Brighter blue
-    }
-    
-    // Force immediate renders - more of them to ensure visibility
+    // Force immediate renders
     for (let i = 0; i < 30; i++) {
       viewer.scene.requestRender();
     }
@@ -70,7 +65,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
   if (!viewer || viewer.isDestroyed()) return;
   
   // Schedule additional renders at strategic intervals for progressive loading
-  const renderIntervals = [10, 50, 100, 250, 500, 1000, 2000, 3000];
+  const renderIntervals = [10, 50, 100, 250, 500, 750, 1000, 1500, 2000, 3000];
   
   renderIntervals.forEach((interval) => {
     setTimeout(() => {
@@ -81,7 +76,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
         // Force globe visibility at each interval
         if (viewer.scene && viewer.scene.globe) {
           viewer.scene.globe.show = true;
-          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
         }
       }
     }, interval);

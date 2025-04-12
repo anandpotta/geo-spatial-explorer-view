@@ -45,8 +45,12 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
       console.warn("Container has zero width/height, forcing dimensions");
       cesiumContainer.current.style.width = '100%';
       cesiumContainer.current.style.height = '100%';
-      cesiumContainer.current.style.minHeight = '400px';
+      cesiumContainer.current.style.minHeight = '500px';
       cesiumContainer.current.style.display = 'block';
+      cesiumContainer.current.style.background = 'black';
+      
+      // Reflow the layout
+      cesiumContainer.current.offsetHeight;
     }
     
     // Setup for offline mode
@@ -64,7 +68,7 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     setDefaultCameraView(viewer);
 
     // Force multiple render cycles to ensure the globe is visible
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 30; i++) { // Increased render cycles
       viewer.scene.requestRender();
     }
     
@@ -72,6 +76,19 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     viewerRef.current = viewer;
     
     console.log("Cesium map initialized in offline mode");
+    
+    // Enable animation
+    viewer.clock.shouldAnimate = true;
+    
+    // Request render again after a slight delay
+    setTimeout(() => {
+      if (viewer && !viewer.isDestroyed()) {
+        viewer.resize();
+        for (let i = 0; i < 10; i++) {
+          viewer.scene.requestRender();
+        }
+      }
+    }, 100);
     
     setupRenderChecks({
       viewer,

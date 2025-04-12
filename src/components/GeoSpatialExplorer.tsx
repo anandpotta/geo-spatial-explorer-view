@@ -64,7 +64,7 @@ const GeoSpatialExplorer = () => {
   };
   
   return (
-    <div className="w-full h-screen flex bg-background overflow-hidden">
+    <div className="w-full h-screen flex bg-black overflow-hidden">
       {/* Left Panel */}
       <ExplorerSidebar 
         selectedLocation={selectedLocation}
@@ -75,7 +75,7 @@ const GeoSpatialExplorer = () => {
       />
       
       {/* Right Panel - Map View */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative bg-black">
         {/* Map content */}
         <MapContent 
           currentView={currentView}

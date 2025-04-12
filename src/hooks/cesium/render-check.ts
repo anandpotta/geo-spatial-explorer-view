@@ -36,13 +36,17 @@ export function setupRenderChecks({
     forceGlobeVisibility(viewer);
     
     // Request multiple renders immediately
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 30; i++) {
       viewer.scene.requestRender();
     }
     
     // Force resize to ensure proper dimensions
     viewer.resize();
     console.log("Forced multiple renders and resize for globe visibility");
+    
+    // Mark as initialized much sooner
+    setIsInitialized(true);
+    setIsLoadingMap(false);
   }
 
   // Start checking if the canvas is properly rendered
@@ -50,6 +54,7 @@ export function setupRenderChecks({
     clearInterval(checkRenderIntervalRef.current);
   }
   
+  let checkCount = 0;
   checkRenderIntervalRef.current = setInterval(() => {
     if (viewer && !viewer.isDestroyed()) {
       const canvas = viewer.canvas;
@@ -61,24 +66,32 @@ export function setupRenderChecks({
           clearInterval(checkRenderIntervalRef.current);
         }
         
-        // Force resize to ensure dimensions are correct
-        viewer.resize();
-        
         // Force globe visibility again
         forceGlobeVisibility(viewer);
         
-        // Set initialized state after a delay
-        setTimeout(() => {
-          setIsInitialized(true);
-          setIsLoadingMap(false);
-          
-          // Force one more visibility check
-          forceGlobeVisibility(viewer);
-          
-          if (onMapReady) {
-            onMapReady();
-          }
-        }, 300);
+        // Call onMapReady if not already called
+        if (onMapReady) {
+          onMapReady();
+        }
+      }
+      
+      // Even if canvas check fails, try to make globe visible
+      forceGlobeVisibility(viewer);
+      
+      checkCount++;
+      if (checkCount >= 30) {
+        // Give up after too many attempts
+        if (checkRenderIntervalRef.current) {
+          clearInterval(checkRenderIntervalRef.current);
+        }
+        
+        // Still consider initialized
+        setIsInitialized(true);
+        setIsLoadingMap(false);
+        
+        if (onMapReady) {
+          onMapReady();
+        }
       }
     } else {
       if (checkRenderIntervalRef.current) {
@@ -88,7 +101,7 @@ export function setupRenderChecks({
   }, 100);
   
   // Schedule additional visibility checks at strategic intervals
-  const checkTimes = [500, 1000, 2000, 3000];
+  const checkTimes = [500, 1000, 1500, 2000, 3000];
   checkTimes.forEach(time => {
     setTimeout(() => {
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
@@ -105,12 +118,12 @@ export function setupRenderChecks({
   renderTimeoutRef.current = setTimeout(() => {
     // Force additional renders after a delay
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-      viewer.resize(); // Force resize again
+      viewerRef.current.resize(); // Force resize again
       
       // Force globe visibility one more time
       forceGlobeVisibility(viewerRef.current);
       
-      // Even if we didn't detect canvas rendering, proceed after timeout
+      // Set as initialized regardless
       setIsInitialized(true);
       setIsLoadingMap(false);
       
@@ -118,5 +131,5 @@ export function setupRenderChecks({
         onMapReady();
       }
     }
-  }, 1500); // Longer timeout as fallback
+  }, 800); // Shorter timeout
 }
