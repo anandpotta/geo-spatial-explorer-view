@@ -34,7 +34,7 @@ const CesiumMap = ({
     }
 
     // Force multiple renders to ensure the globe is visible
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 20; i++) {
       viewer.scene.requestRender();
     }
   };
@@ -46,9 +46,28 @@ const CesiumMap = ({
       onFlyComplete();
     }
   };
+
+  // Force renders periodically to ensure globe visibility
+  useEffect(() => {
+    if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+      const renderTimes = [100, 500, 1000, 2000];
+      renderTimes.forEach(time => {
+        setTimeout(() => {
+          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+            viewerRef.current.scene.requestRender();
+            
+            // Ensure the globe is visible
+            if (viewerRef.current.scene && viewerRef.current.scene.globe) {
+              viewerRef.current.scene.globe.show = true;
+            }
+          }
+        }, time);
+      });
+    }
+  }, [viewerReady]);
   
   return (
-    <div className="w-full h-full relative" style={{ zIndex: 30, position: 'relative' }}>
+    <div className="w-full h-full relative" style={{ zIndex: 30, position: 'relative', background: 'black' }}>
       <CesiumViewer
         isFlying={isFlying}
         onViewerReady={handleViewerReady}

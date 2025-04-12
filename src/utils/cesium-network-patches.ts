@@ -50,52 +50,59 @@ export function patchCesiumToPreventNetworkRequests() {
       };
     }
     
-    // 1. Patch Resource to prevent network requests
+    // Block any network requests through Resource
     if (Cesium.Resource) {
-      const originalFetch = Cesium.Resource.prototype.fetch;
-      Cesium.Resource.prototype.fetch = function(...args: any[]) {
-        console.log('Blocked network request to:', this._url);
-        return Promise.reject(new Error('Network requests are disabled'));
+      // Create a dummy response to prevent CORS errors
+      const createDummyResponse = () => {
+        return Promise.resolve(new Response(new Blob(), {
+          status: 200,
+          headers: { 'Content-Type': 'application/octet-stream' }
+        }));
       };
       
-      const originalFetchImage = Cesium.Resource.prototype.fetchImage;
-      Cesium.Resource.prototype.fetchImage = function(...args: any[]) {
-        console.log('Blocked image request to:', this._url);
-        return Promise.reject(new Error('Network requests are disabled'));
+      // Override fetch methods with mock implementations
+      Cesium.Resource.prototype.fetch = function() {
+        console.log('Blocked network request:', this._url);
+        return createDummyResponse();
       };
       
-      const originalFetchJson = Cesium.Resource.prototype.fetchJson;
-      Cesium.Resource.prototype.fetchJson = function(...args: any[]) {
-        console.log('Blocked JSON request to:', this._url);
-        return Promise.reject(new Error('Network requests are disabled'));
+      Cesium.Resource.prototype.fetchImage = function() {
+        console.log('Blocked image request:', this._url);
+        // Create a tiny transparent image
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        return Promise.resolve(canvas);
       };
       
-      const originalFetchXML = Cesium.Resource.prototype.fetchXML;
-      Cesium.Resource.prototype.fetchXML = function(...args: any[]) {
-        console.log('Blocked XML request to:', this._url);
-        return Promise.reject(new Error('Network requests are disabled'));
+      Cesium.Resource.prototype.fetchJson = function() {
+        console.log('Blocked JSON request:', this._url);
+        return Promise.resolve({});
       };
       
-      const originalFetchText = Cesium.Resource.prototype.fetchText;
-      Cesium.Resource.prototype.fetchText = function(...args: any[]) {
-        console.log('Blocked text request to:', this._url);
-        return Promise.reject(new Error('Network requests are disabled'));
+      Cesium.Resource.prototype.fetchXML = function() {
+        console.log('Blocked XML request:', this._url);
+        return Promise.resolve(document.createElement('div'));
+      };
+      
+      Cesium.Resource.prototype.fetchText = function() {
+        console.log('Blocked text request:', this._url);
+        return Promise.resolve('');
       };
     }
     
-    // 2. Disable RequestScheduler
+    // Prevent web workers which can cause CORS issues
+    if ((Cesium as any).TaskProcessor) {
+      (Cesium as any).TaskProcessor.prototype.execute = function() {
+        return Promise.resolve({});
+      };
+    }
+    
+    // Disable RequestScheduler
     if ((Cesium as any).RequestScheduler) {
-      try {
-        const scheduler = (Cesium as any).RequestScheduler;
-        if (scheduler.maximumRequestsPerServer) {
-          scheduler.maximumRequestsPerServer = 0;
-        }
-        if (scheduler.requestsByServer) {
-          scheduler.requestsByServer = {};
-        }
-      } catch (e) {
-        console.log('Could not disable RequestScheduler, continuing anyway');
-      }
+      const scheduler = (Cesium as any).RequestScheduler;
+      scheduler.maximumRequestsPerServer = 0;
+      scheduler.requestsByServer = {};
     }
     
     console.log('Successfully patched Cesium network requests');
@@ -111,7 +118,7 @@ export function patchCesiumProviders() {
   try {
     // 1. Patch IonImageryProvider and ImageryLayer related functionality
     if (Cesium.IonImageryProvider) {
-      Cesium.IonImageryProvider.fromAssetId = function(...args: any[]) {
+      Cesium.IonImageryProvider.fromAssetId = function() {
         console.log('Blocked IonImageryProvider.fromAssetId');
         return Promise.reject(new Error('Network requests are disabled'));
       };
@@ -132,7 +139,7 @@ export function patchCesiumProviders() {
     
     // 2. Block terrain-related functionality
     if (Cesium.CesiumTerrainProvider) {
-      Cesium.CesiumTerrainProvider.fromUrl = function(...args: any[]) {
+      Cesium.CesiumTerrainProvider.fromUrl = function() {
         console.log('Blocked CesiumTerrainProvider.fromUrl');
         return Promise.reject(new Error('Network requests are disabled'));
       };

@@ -179,7 +179,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           position: 'absolute', 
           top: 0, 
           left: 0,
-          zIndex: 10,
+          zIndex: 30, // Increased z-index for better layering
           visibility: canvasVisible ? 'visible' : 'hidden',
           opacity: canvasVisible ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',

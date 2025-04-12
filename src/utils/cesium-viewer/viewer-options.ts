@@ -39,11 +39,10 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     selectionIndicator: false,
     creditContainer: document.createElement('div'), // Hide credits
     // Use the baseLayer property instead of imageryProvider
-    baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
+    baseLayer: new Cesium.ImageryLayer(gridImageryProvider),
     terrainProvider: new Cesium.EllipsoidTerrainProvider({
       ellipsoid: Cesium.Ellipsoid.WGS84
     }),
-    // Remove the invalid imageryProvider property
     requestRenderMode: false,  // Always render continuously for better visibility
     maximumRenderTimeChange: Infinity,
     targetFrameRate: 60, // Higher framerate for smoother rotation
