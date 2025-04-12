@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
@@ -65,7 +66,8 @@ const MapContent = ({
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden">
       <div className="relative w-full h-full">
-        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
+        {/* Make Cesium view always on top with higher z-index */}
+        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-30' : 'opacity-0 z-10'}`}>
           <CesiumMap 
             selectedLocation={selectedLocation}
             onMapReady={onMapReady}
@@ -76,7 +78,7 @@ const MapContent = ({
           />
         </div>
         
-        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 -z-10'}`}>
+        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-20' : 'opacity-0 z-0'}`}>
           <LeafletMap 
             selectedLocation={selectedLocation} 
             onMapReady={handleLeafletMapRef}
@@ -91,7 +93,7 @@ const MapContent = ({
         />
       </div>
       
-      <div className="absolute top-4 left-4 right-4 z-20">
+      <div className="absolute top-4 left-4 right-4 z-40">
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
     </div>

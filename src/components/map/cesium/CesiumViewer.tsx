@@ -14,7 +14,7 @@ interface CesiumViewerProps {
 
 const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps) => {
   const cesiumContainer = useRef<HTMLDivElement>(null);
-  const [canvasVisible, setCanvasVisible] = useState(true); // Set to true by default
+  const [canvasVisible, setCanvasVisible] = useState(true); // Always true by default
   const forceRenderCount = useRef(0);
   const renderIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoRotationActive = useRef(true);
@@ -60,6 +60,12 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       
       // Force globe visibility when passing viewer reference
       forceGlobeVisibility(viewerRef.current);
+      
+      // Add console logs for debugging
+      console.log('Viewer ready and passed to parent, canvas: ', 
+        viewerRef.current.canvas ? 
+        `${viewerRef.current.canvas.width}x${viewerRef.current.canvas.height}` : 
+        'no canvas');
     }
   }, [isInitialized, onViewerReady]);
 
@@ -122,7 +128,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       
       // Add automated camera rotation for a more dynamic view
       let lastTime = Date.now();
-      const rotationSpeed = 0.2; // degrees per second - increased for more visible rotation
+      const rotationSpeed = 0.5; // degrees per second - increased for more visible rotation
       
       const autoRotateListener = viewerRef.current.clock.onTick.addEventListener(() => {
         if (viewerRef.current && !viewerRef.current.isDestroyed() && autoRotationActive.current) {
@@ -173,7 +179,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           position: 'absolute', 
           top: 0, 
           left: 0,
-          zIndex: 1,
+          zIndex: 10,
           visibility: canvasVisible ? 'visible' : 'hidden',
           opacity: canvasVisible ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',

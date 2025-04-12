@@ -24,10 +24,10 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     
     // Position the camera to show a full Earth view from distance
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 20000000.0), // Position for better view
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000.0), // Adjusted position for better view
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-30.0), // Adjusted angle to see more of globe
+        pitch: Cesium.Math.toRadians(-20.0), // Adjusted angle to see more of globe
         roll: 0.0
       }
     });

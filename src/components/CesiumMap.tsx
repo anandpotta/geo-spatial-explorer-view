@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import * as Cesium from 'cesium';
 import { Location } from '@/utils/geo-utils';
 import CesiumViewer from './map/cesium/CesiumViewer';
@@ -32,6 +32,11 @@ const CesiumMap = ({
     if (onViewerReady) {
       onViewerReady(viewer);
     }
+
+    // Force multiple renders to ensure the globe is visible
+    for (let i = 0; i < 5; i++) {
+      viewer.scene.requestRender();
+    }
   };
 
   // Handle fly operations start/end
@@ -43,7 +48,7 @@ const CesiumMap = ({
   };
   
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" style={{ zIndex: 30, position: 'relative' }}>
       <CesiumViewer
         isFlying={isFlying}
         onViewerReady={handleViewerReady}
