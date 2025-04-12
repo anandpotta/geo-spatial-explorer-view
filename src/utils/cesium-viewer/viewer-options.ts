@@ -38,7 +38,6 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     infoBox: false,
     selectionIndicator: false,
     creditContainer: document.createElement('div'), // Hide credits
-    // Use the correct property name for the imagery provider
     baseLayer: Cesium.ImageryLayer.fromProviderAsync(Promise.resolve(gridImageryProvider)),
     terrainProvider: new Cesium.EllipsoidTerrainProvider({
       ellipsoid: Cesium.Ellipsoid.WGS84

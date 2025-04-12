@@ -7,7 +7,7 @@ import MapContent from './explorer/MapContent';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
-  const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium');
+  const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium'); // Always start with cesium
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
   const { toast } = useToast();

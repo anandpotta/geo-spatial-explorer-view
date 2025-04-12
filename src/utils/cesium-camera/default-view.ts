@@ -11,12 +11,12 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   }
 
   try {
-    // Position the camera to show a more prominent Earth view - closer to Earth
+    // Position the camera to show a more prominent Earth view - further from Earth
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 10000000.0), // Closer view of Earth
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 20000000.0), // Further view of Earth showing more of the globe
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-45.0), // Steeper angle for better Earth visibility
+        pitch: Cesium.Math.toRadians(-30.0), // Lower angle for better Earth visibility
         roll: 0.0
       }
     });
@@ -51,9 +51,12 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     console.log('Enhanced Earth view set with improved colors and visibility');
     
     // Force immediate renders
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 20; i++) {
       viewer.scene.requestRender();
     }
+    
+    // Schedule progressive renders for better loading
+    requestProgressiveRenders(viewer);
   } catch (error) {
     console.error('Failed to set default camera view:', error);
   }
@@ -66,7 +69,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
   if (!viewer || viewer.isDestroyed()) return;
   
   // Schedule additional renders at strategic intervals for progressive loading
-  const renderIntervals = [10, 50, 100, 250, 500, 1000];
+  const renderIntervals = [10, 50, 100, 250, 500, 1000, 2000];
   
   renderIntervals.forEach((interval) => {
     setTimeout(() => {

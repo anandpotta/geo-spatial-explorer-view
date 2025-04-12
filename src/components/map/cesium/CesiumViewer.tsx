@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -110,6 +111,42 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       }
     };
   }, [isInitialized, isFlying]);
+
+  // Setup auto-rotation for the globe
+  useEffect(() => {
+    if (isInitialized && viewerRef.current && !viewerRef.current.isDestroyed()) {
+      // Enable auto-rotation for the globe
+      viewerRef.current.clock.shouldAnimate = true;
+      viewerRef.current.scene.screenSpaceCameraController.enableRotate = true;
+      
+      // Add automated camera rotation for a more dynamic view
+      let lastTime = Date.now();
+      const rotationSpeed = 0.05; // degrees per second
+      
+      const autoRotateListener = viewerRef.current.clock.onTick.addEventListener(() => {
+        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+          const now = Date.now();
+          const delta = (now - lastTime) / 1000; // seconds
+          lastTime = now;
+          
+          // Rotate the camera slowly around the globe
+          viewerRef.current.scene.camera.rotate(
+            Cesium.Cartesian3.UNIT_Z,
+            Cesium.Math.toRadians(rotationSpeed * delta)
+          );
+          
+          // Force a render
+          viewerRef.current.scene.requestRender();
+        }
+      });
+      
+      return () => {
+        if (autoRotateListener) {
+          viewerRef.current?.clock.onTick.removeEventListener(autoRotateListener);
+        }
+      };
+    }
+  }, [isInitialized]);
   
   return (
     <>
