@@ -17,6 +17,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
   const [canvasVisible, setCanvasVisible] = useState(false);
   const forceRenderCount = useRef(0);
   const renderIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoRotationActive = useRef(true);
   
   // Use the Cesium map hook
   const { 
@@ -39,7 +40,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     }
     
     // Schedule progressive renders with strategic timing
-    const renderTimes = [10, 50, 100, 300, 600, 1000, 2000];
+    const renderTimes = [10, 50, 100, 300, 600, 1000, 2000, 3000];
     renderTimes.forEach((time) => {
       setTimeout(() => {
         if (viewerRef.current && !viewerRef.current.isDestroyed()) {
@@ -88,8 +89,8 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
         forceGlobeVisibility(viewerRef.current);
         renderCount++;
         
-        if (renderCount >= 10) {
-          // Stop after 10 attempts
+        if (renderCount >= 15) {
+          // Stop after 15 attempts
           if (renderIntervalRef.current) {
             clearInterval(renderIntervalRef.current);
             renderIntervalRef.current = null;
@@ -102,7 +103,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           renderIntervalRef.current = null;
         }
       }
-    }, 500);
+    }, 300);
     
     return () => {
       if (renderIntervalRef.current) {
@@ -121,10 +122,10 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       
       // Add automated camera rotation for a more dynamic view
       let lastTime = Date.now();
-      const rotationSpeed = 0.05; // degrees per second
+      const rotationSpeed = 0.1; // degrees per second - increased for more visible rotation
       
       const autoRotateListener = viewerRef.current.clock.onTick.addEventListener(() => {
-        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        if (viewerRef.current && !viewerRef.current.isDestroyed() && autoRotationActive.current) {
           const now = Date.now();
           const delta = (now - lastTime) / 1000; // seconds
           lastTime = now;
@@ -147,6 +148,18 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       };
     }
   }, [isInitialized]);
+
+  // Stop auto-rotation when flying to a location
+  useEffect(() => {
+    autoRotationActive.current = !isFlying;
+    
+    // If we finished flying, restart auto-rotation
+    if (!isFlying && viewerRef.current && !viewerRef.current.isDestroyed()) {
+      setTimeout(() => {
+        autoRotationActive.current = true;
+      }, 500);
+    }
+  }, [isFlying]);
   
   return (
     <>
@@ -162,10 +175,10 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           left: 0,
           zIndex: 1,
           visibility: 'visible', // Always keep the container visible
-          minHeight: '400px',
-          display: 'block',
           opacity: canvasVisible ? 1 : 0,
-          transition: 'opacity 0.3s ease-in-out'
+          transition: 'opacity 0.3s ease-in-out',
+          minHeight: '400px',
+          display: 'block'
         }}
         data-cesium-container="true"
       />

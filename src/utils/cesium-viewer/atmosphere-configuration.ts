@@ -18,7 +18,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       if ('hueShift' in viewer.scene.skyAtmosphere) {
         viewer.scene.skyAtmosphere.hueShift = 0.0;
         viewer.scene.skyAtmosphere.saturationShift = 0.1;
-        viewer.scene.skyAtmosphere.brightnessShift = 2.0; // Increase brightness for better visibility
+        viewer.scene.skyAtmosphere.brightnessShift = 2.5; // Further increase brightness for better visibility
       }
     }
     
@@ -28,7 +28,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       viewer.scene.globe.showGroundAtmosphere = true;
       
       // Force the globe to be visible with a bright pure blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
       // Force the scene to use translucency
@@ -47,7 +47,9 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
     }
     
     // Force rendering update
-    viewer.scene.requestRender();
+    for (let i = 0; i < 10; i++) {
+      viewer.scene.requestRender();
+    }
   } catch (e) {
     console.error('Error configuring atmosphere:', e);
   }
@@ -62,11 +64,11 @@ export function configureRendering(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Set a vibrant blue color for the globe if available
+    // Set a vibrant blue color for the globe
     if (viewer.scene.globe) {
       // Make sure globe is shown
       viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
       
       // Force the globe to be visible by applying additional settings
       viewer.scene.globe.depthTestAgainstTerrain = false;
@@ -85,7 +87,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     }
     
     // Force multiple render cycles to ensure the globe appears
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 20; i++) {
       viewer.scene.requestRender();
     }
     
@@ -95,10 +97,11 @@ export function configureRendering(viewer: Cesium.Viewer): void {
       viewer.clock.multiplier = 2.0; // Speed of rotation
     }
     
-    // Update the canvas visiblity
+    // Update the canvas visibility
     if (viewer.canvas) {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
+      viewer.canvas.style.opacity = '1';
     }
     
     // Force resize for proper canvas dimensions
@@ -107,7 +110,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     // Delay additional renders to ensure the globe appears after initial setup
     setTimeout(() => {
       if (!viewer.isDestroyed()) {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 15; i++) {
           viewer.scene.requestRender();
         }
       }
@@ -128,6 +131,12 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   try {
     // Make absolutely sure the globe is visible
     viewer.scene.globe.show = true;
+    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+    
+    // Make sure fog is disabled which can interfere with visibility
+    if (viewer.scene.fog) {
+      viewer.scene.fog.enabled = false;
+    }
     
     // Force the scene to update and render
     viewer.scene.requestRender();
@@ -144,6 +153,15 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     if (cesiumContainer) {
       (cesiumContainer as HTMLElement).style.visibility = 'visible';
       (cesiumContainer as HTMLElement).style.display = 'block';
+      (cesiumContainer as HTMLElement).style.opacity = '1';
+    }
+    
+    // Also ensure the cesium-widget and cesium-widget canvas are visible
+    const cesiumWidget = document.querySelector('.cesium-widget');
+    if (cesiumWidget) {
+      (cesiumWidget as HTMLElement).style.visibility = 'visible';
+      (cesiumWidget as HTMLElement).style.display = 'block';
+      (cesiumWidget as HTMLElement).style.opacity = '1';
     }
     
     // Log the canvas state for debugging
