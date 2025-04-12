@@ -13,8 +13,8 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
   try {
     const globe = viewer.scene.globe;
     
-    // Make the globe blue like Earth - with more vibrant color
-    globe.baseColor = Cesium.Color.BLUE.withAlpha(1.0).brighten(0.5, new Cesium.Color());
+    // Make the globe blue like Earth - with much more vibrant color
+    globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
     
     // Enable lighting for better 3D appearance
     globe.enableLighting = true;
@@ -38,12 +38,13 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
       // Safely ignore if this property isn't available
     }
     
-    // Force the globe to be visible
+    // Force the globe to be visible with higher contrast color
+    globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
     globe.show = true;
     
     // Request a render to update the globe - multiple times
     if (viewer.scene) {
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 30; i++) {
         viewer.scene.requestRender();
       }
     }

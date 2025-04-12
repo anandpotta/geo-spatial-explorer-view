@@ -28,7 +28,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       viewer.scene.globe.showGroundAtmosphere = true;
       
       // Force the globe to be visible with a bright pure blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
       // Force the scene to use translucency
@@ -59,7 +59,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     if (viewer.scene.globe) {
       // Make sure globe is shown
       viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
       
       // Force the globe to be visible by applying additional settings
       viewer.scene.globe.depthTestAgainstTerrain = false;
@@ -93,6 +93,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
       viewer.canvas.style.opacity = '1';
+      viewer.canvas.style.zIndex = '999'; // Higher z-index to ensure visibility
     }
     
     // Force resize for proper canvas dimensions
@@ -120,9 +121,9 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Make absolutely sure the globe is visible
+    // Make absolutely sure the globe is visible with a bright vibrant color
     viewer.scene.globe.show = true;
-    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
     
     // Make sure fog is disabled which can interfere with visibility
     if (viewer.scene.fog) {
@@ -132,11 +133,12 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     // Force the scene to update and render
     viewer.scene.requestRender();
     
-    // Make sure the canvas element is properly displayed
+    // Make sure the canvas element is properly displayed with high z-index
     if (viewer.canvas) {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
       viewer.canvas.style.opacity = '1';
+      viewer.canvas.style.zIndex = '999'; // Higher z-index
     }
     
     // Set a black background color for the scene
@@ -163,6 +165,7 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       (cesiumContainer as HTMLElement).style.visibility = 'visible';
       (cesiumContainer as HTMLElement).style.display = 'block';
       (cesiumContainer as HTMLElement).style.opacity = '1';
+      (cesiumContainer as HTMLElement).style.zIndex = '999';
     }
     
     // Also ensure the cesium-widget and cesium-widget canvas are visible
@@ -171,6 +174,7 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       (cesiumWidget as HTMLElement).style.visibility = 'visible';
       (cesiumWidget as HTMLElement).style.display = 'block';
       (cesiumWidget as HTMLElement).style.opacity = '1';
+      (cesiumWidget as HTMLElement).style.zIndex = '999';
     }
     
     // Force a resize and additional renders

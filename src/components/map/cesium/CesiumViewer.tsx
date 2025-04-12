@@ -95,7 +95,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
         forceGlobeVisibility(viewerRef.current);
         renderCount++;
         
-        if (renderCount >= 30) { // Increased to 30 attempts
+        if (renderCount >= 50) { // Increased to 50 attempts
           // Stop after many attempts
           if (renderIntervalRef.current) {
             clearInterval(renderIntervalRef.current);
@@ -109,7 +109,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           renderIntervalRef.current = null;
         }
       }
-    }, 200);
+    }, 100);
     
     return () => {
       if (renderIntervalRef.current) {
@@ -128,7 +128,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
       
       // Add automated camera rotation for a more dynamic view
       let lastTime = Date.now();
-      const rotationSpeed = 0.5; // degrees per second - increased for more visible rotation
+      const rotationSpeed = 0.7; // degrees per second - increased for more visible rotation
       
       const autoRotateListener = viewerRef.current.clock.onTick.addEventListener(() => {
         if (viewerRef.current && !viewerRef.current.isDestroyed() && autoRotationActive.current) {
@@ -167,6 +167,38 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     }
   }, [isFlying]);
   
+  // Add DOM manipulation to ensure Cesium container is visible
+  useEffect(() => {
+    if (cesiumContainer.current) {
+      cesiumContainer.current.style.visibility = 'visible';
+      cesiumContainer.current.style.display = 'block';
+      cesiumContainer.current.style.opacity = '1';
+      cesiumContainer.current.style.zIndex = '999';
+    }
+    
+    // Get all canvases within cesium container and make sure they're visible
+    const checkCanvases = () => {
+      if (cesiumContainer.current) {
+        const canvases = cesiumContainer.current.querySelectorAll('canvas');
+        canvases.forEach(canvas => {
+          canvas.style.visibility = 'visible';
+          canvas.style.display = 'block';
+          canvas.style.opacity = '1';
+        });
+      }
+    };
+    
+    // Check repeatedly for canvases
+    const canvasInterval = setInterval(checkCanvases, 100);
+    setTimeout(() => {
+      clearInterval(canvasInterval);
+    }, 5000);
+    
+    return () => {
+      clearInterval(canvasInterval);
+    };
+  }, []);
+  
   return (
     <>
       <CesiumMapLoading isLoading={isLoadingMap} mapError={mapError} />
@@ -179,7 +211,7 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
           position: 'absolute', 
           top: 0, 
           left: 0,
-          zIndex: 30, // Increased z-index for better layering
+          zIndex: 999, // Increased z-index for better layering
           visibility: canvasVisible ? 'visible' : 'hidden',
           opacity: canvasVisible ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',
