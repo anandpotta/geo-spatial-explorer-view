@@ -13,10 +13,29 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
   useEffect(() => {
     // Ensure the container is fully visible
     if (containerRef.current) {
+      // Apply critical visibility styles
       containerRef.current.style.visibility = 'visible';
       containerRef.current.style.display = 'block';
       containerRef.current.style.opacity = '1';
-      containerRef.current.style.zIndex = '1000';
+      containerRef.current.style.zIndex = '9999'; // Increased z-index for maximum visibility
+      
+      // Force repaint by triggering layout
+      void containerRef.current.offsetHeight;
+      
+      // Additional forced visibility check with delay
+      const forceVisibilityInterval = setInterval(() => {
+        if (containerRef.current) {
+          containerRef.current.style.visibility = 'visible';
+          containerRef.current.style.display = 'block';
+          containerRef.current.style.opacity = '1';
+          containerRef.current.style.zIndex = '9999';
+        } else {
+          clearInterval(forceVisibilityInterval);
+        }
+      }, 500);
+      
+      // Clear interval after ensuring visibility
+      setTimeout(() => clearInterval(forceVisibilityInterval), 5000);
     }
   }, [containerRef]);
   
@@ -33,11 +52,12 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 1000,
+        zIndex: 9999, // Increased z-index for maximum visibility
         background: '#000',
         visibility: 'visible',
         display: 'block',
-        opacity: 1
+        opacity: 1,
+        pointerEvents: 'auto' // Ensure interaction works
       }}
     />
   );

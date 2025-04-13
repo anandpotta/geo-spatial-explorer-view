@@ -21,9 +21,11 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   globe.translucency.enabled = false; // Disable translucency which could cause visibility issues
   globe.show = true; // Explicitly ensure globe is visible
   globe.depthTestAgainstTerrain = false; // Disable depth testing for better visibility
+  globe.tileCacheSize = 1000; // Larger tile cache
 
   const skyAtmosphere = new Cesium.SkyAtmosphere();
   skyAtmosphere.show = true;
+  skyAtmosphere.brightnessShift = 0.5; // Make atmosphere brighter
   
   return {
     baseLayerPicker: false,
@@ -53,6 +55,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
     orderIndependentTranslucency: true, // Enable for better atmospheric effects
+    automaticallyTrackDataSourceClocks: false, // Disable to improve performance
     contextOptions: {
       webgl: {
         alpha: false, // Disable transparency for better rendering

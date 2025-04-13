@@ -37,8 +37,17 @@ export const API_CONFIG = {
   FEATURES: {
     IMAGERY: false,
     TERRAIN: false,
-    ATMOSPHERE: false,
-    LIGHTING: false,
-    GLOBE_EFFECTS: false
+    ATMOSPHERE: true, // Enable atmosphere for better visibility
+    LIGHTING: true,   // Enable lighting for better visibility
+    GLOBE_EFFECTS: true // Enable globe effects for better visibility
+  },
+  
+  // Debug settings
+  DEBUG: {
+    FORCE_RENDER: true,
+    LOGGING: true,
+    VISIBILITY_CHECKS: true,
+    RENDER_LOOPS: 10,
+    RENDER_INTERVAL_MS: 100
   }
 };
