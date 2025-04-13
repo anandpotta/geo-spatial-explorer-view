@@ -3,35 +3,32 @@ import React from 'react';
 
 interface CesiumContainerProps {
   containerRef: React.RefObject<HTMLDivElement>;
-  children?: React.ReactNode;
 }
 
 /**
- * Container component for the Cesium viewer with proper styling
+ * Dedicated container component for Cesium viewer
  */
-const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef, children }) => {
+const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
   return (
     <div 
       ref={containerRef} 
-      className="w-full h-full cesium-container"
+      data-cesium-container="true"
+      className="absolute inset-0 w-full h-full"
       style={{ 
         width: '100%', 
-        height: '100%', 
-        position: 'absolute', 
-        top: 0, 
+        height: '100%',
+        position: 'absolute',
+        top: 0,
         left: 0,
-        zIndex: 1000, // Increased z-index
-        visibility: 'visible', // Always visible
-        opacity: 1,
-        transition: 'opacity 0.3s ease-in-out',
-        minHeight: '500px',
+        right: 0,
+        bottom: 0,
+        zIndex: 999,
+        background: '#000',
+        visibility: 'visible',
         display: 'block',
-        background: 'black' // Black background for contrast
+        opacity: 1
       }}
-      data-cesium-container="true"
-    >
-      {children}
-    </div>
+    />
   );
 };
 
