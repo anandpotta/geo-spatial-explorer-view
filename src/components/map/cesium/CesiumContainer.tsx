@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 
 interface CesiumContainerProps {
@@ -9,7 +8,7 @@ interface CesiumContainerProps {
  * Dedicated container component for Cesium viewer with enhanced visibility
  */
 const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
-  // Force visibility using an effect
+  // Force visibility using an effect with more aggressive approach
   useEffect(() => {
     // Ensure the container is fully visible
     if (containerRef.current) {
@@ -17,25 +16,34 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       containerRef.current.style.visibility = 'visible';
       containerRef.current.style.display = 'block';
       containerRef.current.style.opacity = '1';
-      containerRef.current.style.zIndex = '9999'; // Increased z-index for maximum visibility
+      containerRef.current.style.zIndex = '10000'; // Maximum z-index
       
       // Force repaint by triggering layout
       void containerRef.current.offsetHeight;
       
-      // Additional forced visibility check with delay
+      // Additional forced visibility check with more frequent intervals
       const forceVisibilityInterval = setInterval(() => {
         if (containerRef.current) {
           containerRef.current.style.visibility = 'visible';
           containerRef.current.style.display = 'block';
           containerRef.current.style.opacity = '1';
-          containerRef.current.style.zIndex = '9999';
+          containerRef.current.style.zIndex = '10000';
+          
+          // Also check for any canvas elements and force them to be visible
+          const canvases = containerRef.current.querySelectorAll('canvas');
+          canvases.forEach(canvas => {
+            canvas.style.visibility = 'visible';
+            canvas.style.display = 'block';
+            canvas.style.opacity = '1';
+            canvas.style.zIndex = '10000';
+          });
         } else {
           clearInterval(forceVisibilityInterval);
         }
-      }, 500);
+      }, 100); // More frequent checks (every 100ms)
       
-      // Clear interval after ensuring visibility
-      setTimeout(() => clearInterval(forceVisibilityInterval), 5000);
+      // Keep checking longer to ensure visibility
+      setTimeout(() => clearInterval(forceVisibilityInterval), 10000); // Extend to 10 seconds
     }
   }, [containerRef]);
   
@@ -52,12 +60,13 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 9999, // Increased z-index for maximum visibility
+        zIndex: 10000, // Maximum z-index
         background: '#000',
         visibility: 'visible',
         display: 'block',
         opacity: 1,
-        pointerEvents: 'auto' // Ensure interaction works
+        pointerEvents: 'auto', // Ensure interaction works
+        isolation: 'isolate' // Create a new stacking context
       }}
     />
   );

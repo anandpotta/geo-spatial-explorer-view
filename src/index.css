@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -111,7 +110,7 @@
   }
 }
 
-/* Cesium specific styles */
+/* Cesium specific styles - enhance for better visibility */
 .cesium-viewer-cesiumWidgetContainer {
   position: absolute !important;
   top: 0 !important;
@@ -120,22 +119,35 @@
   bottom: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  z-index: 9999 !important;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
 }
 
 .cesium-viewer-toolbar {
   top: 5px;
   right: 5px;
+  z-index: 10001 !important; /* Ensure controls are visible */
 }
 
 .cesium-widget canvas {
   width: 100% !important;
   height: 100% !important;
   touch-action: none;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
 }
 
 .cesium-widget, .cesium-viewer {
   width: 100% !important;
   height: 100% !important;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
 }
 
 /* Leaflet specific styles */

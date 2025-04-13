@@ -18,13 +18,14 @@ interface CesiumMapProps {
 const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   return (
     <div className="w-full h-full relative" style={{ 
-      zIndex: 999, 
+      zIndex: 10000, 
       position: 'absolute', 
       top: 0, 
       left: 0, 
       width: '100%', 
       height: '100%', 
-      background: 'black' 
+      background: 'black',
+      isolation: 'isolate', // Create a new stacking context
     }}>
       <CesiumMapCore {...props} />
     </div>

@@ -64,11 +64,23 @@ const MapContent = ({
   };
 
   return (
-    <div className="flex-1 relative w-full h-full overflow-hidden">
+    <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
-        {/* Make Cesium view always on top with higher z-index */}
-        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-[999]' : 'opacity-0 z-10'}`} 
-             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}>
+        {/* Cesium view - improved z-index and visibility */}
+        <div 
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-[10000]' : 'opacity-0 z-0 pointer-events-none'}`} 
+          style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            width: '100%', 
+            height: '100%',
+            visibility: currentView === 'cesium' ? 'visible' : 'hidden'
+          }}
+          data-map-type="cesium"
+        >
           <CesiumMap 
             selectedLocation={selectedLocation}
             onMapReady={onMapReady}
@@ -79,7 +91,14 @@ const MapContent = ({
           />
         </div>
         
-        <div className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-20' : 'opacity-0 z-0'}`}>
+        {/* Leaflet view - proper z-index for visibility when active */}
+        <div 
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-[10000]' : 'opacity-0 z-0 pointer-events-none'}`}
+          style={{ 
+            visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
+          }}
+          data-map-type="leaflet"
+        >
           <LeafletMap 
             selectedLocation={selectedLocation} 
             onMapReady={handleLeafletMapRef}
@@ -94,7 +113,8 @@ const MapContent = ({
         />
       </div>
       
-      <div className="absolute top-4 left-4 right-4 z-[1000]">
+      {/* Search bar with increased z-index to be above both maps */}
+      <div className="absolute top-4 left-4 right-4 z-[10001]">
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
     </div>
