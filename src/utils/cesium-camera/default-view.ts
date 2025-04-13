@@ -13,8 +13,8 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   try {
     // Force a bright, visible blue globe with improved settings
     if (viewer.scene && viewer.scene.globe) {
-      // Use a brighter, more vibrant blue
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      // Use an even brighter, more vibrant blue
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
       // Force globe visibility with enhanced settings
@@ -24,12 +24,12 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       viewer.scene.fog.enabled = false; // Disable fog for better visibility
     }
     
-    // Position closer to the camera with adjusted pitch for better visibility
+    // Position much closer to the camera with adjusted pitch for better visibility
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 10000000.0), // Closer position
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 8000000.0), // Even closer position
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-25.0), // Better angle for globe visibility
+        pitch: Cesium.Math.toRadians(-20.0), // Better angle for globe visibility
         roll: 0.0
       }
     });
@@ -62,7 +62,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
   if (!viewer || viewer.isDestroyed()) return;
   
   // More frequent intervals for the first few seconds
-  const renderIntervals = [10, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000];
+  const renderIntervals = [10, 30, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000];
   
   renderIntervals.forEach((interval) => {
     setTimeout(() => {
@@ -73,7 +73,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
         // Force globe visibility at each interval with brighter color
         if (viewer.scene && viewer.scene.globe) {
           viewer.scene.globe.show = true;
-          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+          viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0);
         }
         
         // Ensure canvas is visible with high z-index
@@ -81,7 +81,7 @@ function requestProgressiveRenders(viewer: Cesium.Viewer): void {
           viewer.canvas.style.visibility = 'visible';
           viewer.canvas.style.display = 'block';
           viewer.canvas.style.opacity = '1';
-          viewer.canvas.style.zIndex = '1000'; // Higher z-index
+          viewer.canvas.style.zIndex = '9999'; // Even higher z-index
         }
       }
     }, interval);

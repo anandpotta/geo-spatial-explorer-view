@@ -10,12 +10,12 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     cells: 2,  // Larger cells for better visibility
     color: Cesium.Color.WHITE.withAlpha(0.9), // More visible grid lines
     glowColor: Cesium.Color.WHITE.withAlpha(0.9),
-    backgroundColor: new Cesium.Color(0.0, 0.5, 1.0, 1.0) // Brighter blue for visibility
+    backgroundColor: new Cesium.Color(0.0, 0.8, 1.0, 1.0) // Brighter blue for visibility
   });
 
   // Create the globe instance with proper configuration
   const globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84);
-  globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0); // Vibrant blue color
+  globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0); // More vibrant blue color
   globe.showGroundAtmosphere = true;
   globe.enableLighting = true;
   globe.translucency.enabled = false; // Disable translucency which could cause visibility issues
@@ -61,7 +61,8 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
         failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
         preserveDrawingBuffer: true, // Ensure rendering is preserved
         stencil: false, // Disable stencil for better performance
-        depth: true // Enable depth testing
+        depth: true, // Enable depth testing
+        premultipliedAlpha: true // Better alpha blending
       }
     },
     useDefaultRenderLoop: true, // Use the default render loop for consistent rendering

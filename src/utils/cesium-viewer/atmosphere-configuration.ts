@@ -28,7 +28,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
       viewer.scene.globe.showGroundAtmosphere = true;
       
       // Set a more vibrant blue color
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
       // Disable translucency which can cause visibility issues
@@ -58,7 +58,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     // Set vibrant blue color for the globe
     if (viewer.scene.globe) {
       viewer.scene.globe.show = true;
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0);
       viewer.scene.globe.depthTestAgainstTerrain = false;
       
       // Force the globe's surface to be correctly rendered
@@ -119,9 +119,9 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   }
   
   try {
-    // Make sure the globe is visible with vibrant blue color
+    // Make sure the globe is visible with even more vibrant blue color
     viewer.scene.globe.show = true;
-    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0);
     
     // Disable fog for clearer view
     if (viewer.scene.fog) {
@@ -136,7 +136,11 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
       viewer.canvas.style.opacity = '1';
-      viewer.canvas.style.zIndex = '1000';
+      viewer.canvas.style.zIndex = '9999'; // Even higher z-index
+      
+      // Force size to be 100%
+      viewer.canvas.style.width = '100%';
+      viewer.canvas.style.height = '100%';
     }
     
     // Set black background for better contrast
@@ -163,7 +167,7 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       (cesiumContainer as HTMLElement).style.visibility = 'visible';
       (cesiumContainer as HTMLElement).style.display = 'block';
       (cesiumContainer as HTMLElement).style.opacity = '1';
-      (cesiumContainer as HTMLElement).style.zIndex = '1000';
+      (cesiumContainer as HTMLElement).style.zIndex = '9999';
     }
     
     // Ensure the cesium-widget and canvas are visible
@@ -172,12 +176,20 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       (cesiumWidget as HTMLElement).style.visibility = 'visible';
       (cesiumWidget as HTMLElement).style.display = 'block';
       (cesiumWidget as HTMLElement).style.opacity = '1';
-      (cesiumWidget as HTMLElement).style.zIndex = '1000';
+      (cesiumWidget as HTMLElement).style.zIndex = '9999';
+      
+      // Also adjust any canvas elements inside
+      const canvases = (cesiumWidget as HTMLElement).querySelectorAll('canvas');
+      canvases.forEach(canvas => {
+        canvas.style.visibility = 'visible';
+        canvas.style.display = 'block';
+        canvas.style.opacity = '1';
+      });
     }
     
     // Force resize and multiple renders
     viewer.resize();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 15; i++) {
       viewer.scene.requestRender();
     }
   } catch (e) {
