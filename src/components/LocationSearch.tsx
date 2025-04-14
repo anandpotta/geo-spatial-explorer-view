@@ -41,14 +41,12 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     setQuery(location.label);
     setShowResults(false);
     
-    // Add toast notification
     toast({
       title: "Starting navigation",
       description: `Traveling to ${location.label}`,
       duration: 3000,
     });
     
-    // Trigger the location selection
     onLocationSelect(location);
   };
 
@@ -74,7 +72,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
       console.log('Submitting first result:', results[0]);
       handleSelect(results[0]);
     } else if (query.length >= 3) {
-      // If no results but query is valid, show loading and start search
       setIsLoading(true);
       searchLocations(query).then(locations => {
         setIsLoading(false);
@@ -92,16 +89,16 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   };
 
   return (
-    <div className="map-search-panel p-3 z-10 absolute top-0 left-0 right-0 bg-background/80 backdrop-blur-sm shadow-md">
+    <div className="w-full p-2 z-[10000] bg-background rounded-md shadow-lg">
       <form onSubmit={handleSubmit} className="relative">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Input
               type="text"
-              placeholder="Enter address to navigate from space..."
+              placeholder="Enter location to navigate..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pr-8 pl-10"
+              className="pr-8 pl-10 w-full"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             {query && (
@@ -120,7 +117,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         </div>
         
         {showResults && results.length > 0 && (
-          <ul className="absolute z-10 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+          <ul className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
             {results.map((location) => (
               <li 
                 key={location.id} 

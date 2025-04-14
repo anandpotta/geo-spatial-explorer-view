@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
@@ -65,17 +64,12 @@ const MapContent = ({
     console.log(`Tool selected: ${tool}`);
     setActiveTool(tool);
     
-    // Different handling based on the current active map
     if (currentView === 'cesium') {
-      // Handle Cesium drawing tools
       if (tool === 'clear') {
-        // Clear all drawings in Cesium
         toast.info('Clearing all shapes');
       }
     } else if (currentView === 'leaflet') {
-      // Leaflet drawing tools are handled directly in the LeafletMap component
       if (tool === 'clear' && leafletMapRef.current) {
-        // Clear all drawings in Leaflet
         const layers = leafletMapRef.current._layers;
         if (layers) {
           Object.keys(layers).forEach(layerId => {
@@ -93,7 +87,6 @@ const MapContent = ({
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
-        {/* Cesium view - improved z-index and visibility */}
         <div 
           className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
           style={{ 
@@ -118,7 +111,6 @@ const MapContent = ({
           />
         </div>
         
-        {/* Leaflet view - proper z-index for visibility when active */}
         <div 
           className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
           style={{ 
@@ -132,7 +124,6 @@ const MapContent = ({
           />
         </div>
         
-        {/* Drawing Tools - rendered outside map containers for consistent visibility */}
         <DrawingTools 
           onToolSelect={handleToolSelect}
           onZoomIn={handleZoomIn}
@@ -141,12 +132,11 @@ const MapContent = ({
         />
       </div>
       
-      {/* Search bar with increased z-index to be above both maps */}
       <div 
-        className="absolute top-4 left-4 right-4" 
+        className="absolute top-4 left-4 right-4 z-[10000]" 
         style={{ 
-          zIndex: 20000,
-          position: 'relative'
+          maxWidth: '400px',
+          margin: '0 auto'
         }}
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
