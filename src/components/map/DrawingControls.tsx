@@ -50,8 +50,6 @@ const DrawingControls = ({ onCreated }: DrawingControlsProps) => {
             marker: true,
             polyline: true
           }}
-          // Explicitly set the feature group prop
-          featureGroup={featureGroupRef.current}
         />
       )}
     </FeatureGroup>
