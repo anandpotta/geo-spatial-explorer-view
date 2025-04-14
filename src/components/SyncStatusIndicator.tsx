@@ -8,12 +8,29 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { checkBackendAvailability } from '@/utils/api-client';
 
 const SyncStatusIndicator: React.FC = () => {
-  const { isOnline, isSyncing, lastSynced, syncNow } = useApiSync();
+  // Default values when not wrapped in ApiSyncProvider
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [isBackendReachable, setIsBackendReachable] = useState<boolean | null>(null);
+  
+  // Try to use ApiSyncContext if available, otherwise use the default values
+  let apiSyncContext;
+  try {
+    apiSyncContext = useApiSync();
+  } catch (error) {
+    // If useApiSync throws an error, we'll use our local state instead
+    console.warn('SyncStatusIndicator: ApiSyncProvider not found, using fallback mode');
+  }
+  
+  const contextIsOnline = apiSyncContext?.isOnline ?? isOnline;
+  const contextIsSyncing = apiSyncContext?.isSyncing ?? isSyncing;
+  const contextLastSynced = apiSyncContext?.lastSynced ?? lastSynced;
+  const syncNow = apiSyncContext?.syncNow ?? (() => console.log('Sync not available in fallback mode'));
   
   // Check backend status on mount and when online status changes
   useEffect(() => {
-    if (isOnline) {
+    if (contextIsOnline) {
       const checkBackend = async () => {
         const available = await checkBackendAvailability();
         setIsBackendReachable(available);
@@ -26,10 +43,26 @@ const SyncStatusIndicator: React.FC = () => {
     } else {
       setIsBackendReachable(false);
     }
-  }, [isOnline]);
+  }, [contextIsOnline]);
+  
+  // Add event listeners for online/offline status when not using ApiSyncContext
+  useEffect(() => {
+    if (!apiSyncContext) {
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+  
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+  
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, [apiSyncContext]);
   
   // Connection status text and color
-  const connectionStatus = isOnline 
+  const connectionStatus = contextIsOnline 
     ? isBackendReachable 
       ? { label: 'Server Connected', color: 'text-green-500' } 
       : { label: 'Local Only', color: 'text-orange-500' }
@@ -41,7 +74,7 @@ const SyncStatusIndicator: React.FC = () => {
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-1.5">
-              {isOnline ? (
+              {contextIsOnline ? (
                 isBackendReachable ? (
                   <Server size={16} className={connectionStatus.color} />
                 ) : (
@@ -57,7 +90,7 @@ const SyncStatusIndicator: React.FC = () => {
           </TooltipTrigger>
           <TooltipContent>
             <p>
-              {isOnline 
+              {contextIsOnline 
                 ? isBackendReachable 
                   ? 'Connected to server - data will sync automatically' 
                   : 'Online but server is unreachable - working with local data only'
@@ -67,7 +100,7 @@ const SyncStatusIndicator: React.FC = () => {
         </Tooltip>
       </TooltipProvider>
       
-      {isOnline && isBackendReachable && (
+      {contextIsOnline && isBackendReachable && (
         <>
           <div className="h-4 border-l border-border mx-1" />
           
@@ -79,20 +112,20 @@ const SyncStatusIndicator: React.FC = () => {
                   size="icon" 
                   className="h-6 w-6" 
                   onClick={syncNow}
-                  disabled={isSyncing}
+                  disabled={contextIsSyncing}
                 >
                   <RefreshCw 
                     size={14} 
-                    className={isSyncing ? "animate-spin text-blue-500" : "text-muted-foreground"}
+                    className={contextIsSyncing ? "animate-spin text-blue-500" : "text-muted-foreground"}
                   />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>
-                  {isSyncing 
+                  {contextIsSyncing 
                     ? 'Syncing data with server...' 
-                    : lastSynced 
-                      ? `Last synced ${formatDistanceToNow(lastSynced, { addSuffix: true })}` 
+                    : contextLastSynced 
+                      ? `Last synced ${formatDistanceToNow(contextLastSynced, { addSuffix: true })}` 
                       : 'Click to sync with server'}
                 </p>
               </TooltipContent>
