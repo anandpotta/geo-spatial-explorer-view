@@ -1,5 +1,10 @@
 
 const concurrently = require('concurrently');
+const chalk = require('chalk');
+
+console.log(chalk.blue('Starting Geospatial Explorer application...'));
+console.log(chalk.blue('✓ Frontend will be available at: http://localhost:8080'));
+console.log(chalk.green('✓ Backend API will be available at: http://localhost:3001/api'));
 
 concurrently([
   { 

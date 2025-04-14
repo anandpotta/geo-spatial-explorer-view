@@ -1,5 +1,5 @@
-
 import { LocationMarker, DrawingData } from './geo-utils';
+import { toast } from '@/components/ui/use-toast';
 
 // API base URL - change this to your backend URL when deployed
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
@@ -8,17 +8,68 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
 
 // Network status checker
 let isOnline = navigator.onLine;
-window.addEventListener('online', () => {
-  isOnline = true;
-  syncLocalDataWithBackend();
+let isBackendAvailable = false;
+
+// Check if backend is available
+async function checkBackendAvailability() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`, { 
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    });
+    
+    if (response.ok) {
+      console.log('Backend API is available');
+      isBackendAvailable = true;
+      return true;
+    } else {
+      console.warn('Backend API returned non-200 status:', response.status);
+      isBackendAvailable = false;
+      return false;
+    }
+  } catch (error) {
+    console.warn('Backend API is not available:', error);
+    isBackendAvailable = false;
+    return false;
+  }
+}
+
+// Initialize backend check
+checkBackendAvailability().then(available => {
+  if (!available) {
+    console.log('Working in offline mode - backend not available');
+    toast({
+      title: "Backend unavailable",
+      description: "Working in offline mode. Your data will be stored locally.",
+    });
+  }
 });
+
+// Event listeners for online/offline status
+window.addEventListener('online', async () => {
+  isOnline = true;
+  const backendAvailable = await checkBackendAvailability();
+  if (backendAvailable) {
+    syncLocalDataWithBackend();
+    toast({
+      title: "Back online",
+      description: "Syncing data with server...",
+    });
+  }
+});
+
 window.addEventListener('offline', () => {
   isOnline = false;
+  toast({
+    title: "Working offline",
+    description: "Your data will be stored locally until you reconnect.",
+  });
 });
 
 // Function to sync all local data with backend when coming online
 export async function syncLocalDataWithBackend(): Promise<void> {
-  if (!isOnline) return;
+  if (!isOnline || !isBackendAvailable) return;
   
   try {
     // Get all local data
@@ -57,16 +108,30 @@ export async function syncLocalDataWithBackend(): Promise<void> {
 
 // Markers API
 export async function fetchMarkers(): Promise<LocationMarker[]> {
-  if (!isOnline) {
-    const markersJson = localStorage.getItem('savedMarkers');
-    return markersJson ? JSON.parse(markersJson) : [];
+  // Always check local storage first
+  const markersJson = localStorage.getItem('savedMarkers');
+  const localMarkers = markersJson ? JSON.parse(markersJson) : [];
+  
+  // If offline or backend not available, return local data
+  if (!isOnline || !isBackendAvailable) {
+    return localMarkers;
   }
   
+  // Try to fetch from backend
   try {
-    const response = await fetch(`${API_BASE_URL}/markers`);
+    const response = await fetch(`${API_BASE_URL}/markers`, {
+      headers: { 'Accept': 'application/json' }
+    });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch markers');
+      throw new Error(`Failed to fetch markers: ${response.status}`);
+    }
+    
+    // Check if we received HTML instead of JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.indexOf('application/json') === -1) {
+      console.error('Received non-JSON response from API:', contentType);
+      return localMarkers;
     }
     
     const markers = await response.json();
@@ -76,8 +141,7 @@ export async function fetchMarkers(): Promise<LocationMarker[]> {
   } catch (error) {
     console.error('Error fetching markers:', error);
     // Fall back to local storage
-    const markersJson = localStorage.getItem('savedMarkers');
-    return markersJson ? JSON.parse(markersJson) : [];
+    return localMarkers;
   }
 }
 
