@@ -35,9 +35,17 @@ export async function checkBackendAvailability(): Promise<boolean> {
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      console.log('Backend API is available');
-      isBackendAvailable = true;
-      return true;
+      const contentType = response.headers.get('content-type');
+      // Ensure we actually got JSON back and not HTML
+      if (contentType && contentType.includes('application/json')) {
+        console.log('Backend API is available');
+        isBackendAvailable = true;
+        return true;
+      } else {
+        console.warn('Backend API returned non-JSON response');
+        isBackendAvailable = false;
+        return false;
+      }
     } else {
       console.warn(`Backend API returned non-200 status: ${response.status}`);
       isBackendAvailable = false;
@@ -50,14 +58,12 @@ export async function checkBackendAvailability(): Promise<boolean> {
   }
 }
 
-// Check backend status immediately
+// Check backend status immediately but don't show toast initially
 checkBackendAvailability().then(available => {
   if (!available) {
     console.log('Working in offline mode - backend not available');
-    toast({
-      title: "Backend unavailable",
-      description: "Working in offline mode. Your data will be stored locally.",
-    });
+    // Don't show toast on initial load to avoid confusion
+    // Users will still see the connectivity indicator
   }
 });
 
@@ -119,7 +125,7 @@ export async function apiCall<T>(
     
     // Check for non-JSON responses
     const contentType = response.headers.get('content-type');
-    if (contentType && !contentType.includes('application/json')) {
+    if (!contentType || !contentType.includes('application/json')) {
       console.error('Received non-JSON response from API:', contentType);
       throw new Error('Invalid response format');
     }

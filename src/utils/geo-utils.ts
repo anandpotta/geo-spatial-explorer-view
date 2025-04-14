@@ -1,5 +1,6 @@
 
 import { OpenStreetMapProvider } from 'leaflet-geosearch';
+import { getConnectionStatus } from './api-service';
 
 export interface Location {
   id: string;
@@ -80,8 +81,10 @@ export function saveMarker(marker: LocationMarker): void {
 export function getSavedMarkers(): LocationMarker[] {
   const markersJson = localStorage.getItem('savedMarkers');
   if (!markersJson) {
-    // Try to fetch from backend first if localStorage is empty
-    fetchMarkersFromBackend();
+    // Try to fetch from backend first if localStorage is empty, but don't await
+    fetchMarkersFromBackend().catch(() => {
+      console.log('Could not fetch markers from backend, using local storage');
+    });
     return [];
   }
   
@@ -108,6 +111,9 @@ export function deleteMarker(id: string): void {
 
 // Backend synchronization functions
 async function syncMarkersWithBackend(markers: LocationMarker[]): Promise<void> {
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (!isOnline || !isBackendAvailable) return;
+  
   try {
     const response = await fetch('/api/markers/sync', {
       method: 'POST',
@@ -129,11 +135,22 @@ async function syncMarkersWithBackend(markers: LocationMarker[]): Promise<void> 
 }
 
 async function fetchMarkersFromBackend(): Promise<void> {
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (!isOnline || !isBackendAvailable) {
+    throw new Error('Backend unavailable');
+  }
+  
   try {
     const response = await fetch('/api/markers');
     
     if (!response.ok) {
       throw new Error('Failed to fetch markers from backend');
+    }
+    
+    // Check content type to avoid parsing HTML as JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response format from backend');
     }
     
     const markers = await response.json();
@@ -142,10 +159,14 @@ async function fetchMarkersFromBackend(): Promise<void> {
   } catch (error) {
     console.error('Error fetching markers from backend:', error);
     // Continue with empty local storage if backend is unavailable
+    throw error; // Re-throw to inform caller
   }
 }
 
 async function deleteMarkerFromBackend(id: string): Promise<void> {
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (!isOnline || !isBackendAvailable) return;
+  
   try {
     const response = await fetch(`/api/markers/${id}`, {
       method: 'DELETE',

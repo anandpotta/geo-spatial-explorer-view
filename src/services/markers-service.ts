@@ -8,13 +8,15 @@ export async function fetchMarkers(): Promise<LocationMarker[]> {
   const markersJson = localStorage.getItem('savedMarkers');
   const localMarkers = markersJson ? JSON.parse(markersJson) : [];
   
-  // Try to fetch from backend if available
+  // Don't even try to fetch from backend if we know it's unavailable
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (!isOnline || !isBackendAvailable) {
+    console.log('Using local markers only - backend unavailable');
+    return localMarkers;
+  }
+  
+  // Try to fetch from backend
   try {
-    const { isOnline, isBackendAvailable } = getConnectionStatus();
-    if (!isOnline || !isBackendAvailable) {
-      return localMarkers;
-    }
-    
     const markers = await apiCall<LocationMarker[]>('markers');
     
     // Update local storage with latest data from server

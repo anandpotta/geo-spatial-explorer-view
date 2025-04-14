@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useApiSync } from '@/contexts/ApiSyncContext';
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -19,6 +19,10 @@ const SyncStatusIndicator: React.FC = () => {
         setIsBackendReachable(available);
       };
       checkBackend();
+      
+      // Check again periodically if the backend becomes available
+      const interval = setInterval(checkBackend, 30000); // Check every 30 seconds
+      return () => clearInterval(interval);
     } else {
       setIsBackendReachable(false);
     }
@@ -27,18 +31,22 @@ const SyncStatusIndicator: React.FC = () => {
   // Connection status text and color
   const connectionStatus = isOnline 
     ? isBackendReachable 
-      ? { label: 'Online', color: 'text-green-500' } 
-      : { label: 'No Backend', color: 'text-orange-500' }
+      ? { label: 'Server Connected', color: 'text-green-500' } 
+      : { label: 'Local Only', color: 'text-orange-500' }
     : { label: 'Offline', color: 'text-yellow-500' };
   
   return (
-    <div className="flex items-center gap-2 px-3 py-1 bg-background/80 backdrop-blur-sm rounded-md">
+    <div className="flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-sm rounded-md shadow-md">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               {isOnline ? (
-                <Wifi size={16} className={connectionStatus.color} />
+                isBackendReachable ? (
+                  <Server size={16} className={connectionStatus.color} />
+                ) : (
+                  <WifiOff size={16} className={connectionStatus.color} />
+                )
               ) : (
                 <WifiOff size={16} className={connectionStatus.color} />
               )}
@@ -51,45 +59,47 @@ const SyncStatusIndicator: React.FC = () => {
             <p>
               {isOnline 
                 ? isBackendReachable 
-                  ? 'Connected to server' 
-                  : 'Online but server is unreachable'
-                : 'Working offline'}
+                  ? 'Connected to server - data will sync automatically' 
+                  : 'Online but server is unreachable - working with local data only'
+                : 'Working offline - data is stored locally'}
             </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       
-      <div className="h-4 border-l border-border mx-1" />
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6" 
-              onClick={syncNow}
-              disabled={!isOnline || !isBackendReachable || isSyncing}
-            >
-              <RefreshCw 
-                size={14} 
-                className={isSyncing ? "animate-spin text-blue-500" : isOnline && isBackendReachable ? "text-muted-foreground" : "text-muted-foreground/50"}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>
-              {isSyncing 
-                ? 'Syncing data with server...' 
-                : !isOnline || !isBackendReachable
-                  ? 'Cannot sync while offline or server unavailable'
-                  : lastSynced 
-                    ? `Last synced ${formatDistanceToNow(lastSynced, { addSuffix: true })}` 
-                    : 'Click to sync with server'}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {isOnline && isBackendReachable && (
+        <>
+          <div className="h-4 border-l border-border mx-1" />
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6" 
+                  onClick={syncNow}
+                  disabled={isSyncing}
+                >
+                  <RefreshCw 
+                    size={14} 
+                    className={isSyncing ? "animate-spin text-blue-500" : "text-muted-foreground"}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {isSyncing 
+                    ? 'Syncing data with server...' 
+                    : lastSynced 
+                      ? `Last synced ${formatDistanceToNow(lastSynced, { addSuffix: true })}` 
+                      : 'Click to sync with server'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </>
+      )}
     </div>
   );
 };
