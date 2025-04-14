@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
@@ -7,44 +8,16 @@ import L from 'leaflet';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
-  activeTool: string | null;
 }
 
-const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
+const DrawingControls = ({ onCreated }: DrawingControlsProps) => {
   const editControlRef = useRef<any>(null);
   
-  useEffect(() => {
-    if (!editControlRef.current || !activeTool) return;
-    
-    const leafletElement = editControlRef.current.leafletElement;
-    if (!leafletElement) return;
-    
-    Object.keys(leafletElement._modes).forEach((mode) => {
-      if (leafletElement._modes[mode].handler.enabled()) {
-        leafletElement._modes[mode].handler.disable();
-      }
-    });
-
-    if (activeTool === 'polygon' && leafletElement._modes.polygon) {
-      leafletElement._modes.polygon.handler.enable();
-      toast.info("Click on map to start drawing polygon");
-    } else if (activeTool === 'marker' && leafletElement._modes.marker) {
-      leafletElement._modes.marker.handler.enable();
-      toast.info("Click on map to place marker");
-    } else if (activeTool === 'circle' && leafletElement._modes.circle) {
-      leafletElement._modes.circle.handler.enable();
-      toast.info("Click on map to draw circle");
-    } else if (activeTool === 'rectangle' && leafletElement._modes.rectangle) {
-      leafletElement._modes.rectangle.handler.enable();
-      toast.info("Click on map to draw rectangle");
-    }
-  }, [activeTool]);
-
   return (
     <FeatureGroup>
       <EditControl
         ref={editControlRef}
-        position="topright"
+        position="topleft"
         onCreated={e => {
           const { layerType, layer } = e;
           
