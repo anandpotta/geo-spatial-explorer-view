@@ -8,10 +8,19 @@ import L from 'leaflet';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
+  activeTool?: string | null;
 }
 
-const DrawingControls = ({ onCreated }: DrawingControlsProps) => {
+const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
   const editControlRef = useRef<any>(null);
+  
+  // If we want to react to activeTool changes in the future
+  useEffect(() => {
+    if (activeTool && editControlRef.current) {
+      console.log('Active drawing tool:', activeTool);
+      // We could trigger drawing modes based on activeTool here if needed
+    }
+  }, [activeTool]);
   
   return (
     <FeatureGroup>

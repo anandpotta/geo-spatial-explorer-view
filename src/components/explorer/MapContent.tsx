@@ -127,7 +127,6 @@ const MapContent = ({
         </div>
         
         <DrawingTools 
-          onToolSelect={handleToolSelect}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
