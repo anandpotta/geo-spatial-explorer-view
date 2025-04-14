@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, AttributionControl, useMap, FeatureGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
@@ -11,6 +11,7 @@ import MapEvents from './map/MapEvents';
 import UserMarker from './map/UserMarker';
 import TempMarker from './map/TempMarker';
 import { EditControl } from "react-leaflet-draw";
+import { toast } from 'sonner';
 
 // Initialize leaflet icons
 setupLeafletIcons();
@@ -44,6 +45,7 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building'); // Set building as default
   const mapRef = useRef<L.Map | null>(null);
   const [drawingMode, setDrawingMode] = useState<string | null>(null);
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
 
   // Load saved markers on mount
   useEffect(() => {
@@ -135,13 +137,14 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
       // Here you can save the shape to your state or database
       const id = uuidv4();
       layer.options.id = id;
+      layer.options.isDrawn = true;
       
       // You could save the GeoJSON representation
       const geoJSON = layer.toGeoJSON();
       console.log('GeoJSON:', geoJSON);
       
       // Show a toast notification
-      // toast.success(`${layerType} created successfully`);
+      toast.success(`${layerType} created successfully`);
     }
   };
 
@@ -162,19 +165,22 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
         />
         <AttributionControl position="bottomright" prefix={false} />
         
-        {/* Leaflet Draw control */}
-        <EditControl
-          position="topright"
-          onCreated={handleCreated}
-          draw={{
-            rectangle: true,
-            polygon: true,
-            circle: true,
-            circlemarker: false,
-            marker: true,
-            polyline: true
-          }}
-        />
+        {/* Feature Group for Leaflet Draw */}
+        <FeatureGroup ref={featureGroupRef}>
+          {/* Leaflet Draw control */}
+          <EditControl
+            position="topright"
+            onCreated={handleCreated}
+            draw={{
+              rectangle: true,
+              polygon: true,
+              circle: true,
+              circlemarker: false,
+              marker: true,
+              polyline: true
+            }}
+          />
+        </FeatureGroup>
         
         {/* User-created markers */}
         {markers.map((marker) => (
