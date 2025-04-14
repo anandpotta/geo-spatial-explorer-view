@@ -1,10 +1,11 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as Cesium from 'cesium';
 import { useCesiumGlobeVisibility } from './hooks/useCesiumGlobeVisibility';
 import CesiumViewer from './CesiumViewer';
 import CesiumLocationHandler from './CesiumLocationHandler';
 import { Location } from '@/utils/geo-utils';
+import { forceGlobeVisibility } from '@/utils/cesium-viewer';
 
 interface CesiumMapCoreProps {
   selectedLocation?: Location;
@@ -41,10 +42,29 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
     for (let i = 0; i < 40; i++) {
       viewer.scene.requestRender();
     }
+    
+    // Force immediate globe visibility
+    forceGlobeVisibility(viewer);
   };
 
   // Use the globe visibility hook
   useCesiumGlobeVisibility(viewerRef, viewerReady);
+
+  // Manual intervention to ensure globe visibility
+  useEffect(() => {
+    if (viewerRef.current && viewerReady) {
+      const intervals = [100, 300, 500, 1000, 2000, 3000];
+      intervals.forEach(interval => {
+        setTimeout(() => {
+          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+            forceGlobeVisibility(viewerRef.current);
+            viewerRef.current.resize();
+            console.log(`Forcing globe visibility at ${interval}ms`);
+          }
+        }, interval);
+      });
+    }
+  }, [viewerReady]);
 
   // Handle fly operations start/end
   const handleFlyComplete = () => {

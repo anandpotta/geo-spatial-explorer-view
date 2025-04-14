@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 
 interface CesiumContainerProps {
@@ -17,9 +18,18 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       containerRef.current.style.display = 'block';
       containerRef.current.style.opacity = '1';
       containerRef.current.style.zIndex = '10000'; // Maximum z-index
+      containerRef.current.dataset.cesiumContainer = "true";
+      
+      // Force dimensions
+      containerRef.current.style.width = '100%';
+      containerRef.current.style.height = '100%';
+      containerRef.current.style.minHeight = '500px';
       
       // Force repaint by triggering layout
       void containerRef.current.offsetHeight;
+      
+      // Clear any existing background
+      containerRef.current.style.background = 'black';
       
       // Additional forced visibility check with more frequent intervals
       const forceVisibilityInterval = setInterval(() => {

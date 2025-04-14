@@ -11,6 +11,7 @@ import { destroyViewer } from './use-cesium-cleanup';
 import { setupRenderChecks } from './render-check';
 import { handleInitializationError } from './handle-initialization-error';
 import { ViewerInitializationOptions } from './initialization-types';
+import { forceGlobeVisibility } from '@/utils/cesium-viewer';
 
 /**
  * Initializes the Cesium viewer
@@ -59,7 +60,15 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     // Create the viewer with offline options
     const viewerOptions = createOfflineCesiumViewerOptions();
     
+    // Add debug information to see if viewer creation is working
+    console.log("Creating Cesium viewer with container dimensions:", 
+      cesiumContainer.current.clientWidth, 
+      cesiumContainer.current.clientHeight);
+    
     const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
+    
+    // Log successful creation
+    console.log("Cesium viewer created successfully");
     
     // Configure for offline mode
     configureOfflineViewer(viewer);
@@ -80,10 +89,14 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     // Enable animation
     viewer.clock.shouldAnimate = true;
     
+    // Force globe visibility
+    forceGlobeVisibility(viewer);
+    
     // Request render again after a slight delay
     setTimeout(() => {
       if (viewer && !viewer.isDestroyed()) {
         viewer.resize();
+        forceGlobeVisibility(viewer);
         for (let i = 0; i < 10; i++) {
           viewer.scene.requestRender();
         }

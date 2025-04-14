@@ -1,4 +1,3 @@
-
 import * as Cesium from 'cesium';
 
 /**
@@ -123,6 +122,15 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     viewer.scene.globe.show = true;
     viewer.scene.globe.baseColor = new Cesium.Color(0.0, 1.0, 1.0, 1.0); // Even brighter cyan color
     
+    // Force all internal properties to be visible
+    const globe = viewer.scene.globe;
+    (globe as any)._surface._tilesToRender = [];
+    (globe as any)._surface._tileLoadQueue = [];
+    
+    // Make globe fully opaque
+    globe.translucency.frontFaceAlpha = 1.0;
+    globe.translucency.backFaceAlpha = 1.0;
+    
     // Disable fog and enhance brightness
     if (viewer.scene.fog) {
       viewer.scene.fog.enabled = false;
@@ -137,7 +145,7 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     }
     
     // Force immediate render multiple times
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       viewer.scene.requestRender();
     }
     
@@ -160,8 +168,8 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
         // Force dimensions and reflow
         containerElement.style.width = '100%';
         containerElement.style.height = '100%';
-        containerElement.style.minWidth = '100px';
-        containerElement.style.minHeight = '100px';
+        containerElement.style.minWidth = '300px';
+        containerElement.style.minHeight = '300px';
         void containerElement.offsetHeight; // Force reflow
         
         // Force resize
@@ -179,8 +187,9 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       if (distance > 25000000) {
         viewer.camera.lookAt(
           Cesium.Cartesian3.ZERO,
-          new Cesium.Cartesian3(0, 0, 12000000) // Even closer look
+          new Cesium.Cartesian3(0, 0, 10000000) // Even closer look
         );
+        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
       }
     }
     
@@ -205,6 +214,18 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
         canvas.style.visibility = 'visible';
         canvas.style.display = 'block';
         canvas.style.opacity = '1';
+      }
+    });
+    
+    // Find all cesium widgets and ensure they're visible
+    const widgets = document.querySelectorAll('.cesium-widget');
+    widgets.forEach(widget => {
+      if (widget instanceof HTMLElement) {
+        widget.style.visibility = 'visible';
+        widget.style.display = 'block';
+        widget.style.width = '100%';
+        widget.style.height = '100%';
+        widget.style.background = 'transparent';
       }
     });
     
