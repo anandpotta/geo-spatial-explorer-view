@@ -35,7 +35,14 @@ const DrawingTools = ({
   };
   
   return (
-    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md z-20">
+    <div 
+      className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md"
+      style={{ 
+        zIndex: 20000, // Significantly increased z-index to ensure visibility
+        isolation: 'isolate', // Create stacking context
+        position: 'fixed' // Changed to fixed positioning to ensure it stays visible
+      }}
+    >
       <TooltipProvider>
         {/* Drawing Tools */}
         <Tooltip>

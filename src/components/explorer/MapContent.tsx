@@ -68,7 +68,7 @@ const MapContent = ({
       <div className="relative w-full h-full">
         {/* Cesium view - improved z-index and visibility */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-[10000]' : 'opacity-0 z-0 pointer-events-none'}`} 
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
           style={{ 
             position: 'absolute', 
             top: 0, 
@@ -93,7 +93,7 @@ const MapContent = ({
         
         {/* Leaflet view - proper z-index for visibility when active */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-[10000]' : 'opacity-0 z-0 pointer-events-none'}`}
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
           style={{ 
             visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
           }}
@@ -105,6 +105,7 @@ const MapContent = ({
           />
         </div>
         
+        {/* Drawing Tools - rendered outside map containers for consistent visibility */}
         <DrawingTools 
           onToolSelect={handleToolSelect}
           onZoomIn={handleZoomIn}
@@ -114,7 +115,13 @@ const MapContent = ({
       </div>
       
       {/* Search bar with increased z-index to be above both maps */}
-      <div className="absolute top-4 left-4 right-4 z-[10001]">
+      <div 
+        className="absolute top-4 left-4 right-4" 
+        style={{ 
+          zIndex: 20000,
+          position: 'relative'
+        }}
+      >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
     </div>

@@ -32,6 +32,19 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
       document.head.appendChild(link);
     }
     
+    // Add CSS to ensure Cesium doesn't hide other UI elements
+    const style = document.createElement('style');
+    style.textContent = `
+      .cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
+        z-index: 1000 !important;
+      }
+      .cesium-widget-credits {
+        z-index: 1000 !important;
+        opacity: 0.5;
+      }
+    `;
+    document.head.appendChild(style);
+    
     return () => {
       console.log("CesiumMap component unmounted");
     };
