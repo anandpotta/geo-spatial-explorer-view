@@ -1,4 +1,6 @@
 
+// This file is a central export point for all API-related functions
+
 export { 
   fetchMarkers,
   createMarker,
