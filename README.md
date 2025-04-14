@@ -1,73 +1,102 @@
-# Welcome to your Lovable project
 
-## Project info
+# GeoSpatial Explorer
 
-**URL**: https://lovable.dev/projects/cc37a839-f29b-40b5-bd83-6197582243b9
+A full-stack application for exploring geographic data with 3D and 2D visualization capabilities.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- 3D Earth view using CesiumJS
+- 2D map view using Leaflet
+- Location search with OpenStreetMap
+- Drawing and annotation tools
+- Offline support with local storage
+- Backend synchronization with Node.js
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cc37a839-f29b-40b5-bd83-6197582243b9) and start prompting.
+- Frontend:
+  - React
+  - TypeScript
+  - CesiumJS
+  - Leaflet
+  - TailwindCSS
+  - ShadcnUI
 
-Changes made via Lovable will be committed automatically to this repo.
+- Backend:
+  - Node.js
+  - Express
+  - File-based JSON storage
 
-**Use your preferred IDE**
+## Setup Instructions
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Frontend
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Install dependencies:
+```bash
+npm install
+```
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+2. Start the development server:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Backend
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Navigate to the server directory:
+```bash
+cd server
+```
 
-**Use GitHub Codespaces**
+2. Install dependencies:
+```bash
+npm install
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+3. Start the backend server:
+```bash
+npm run dev
+```
 
-## What technologies are used for this project?
+## Usage
 
-This project is built with:
+1. The application starts with a 3D Earth view.
+2. Use the search bar to find locations.
+3. When a location is selected, the view will fly to that location in 3D.
+4. After arriving, the view transitions to a 2D map for detailed editing.
+5. Use the drawing tools to mark buildings, areas, or points of interest.
+6. All data is saved locally and synchronized with the backend when online.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Offline Support
 
-## How can I deploy this project?
+The application functions fully offline with:
+- Local storage for saving markers and drawings
+- Automatic synchronization when reconnected to the internet
+- Status indicator showing online/offline state
 
-Simply open [Lovable](https://lovable.dev/projects/cc37a839-f29b-40b5-bd83-6197582243b9) and click on Share -> Publish.
+## Project Structure
 
-## Can I connect a custom domain to my Lovable project?
+- `/src` - Frontend React application
+- `/server` - Backend Node.js server
+- `/public` - Static assets
 
-Yes it is!
+## Development
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- The frontend and backend can be developed independently.
+- Changes to the frontend will be immediately visible via hot reloading.
+- Backend changes require server restart (automatic with nodemon).
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Deployment
+
+1. Build the frontend:
+```bash
+npm run build
+```
+
+2. Copy the contents of the `dist` directory to the `server` directory.
+
+3. Start the production server:
+```bash
+cd server
+NODE_ENV=production npm start
+```

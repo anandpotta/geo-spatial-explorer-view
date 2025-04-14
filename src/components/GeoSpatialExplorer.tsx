@@ -4,6 +4,7 @@ import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
+import SyncStatusIndicator from './SyncStatusIndicator';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
@@ -84,6 +85,11 @@ const GeoSpatialExplorer = () => {
           onFlyComplete={handleFlyComplete}
           onLocationSelect={handleLocationSelect}
         />
+        
+        {/* Sync status indicator */}
+        <div className="absolute bottom-5 right-5 z-[10001]">
+          <SyncStatusIndicator />
+        </div>
       </div>
     </div>
   );

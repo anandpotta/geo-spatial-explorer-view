@@ -72,11 +72,18 @@ export function saveMarker(marker: LocationMarker): void {
   const savedMarkers = getSavedMarkers();
   savedMarkers.push(marker);
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
+  
+  // Sync with backend
+  syncMarkersWithBackend(savedMarkers);
 }
 
 export function getSavedMarkers(): LocationMarker[] {
   const markersJson = localStorage.getItem('savedMarkers');
-  if (!markersJson) return [];
+  if (!markersJson) {
+    // Try to fetch from backend first if localStorage is empty
+    fetchMarkersFromBackend();
+    return [];
+  }
   
   try {
     const markers = JSON.parse(markersJson);
@@ -94,4 +101,171 @@ export function deleteMarker(id: string): void {
   const savedMarkers = getSavedMarkers();
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
+  
+  // Sync deletion with backend
+  deleteMarkerFromBackend(id);
+}
+
+// Backend synchronization functions
+async function syncMarkersWithBackend(markers: LocationMarker[]): Promise<void> {
+  try {
+    const response = await fetch('/api/markers/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(markers),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to sync markers with backend');
+    }
+    
+    console.log('Markers successfully synced with backend');
+  } catch (error) {
+    console.error('Error syncing markers with backend:', error);
+    // Continue with local storage only if backend is unavailable
+  }
+}
+
+async function fetchMarkersFromBackend(): Promise<void> {
+  try {
+    const response = await fetch('/api/markers');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch markers from backend');
+    }
+    
+    const markers = await response.json();
+    localStorage.setItem('savedMarkers', JSON.stringify(markers));
+    console.log('Markers successfully fetched from backend');
+  } catch (error) {
+    console.error('Error fetching markers from backend:', error);
+    // Continue with empty local storage if backend is unavailable
+  }
+}
+
+async function deleteMarkerFromBackend(id: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/markers/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete marker from backend');
+    }
+    
+    console.log('Marker successfully deleted from backend');
+  } catch (error) {
+    console.error('Error deleting marker from backend:', error);
+    // Continue with local storage only if backend is unavailable
+  }
+}
+
+// Drawing related functions
+export interface DrawingData {
+  id: string;
+  type: 'polygon' | 'circle' | 'freehand';
+  coordinates: Array<[number, number]>;
+  properties: {
+    name?: string;
+    description?: string;
+    createdAt: Date;
+  };
+}
+
+export function saveDrawing(drawing: DrawingData): void {
+  const savedDrawings = getSavedDrawings();
+  savedDrawings.push(drawing);
+  localStorage.setItem('savedDrawings', JSON.stringify(savedDrawings));
+  
+  // Sync with backend
+  syncDrawingsWithBackend(savedDrawings);
+}
+
+export function getSavedDrawings(): DrawingData[] {
+  const drawingsJson = localStorage.getItem('savedDrawings');
+  if (!drawingsJson) {
+    // Try to fetch from backend first if localStorage is empty
+    fetchDrawingsFromBackend();
+    return [];
+  }
+  
+  try {
+    const drawings = JSON.parse(drawingsJson);
+    return drawings.map((drawing: any) => ({
+      ...drawing,
+      properties: {
+        ...drawing.properties,
+        createdAt: new Date(drawing.properties.createdAt)
+      }
+    }));
+  } catch (e) {
+    console.error('Failed to parse saved drawings', e);
+    return [];
+  }
+}
+
+export function deleteDrawing(id: string): void {
+  const savedDrawings = getSavedDrawings();
+  const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);
+  localStorage.setItem('savedDrawings', JSON.stringify(filteredDrawings));
+  
+  // Sync deletion with backend
+  deleteDrawingFromBackend(id);
+}
+
+async function syncDrawingsWithBackend(drawings: DrawingData[]): Promise<void> {
+  try {
+    const response = await fetch('/api/drawings/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(drawings),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to sync drawings with backend');
+    }
+    
+    console.log('Drawings successfully synced with backend');
+  } catch (error) {
+    console.error('Error syncing drawings with backend:', error);
+    // Continue with local storage only if backend is unavailable
+  }
+}
+
+async function fetchDrawingsFromBackend(): Promise<void> {
+  try {
+    const response = await fetch('/api/drawings');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch drawings from backend');
+    }
+    
+    const drawings = await response.json();
+    localStorage.setItem('savedDrawings', JSON.stringify(drawings));
+    console.log('Drawings successfully fetched from backend');
+  } catch (error) {
+    console.error('Error fetching drawings from backend:', error);
+    // Continue with empty local storage if backend is unavailable
+  }
+}
+
+async function deleteDrawingFromBackend(id: string): Promise<void> {
+  try {
+    const response = await fetch(`/api/drawings/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete drawing from backend');
+    }
+    
+    console.log('Drawing successfully deleted from backend');
+  } catch (error) {
+    console.error('Error deleting drawing from backend:', error);
+    // Continue with local storage only if backend is unavailable
+  }
 }
