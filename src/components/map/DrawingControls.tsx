@@ -1,9 +1,10 @@
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
+import L from 'leaflet';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -30,20 +31,29 @@ const DrawingControls = ({ onCreated }: DrawingControlsProps) => {
     }
   };
 
+  // Ensure the FeatureGroup is properly initialized
+  useEffect(() => {
+    console.log("FeatureGroup ref:", featureGroupRef.current);
+  }, [featureGroupRef.current]);
+
   return (
     <FeatureGroup ref={featureGroupRef}>
-      <EditControl
-        position="topright"
-        onCreated={handleCreated}
-        draw={{
-          rectangle: true,
-          polygon: true,
-          circle: true,
-          circlemarker: false,
-          marker: true,
-          polyline: true
-        }}
-      />
+      {featureGroupRef.current && (
+        <EditControl
+          position="topright"
+          onCreated={handleCreated}
+          draw={{
+            rectangle: true,
+            polygon: true,
+            circle: true,
+            circlemarker: false,
+            marker: true,
+            polyline: true
+          }}
+          // Explicitly set the feature group prop
+          featureGroup={featureGroupRef.current}
+        />
+      )}
     </FeatureGroup>
   );
 };

@@ -26,7 +26,7 @@ const MarkersList = ({
 }: MarkersListProps) => {
   return (
     <>
-      {markers.map((marker) => (
+      {Array.isArray(markers) && markers.map((marker) => (
         <UserMarker 
           key={marker.id} 
           marker={marker} 
@@ -34,7 +34,7 @@ const MarkersList = ({
         />
       ))}
       
-      {tempMarker && (
+      {tempMarker && Array.isArray(tempMarker) && (
         <TempMarker 
           position={tempMarker}
           markerName={markerName}

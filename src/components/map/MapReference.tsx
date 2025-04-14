@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -9,9 +9,12 @@ interface MapReferenceProps {
 
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
+  const hasCalledOnReady = useRef(false);
   
   useEffect(() => {
-    if (map && onMapReady) {
+    if (map && onMapReady && !hasCalledOnReady.current) {
+      hasCalledOnReady.current = true;
+      console.log('Map is ready, calling onMapReady');
       onMapReady(map);
     }
   }, [map, onMapReady]);
