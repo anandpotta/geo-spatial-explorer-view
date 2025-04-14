@@ -13,6 +13,7 @@ const SyncStatusIndicator: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [isBackendReachable, setIsBackendReachable] = useState<boolean | null>(null);
+  const [isApiSyncAvailable, setIsApiSyncAvailable] = useState<boolean>(true);
   
   // Try to use ApiSyncContext if available, otherwise use the default values
   let apiSyncContext;
@@ -20,7 +21,10 @@ const SyncStatusIndicator: React.FC = () => {
     apiSyncContext = useApiSync();
   } catch (error) {
     // If useApiSync throws an error, we'll use our local state instead
-    console.warn('SyncStatusIndicator: ApiSyncProvider not found, using fallback mode');
+    if (isApiSyncAvailable) {
+      console.warn('SyncStatusIndicator: ApiSyncProvider not found, using fallback mode');
+      setIsApiSyncAvailable(false);
+    }
   }
   
   const contextIsOnline = apiSyncContext?.isOnline ?? isOnline;
@@ -32,9 +36,15 @@ const SyncStatusIndicator: React.FC = () => {
   useEffect(() => {
     if (contextIsOnline) {
       const checkBackend = async () => {
-        const available = await checkBackendAvailability();
-        setIsBackendReachable(available);
+        try {
+          const available = await checkBackendAvailability();
+          setIsBackendReachable(available);
+        } catch (error) {
+          console.log('Failed to check backend availability:', error);
+          setIsBackendReachable(false);
+        }
       };
+      
       checkBackend();
       
       // Check again periodically if the backend becomes available
