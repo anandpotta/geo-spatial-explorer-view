@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { syncLocalDataWithBackend } from '@/utils/api-client';
+import { syncLocalDataWithBackend, checkBackendAvailability } from '@/utils/api-client';
 
 interface ApiSyncContextType {
   isOnline: boolean;
@@ -15,7 +15,9 @@ export const ApiSyncProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [backendAvailable, setBackendAvailable] = useState<boolean>(false);
 
+  // Monitor online status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -29,26 +31,38 @@ export const ApiSyncProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   }, []);
 
-  // Auto sync when coming online
+  // Check backend availability
   useEffect(() => {
     if (isOnline) {
-      syncNow();
+      const checkBackend = async () => {
+        const available = await checkBackendAvailability();
+        setBackendAvailable(available);
+        if (available) {
+          syncNow();
+        }
+      };
+      
+      checkBackend();
+    } else {
+      setBackendAvailable(false);
     }
   }, [isOnline]);
 
-  // Periodic sync every 5 minutes when online
+  // Periodic sync when online and backend is available
   useEffect(() => {
-    if (!isOnline) return;
+    if (!isOnline || !backendAvailable) return;
 
     const syncInterval = setInterval(() => {
-      syncNow();
-    }, 5 * 60 * 1000);
+      if (!isSyncing) {
+        syncNow();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(syncInterval);
-  }, [isOnline]);
+  }, [isOnline, backendAvailable, isSyncing]);
 
   const syncNow = async () => {
-    if (!isOnline || isSyncing) return;
+    if (!isOnline || !backendAvailable || isSyncing) return;
     
     setIsSyncing(true);
     try {

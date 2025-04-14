@@ -27,13 +27,17 @@ async function ensureDataDir() {
       await fs.access(MARKERS_FILE);
     } catch {
       await fs.writeFile(MARKERS_FILE, '[]');
+      console.log('Created empty markers file');
     }
     
     try {
       await fs.access(DRAWINGS_FILE);
     } catch {
       await fs.writeFile(DRAWINGS_FILE, '[]');
+      console.log('Created empty drawings file');
     }
+    
+    console.log(`Data directory initialized at ${DATA_DIR}`);
   } catch (error) {
     console.error('Error initializing data directory:', error);
     process.exit(1);
@@ -70,6 +74,11 @@ async function writeDrawings(drawings) {
 }
 
 // API Routes
+
+// Health check endpoint - respond first to ensure it's always available
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Markers
 app.get('/api/markers', async (req, res) => {
@@ -189,13 +198,37 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('API Error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    message: err.message || 'Unknown error occurred'
+  });
+});
+
 // Start server
 async function startServer() {
-  await ensureDataDir();
-  
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  try {
+    await ensureDataDir();
+    
+    app.listen(PORT, () => {
+      console.log(`Backend server running at http://localhost:${PORT}`);
+      console.log(`API available at http://localhost:${PORT}/api`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 }
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Promise Rejection:', reason);
+});
 
 startServer().catch(console.error);
