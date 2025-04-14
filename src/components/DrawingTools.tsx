@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, PenTool, Edit, Layers } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
 import MapControls from './drawing/MapControls';
 import ShapeTools from './drawing/ShapeTools';
@@ -92,26 +92,51 @@ const DrawingTools = ({
       }}
       onMouseDown={handleMouseDown}
     >
-      <ShapeTools 
-        activeTool={activeTool} 
-        onToolSelect={handleToolClick} 
-      />
-      
-      <div className="h-4" />
-      
-      <MapControls 
-        onZoomIn={onZoomIn}
-        onZoomOut={onZoomOut}
-        onReset={onReset}
-      />
-      
-      <div className="h-4" />
-      
-      <DrawingToolButton
-        icon={Trash2}
-        label="Clear All"
-        onClick={() => handleToolClick('clear')}
-      />
+      <div className="flex flex-col space-y-2">
+        <ShapeTools 
+          activeTool={activeTool} 
+          onToolSelect={handleToolClick} 
+        />
+        
+        <div className="h-4 border-b border-gray-200" />
+        
+        <div className="flex flex-col space-y-2">
+          <DrawingToolButton
+            icon={PenTool}
+            label="Free Draw"
+            isActive={activeTool === 'freedraw'}
+            onClick={() => handleToolClick('freedraw')}
+          />
+          <DrawingToolButton
+            icon={Edit}
+            label="Edit Drawn Shapes"
+            isActive={activeTool === 'edit'}
+            onClick={() => handleToolClick('edit')}
+          />
+          <DrawingToolButton
+            icon={Layers}
+            label="Select Shapes"
+            isActive={activeTool === 'select'}
+            onClick={() => handleToolClick('select')}
+          />
+        </div>
+        
+        <div className="h-4 border-b border-gray-200" />
+        
+        <MapControls 
+          onZoomIn={onZoomIn}
+          onZoomOut={onZoomOut}
+          onReset={onReset}
+        />
+        
+        <div className="h-4 border-b border-gray-200" />
+        
+        <DrawingToolButton
+          icon={Trash2}
+          label="Clear All"
+          onClick={() => handleToolClick('clear')}
+        />
+      </div>
     </div>
   );
 };
