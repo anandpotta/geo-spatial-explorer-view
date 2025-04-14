@@ -13,6 +13,7 @@ import {
   ZoomIn, 
   ZoomOut 
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface DrawingToolsProps {
   onToolSelect: (tool: string) => void;
@@ -30,8 +31,16 @@ const DrawingTools = ({
   const [activeTool, setActiveTool] = useState<string | null>(null);
   
   const handleToolClick = (tool: string) => {
-    setActiveTool(tool === activeTool ? null : tool);
-    onToolSelect(tool);
+    const newActiveTool = tool === activeTool ? null : tool;
+    setActiveTool(newActiveTool);
+    onToolSelect(newActiveTool || '');
+    
+    // Show toast notification
+    if (newActiveTool) {
+      toast.success(`${newActiveTool} tool selected`);
+    } else {
+      toast.info('Drawing tool deselected');
+    }
   };
   
   return (

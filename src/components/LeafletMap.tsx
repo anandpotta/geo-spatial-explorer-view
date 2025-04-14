@@ -3,12 +3,14 @@ import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { setupLeafletIcons } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
 import UserMarker from './map/UserMarker';
 import TempMarker from './map/TempMarker';
+import { EditControl } from "react-leaflet-draw";
 
 // Initialize leaflet icons
 setupLeafletIcons();
@@ -41,6 +43,7 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
   const [markerName, setMarkerName] = useState('');
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building'); // Set building as default
   const mapRef = useRef<L.Map | null>(null);
+  const [drawingMode, setDrawingMode] = useState<string | null>(null);
 
   // Load saved markers on mount
   useEffect(() => {
@@ -66,9 +69,20 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
     }
   }, [selectedLocation]);
 
+  // Update drawing mode when parent component requests it
+  useEffect(() => {
+    if (drawingMode && mapRef.current) {
+      // Enable the appropriate drawing mode
+      console.log('Enabling drawing mode:', drawingMode);
+    }
+  }, [drawingMode]);
+
   const handleMapClick = (latlng: L.LatLng) => {
-    setTempMarker([latlng.lat, latlng.lng]);
-    setMarkerName(selectedLocation?.label || 'New Building');
+    // Only create markers when in marker mode or no specific tool is selected
+    if (drawingMode === 'marker' || !drawingMode) {
+      setTempMarker([latlng.lat, latlng.lng]);
+      setMarkerName(selectedLocation?.label || 'New Building');
+    }
   };
 
   const handleSaveMarker = () => {
@@ -108,6 +122,29 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
     }
   };
 
+  const handleCreated = (e: any) => {
+    const { layerType, layer } = e;
+    
+    if (layerType === 'marker') {
+      const { lat, lng } = layer.getLatLng();
+      setTempMarker([lat, lng]);
+      setMarkerName('New Marker');
+    } else {
+      // For shapes like polygons, circles, etc.
+      console.log('Created shape:', layerType, layer);
+      // Here you can save the shape to your state or database
+      const id = uuidv4();
+      layer.options.id = id;
+      
+      // You could save the GeoJSON representation
+      const geoJSON = layer.toGeoJSON();
+      console.log('GeoJSON:', geoJSON);
+      
+      // Show a toast notification
+      // toast.success(`${layerType} created successfully`);
+    }
+  };
+
   return (
     <div className="w-full h-full relative">
       <MapContainer 
@@ -124,6 +161,20 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <AttributionControl position="bottomright" prefix={false} />
+        
+        {/* Leaflet Draw control */}
+        <EditControl
+          position="topright"
+          onCreated={handleCreated}
+          draw={{
+            rectangle: true,
+            polygon: true,
+            circle: true,
+            circlemarker: false,
+            marker: true,
+            polyline: true
+          }}
+        />
         
         {/* User-created markers */}
         {markers.map((marker) => (

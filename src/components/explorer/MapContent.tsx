@@ -1,11 +1,12 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
 import LeafletMap from '../LeafletMap';
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
+import { toast } from 'sonner';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
@@ -24,6 +25,7 @@ const MapContent = ({
 }: MapContentProps) => {
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<any>(null);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
 
   const handleCesiumViewerRef = (viewer: any) => {
     cesiumViewerRef.current = viewer;
@@ -52,15 +54,40 @@ const MapContent = ({
   const handleResetView = () => {
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       resetCamera(cesiumViewerRef.current);
+      toast.info('View reset');
     } else if (currentView === 'leaflet' && leafletMapRef.current) {
       leafletMapRef.current.setView([51.505, -0.09], 13);
+      toast.info('View reset');
     }
   };
 
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
-    // Implement tool logic based on the selected tool
-    // This will be more complex and depends on your app's requirements
+    setActiveTool(tool);
+    
+    // Different handling based on the current active map
+    if (currentView === 'cesium') {
+      // Handle Cesium drawing tools
+      if (tool === 'clear') {
+        // Clear all drawings in Cesium
+        toast.info('Clearing all shapes');
+      }
+    } else if (currentView === 'leaflet') {
+      // Leaflet drawing tools are handled directly in the LeafletMap component
+      if (tool === 'clear' && leafletMapRef.current) {
+        // Clear all drawings in Leaflet
+        const layers = leafletMapRef.current._layers;
+        if (layers) {
+          Object.keys(layers).forEach(layerId => {
+            const layer = layers[layerId];
+            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+              leafletMapRef.current.removeLayer(layer);
+            }
+          });
+          toast.info('All shapes cleared');
+        }
+      }
+    }
   };
 
   return (
