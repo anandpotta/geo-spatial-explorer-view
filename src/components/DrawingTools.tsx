@@ -5,7 +5,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { 
   MapPin, 
   Pencil, 
-  Square, 
+  Square,
+  Rectangle, 
   Circle, 
   Move, 
   RotateCw, 
@@ -33,23 +34,16 @@ const DrawingTools = ({
   const handleToolClick = (tool: string) => {
     const newActiveTool = tool === activeTool ? null : tool;
     setActiveTool(newActiveTool);
-    onToolSelect(newActiveTool || '');
-    
-    // Show toast notification
-    if (newActiveTool) {
-      toast.success(`${newActiveTool} tool selected`);
-    } else {
-      toast.info('Drawing tool deselected');
-    }
+    onToolSelect(tool);
   };
   
   return (
     <div 
       className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md"
       style={{ 
-        zIndex: 20000, // Significantly increased z-index to ensure visibility
-        isolation: 'isolate', // Create stacking context
-        position: 'fixed' // Changed to fixed positioning to ensure it stays visible
+        zIndex: 20000,
+        isolation: 'isolate',
+        position: 'fixed'
       }}
     >
       <TooltipProvider>
@@ -89,6 +83,22 @@ const DrawingTools = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
+              variant={activeTool === 'rectangle' ? 'default' : 'outline'} 
+              size="icon" 
+              onClick={() => handleToolClick('rectangle')}
+              className="map-toolbar-button"
+            >
+              <Rectangle size={20} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            <p>Draw Rectangle</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
               variant={activeTool === 'circle' ? 'default' : 'outline'} 
               size="icon" 
               onClick={() => handleToolClick('circle')}
@@ -99,22 +109,6 @@ const DrawingTools = ({
           </TooltipTrigger>
           <TooltipContent side="left">
             <p>Draw Circle</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant={activeTool === 'freehand' ? 'default' : 'outline'} 
-              size="icon" 
-              onClick={() => handleToolClick('freehand')}
-              className="map-toolbar-button"
-            >
-              <Pencil size={20} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">
-            <p>Freehand Drawing</p>
           </TooltipContent>
         </Tooltip>
         

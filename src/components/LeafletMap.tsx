@@ -33,7 +33,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   const [markerName, setMarkerName] = useState('');
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
   const mapRef = useRef<L.Map | null>(null);
-  const [drawingMode, setDrawingMode] = useState<string | null>(null);
   
   // Load saved markers when the component mounts
   useEffect(() => {
@@ -43,27 +42,35 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   }, []);
 
-  // Handle active tool changes from parent component
-  useEffect(() => {
-    if (activeTool && mapRef.current) {
-      setDrawingMode(activeTool);
-      
-      // Trigger the appropriate drawing tool based on the active tool
-      if (activeTool === 'marker' || activeTool === 'polygon' || activeTool === 'circle') {
-        // This would ideally activate the drawing tools, but requires direct DOM access
-        // which we're avoiding for now
-        toast.info(`${activeTool} tool activated - click on map to place`);
-      }
-    }
-  }, [activeTool]);
-
   // Connect to map events for location changes
   useMapEvents(mapRef.current, selectedLocation);
 
   const handleMapClick = (latlng: L.LatLng) => {
-    if (drawingMode === 'marker' || activeTool === 'marker' || !drawingMode) {
+    // Only handle map clicks for creating markers if the polygon tool isn't active
+    if (activeTool === 'marker' || (!activeTool && !tempMarker)) {
       setTempMarker([latlng.lat, latlng.lng]);
       setMarkerName(selectedLocation?.label || 'New Building');
+    }
+  };
+
+  const handleShapeCreated = (shape: any) => {
+    console.log("Shape created:", shape);
+    
+    if (shape.type === 'marker') {
+      setTempMarker(shape.position);
+      setMarkerName('New Marker');
+    } else {
+      // For shapes like polygons, circles, etc.
+      toast.success(`${shape.type} created - Click to tag this building`);
+      
+      // You could save the shape data here
+      // saveShape({
+      //   id: shape.id,
+      //   type: shape.type,
+      //   geoJSON: shape.geoJSON,
+      //   name: `New ${shape.type}`,
+      //   createdAt: new Date()
+      // });
     }
   };
 
@@ -101,17 +108,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   };
 
-  const handleShapeCreated = (shape: any) => {
-    console.log("Shape created:", shape);
-    if (shape.type === 'marker') {
-      setTempMarker(shape.position);
-      setMarkerName('New Marker');
-    } else {
-      // Handle other shape types (polygon, circle, etc.)
-      toast.success(`${shape.type} created - Click to edit properties`);
-    }
-  };
-
   return (
     <div className="w-full h-full relative">
       <MapContainer 
@@ -124,7 +120,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <AttributionControl position="bottomright" prefix={false} />
         
-        <DrawingControls onCreated={handleShapeCreated} />
+        {/* Drawing controls with active tool passed down */}
+        <DrawingControls 
+          onCreated={handleShapeCreated} 
+          activeTool={activeTool || null}
+        />
         
         <MarkersList
           markers={markers}
@@ -140,12 +140,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         <MapEvents onMapClick={handleMapClick} />
       </MapContainer>
 
-      <div className="absolute bottom-24 right-4 bg-background/80 backdrop-blur-sm p-3 rounded-md shadow-md z-[1000]">
-        <h3 className="font-medium text-sm mb-2">Draw Building Boundary</h3>
-        <p className="text-xs text-muted-foreground mb-2">
-          {activeTool ? `Tool selected: ${activeTool}` : 'Select a drawing tool from the sidebar'}
-        </p>
-      </div>
+      {/* Remove the duplicate instruction box, since we're using the main drawing tools */}
     </div>
   );
 };

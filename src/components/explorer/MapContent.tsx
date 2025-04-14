@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
@@ -62,7 +63,7 @@ const MapContent = ({
 
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
-    setActiveTool(tool);
+    setActiveTool(tool === activeTool ? null : tool);
     
     if (currentView === 'cesium') {
       if (tool === 'clear') {
@@ -80,8 +81,6 @@ const MapContent = ({
           });
           toast.info('All shapes cleared');
         }
-      } else {
-        toast.info(`${tool} tool selected - draw on map`);
       }
     }
   };
@@ -136,10 +135,9 @@ const MapContent = ({
       </div>
       
       <div 
-        className="absolute top-4 left-4 right-4 z-[10000]" 
+        className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
         style={{ 
           maxWidth: '400px',
-          margin: '0 auto'
         }}
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
