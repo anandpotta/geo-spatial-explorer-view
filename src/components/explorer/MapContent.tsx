@@ -80,6 +80,8 @@ const MapContent = ({
           });
           toast.info('All shapes cleared');
         }
+      } else {
+        toast.info(`${tool} tool selected - draw on map`);
       }
     }
   };
@@ -121,6 +123,7 @@ const MapContent = ({
           <LeafletMap 
             selectedLocation={selectedLocation} 
             onMapReady={handleLeafletMapRef}
+            activeTool={activeTool}
           />
         </div>
         

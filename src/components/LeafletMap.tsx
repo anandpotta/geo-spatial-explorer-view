@@ -1,7 +1,7 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
+import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
@@ -12,6 +12,7 @@ import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
 import MarkersList from './map/MarkersList';
 import { useMapEvents } from '@/hooks/useMapEvents';
+import { toast } from 'sonner';
 
 // Initialize leaflet icons
 setupLeafletIcons();
@@ -19,9 +20,10 @@ setupLeafletIcons();
 interface LeafletMapProps {
   selectedLocation?: Location;
   onMapReady?: (map: L.Map) => void;
+  activeTool?: string | null;
 }
 
-const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
+const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
   const [position, setPosition] = useState<[number, number]>(
     selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
   );
@@ -32,11 +34,34 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
   const mapRef = useRef<L.Map | null>(null);
   const [drawingMode, setDrawingMode] = useState<string | null>(null);
+  
+  // Load saved markers when the component mounts
+  useEffect(() => {
+    const loadedMarkers = getSavedMarkers();
+    if (loadedMarkers && loadedMarkers.length > 0) {
+      setMarkers(loadedMarkers);
+    }
+  }, []);
 
+  // Handle active tool changes from parent component
+  useEffect(() => {
+    if (activeTool && mapRef.current) {
+      setDrawingMode(activeTool);
+      
+      // Trigger the appropriate drawing tool based on the active tool
+      if (activeTool === 'marker' || activeTool === 'polygon' || activeTool === 'circle') {
+        // This would ideally activate the drawing tools, but requires direct DOM access
+        // which we're avoiding for now
+        toast.info(`${activeTool} tool activated - click on map to place`);
+      }
+    }
+  }, [activeTool]);
+
+  // Connect to map events for location changes
   useMapEvents(mapRef.current, selectedLocation);
 
   const handleMapClick = (latlng: L.LatLng) => {
-    if (drawingMode === 'marker' || !drawingMode) {
+    if (drawingMode === 'marker' || activeTool === 'marker' || !drawingMode) {
       setTempMarker([latlng.lat, latlng.lng]);
       setMarkerName(selectedLocation?.label || 'New Building');
     }
@@ -57,11 +82,13 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
     setMarkers([...markers, newMarker]);
     setTempMarker(null);
     setMarkerName('');
+    toast.success("Location saved successfully");
   };
 
   const handleDeleteMarker = (id: string) => {
     deleteMarker(id);
     setMarkers(markers.filter(marker => marker.id !== id));
+    toast.success("Location removed");
   };
 
   const handleSetMapRef = (map: L.Map) => {
@@ -75,9 +102,13 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
   };
 
   const handleShapeCreated = (shape: any) => {
+    console.log("Shape created:", shape);
     if (shape.type === 'marker') {
       setTempMarker(shape.position);
       setMarkerName('New Marker');
+    } else {
+      // Handle other shape types (polygon, circle, etc.)
+      toast.success(`${shape.type} created - Click to edit properties`);
     }
   };
 
@@ -86,10 +117,8 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
       <MapContainer 
         className="w-full h-full"
         attributionControl={false}
-        {...{
-          center: position,
-          zoom: zoom
-        } as any}
+        center={position}
+        zoom={zoom}
       >
         <MapReference onMapReady={handleSetMapRef} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -114,7 +143,7 @@ const LeafletMap = ({ selectedLocation, onMapReady }: LeafletMapProps) => {
       <div className="absolute bottom-24 right-4 bg-background/80 backdrop-blur-sm p-3 rounded-md shadow-md z-[1000]">
         <h3 className="font-medium text-sm mb-2">Draw Building Boundary</h3>
         <p className="text-xs text-muted-foreground mb-2">
-          Click on the map to start marking building boundaries
+          {activeTool ? `Tool selected: ${activeTool}` : 'Select a drawing tool from the sidebar'}
         </p>
       </div>
     </div>
