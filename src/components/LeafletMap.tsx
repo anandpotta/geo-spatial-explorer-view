@@ -19,7 +19,6 @@ import { useDrawing } from '@/hooks/useDrawing';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { getAllSavedBuildings } from '@/utils/building-utils';
 import { toast } from 'sonner';
-import DraggableDrawingTools from './drawing/DraggableDrawingTools';
 
 // Initialize Leaflet icons and drawing styles
 setupLeafletIcons();
@@ -153,11 +152,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
         
         <MapEvents onMapClick={(latlng) => handleMapClick(latlng, localActiveTool)} />
       </MapContainer>
-
-      <DraggableDrawingTools 
-        activeTool={localActiveTool} 
-        onToolSelect={handleToolSelect}
-      />
 
       {showDrawingDialog && (
         <BuildingDialog
