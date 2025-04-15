@@ -31,29 +31,18 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       // Clear any existing background
       containerRef.current.style.background = 'black';
       
-      // Additional forced visibility check with more frequent intervals
-      const forceVisibilityInterval = setInterval(() => {
-        if (containerRef.current) {
-          containerRef.current.style.visibility = 'visible';
-          containerRef.current.style.display = 'block';
-          containerRef.current.style.opacity = '1';
-          containerRef.current.style.zIndex = '10000';
-          
-          // Also check for any canvas elements and force them to be visible
-          const canvases = containerRef.current.querySelectorAll('canvas');
-          canvases.forEach(canvas => {
-            canvas.style.visibility = 'visible';
-            canvas.style.display = 'block';
-            canvas.style.opacity = '1';
-            canvas.style.zIndex = '10000';
-          });
-        } else {
-          clearInterval(forceVisibilityInterval);
+      // Add a style tag to ensure visibility
+      const style = document.createElement('style');
+      style.textContent = `
+        [data-cesium-container="true"] {
+          visibility: visible !important;
+          display: block !important;
+          opacity: 1 !important;
+          z-index: 10000 !important;
+          background: black !important;
         }
-      }, 100); // More frequent checks (every 100ms)
-      
-      // Keep checking longer to ensure visibility
-      setTimeout(() => clearInterval(forceVisibilityInterval), 10000); // Extend to 10 seconds
+      `;
+      document.head.appendChild(style);
     }
   }, [containerRef]);
   

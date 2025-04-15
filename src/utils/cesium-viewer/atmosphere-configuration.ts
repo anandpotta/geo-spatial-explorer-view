@@ -47,11 +47,22 @@ export function configureRendering(viewer: Cesium.Viewer): void {
   // Add a CSS rule to ensure all .cesium-widget elements are visible
   const style = document.createElement('style');
   style.textContent = `
-    .cesium-widget, .cesium-widget canvas, .cesium-viewer {
+    body .cesium-widget, 
+    body .cesium-widget canvas, 
+    body .cesium-viewer {
       visibility: visible !important;
       display: block !important;
       opacity: 1 !important;
       z-index: 10000 !important;
+      background: #000 !important;
+    }
+    
+    /* Override any other styles that might be hiding the globe */
+    body .cesium-viewer-cesiumWidgetContainer {
+      visibility: visible !important;
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
     }
   `;
   document.head.appendChild(style);
@@ -69,11 +80,31 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     return;
   }
   
-  enhanceGlobeVisibility(viewer);
-  ensureCanvasVisibility(viewer);
+  // Make the globe much more visible
+  viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
+  viewer.scene.globe.show = true;
+  
+  // Use a bright light to illuminate the globe
+  viewer.scene.light = new Cesium.DirectionalLight({
+    direction: Cesium.Cartesian3.normalize(
+      new Cesium.Cartesian3(4, 4, -1),
+      new Cesium.Cartesian3()
+    ),
+    color: new Cesium.Color(1.0, 1.0, 1.0, 1.0)
+  });
+  
+  // Set black background for better contrast
+  viewer.scene.backgroundColor = Cesium.Color.BLACK;
+  
+  // Enable atmospheric effects
+  viewer.scene.skyAtmosphere.show = true;
+  viewer.scene.globe.showGroundAtmosphere = true;
   
   // Force multiple renders
   for (let i = 0; i < 30; i++) {
     viewer.scene.requestRender();
   }
+  
+  // Ensure canvas is visible
+  ensureCanvasVisibility(viewer);
 }

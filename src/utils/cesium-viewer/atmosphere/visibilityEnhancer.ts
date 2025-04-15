@@ -10,7 +10,7 @@ export function enhanceGlobeVisibility(viewer: Cesium.Viewer): void {
   }
   
   // Use a much more vibrant color that will be visible in any environment
-  viewer.scene.globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
+  viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
   
   // Force the globe to be shown
   viewer.scene.globe.show = true;
@@ -41,6 +41,18 @@ export function enhanceGlobeVisibility(viewer: Cesium.Viewer): void {
     ),
     color: new Cesium.Color(1.0, 1.0, 1.0, 1.0)
   });
+  
+  // Raise the globe visually to ensure it's not hidden behind other elements
+  if (viewer.scene.globe) {
+    // Add stronger shadows and contrast to make the globe more visible
+    viewer.scene.globe.shadows = Cesium.ShadowMode.ENABLED;
+    viewer.scene.globe.backFaceCulling = false;
+    
+    // Force multiple renders to ensure visibility
+    for (let i = 0; i < 20; i++) {
+      viewer.scene.requestRender();
+    }
+  }
 }
 
 /**
@@ -68,6 +80,18 @@ export function ensureCanvasVisibility(viewer: Cesium.Viewer): void {
       opacity: 1 !important;
       z-index: 10000 !important;
     }
+    
+    /* Enhance globe visibility by forcing black background */
+    .cesium-viewer {
+      background-color: #000000 !important;
+    }
+    
+    /* Ensure the widget is properly sized */
+    .cesium-widget {
+      width: 100% !important;
+      height: 100% !important;
+    }
   `;
   document.head.appendChild(style);
 }
+
