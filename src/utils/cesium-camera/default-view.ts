@@ -23,8 +23,10 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       viewer.scene.skyAtmosphere.show = true;
       viewer.scene.fog.enabled = false; // Disable fog for better visibility
       
-      // Ensure the globe is fully opaque
-      viewer.scene.globe.translucency = false;
+      // Ensure the globe is fully opaque - using the correct type
+      if (viewer.scene.globe.translucency) {
+        viewer.scene.globe.translucency.enabled = false;
+      }
       
       // Set stronger lighting
       viewer.scene.light = new Cesium.DirectionalLight({
