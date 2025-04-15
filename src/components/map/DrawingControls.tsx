@@ -16,10 +16,10 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
   
-  // Use a callback to set the drawing control reference
-  const handleEditControlRef = useCallback((element: any) => {
-    if (element && element.leafletElement) {
-      setDrawControl(element.leafletElement);
+  // Use a callback to get the reference from the ref prop
+  const handleEditControlReady = useCallback((editControl: any) => {
+    if (editControl) {
+      setDrawControl(editControl);
     }
   }, []);
   
@@ -89,8 +89,7 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   return (
     <FeatureGroup>
       <EditControl
-        // Using onRef instead of ref
-        onRef={handleEditControlRef}
+        ref={handleEditControlReady}
         position="topleft"
         onCreated={e => {
           const { layerType, layer } = e;

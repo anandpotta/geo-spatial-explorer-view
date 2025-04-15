@@ -1,6 +1,7 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import L from 'leaflet';
-import { Location } from '@/utils/geo-utils';
+import { Location } from '@/utils/location/types';
 import { saveBuilding, getSavedBuildings } from '@/utils/building-utils';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -85,6 +86,7 @@ export const useBuildings = (mapRef: React.MutableRefObject<L.Map | null>, selec
       geoJSON: currentDrawing.geoJSON,
       locationKey,
       location: {
+        id: selectedLocation.id || uuidv4(),
         x: selectedLocation.x,
         y: selectedLocation.y,
         label: selectedLocation.label
