@@ -1,5 +1,4 @@
-
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -16,7 +15,6 @@ import { toast } from 'sonner';
 import { useBuildings } from '@/hooks/useBuildings';
 import BuildingDialog from './map/BuildingDialog';
 
-// Initialize leaflet icons
 setupLeafletIcons();
 
 interface LeafletMapProps {
@@ -36,7 +34,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
   const mapRef = useRef<L.Map | null>(null);
 
-  // Use the buildings hook
   const {
     showBuildingDialog,
     setShowBuildingDialog,
@@ -47,7 +44,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     handleSaveBuilding
   } = useBuildings(mapRef, selectedLocation);
   
-  // Load saved markers when the component mounts
   useEffect(() => {
     const loadedMarkers = getSavedMarkers();
     if (loadedMarkers && loadedMarkers.length > 0) {
@@ -55,7 +51,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   }, []);
 
-  // Connect to map events for location changes
   useMapEvents(mapRef.current, selectedLocation);
 
   const handleMapClick = (latlng: L.LatLng) => {
@@ -109,7 +104,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       map.flyTo([selectedLocation.y, selectedLocation.x], 18);
     }
     
-    // Add OSM Buildings layer for 3D building visualization
     fetch('https://tile.osmbuildings.org/0.2/dixw8kmb/tile/{z}/{x}/{y}.json')
       .then(response => {
         if (response.ok) {
