@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
@@ -104,30 +105,59 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       map.flyTo([selectedLocation.y, selectedLocation.x], 18);
     }
     
-    fetch('https://tile.osmbuildings.org/0.2/dixw8kmb/tile/{z}/{x}/{y}.json')
-      .then(response => {
-        if (response.ok) {
-          L.tileLayer('https://tile.osmbuildings.org/0.2/dixw8kmb/tile/{z}/{x}/{y}.png', {
-            attribution: '© OSM Buildings',
-            maxZoom: 19
-          }).addTo(map);
-          
-          console.log("OSM Buildings layer added successfully");
-        } else {
-          console.log("OSM Buildings service not available, using fallback");
-          map.createPane('buildings');
-          map.getPane('buildings')!.style.zIndex = '450';
-          
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            pane: 'buildings',
-            attribution: '© OpenStreetMap contributors'
-          }).addTo(map);
-        }
-      })
-      .catch(error => {
-        console.error("Error adding OSM Buildings layer:", error);
-        toast.error("Could not load 3D buildings. Using standard map.");
-      });
+    // Add OSM Buildings layer with CORS error handling
+    addOsmBuildingsLayer(map);
+  };
+
+  // Separate function to add OSM Buildings layer with error handling
+  const addOsmBuildingsLayer = (map: L.Map) => {
+    const probeUrl = 'https://tile.osmbuildings.org/0.2/dixw8kmb/tile/1/1/1.json';
+    
+    // Use a simple HEAD request first to check availability without triggering CORS errors
+    fetch(probeUrl, { 
+      method: 'HEAD',
+      mode: 'no-cors' // This prevents CORS errors during the test
+    })
+    .then(() => {
+      // If we get here, the service might be available, try to add the layer
+      try {
+        L.tileLayer('https://tile.osmbuildings.org/0.2/dixw8kmb/tile/{z}/{x}/{y}.png', {
+          attribution: '© OSM Buildings',
+          maxZoom: 19
+        }).addTo(map);
+        
+        console.log("OSM Buildings layer added");
+      } catch (error) {
+        console.warn("Error adding OSM Buildings layer:", error);
+        addFallbackLayer(map);
+      }
+    })
+    .catch(error => {
+      console.warn("OSM Buildings service unavailable:", error);
+      addFallbackLayer(map);
+    });
+  };
+
+  // Fallback layer if OSM Buildings is unavailable
+  const addFallbackLayer = (map: L.Map) => {
+    console.log("Using fallback map layer");
+    
+    // Create a dedicated pane for buildings to control layer order
+    map.createPane('buildings');
+    if (map.getPane('buildings')) {
+      map.getPane('buildings').style.zIndex = '450';
+    }
+    
+    // Add standard OpenStreetMap layer as fallback
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      pane: 'buildings',
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+    
+    toast.info("Using standard map. 3D buildings unavailable.", {
+      duration: 3000
+    });
   };
 
   return (
