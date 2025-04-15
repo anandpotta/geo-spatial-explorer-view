@@ -47,7 +47,9 @@ const ExplorerSidebar = ({
         x: location.x,
         y: location.y
       },
-      createdAt: new Date()
+      createdAt: new Date(),
+      type: 'polygon', // Adding a default type value
+      geoJSON: {} // Adding an empty geoJSON object as a placeholder
     };
     
     // Pass to parent handler
