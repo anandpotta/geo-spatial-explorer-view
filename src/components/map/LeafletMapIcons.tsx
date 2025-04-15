@@ -20,16 +20,30 @@ export const setupDrawingStyles = () => {
   // Apply default styles for drawing
   if (L.Draw) {
     if (L.Draw.Polyline) {
-      // Using shapeOptions instead of accessing options directly
-      L.Draw.Polyline.prototype.options.shapeOptions = {
-        color: '#1EAEDB',
-        weight: 4,
-        opacity: 0.8,
-        fill: true,
-        fillColor: '#1EAEDB',
-        fillOpacity: 0.3,
-        clickable: true
-      };
+      // Fix: Access the correct property path for shape options
+      // The prototype object structure in Leaflet.Draw is different
+      try {
+        // Set shape options using the correct property path
+        const drawPolylinePrototype = L.Draw.Polyline.prototype;
+        if (drawPolylinePrototype) {
+          // Some versions of Leaflet.Draw use this structure
+          if (!drawPolylinePrototype.options) {
+            drawPolylinePrototype.options = {};
+          }
+          
+          drawPolylinePrototype.options.shapeOptions = {
+            color: '#1EAEDB',
+            weight: 4,
+            opacity: 0.8,
+            fill: true,
+            fillColor: '#1EAEDB',
+            fillOpacity: 0.3,
+            clickable: true
+          };
+        }
+      } catch (err) {
+        console.error('Error setting polyline styles:', err);
+      }
     }
   }
 };
