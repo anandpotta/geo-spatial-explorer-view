@@ -26,6 +26,9 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
       height: '100%', 
       background: 'black',
       isolation: 'isolate', // Create a new stacking context
+      visibility: 'visible',
+      opacity: 1,
+      display: 'block',
     }}>
       <CesiumMapCore {...props} />
     </div>

@@ -32,7 +32,7 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
       document.head.appendChild(link);
     }
     
-    // Add CSS to ensure Cesium doesn't hide other UI elements
+    // Add CSS to ensure Cesium doesn't hide other UI elements and is visible
     const style = document.createElement('style');
     style.textContent = `
       .cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
@@ -41,6 +41,12 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
       .cesium-widget-credits {
         z-index: 1000 !important;
         opacity: 0.5;
+      }
+      .cesium-widget, .cesium-viewer, .cesium-widget canvas {
+        visibility: visible !important;
+        display: block !important;
+        opacity: 1 !important;
+        z-index: 10000 !important;
       }
     `;
     document.head.appendChild(style);
@@ -51,8 +57,17 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   }, []);
   
   return (
-    <div className="w-full h-full relative">
-      {/* Optionally add a message about offline mode */}
+    <div className="w-full h-full relative" style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      background: 'black',
+      zIndex: 10000,
+      visibility: 'visible',
+      opacity: 1
+    }}>
       <CesiumMapCore {...props} />
     </div>
   );

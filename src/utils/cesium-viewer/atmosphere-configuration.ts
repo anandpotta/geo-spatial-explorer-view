@@ -1,3 +1,4 @@
+
 import * as Cesium from 'cesium';
 
 /**
@@ -87,7 +88,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
       viewer.canvas.style.opacity = '1';
-      viewer.canvas.style.zIndex = '1000'; // Higher z-index
+      viewer.canvas.style.zIndex = '10000'; // Higher z-index
     }
     
     // Force a resize for proper dimensions
@@ -120,120 +121,84 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   try {
     // Make sure the globe is visible with even more vivid blue color
     viewer.scene.globe.show = true;
-    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 1.0, 1.0, 1.0); // Even brighter cyan color
+    viewer.scene.globe.baseColor = new Cesium.Color(0.0, 1.0, 1.0, 1.0); // Bright cyan color for better visibility
     
-    // Force all internal properties to be visible
+    // Explicitly set high visibility values
     const globe = viewer.scene.globe;
-    (globe as any)._surface._tilesToRender = [];
-    (globe as any)._surface._tileLoadQueue = [];
+    globe.showGroundAtmosphere = true;
+    globe.enableLighting = true;
+    
+    // Force background to be black for better contrast
+    viewer.scene.backgroundColor = Cesium.Color.BLACK;
     
     // Make globe fully opaque
-    globe.translucency.frontFaceAlpha = 1.0;
-    globe.translucency.backFaceAlpha = 1.0;
+    if ('translucency' in globe) {
+      globe.translucency.enabled = false;
+      globe.translucency.frontFaceAlpha = 1.0;
+      globe.translucency.backFaceAlpha = 1.0;
+    }
     
-    // Disable fog and enhance brightness
+    // Disable fog for better visibility
     if (viewer.scene.fog) {
       viewer.scene.fog.enabled = false;
     }
     
+    // Force sky atmosphere to be visible with increased brightness
     if (viewer.scene.skyAtmosphere) {
       viewer.scene.skyAtmosphere.show = true;
-      // Access these properties safely
       if ('brightnessShift' in viewer.scene.skyAtmosphere) {
-        viewer.scene.skyAtmosphere.brightnessShift = 5.0; // Increase atmosphere brightness
+        viewer.scene.skyAtmosphere.brightnessShift = 5.0; // Much brighter
       }
     }
     
-    // Force immediate render multiple times
-    for (let i = 0; i < 20; i++) {
+    // Force multiple renders
+    for (let i = 0; i < 30; i++) {
       viewer.scene.requestRender();
     }
     
-    // Ensure canvas is fully visible with maximum z-index
+    // Make sure canvas is fully visible with explicit styles
     if (viewer.canvas) {
       viewer.canvas.style.visibility = 'visible';
       viewer.canvas.style.display = 'block';
       viewer.canvas.style.opacity = '1';
-      viewer.canvas.style.zIndex = '10000'; // Maximum z-index
-      
-      // Force size to be 100%
+      viewer.canvas.style.position = 'absolute';
+      viewer.canvas.style.top = '0';
+      viewer.canvas.style.left = '0';
       viewer.canvas.style.width = '100%';
       viewer.canvas.style.height = '100%';
+      viewer.canvas.style.zIndex = '10000'; // Maximum z-index
       
-      // Ensure the canvas has proper dimensions
-      const containerElement = viewer.canvas.parentElement;
-      if (containerElement && 
-          (viewer.canvas.width === 0 || viewer.canvas.height === 0 || 
-           containerElement.clientWidth === 0 || containerElement.clientHeight === 0)) {
-        // Force dimensions and reflow
-        containerElement.style.width = '100%';
-        containerElement.style.height = '100%';
-        containerElement.style.minWidth = '300px';
-        containerElement.style.minHeight = '300px';
-        void containerElement.offsetHeight; // Force reflow
+      // Force canvas to be properly sized
+      if (viewer.canvas.width === 0 || viewer.canvas.height === 0) {
+        const containerElement = viewer.canvas.parentElement;
+        if (containerElement) {
+          // Force dimensions
+          containerElement.style.width = '100%';
+          containerElement.style.height = '100%';
+          containerElement.style.minWidth = '300px';
+          containerElement.style.minHeight = '300px';
+        }
         
         // Force resize
         viewer.resize();
       }
     }
     
-    // Set black background for better contrast
-    viewer.scene.backgroundColor = Cesium.Color.BLACK;
-    
-    // Adjust camera if needed to see the globe
-    if (viewer.camera) {
-      // Only adjust if too far out
-      const distance = Cesium.Cartesian3.magnitude(viewer.camera.position);
-      if (distance > 25000000) {
-        viewer.camera.lookAt(
-          Cesium.Cartesian3.ZERO,
-          new Cesium.Cartesian3(0, 0, 10000000) // Even closer look
-        );
-        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+    // Add a CSS rule to ensure all .cesium-widget elements are visible
+    const style = document.createElement('style');
+    style.textContent = `
+      .cesium-widget, .cesium-widget canvas, .cesium-viewer {
+        visibility: visible !important;
+        display: block !important;
+        opacity: 1 !important;
+        z-index: 10000 !important;
       }
-    }
+    `;
+    document.head.appendChild(style);
     
-    // Force another render
-    viewer.scene.requestRender();
-    
-    // Force visibility on all Cesium-related elements more aggressively
-    const cesiumElements = document.querySelectorAll('[data-cesium-container="true"], .cesium-widget, .cesium-viewer');
-    cesiumElements.forEach(element => {
-      if (element instanceof HTMLElement) {
-        element.style.visibility = 'visible';
-        element.style.display = 'block';
-        element.style.opacity = '1';
-        element.style.zIndex = '10000';
-      }
-    });
-    
-    // Find all canvas elements inside Cesium containers and make them visible
-    const canvases = document.querySelectorAll('.cesium-widget canvas, [data-cesium-container="true"] canvas');
-    canvases.forEach(canvas => {
-      if (canvas instanceof HTMLElement) {
-        canvas.style.visibility = 'visible';
-        canvas.style.display = 'block';
-        canvas.style.opacity = '1';
-      }
-    });
-    
-    // Find all cesium widgets and ensure they're visible
-    const widgets = document.querySelectorAll('.cesium-widget');
-    widgets.forEach(widget => {
-      if (widget instanceof HTMLElement) {
-        widget.style.visibility = 'visible';
-        widget.style.display = 'block';
-        widget.style.width = '100%';
-        widget.style.height = '100%';
-        widget.style.background = 'transparent';
-      }
-    });
-    
-    // Force resize and multiple renders
+    // Force one more resize and render
     viewer.resize();
-    for (let i = 0; i < 20; i++) {
-      viewer.scene.requestRender();
-    }
+    viewer.scene.requestRender();
   } catch (e) {
     console.error('Error in forceGlobeVisibility:', e);
   }

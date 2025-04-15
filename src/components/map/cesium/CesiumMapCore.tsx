@@ -39,27 +39,31 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
     }
 
     // Force multiple renders to ensure the globe is visible
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 50; i++) {
       viewer.scene.requestRender();
     }
     
     // Force immediate globe visibility
     forceGlobeVisibility(viewer);
+    
+    console.log("CesiumMapCore: Viewer is ready, forcing globe visibility");
   };
 
   // Use the globe visibility hook
   useCesiumGlobeVisibility(viewerRef, viewerReady);
 
-  // Manual intervention to ensure globe visibility
+  // Additional attempts to ensure globe visibility
   useEffect(() => {
     if (viewerRef.current && viewerReady) {
-      const intervals = [100, 300, 500, 1000, 2000, 3000];
+      // Add more aggressive visibility checks at various intervals
+      const intervals = [50, 100, 200, 300, 500, 1000, 2000, 3000, 5000];
+      
       intervals.forEach(interval => {
         setTimeout(() => {
           if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+            console.log(`Forcing globe visibility at ${interval}ms`);
             forceGlobeVisibility(viewerRef.current);
             viewerRef.current.resize();
-            console.log(`Forcing globe visibility at ${interval}ms`);
           }
         }, interval);
       });
