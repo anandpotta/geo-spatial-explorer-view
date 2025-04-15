@@ -17,7 +17,7 @@ interface DrawingControlsProps {
 
 const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingControlsProps) => {
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
-  const { drawnLayers, setDrawnLayers, onDrawControlMounted, clearDrawnShapes } = useDrawingControls(activeTool);
+  const { drawnLayers, setDrawnLayers, onDrawControlMounted } = useDrawingControls(activeTool);
   useLayerStyles(selectedBuildingId, drawnLayers);
 
   useEffect(() => {

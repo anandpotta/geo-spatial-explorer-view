@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 
@@ -14,9 +14,8 @@ export const useDrawingControls = (activeTool: string | null) => {
     }
   }, []);
 
-  // Effect to handle active tool changes is now integrated into this function
-  // which will run whenever drawControl or activeTool changes
-  const activateDrawingTool = useCallback(() => {
+  // Use useEffect to handle activeTool changes instead of calling the function directly
+  useEffect(() => {
     if (!activeTool || !drawControl) return;
 
     try {
@@ -57,11 +56,6 @@ export const useDrawingControls = (activeTool: string | null) => {
       toast.error('Failed to enable drawing tool');
     }
   }, [activeTool, drawControl]);
-
-  // Call activateDrawingTool whenever drawControl or activeTool changes
-  if (drawControl && activeTool) {
-    activateDrawingTool();
-  }
 
   const clearDrawnShapes = useCallback(() => {
     Object.values(drawnLayers).forEach(layer => {
