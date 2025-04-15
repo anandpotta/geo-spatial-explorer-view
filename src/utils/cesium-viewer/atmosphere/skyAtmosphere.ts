@@ -19,6 +19,9 @@ export function configureSkyAtmosphere(viewer: Cesium.Viewer): void {
       skyAtmosphere.saturationShift = 0.1;
       skyAtmosphere.brightnessShift = 3.0;
     }
+
+    // Note: removed setDynamicLighting call that was causing errors
+    
   } catch (e) {
     console.error('Error configuring sky atmosphere:', e);
   }
