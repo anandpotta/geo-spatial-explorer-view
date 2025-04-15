@@ -1,4 +1,3 @@
-
 import { useEffect, useCallback, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
@@ -16,14 +15,13 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
   
-  // Create a function to set the ref
   const editControlRef = useCallback((element: any) => {
     if (element) {
       console.log('EditControl ref received:', element);
       setDrawControl(element);
     }
   }, []);
-  
+
   useEffect(() => {
     if (activeTool && drawControl) {
       console.log('Active drawing tool:', activeTool);
@@ -100,19 +98,18 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
           if (layerType !== 'marker') {
             const layerWithOptions = layer as L.Path;
             
-            // Ensure options object exists
             if (!layerWithOptions.options) {
               (layerWithOptions as any).options = {};
             }
             
-            // Make sure the line is visible by setting opacity
             if ('setStyle' in layer) {
               layer.setStyle({
                 color: '#1EAEDB',
                 weight: 3,
-                opacity: 1, // Set to 1 to ensure visibility
+                opacity: 1,
                 fillColor: '#D3E4FD',
-                fillOpacity: 0.5
+                fillOpacity: 0.5,
+                dashArray: '5, 10'
               });
             }
             
@@ -121,7 +118,6 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
             (options as any).isDrawn = true;
             (options as any).buildingId = id;
             
-            // Add the layer to our state to track it
             setDrawnLayers(prev => ({
               ...prev,
               [id]: layer
@@ -145,36 +141,66 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
             shapeOptions: {
               color: '#1EAEDB',
               weight: 3,
-              opacity: 1, // Set to 1 to ensure visibility
+              opacity: 1,
               fillColor: '#D3E4FD',
-              fillOpacity: 0.5
+              fillOpacity: 0.5,
+              dashArray: '5, 10'
             }
           },
           polygon: {
             shapeOptions: {
               color: '#1EAEDB',
               weight: 3,
-              opacity: 1, // Set to 1 to ensure visibility
+              opacity: 1,
               fillColor: '#D3E4FD',
-              fillOpacity: 0.5
+              fillOpacity: 0.5,
+              dashArray: '5, 10'
             },
             allowIntersection: false,
             drawError: {
               color: '#e1e100',
               message: '<strong>Drawing error:</strong> Shapes cannot intersect!'
-            }
+            },
+            showArea: true
           },
           circle: {
             shapeOptions: {
               color: '#1EAEDB',
               weight: 3,
-              opacity: 1, // Set to 1 to ensure visibility
+              opacity: 1,
               fillColor: '#D3E4FD',
-              fillOpacity: 0.5
-            }
+              fillOpacity: 0.5,
+              dashArray: '5, 10'
+            },
+            showRadius: true
+          },
+          polyline: {
+            shapeOptions: {
+              color: '#1EAEDB',
+              weight: 3,
+              opacity: 1,
+              dashArray: '5, 10'
+            },
+            metric: true,
+            feet: false,
+            showLength: true
           },
           circlemarker: false,
-          marker: activeTool === 'marker'
+          marker: activeTool === 'marker',
+          circle: true,
+          polygon: true,
+          rectangle: true,
+          polyline: true
+        }}
+        edit={{
+          featureGroup: new L.FeatureGroup(),
+          remove: true,
+          edit: {
+            selectedPathOptions: {
+              maintainColor: true,
+              dashArray: '5, 10'
+            }
+          }
         }}
       />
     </FeatureGroup>

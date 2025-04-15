@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Location } from '@/utils/location/types';
 import CesiumMap from '../CesiumMap';
@@ -8,6 +7,7 @@ import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
 import ShapeTools from '../drawing/ShapeTools';
+import LocationDropdown from '../LocationDropdown';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
@@ -117,7 +117,19 @@ const MapContent = ({
         />
 
         {currentView === 'leaflet' && (
-          <div className="absolute right-4 top-20 z-[10000]">
+          <div className="absolute right-4 top-20 z-[10000] flex flex-col gap-4">
+            <LocationDropdown 
+              onSelect={(building) => {
+                if (onLocationSelect) {
+                  onLocationSelect({
+                    id: building.location.id,
+                    label: building.name,
+                    x: building.location.x,
+                    y: building.location.y
+                  });
+                }
+              }}
+            />
             <ShapeTools 
               activeTool={activeTool} 
               onToolSelect={handleToolSelect} 
@@ -128,9 +140,7 @@ const MapContent = ({
       
       <div 
         className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
-        style={{ 
-          maxWidth: '400px',
-        }}
+        style={{ maxWidth: '400px' }}
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
