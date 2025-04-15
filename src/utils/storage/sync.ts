@@ -1,4 +1,3 @@
-
 import { LocationMarker } from '../location/types';
 import { DrawingData } from '../drawing/types';
 import { getConnectionStatus } from '../api-service';

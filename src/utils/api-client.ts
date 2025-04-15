@@ -1,11 +1,10 @@
-
 // This file is a central export point for all API-related functions
 
 export { 
   fetchMarkers,
   createMarker,
   deleteMarkerApi
-} from '@/services/markers-service';
+} from '@/services/markers';
 
 export {
   fetchDrawings,
