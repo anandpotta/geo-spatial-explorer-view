@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ interface DrawingControlsProps {
 const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingControlsProps) => {
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
+  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
   
   const editControlRef = useCallback((element: any) => {
     if (element) {
@@ -87,7 +88,7 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   }, [selectedBuildingId, drawnLayers]);
   
   return (
-    <FeatureGroup>
+    <FeatureGroup ref={featureGroupRef}>
       <EditControl
         ref={editControlRef}
         position="topleft"
@@ -190,7 +191,6 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
           marker: activeTool === 'marker'
         }}
         edit={{
-          featureGroup: new L.FeatureGroup(),
           remove: true,
           edit: {
             selectedPathOptions: {
