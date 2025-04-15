@@ -18,15 +18,18 @@ export const setupLeafletIcons = () => {
 // Add polyline styles to ensure lines are visible
 export const setupDrawingStyles = () => {
   // Apply default styles for drawing
-  if (L.Draw && L.Draw.Polyline) {
-    L.Draw.Polyline.prototype.options.shapeOptions = {
-      color: '#1EAEDB',
-      weight: 4,
-      opacity: 0.8,
-      fill: true,
-      fillColor: '#1EAEDB',
-      fillOpacity: 0.3,
-      clickable: true
-    };
+  if (L.Draw) {
+    if (L.Draw.Polyline) {
+      // Using shapeOptions instead of accessing options directly
+      L.Draw.Polyline.prototype.options.shapeOptions = {
+        color: '#1EAEDB',
+        weight: 4,
+        opacity: 0.8,
+        fill: true,
+        fillColor: '#1EAEDB',
+        fillOpacity: 0.3,
+        clickable: true
+      };
+    }
   }
 };

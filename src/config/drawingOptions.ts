@@ -5,8 +5,8 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       color: '#1EAEDB',
       weight: 4,
       opacity: 0.8,
-      lineCap: 'round',
-      lineJoin: 'round'
+      lineCap: 'round' as const, // Type assertion to match LineCapShape
+      lineJoin: 'round' as const // Type assertion to match LineJoinShape
     },
     metric: true,
     feet: false,
