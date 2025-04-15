@@ -21,7 +21,12 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       viewer.scene.globe.showGroundAtmosphere = true;
       viewer.scene.globe.enableLighting = true;
       viewer.scene.skyAtmosphere.show = true;
-      viewer.scene.skyAtmosphere.brightness = 5.0; // Increase atmosphere brightness
+      // Remove direct brightness setting and use hue/saturation shift instead
+      if ('hueShift' in viewer.scene.skyAtmosphere) {
+        viewer.scene.skyAtmosphere.hueShift = 0.0;
+        viewer.scene.skyAtmosphere.saturationShift = 0.1;
+        viewer.scene.skyAtmosphere.brightnessShift = 2.0; // Use brightnessShift instead
+      }
       viewer.scene.fog.enabled = false; // Disable fog for better visibility
       
       // Ensure the globe is fully opaque - using the correct type
