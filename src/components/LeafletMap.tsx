@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
@@ -70,7 +69,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
 
   useMapEvents(mapRef.current, selectedLocation);
 
-  // Update the localActiveTool only when the active tool actually changes
   useEffect(() => {
     if (activeToolRef.current !== activeTool) {
       activeToolRef.current = activeTool;
@@ -96,10 +94,8 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
     }
   }, [selectedBuildingId]);
   
-  // This is important to ensure the map is properly sized
   useEffect(() => {
     if (mapRef.current) {
-      // Force a resize to ensure the map is properly sized
       setTimeout(() => {
         if (mapRef.current) {
           mapRef.current.invalidateSize();

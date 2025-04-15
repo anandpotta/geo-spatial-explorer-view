@@ -19,7 +19,7 @@ const MapReference: React.FC<MapReferenceProps> = ({ onMapReady }) => {
     }
   }, [map, onMapReady]);
   
-  // This component doesn't render anything
+  // This component doesn't render anything visible
   return null;
 };
 
