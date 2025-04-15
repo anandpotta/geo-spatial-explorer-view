@@ -1,4 +1,3 @@
-
 interface BuildingDialogProps {
   show: boolean;
   buildingName: string;

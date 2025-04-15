@@ -9,10 +9,10 @@ import { setupLeafletIcons } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
-import MarkersList from './map/MarkersList';
-import BuildingDialog from './map/BuildingDialog';
+import MarkersList from './map/markers/MarkersList';
+import BuildingDialog from './map/buildings/BuildingDialog';
 import { useMapState } from '@/hooks/useMapState';
-import { MapLayers } from './map/MapLayers';
+import { MapLayers } from './map/layers/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
 import { useMarkers } from '@/hooks/useMarkers';
 import { useDrawing } from '@/hooks/useDrawing';
@@ -47,7 +47,8 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     drawingName,
     setDrawingName,
     handleCreatedShape,
-    handleSaveDrawing
+    handleSaveDrawing,
+    setCurrentDrawing
   } = useDrawing();
 
   const handleSetMapRef = (map: L.Map) => {
