@@ -1,3 +1,7 @@
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 interface BuildingDialogProps {
   show: boolean;
   buildingName: string;
@@ -16,29 +20,31 @@ const BuildingDialog = ({
   if (!show) return null;
 
   return (
-    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-md shadow-lg z-[10000] w-80">
-      <h3 className="text-lg font-semibold mb-4">Save Building</h3>
-      <input
-        type="text"
-        value={buildingName}
-        onChange={(e) => onBuildingNameChange(e.target.value)}
-        placeholder="Building Name"
-        className="w-full p-2 border rounded-md mb-4"
-      />
-      <div className="flex justify-end gap-2">
-        <button 
-          onClick={onCancel}
-          className="px-4 py-2 border rounded-md hover:bg-gray-100"
-        >
-          Cancel
-        </button>
-        <button 
-          onClick={onSave}
-          disabled={!buildingName.trim()}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
-        >
-          Save
-        </button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10002]">
+      <div className="bg-background p-6 rounded-lg shadow-lg w-80 max-w-md">
+        <h3 className="text-lg font-semibold mb-4">Save Building</h3>
+        <Input
+          type="text"
+          value={buildingName}
+          onChange={(e) => onBuildingNameChange(e.target.value)}
+          placeholder="Building Name"
+          className="w-full mb-4"
+          autoFocus
+        />
+        <div className="flex justify-end gap-2">
+          <Button 
+            variant="outline"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={onSave}
+            disabled={!buildingName.trim()}
+          >
+            Save
+          </Button>
+        </div>
       </div>
     </div>
   );

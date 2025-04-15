@@ -36,14 +36,13 @@ const ExplorerSidebar = ({
     setCurrentView(view);
   };
   
-  const handleBuildingSelect = (location: { x: number, y: number, label: string, name: string }) => {
-    const locationId = uuidv4();
+  const handleBuildingSelect = (location: { id: string, x: number, y: number, label: string, name: string }) => {
     const buildingObj: Building = {
       id: uuidv4(),
       name: location.name,
       locationKey: `${location.y}-${location.x}`,
       location: {
-        id: locationId,
+        id: location.id || uuidv4(),
         label: location.label,
         x: location.x,
         y: location.y

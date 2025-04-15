@@ -2,7 +2,8 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
-import { DrawingData, saveDrawing, getSavedDrawings, deleteDrawing } from '@/utils/geo-utils';
+import { Building, saveBuilding } from '@/utils/building-utils';
+import L from 'leaflet';
 
 export const useDrawing = () => {
   const [showDrawingDialog, setShowDrawingDialog] = useState(false);
@@ -16,13 +17,14 @@ export const useDrawing = () => {
       return;
     }
 
+    console.log('New shape created:', shape);
     const id = shape.id || uuidv4();
     const newDrawing = {
       id,
       type: shape.type,
       geoJSON: shape.geoJSON,
       layer: shape.layer,
-      name: drawingName || `New ${shape.type}`
+      name: drawingName || `New ${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}`
     };
 
     setCurrentDrawing(newDrawing);
@@ -33,29 +35,42 @@ export const useDrawing = () => {
   const handleSaveDrawing = useCallback(() => {
     if (!currentDrawing || !drawingName.trim()) return;
 
-    const drawingData: DrawingData = {
-      id: currentDrawing.id,
-      type: currentDrawing.type,
-      coordinates: currentDrawing.geoJSON.coordinates,
-      properties: {
+    try {
+      // Create building object with required fields
+      const buildingData: Building = {
+        id: currentDrawing.id,
         name: drawingName,
+        type: currentDrawing.type,
+        geoJSON: currentDrawing.geoJSON,
+        locationKey: `${currentDrawing.geoJSON.geometry.coordinates[0][0][1].toFixed(4)}_${currentDrawing.geoJSON.geometry.coordinates[0][0][0].toFixed(4)}`,
+        location: {
+          id: uuidv4(),
+          label: drawingName,
+          y: currentDrawing.geoJSON.geometry.coordinates[0][0][1],
+          x: currentDrawing.geoJSON.geometry.coordinates[0][0][0]
+        },
         createdAt: new Date()
+      };
+
+      console.log('Saving building:', buildingData);
+      saveBuilding(buildingData);
+
+      if (currentDrawing.layer) {
+        currentDrawing.layer.bindPopup(drawingName);
+        setDrawnLayers(prev => ({
+          ...prev,
+          [buildingData.id]: currentDrawing.layer
+        }));
       }
-    };
 
-    saveDrawing(drawingData);
-
-    if (currentDrawing.layer) {
-      setDrawnLayers(prev => ({
-        ...prev,
-        [drawingData.id]: currentDrawing.layer
-      }));
+      setCurrentDrawing(null);
+      setDrawingName('');
+      setShowDrawingDialog(false);
+      toast.success("Building saved successfully");
+    } catch (error) {
+      console.error("Error saving drawing:", error);
+      toast.error("Failed to save building");
     }
-
-    setCurrentDrawing(null);
-    setDrawingName('');
-    setShowDrawingDialog(false);
-    toast.success("Drawing saved successfully");
   }, [currentDrawing, drawingName]);
 
   const clearDrawingLayers = useCallback(() => {

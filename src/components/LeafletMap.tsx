@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { Location } from '@/utils/geo-utils';
+import { Location } from '@/utils/location/types';
 import { setupLeafletIcons } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
@@ -17,8 +17,11 @@ import { MapLayers } from './map/layers/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
 import { useMarkers } from '@/hooks/useMarkers';
 import { useDrawing } from '@/hooks/useDrawing';
+import { useMapEvents } from '@/hooks/useMapEvents';
 import { getAllSavedBuildings } from '@/utils/building-utils';
+import { toast } from 'sonner';
 
+// Initialize Leaflet icons
 setupLeafletIcons();
 
 interface LeafletMapProps {
@@ -57,11 +60,15 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
   } = useDrawing();
 
   const handleSetMapRef = (map: L.Map) => {
+    console.log('Map reference set:', map);
     mapRef.current = map;
     if (onMapReady) {
       onMapReady(map);
     }
   };
+
+  // Use the map events hook
+  useMapEvents(mapRef.current, selectedLocation);
 
   // Effect to fly to building location if selectedBuildingId changes
   useEffect(() => {
@@ -70,11 +77,14 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
       const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
       
       if (selectedBuilding && selectedBuilding.location) {
+        console.log('Flying to building:', selectedBuilding.name);
         mapRef.current.flyTo(
           [selectedBuilding.location.y, selectedBuilding.location.x], 
           18, 
           { animate: true, duration: 1 }
         );
+        
+        toast.success(`Viewing: ${selectedBuilding.name}`);
       }
     }
   }, [selectedBuildingId]);
@@ -85,16 +95,19 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
   }, [activeTool]);
 
   const handleToolSelect = (tool: string) => {
-    setLocalActiveTool(tool);
+    console.log('Tool selected:', tool);
+    setLocalActiveTool(prev => prev === tool ? null : tool);
   };
 
   return (
     <div className="w-full h-full relative">
       <MapContainer 
-        className="w-full h-full"
+        className="w-full h-full z-0"
         attributionControl={false}
         center={position}
         zoom={zoom}
+        zoomControl={false}
+        style={{ zIndex: 0 }}
       >
         <MapReference onMapReady={handleSetMapRef} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -131,23 +144,25 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
         <MapEvents onMapClick={(latlng) => handleMapClick(latlng, localActiveTool)} />
       </MapContainer>
 
-      <div className="absolute right-4 top-4 z-[1000]">
+      <div className="absolute right-4 top-4 z-[10001]">
         <ShapeTools 
           activeTool={localActiveTool} 
           onToolSelect={handleToolSelect}
         />
       </div>
 
-      <BuildingDialog
-        show={showDrawingDialog}
-        buildingName={drawingName}
-        onBuildingNameChange={setDrawingName}
-        onSave={handleSaveDrawing}
-        onCancel={() => {
-          setShowDrawingDialog(false);
-          setCurrentDrawing(null);
-        }}
-      />
+      {showDrawingDialog && (
+        <BuildingDialog
+          show={showDrawingDialog}
+          buildingName={drawingName}
+          onBuildingNameChange={setDrawingName}
+          onSave={handleSaveDrawing}
+          onCancel={() => {
+            setShowDrawingDialog(false);
+            setCurrentDrawing(null);
+          }}
+        />
+      )}
     </div>
   );
 };
