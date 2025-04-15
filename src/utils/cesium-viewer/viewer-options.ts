@@ -13,20 +13,6 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     backgroundColor: new Cesium.Color(0.0, 0.8, 1.0, 1.0) // Brighter blue for visibility
   });
 
-  // Create the globe instance with proper configuration
-  const globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84);
-  globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0); // More vibrant blue color
-  globe.showGroundAtmosphere = true;
-  globe.enableLighting = true;
-  globe.translucency.enabled = false; // Disable translucency which could cause visibility issues
-  globe.show = true; // Explicitly ensure globe is visible
-  globe.depthTestAgainstTerrain = false; // Disable depth testing for better visibility
-  globe.tileCacheSize = 1000; // Larger tile cache
-
-  const skyAtmosphere = new Cesium.SkyAtmosphere();
-  skyAtmosphere.show = true;
-  skyAtmosphere.brightnessShift = 0.5; // Make atmosphere brighter
-  
   return {
     baseLayerPicker: false,
     geocoder: false,
@@ -50,8 +36,6 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    skyAtmosphere: skyAtmosphere, // Use our preconfigured skyAtmosphere
-    globe: globe, // Use our preconfigured globe
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
     orderIndependentTranslucency: true, // Enable for better atmospheric effects
@@ -64,8 +48,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
         failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
         preserveDrawingBuffer: true, // Ensure rendering is preserved
         stencil: false, // Disable stencil for better performance
-        depth: true, // Enable depth testing
-        premultipliedAlpha: true // Better alpha blending
+        depth: true // Enable depth testing
       }
     },
     useDefaultRenderLoop: true, // Use the default render loop for consistent rendering

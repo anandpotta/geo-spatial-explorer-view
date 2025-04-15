@@ -20,6 +20,8 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
         viewer.scene.skyAtmosphere.saturationShift = 0.1;
         viewer.scene.skyAtmosphere.brightnessShift = 3.0; // Increased brightness
       }
+      
+      // Avoid using setDynamicLighting which might not exist in this Cesium version
     }
     
     // Enhance globe lighting
