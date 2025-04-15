@@ -60,7 +60,7 @@ const GeoSpatialExplorer = () => {
   const handleSavedLocationSelect = (position: [number, number]) => {
     // Create a simple location object from coordinates
     const location: Location = {
-      id: `loc-${position[0]}-${position[1]}`,
+      id: `loc-${position[0]}-${position[1]}`, // Adding required id property
       label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
       y: position[0],
       x: position[1]
