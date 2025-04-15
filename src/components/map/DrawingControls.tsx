@@ -8,7 +8,6 @@ import { useDrawingControls } from '@/hooks/useDrawingControls';
 import { useLayerStyles } from '@/hooks/useLayerStyles';
 import { getDrawingOptions, editOptions } from '@/config/drawingOptions';
 import { toast } from 'sonner';
-import { setupDrawingStyles } from '../map/LeafletMapIcons';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -21,10 +20,28 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   const { drawControl, drawnLayers, setDrawnLayers, editControlRef } = useDrawingControls(activeTool);
   useLayerStyles(selectedBuildingId, drawnLayers);
 
-  // Initialize drawing styles
   useEffect(() => {
-    // Set up drawing styles to ensure lines are visible
-    setupDrawingStyles();
+    // Override Leaflet.draw's readableArea function to fix the "type is not defined" error
+    if (L.Draw && L.GeometryUtil) {
+      try {
+        // Fix for the "type is not defined" error in leaflet-draw
+        L.GeometryUtil.readableArea = function(area: number, isMetric: boolean) {
+          const areaStr = isMetric
+              ? area >= 10000
+                  ? (area / 1000000).toFixed(2) + ' km²'
+                  : area.toFixed(2) + ' m²'
+              : area < 2589988.11
+                  ? (area / 0.836127).toFixed(2) + ' sq ft'
+                  : (area / 2589988.11).toFixed(2) + ' sq mi';
+          
+          return areaStr;
+        };
+        
+        console.log("Patched Leaflet.draw area calculation");
+      } catch (err) {
+        console.error("Failed to patch Leaflet.draw:", err);
+      }
+    }
   }, []);
 
   const handleShapeCreated = (e: any) => {

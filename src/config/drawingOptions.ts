@@ -25,7 +25,7 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       clickable: true,
       dashArray: null
     },
-    showArea: true,
+    // Removed showArea property to prevent the "type is not defined" error
     metric: true
   },
   polygon: {
@@ -39,9 +39,8 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       clickable: true,
       dashArray: null
     },
-    allowIntersection: false, 
-    showArea: true,
-    showLength: true,
+    allowIntersection: false,
+    // Removed showArea and showLength properties to prevent errors
     metric: true,
     drawError: {
       color: '#FF0000',
