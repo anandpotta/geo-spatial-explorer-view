@@ -42,9 +42,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     setCurrentDrawing,
     buildingName,
     setBuildingName,
-    handleSaveBuilding
+    handleSaveBuilding,
+    loadSavedBuildings
   } = useBuildings(mapRef, selectedLocation);
   
+  // Load markers on initial render
   useEffect(() => {
     const loadedMarkers = getSavedMarkers();
     if (loadedMarkers && loadedMarkers.length > 0) {
@@ -52,7 +54,15 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   }, []);
 
+  // Register map events
   useMapEvents(mapRef.current, selectedLocation);
+
+  // When selected location changes, reload buildings
+  useEffect(() => {
+    if (selectedLocation && mapRef.current) {
+      // This is handled in useBuildings hook now
+    }
+  }, [selectedLocation]);
 
   const handleMapClick = (latlng: L.LatLng) => {
     if (activeTool === 'marker' || (!activeTool && !tempMarker)) {
@@ -66,6 +76,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       setTempMarker(shape.position);
       setMarkerName('New Marker');
     } else {
+      // Store the shape including the layer reference
       setCurrentDrawing(shape);
       setBuildingName(selectedLocation?.label ? `Building at ${selectedLocation.label}` : 'New Building');
       setShowBuildingDialog(true);

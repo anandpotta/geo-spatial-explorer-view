@@ -66,13 +66,16 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
             (options as any).isDrawn = true;
             (options as any).buildingId = id;
             
+            // Convert to GeoJSON for storage
             const geoJSON = layer.toGeoJSON();
             console.log('GeoJSON:', geoJSON);
             
             toast.success(`${layerType} created successfully`);
+            
+            // Pass the layer to parent for proper tracking
             onCreated({ 
               type: layerType, 
-              layer, 
+              layer, // Pass the actual layer reference
               geoJSON,
               id
             });
