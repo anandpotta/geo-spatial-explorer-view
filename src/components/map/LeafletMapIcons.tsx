@@ -20,13 +20,11 @@ export const setupDrawingStyles = () => {
   // Apply default styles for drawing
   if (L.Draw) {
     if (L.Draw.Polyline) {
-      // Fix: Access the correct property path for shape options
-      // The prototype object structure in Leaflet.Draw is different
       try {
-        // Set shape options using the correct property path
-        const drawPolylinePrototype = L.Draw.Polyline.prototype;
+        // Use type assertion to address TypeScript errors
+        const drawPolylinePrototype = L.Draw.Polyline.prototype as any;
+        
         if (drawPolylinePrototype) {
-          // Some versions of Leaflet.Draw use this structure
           if (!drawPolylinePrototype.options) {
             drawPolylinePrototype.options = {};
           }
