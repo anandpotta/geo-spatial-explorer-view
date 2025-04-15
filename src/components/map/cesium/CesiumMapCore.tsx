@@ -4,7 +4,7 @@ import * as Cesium from 'cesium';
 import { useCesiumGlobeVisibility } from './hooks/useCesiumGlobeVisibility';
 import CesiumViewer from './CesiumViewer';
 import CesiumLocationHandler from './CesiumLocationHandler';
-import { Location } from '@/utils/geo-utils';
+import { Location } from '@/utils/location/types';
 import { forceGlobeVisibility } from '@/utils/cesium-viewer';
 
 interface CesiumMapCoreProps {

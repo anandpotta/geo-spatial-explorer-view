@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
-import { Location } from '@/utils/geo-utils';
+import { Location } from '@/utils/location/types';
 import { flyToLocation } from '@/utils/cesium-utils';
 
 interface CesiumLocationHandlerProps {

@@ -1,6 +1,6 @@
 
 import React, { useRef, useState } from 'react';
-import { Location } from '@/utils/geo-utils';
+import { Location } from '@/utils/location/types';
 import CesiumMap from '../CesiumMap';
 import LeafletMap from '../LeafletMap';
 import DrawingTools from '../DrawingTools';
