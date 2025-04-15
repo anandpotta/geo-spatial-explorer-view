@@ -6,7 +6,6 @@ import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
-import ShapeTools from '../drawing/ShapeTools';
 import LocationDropdown from '../map/LocationDropdown';
 
 interface MapContentProps {
@@ -129,10 +128,6 @@ const MapContent = ({
                   });
                 }
               }}
-            />
-            <ShapeTools 
-              activeTool={activeTool} 
-              onToolSelect={handleToolSelect} 
             />
           </div>
         )}
