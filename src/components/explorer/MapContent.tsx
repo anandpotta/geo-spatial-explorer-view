@@ -7,7 +7,7 @@ import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
 import ShapeTools from '../drawing/ShapeTools';
-import LocationDropdown from '../LocationDropdown';
+import LocationDropdown from '../map/LocationDropdown';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';

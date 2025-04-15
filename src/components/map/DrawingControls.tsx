@@ -1,3 +1,4 @@
+
 import { useEffect, useCallback, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
@@ -186,18 +187,14 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
             showLength: true
           },
           circlemarker: false,
-          marker: activeTool === 'marker',
-          circle: true,
-          polygon: true,
-          rectangle: true,
-          polyline: true
+          marker: activeTool === 'marker'
         }}
         edit={{
           featureGroup: new L.FeatureGroup(),
           remove: true,
           edit: {
             selectedPathOptions: {
-              maintainColor: true,
+              color: '#fe57a1',
               dashArray: '5, 10'
             }
           }
