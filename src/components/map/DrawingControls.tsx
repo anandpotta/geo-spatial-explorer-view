@@ -16,10 +16,11 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
   
-  // Use a callback to get the reference from the EditControl
-  const handleEditControlReady = useCallback((editControl: any) => {
-    if (editControl) {
-      setDrawControl(editControl);
+  // Create a function to set the ref
+  const editControlRef = useCallback((element: any) => {
+    if (element) {
+      console.log('EditControl ref received:', element);
+      setDrawControl(element);
     }
   }, []);
   
@@ -89,7 +90,7 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   return (
     <FeatureGroup>
       <EditControl
-        ref={handleEditControlReady}
+        ref={editControlRef}
         position="topleft"
         onCreated={e => {
           const { layerType, layer } = e;
