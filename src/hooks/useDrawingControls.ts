@@ -29,8 +29,25 @@ export const useDrawingControls = (activeTool: string | null) => {
 
       // Enable the selected tool
       if (toolbar._modes[activeTool]?.handler) {
-        toolbar._modes[activeTool].handler.enable();
-        console.log(`Enabled ${activeTool} drawing tool`);
+        const handler = toolbar._modes[activeTool].handler;
+        
+        // Ensure the handler is properly initialized
+        if (typeof handler.enable === 'function') {
+          handler.enable();
+          console.log(`Enabled ${activeTool} drawing tool`);
+          
+          // For polyline, make sure we setup the right styling
+          if (activeTool === 'polyline' && handler._poly) {
+            handler._poly.setStyle({
+              color: '#1EAEDB',
+              weight: 4,
+              opacity: 0.8
+            });
+          }
+        } else {
+          console.error(`Handler for ${activeTool} is not properly initialized`);
+          toast.error('Drawing tool could not be enabled');
+        }
       }
     } catch (error) {
       console.error('Error enabling drawing tool:', error);
@@ -38,10 +55,26 @@ export const useDrawingControls = (activeTool: string | null) => {
     }
   }, [activeTool, drawControl]);
 
+  const clearDrawnShapes = useCallback(() => {
+    Object.values(drawnLayers).forEach(layer => {
+      try {
+        if (layer) {
+          if ('remove' in layer && typeof layer.remove === 'function') {
+            layer.remove();
+          }
+        }
+      } catch (err) {
+        console.error('Error removing layer:', err);
+      }
+    });
+    setDrawnLayers({});
+  }, [drawnLayers]);
+
   return {
     drawControl,
     drawnLayers,
     setDrawnLayers,
-    editControlRef
+    editControlRef,
+    clearDrawnShapes
   };
 };

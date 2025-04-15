@@ -1,5 +1,5 @@
 
-import { MapPin, Square, Circle, Pentagon } from 'lucide-react';
+import { MapPin, Square, Circle, Pentagon, LineIcon } from 'lucide-react';
 import DrawingToolButton from './DrawingToolButton';
 
 interface ShapeToolsProps {
@@ -15,6 +15,12 @@ const ShapeTools = ({ activeTool, onToolSelect }: ShapeToolsProps) => {
         label="Add Marker"
         isActive={activeTool === 'marker'}
         onClick={() => onToolSelect('marker')}
+      />
+      <DrawingToolButton
+        icon={LineIcon}
+        label="Draw Line"
+        isActive={activeTool === 'polyline'}
+        onClick={() => onToolSelect('polyline')}
       />
       <DrawingToolButton
         icon={Pentagon}
