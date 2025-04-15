@@ -20,8 +20,8 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   const { drawnLayers, setDrawnLayers, onDrawControlMounted } = useDrawingControls(activeTool);
   useLayerStyles(selectedBuildingId, drawnLayers);
 
+  // Patch Leaflet.draw's readableArea function only once on mount
   useEffect(() => {
-    // Override Leaflet.draw's readableArea function to fix the "type is not defined" error
     if (L.Draw && L.GeometryUtil) {
       try {
         // Fix for the "type is not defined" error in leaflet-draw
@@ -42,7 +42,7 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
         console.error("Failed to patch Leaflet.draw:", err);
       }
     }
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once
 
   const handleShapeCreated = (e: any) => {
     try {

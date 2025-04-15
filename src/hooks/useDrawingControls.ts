@@ -9,6 +9,7 @@ export const useDrawingControls = (activeTool: string | null) => {
   // Use refs to track mounting and previous active tool state
   const controlMountedRef = useRef(false);
   const prevActiveToolRef = useRef<string | null>(null);
+  const toolEnabledRef = useRef<string | null>(null);
 
   const onDrawControlMounted = useCallback((drawingControl: any) => {
     if (drawingControl && !controlMountedRef.current) {
@@ -20,10 +21,14 @@ export const useDrawingControls = (activeTool: string | null) => {
 
   // Use useEffect to handle activeTool changes
   useEffect(() => {
-    // Skip if no active tool or draw control, or if the tool hasn't changed
-    if (!activeTool || !drawControl || activeTool === prevActiveToolRef.current) return;
-
-    // Update the previous active tool ref
+    // Skip if no active tool or draw control
+    if (!drawControl) return;
+    
+    // Skip if tool hasn't changed or we've already enabled this tool
+    if (activeTool === toolEnabledRef.current) return;
+    
+    // Update the tool enabled ref
+    toolEnabledRef.current = activeTool;
     prevActiveToolRef.current = activeTool;
     
     try {
@@ -37,8 +42,8 @@ export const useDrawingControls = (activeTool: string | null) => {
         }
       });
 
-      // Enable the selected tool
-      if (toolbar._modes[activeTool]?.handler) {
+      // Enable the selected tool if we have an active tool
+      if (activeTool && toolbar._modes[activeTool]?.handler) {
         const handler = toolbar._modes[activeTool].handler;
         
         // Ensure the handler is properly initialized

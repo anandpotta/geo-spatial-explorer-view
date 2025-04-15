@@ -34,8 +34,8 @@ interface LeafletMapProps {
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuildingId }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const { position, zoom } = useMapState(selectedLocation);
-  // Only initialize localActiveTool once and update via useEffect
-  const [localActiveTool, setLocalActiveTool] = useState<string | null>(null);
+  const [localActiveTool, setLocalActiveTool] = useState<string | null>(activeTool || null);
+  const activeToolRef = useRef<string | null>(null);
   
   const {
     markers,
@@ -70,14 +70,13 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
 
   useMapEvents(mapRef.current, selectedLocation);
 
-  // Update the localActiveTool when activeTool prop changes - only when the value is actually different
+  // Update the localActiveTool only when the active tool actually changes
   useEffect(() => {
-    const newActiveTool = activeTool || null;
-    if (localActiveTool !== newActiveTool) {
-      console.log(`Updating active tool from ${localActiveTool} to ${newActiveTool}`);
-      setLocalActiveTool(newActiveTool);
+    if (activeToolRef.current !== activeTool) {
+      activeToolRef.current = activeTool;
+      setLocalActiveTool(activeTool || null);
     }
-  }, [activeTool, localActiveTool]);
+  }, [activeTool]);
 
   useEffect(() => {
     if (selectedBuildingId && mapRef.current) {
