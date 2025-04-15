@@ -3,21 +3,20 @@ import { toast } from "@/components/ui/use-toast";
 
 // API configuration
 const API_CONFIG = {
-  BASE_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://your-production-api.com/api' 
-    : 'http://localhost:3001/api',
+  BASE_URL: '',  // Empty base URL to prevent network requests
   TIMEOUT: 8000, // 8 seconds timeout
-  RETRY_COUNT: 2,
+  RETRY_COUNT: 0, // Don't retry failed requests
   RETRY_DELAY: 1500,
+  OFFLINE_MODE: true, // Force offline mode
 };
 
 // Network and backend status
 let isOnline = navigator.onLine;
 let isBackendAvailable = false;
 
-// Check if backend is available
+// Check if backend is available - this function now immediately returns false in offline mode
 export async function checkBackendAvailability(): Promise<boolean> {
-  if (!isOnline) {
+  if (API_CONFIG.OFFLINE_MODE || !isOnline) {
     return false;
   }
   
@@ -59,24 +58,27 @@ export async function checkBackendAvailability(): Promise<boolean> {
 }
 
 // Check backend status immediately but don't show toast initially
-checkBackendAvailability().then(available => {
-  if (!available) {
-    console.log('Working in offline mode - backend not available');
-    // Don't show toast on initial load to avoid confusion
-    // Users will still see the connectivity indicator
-  }
-});
+// In offline mode, don't even try to check
+if (!API_CONFIG.OFFLINE_MODE) {
+  checkBackendAvailability().then(available => {
+    if (!available) {
+      console.log('Working in offline mode - backend not available');
+    }
+  });
+}
 
 // Network status event listeners
 window.addEventListener('online', async () => {
   isOnline = true;
-  const backendAvailable = await checkBackendAvailability();
-  
-  if (backendAvailable) {
-    toast({
-      title: "Back online",
-      description: "Connected to backend service. Syncing data...",
-    });
+  if (!API_CONFIG.OFFLINE_MODE) {
+    const backendAvailable = await checkBackendAvailability();
+    
+    if (backendAvailable) {
+      toast({
+        title: "Back online",
+        description: "Connected to backend service. Syncing data...",
+      });
+    }
   }
 });
 
@@ -90,12 +92,17 @@ window.addEventListener('offline', () => {
   });
 });
 
-// Generic API call with retries
+// Generic API call with retries - returns immediately in offline mode
 export async function apiCall<T>(
   endpoint: string, 
   options: RequestInit = {}, 
   retries = API_CONFIG.RETRY_COUNT
 ): Promise<T> {
+  // If offline mode is enabled, reject immediately
+  if (API_CONFIG.OFFLINE_MODE) {
+    return Promise.reject(new Error('Offline mode enabled'));
+  }
+  
   // If offline or backend not available, reject immediately
   if (!isOnline || !isBackendAvailable) {
     return Promise.reject(new Error('Backend not available'));
@@ -145,15 +152,17 @@ export async function apiCall<T>(
     }
     
     // If we're out of retries, check if backend is still available
-    checkBackendAvailability();
+    if (!API_CONFIG.OFFLINE_MODE) {
+      checkBackendAvailability();
+    }
     throw error;
   }
 }
 
-// Get backend status
+// Get connection status
 export function getConnectionStatus() {
   return {
-    isOnline,
-    isBackendAvailable
+    isOnline: !API_CONFIG.OFFLINE_MODE && isOnline,
+    isBackendAvailable: !API_CONFIG.OFFLINE_MODE && isBackendAvailable
   };
 }

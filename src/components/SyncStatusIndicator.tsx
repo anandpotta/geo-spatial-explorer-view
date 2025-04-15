@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useApiSync } from '@/contexts/ApiSyncContext';
-import { Wifi, WifiOff, RefreshCw, Server } from 'lucide-react';
+import { WifiOff, RefreshCw, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,7 +22,7 @@ const SyncStatusIndicator: React.FC = () => {
   } catch (error) {
     // If useApiSync throws an error, we'll use our local state instead
     if (isApiSyncAvailable) {
-      console.warn('SyncStatusIndicator: ApiSyncProvider not found, using fallback mode');
+      console.log('SyncStatusIndicator: ApiSyncProvider not found, using fallback mode');
       setIsApiSyncAvailable(false);
     }
   }
@@ -32,51 +32,17 @@ const SyncStatusIndicator: React.FC = () => {
   const contextLastSynced = apiSyncContext?.lastSynced ?? lastSynced;
   const syncNow = apiSyncContext?.syncNow ?? (() => console.log('Sync not available in fallback mode'));
   
-  // Check backend status on mount and when online status changes
-  useEffect(() => {
-    if (contextIsOnline) {
-      const checkBackend = async () => {
-        try {
-          const available = await checkBackendAvailability();
-          setIsBackendReachable(available);
-        } catch (error) {
-          console.log('Failed to check backend availability:', error);
-          setIsBackendReachable(false);
-        }
-      };
-      
-      checkBackend();
-      
-      // Check again periodically if the backend becomes available
-      const interval = setInterval(checkBackend, 30000); // Check every 30 seconds
-      return () => clearInterval(interval);
-    } else {
-      setIsBackendReachable(false);
-    }
-  }, [contextIsOnline]);
-  
-  // Add event listeners for online/offline status when not using ApiSyncContext
-  useEffect(() => {
-    if (!apiSyncContext) {
-      const handleOnline = () => setIsOnline(true);
-      const handleOffline = () => setIsOnline(false);
-  
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-  
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
-    }
-  }, [apiSyncContext]);
+  // Always set offline mode for this application
+  const forceOfflineMode = true;
   
   // Connection status text and color
-  const connectionStatus = contextIsOnline 
-    ? isBackendReachable 
-      ? { label: 'Server Connected', color: 'text-green-500' } 
-      : { label: 'Local Only', color: 'text-orange-500' }
-    : { label: 'Offline', color: 'text-yellow-500' };
+  const connectionStatus = forceOfflineMode 
+    ? { label: 'Offline Mode', color: 'text-blue-500' }
+    : contextIsOnline 
+      ? isBackendReachable 
+        ? { label: 'Server Connected', color: 'text-green-500' } 
+        : { label: 'Local Only', color: 'text-orange-500' }
+      : { label: 'Offline', color: 'text-yellow-500' };
   
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-sm rounded-md shadow-md">
@@ -84,7 +50,9 @@ const SyncStatusIndicator: React.FC = () => {
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-1.5">
-              {contextIsOnline ? (
+              {forceOfflineMode ? (
+                <WifiOff size={16} className={connectionStatus.color} />
+              ) : contextIsOnline ? (
                 isBackendReachable ? (
                   <Server size={16} className={connectionStatus.color} />
                 ) : (
@@ -100,17 +68,19 @@ const SyncStatusIndicator: React.FC = () => {
           </TooltipTrigger>
           <TooltipContent>
             <p>
-              {contextIsOnline 
-                ? isBackendReachable 
-                  ? 'Connected to server - data will sync automatically' 
-                  : 'Online but server is unreachable - working with local data only'
-                : 'Working offline - data is stored locally'}
+              {forceOfflineMode
+                ? 'Application is running in offline mode - all data is stored locally'
+                : contextIsOnline 
+                  ? isBackendReachable 
+                    ? 'Connected to server - data will sync automatically' 
+                    : 'Online but server is unreachable - working with local data only'
+                  : 'Working offline - data is stored locally'}
             </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       
-      {contextIsOnline && isBackendReachable && (
+      {!forceOfflineMode && contextIsOnline && isBackendReachable && (
         <>
           <div className="h-4 border-l border-border mx-1" />
           
