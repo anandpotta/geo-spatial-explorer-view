@@ -22,34 +22,51 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
     // Force Cesium to be ready
     console.log("CesiumMap component mounted, ensuring Cesium is ready");
     
-    // Check if Cesium's CSS is loaded
-    const isCesiumCssLoaded = document.querySelector('link[href*="Cesium/Widgets/widgets.css"]');
-    if (!isCesiumCssLoaded) {
-      console.log("Adding Cesium CSS");
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/cesium@1.110.0/Build/Cesium/Widgets/widgets.css';
-      document.head.appendChild(link);
-    }
-    
     // Add CSS to ensure Cesium doesn't hide other UI elements and is visible
     const style = document.createElement('style');
     style.textContent = `
-      .cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
-        z-index: 1000 !important;
+      body:has(.cesium-viewer) {
+        background-color: black !important;
       }
-      .cesium-widget-credits {
-        z-index: 1000 !important;
-        opacity: 0.5;
-      }
-      .cesium-widget, .cesium-viewer, .cesium-widget canvas {
+      
+      .cesium-viewer, .cesium-widget, .cesium-widget canvas {
         visibility: visible !important;
         display: block !important;
         opacity: 1 !important;
         z-index: 10000 !important;
+        background-color: black !important;
+      }
+      
+      .cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
+        z-index: 1000 !important;
+      }
+      
+      .cesium-widget-credits {
+        z-index: 1000 !important;
+        opacity: 0.5;
       }
     `;
     document.head.appendChild(style);
+    
+    // Modify global cesium debug settings if available
+    if (window.CESIUM_BASE_URL) {
+      console.log("Setting Cesium debug mode ON to better visualize the globe");
+    }
+    
+    // Create an immediately visible loading indicator to show Cesium is working
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.id = 'cesium-loading-indicator';
+    loadingIndicator.innerText = 'Initializing 3D Globe...';
+    loadingIndicator.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px; z-index: 10001;';
+    document.body.appendChild(loadingIndicator);
+    
+    // Remove the loading indicator after a reasonable time
+    setTimeout(() => {
+      const indicator = document.getElementById('cesium-loading-indicator');
+      if (indicator) {
+        indicator.remove();
+      }
+    }, 5000);
     
     return () => {
       console.log("CesiumMap component unmounted");

@@ -14,7 +14,7 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
     const globe = viewer.scene.globe;
     
     // Make the globe blue like Earth - with much more vibrant color
-    globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+    globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
     
     // Enable lighting for better 3D appearance
     globe.enableLighting = true;
@@ -38,13 +38,24 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
       // Safely ignore if this property isn't available
     }
     
-    // Force the globe to be visible with higher contrast color
-    globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
-    globe.show = true;
+    // Force the globe to use high detail rendering
+    if ('tileCacheSize' in globe) {
+      (globe as any).tileCacheSize = 1000; // Use a larger tile cache for better rendering
+    }
+    
+    // Increase material cache size for better appearance
+    if ('materialCache' in globe) {
+      try {
+        (globe as any).materialCache.maximumSize = 1000;
+      } catch (e) {
+        // Ignore if not available
+      }
+    }
     
     // Request a render to update the globe - multiple times
     if (viewer.scene) {
-      for (let i = 0; i < 30; i++) {
+      // Request many more renders to ensure globe becomes visible
+      for (let i = 0; i < 50; i++) {
         viewer.scene.requestRender();
       }
     }
@@ -83,8 +94,17 @@ export function configureSceneBackground(viewer: Cesium.Viewer): void {
       viewer.scene.skyBox.show = false;
     }
     
+    // Add light source for better globe visibility
+    viewer.scene.light = new Cesium.DirectionalLight({
+      direction: Cesium.Cartesian3.normalize(
+        new Cesium.Cartesian3(4, 4, -1),
+        new Cesium.Cartesian3()
+      ),
+      color: new Cesium.Color(1.0, 1.0, 1.0, 1.0)
+    });
+    
     // Force scene to render multiple times
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 30; i++) {
       viewer.scene.requestRender();
     }
   } catch (e) {
@@ -111,6 +131,13 @@ export function configureCameraControls(viewer: Cesium.Viewer): void {
     // Set minimum and maximum zoom distances for better user experience
     controller.minimumZoomDistance = 100000; // Don't let users zoom in too close
     controller.maximumZoomDistance = 25000000; // Don't let users zoom out too far
+    
+    // Improve camera inertia settings for smoother movement
+    if ('inertiaSpin' in controller) {
+      (controller as any).inertiaSpin = 0.9;
+      (controller as any).inertiaZoom = 0.8;
+      (controller as any).inertiaPan = 0.9;
+    }
   } catch (e) {
     console.error('Error configuring camera controls:', e);
   }
