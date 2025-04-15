@@ -1,10 +1,11 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { Location } from '@/utils/location/types';
-import { setupLeafletIcons } from './map/LeafletMapIcons';
+import { setupLeafletIcons, setupDrawingStyles } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
@@ -20,8 +21,9 @@ import { getAllSavedBuildings } from '@/utils/building-utils';
 import { toast } from 'sonner';
 import DraggableDrawingTools from './drawing/DraggableDrawingTools';
 
-// Initialize Leaflet icons
+// Initialize Leaflet icons and drawing styles
 setupLeafletIcons();
+setupDrawingStyles();
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -86,7 +88,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
     }
   }, [selectedBuildingId]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalActiveTool(activeTool || null);
   }, [activeTool]);
 
@@ -94,6 +96,18 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
     console.log('Tool selected:', tool);
     setLocalActiveTool(prev => prev === tool ? null : tool);
   };
+  
+  // This is important to ensure the drawing tools are initialized properly
+  useEffect(() => {
+    if (mapRef.current) {
+      // Force a resize to ensure the map is properly sized
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, 100);
+    }
+  }, [mapRef.current]);
 
   return (
     <div className="w-full h-full relative">

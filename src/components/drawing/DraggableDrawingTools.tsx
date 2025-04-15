@@ -53,6 +53,7 @@ const DraggableDrawingTools = ({ activeTool, onToolSelect }: DraggableDrawingToo
         x: event.clientX - position.x,
         y: event.clientY - position.y
       };
+      event.preventDefault(); // Prevent text selection during drag
     }
   };
 
@@ -92,16 +93,26 @@ const DraggableDrawingTools = ({ activeTool, onToolSelect }: DraggableDrawingToo
   return (
     <div 
       ref={toolbarRef}
-      className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move leaflet-draw leaflet-control"
+      className="fixed bg-background/90 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move z-[1000]"
       style={{ 
         left: position.x,
         top: position.y,
-        zIndex: 1000,
         touchAction: 'none',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+        border: '1px solid rgba(0,0,0,0.1)'
       }}
       onMouseDown={handleMouseDown}
+      onTouchStart={(e) => {
+        const touch = e.touches[0];
+        setIsDragging(true);
+        dragStartRef.current = {
+          x: touch.clientX - position.x,
+          y: touch.clientY - position.y
+        };
+      }}
     >
       <div className="flex flex-col gap-2 select-none">
+        <div className="text-xs opacity-70 pb-1 text-center">Drawing Tools</div>
         <DrawingToolButton
           icon={MapPin}
           label="Add Marker"

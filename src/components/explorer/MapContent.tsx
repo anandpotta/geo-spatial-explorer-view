@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { Location } from '@/utils/location/types';
 import CesiumMap from '../CesiumMap';
@@ -64,6 +65,7 @@ const MapContent = ({
   };
 
   const handleToolSelect = (tool: string) => {
+    console.log("MapContent: Selected tool:", tool);
     setActiveTool(prev => prev === tool ? null : tool);
   };
 

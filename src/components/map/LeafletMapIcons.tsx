@@ -21,7 +21,7 @@ export const setupDrawingStyles = () => {
   if (L.Draw) {
     if (L.Draw.Polyline) {
       try {
-        // Use type assertion to address TypeScript errors
+        // Fix for TypeScript errors - use proper type assertion
         const drawPolylinePrototype = L.Draw.Polyline.prototype as any;
         
         if (drawPolylinePrototype) {
@@ -30,13 +30,14 @@ export const setupDrawingStyles = () => {
           }
           
           drawPolylinePrototype.options.shapeOptions = {
-            color: '#1EAEDB',
+            color: '#3388ff',
             weight: 4,
             opacity: 0.8,
             fill: true,
-            fillColor: '#1EAEDB',
+            fillColor: '#3388ff',
             fillOpacity: 0.3,
-            clickable: true
+            clickable: true,
+            zIndexOffset: 2000 // Ensure lines appear above other elements
           };
         }
       } catch (err) {

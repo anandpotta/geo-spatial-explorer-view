@@ -2,56 +2,61 @@
 export const getDrawingOptions = (activeTool: string | null) => ({
   polyline: {
     shapeOptions: {
-      color: '#1EAEDB',
-      weight: 4,
-      opacity: 0.8,
-      lineCap: 'round' as const, // Type assertion to match LineCapShape
-      lineJoin: 'round' as const // Type assertion to match LineJoinShape
+      color: '#3388ff',
+      weight: 5,
+      opacity: 1.0,
+      lineCap: 'round' as const,
+      lineJoin: 'round' as const,
+      dashArray: null
     },
     metric: true,
     feet: false,
     showLength: true,
-    zIndexOffset: 2000  // Ensure lines appear above other elements
+    zIndexOffset: 2000
   },
   rectangle: {
     shapeOptions: {
-      color: '#1EAEDB',
+      color: '#3388ff',
       weight: 4,
-      opacity: 0.8,
-      fillColor: '#D3E4FD',
-      fillOpacity: 0.5,
-      clickable: true
+      opacity: 1.0,
+      fill: true,
+      fillColor: '#3388ff',
+      fillOpacity: 0.3,
+      clickable: true,
+      dashArray: null
     },
     showArea: true,
     metric: true
   },
   polygon: {
     shapeOptions: {
-      color: '#1EAEDB',
+      color: '#3388ff',
       weight: 4,
-      opacity: 0.8,
-      fillColor: '#D3E4FD',
-      fillOpacity: 0.5,
-      clickable: true
+      opacity: 1.0,
+      fill: true,
+      fillColor: '#3388ff',
+      fillOpacity: 0.3,
+      clickable: true,
+      dashArray: null
     },
-    allowIntersection: false,
+    allowIntersection: false, 
     showArea: true,
     showLength: true,
     metric: true,
     drawError: {
-      color: '#e1e100',
+      color: '#FF0000',
       timeout: 1000,
       message: '<strong>Error:</strong> Shapes cannot intersect!'
     },
-    zIndexOffset: 2000  // Ensure lines appear above other elements
+    zIndexOffset: 2000
   },
   circle: {
     shapeOptions: {
-      color: '#1EAEDB',
+      color: '#3388ff',
       weight: 4,
-      opacity: 0.8,
-      fillColor: '#D3E4FD',
-      fillOpacity: 0.5,
+      opacity: 1.0,
+      fillColor: '#3388ff',
+      fillOpacity: 0.3,
       clickable: true
     },
     showRadius: true,
