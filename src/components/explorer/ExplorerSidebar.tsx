@@ -44,7 +44,7 @@ const ExplorerSidebar = ({
       name: location.name,
       locationKey: `${location.y}-${location.x}`,
       location: {
-        id: locationId, // Use the provided id or generate a new one
+        id: locationId,
         label: location.label,
         x: location.x,
         y: location.y

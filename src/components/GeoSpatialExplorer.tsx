@@ -75,12 +75,18 @@ const GeoSpatialExplorer = () => {
       setCurrentView('cesium');
       setFlyCompleted(false);
       
-      // Make sure we provide a complete Location object with an id
-      if (building.location && !building.location.id) {
-        building.location.id = uuidv4();
+      // Make sure the building location has a valid id
+      if (building.location) {
+        // Create a complete location object with an id if it doesn't have one
+        const locationWithId: Location = {
+          id: building.location.id || uuidv4(),
+          label: building.location.label,
+          x: building.location.x,
+          y: building.location.y
+        };
+        
+        setSelectedLocation(locationWithId);
       }
-      
-      setSelectedLocation(building.location);
       
       toast({
         title: 'Building selected',
