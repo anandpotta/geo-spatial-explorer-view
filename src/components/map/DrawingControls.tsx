@@ -62,23 +62,30 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
             const layerWithOptions = layer as L.Path;
             const options = layerWithOptions.options || {};
             
-            // Apply styling to the drawn shapes
+            // Apply styling to the drawn shapes - only apply to Path types (polygons, circles, rectangles)
+            // Check if it's a Path by checking for setStyle method
             if (layerType === 'polygon' || layerType === 'rectangle') {
-              layer.setStyle({
-                color: '#1EAEDB',       // Border color - bright blue
-                weight: 3,              // Border width
-                opacity: 0.8,           // Border opacity
-                fillColor: '#D3E4FD',   // Fill color - soft blue
-                fillOpacity: 0.5        // Fill opacity
-              });
+              // Check if the layer is a Path type and has setStyle
+              if ('setStyle' in layer) {
+                layer.setStyle({
+                  color: '#1EAEDB',       // Border color - bright blue
+                  weight: 3,              // Border width
+                  opacity: 0.8,           // Border opacity
+                  fillColor: '#D3E4FD',   // Fill color - soft blue
+                  fillOpacity: 0.5        // Fill opacity
+                });
+              }
             } else if (layerType === 'circle') {
-              layer.setStyle({
-                color: '#1EAEDB',       // Border color - bright blue
-                weight: 3,              // Border width
-                opacity: 0.8,           // Border opacity
-                fillColor: '#D3E4FD',   // Fill color - soft blue
-                fillOpacity: 0.5        // Fill opacity
-              });
+              // Check if the layer is a Path type and has setStyle
+              if ('setStyle' in layer) {
+                layer.setStyle({
+                  color: '#1EAEDB',       // Border color - bright blue
+                  weight: 3,              // Border width
+                  opacity: 0.8,           // Border opacity
+                  fillColor: '#D3E4FD',   // Fill color - soft blue
+                  fillOpacity: 0.5        // Fill opacity
+                });
+              }
             }
             
             (options as any).id = id;
