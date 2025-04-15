@@ -10,12 +10,12 @@ import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
 import MarkersList from './map/MarkersList';
-import { useBuildings } from '@/hooks/useBuildings';
 import BuildingDialog from './map/BuildingDialog';
 import { useMapState } from '@/hooks/useMapState';
 import { MapLayers } from './map/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
 import { useMarkers } from '@/hooks/useMarkers';
+import { useDrawing } from '@/hooks/useDrawing';
 
 setupLeafletIcons();
 
@@ -41,15 +41,14 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   } = useMarkers();
 
   const {
-    showBuildingDialog,
-    setShowBuildingDialog,
+    showDrawingDialog,
+    setShowDrawingDialog,
     currentDrawing,
-    setCurrentDrawing,
-    buildingName,
-    setBuildingName,
-    handleSaveBuilding,
-    loadSavedBuildings
-  } = useBuildings(mapRef, selectedLocation);
+    drawingName,
+    setDrawingName,
+    handleCreatedShape,
+    handleSaveDrawing
+  } = useDrawing();
 
   const handleSetMapRef = (map: L.Map) => {
     mapRef.current = map;
@@ -82,15 +81,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         )}
         
         <DrawingControls 
-          onCreated={(shape) => {
-            if (shape.type === 'marker') {
-              handleMapClick(shape.position, activeTool);
-            } else {
-              setCurrentDrawing(shape);
-              setBuildingName(selectedLocation?.label ? `Building at ${selectedLocation.label}` : 'New Building');
-              setShowBuildingDialog(true);
-            }
-          }}
+          onCreated={handleCreatedShape}
           activeTool={activeTool || null}
         />
         
@@ -109,12 +100,12 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       </MapContainer>
 
       <BuildingDialog
-        show={showBuildingDialog}
-        buildingName={buildingName}
-        onBuildingNameChange={setBuildingName}
-        onSave={handleSaveBuilding}
+        show={showDrawingDialog}
+        buildingName={drawingName}
+        onBuildingNameChange={setDrawingName}
+        onSave={handleSaveDrawing}
         onCancel={() => {
-          setShowBuildingDialog(false);
+          setShowDrawingDialog(false);
           setCurrentDrawing(null);
         }}
       />
