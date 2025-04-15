@@ -1,20 +1,23 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 
 export const useDrawingControls = (activeTool: string | null) => {
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
+  // Use a ref to track if the control has already been mounted
+  const controlMountedRef = useRef(false);
 
   const onDrawControlMounted = useCallback((drawingControl: any) => {
-    if (drawingControl) {
+    if (drawingControl && !controlMountedRef.current) {
+      controlMountedRef.current = true;
       setDrawControl(drawingControl);
       console.log("Drawing control mounted:", drawingControl);
     }
   }, []);
 
-  // Use useEffect to handle activeTool changes instead of calling the function directly
+  // Use useEffect to handle activeTool changes
   useEffect(() => {
     if (!activeTool || !drawControl) return;
 

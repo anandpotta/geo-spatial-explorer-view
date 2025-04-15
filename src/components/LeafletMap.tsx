@@ -34,7 +34,7 @@ interface LeafletMapProps {
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuildingId }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const { position, zoom } = useMapState(selectedLocation);
-  const [localActiveTool, setLocalActiveTool] = useState<string | null>(activeTool || null);
+  const [localActiveTool, setLocalActiveTool] = useState<string | null>(null);
   
   const {
     markers,
@@ -69,6 +69,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
 
   useMapEvents(mapRef.current, selectedLocation);
 
+  // Update the localActiveTool when activeTool prop changes
+  useEffect(() => {
+    setLocalActiveTool(activeTool || null);
+  }, [activeTool]);
+
   useEffect(() => {
     if (selectedBuildingId && mapRef.current) {
       const buildings = getAllSavedBuildings();
@@ -86,17 +91,8 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
       }
     }
   }, [selectedBuildingId]);
-
-  useEffect(() => {
-    setLocalActiveTool(activeTool || null);
-  }, [activeTool]);
-
-  const handleToolSelect = (tool: string) => {
-    console.log('Tool selected:', tool);
-    setLocalActiveTool(prev => prev === tool ? null : tool);
-  };
   
-  // This is important to ensure the drawing tools are initialized properly
+  // This is important to ensure the map is properly sized
   useEffect(() => {
     if (mapRef.current) {
       // Force a resize to ensure the map is properly sized
@@ -135,7 +131,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
         
         <DrawingControls 
           onCreated={handleCreatedShape}
-          activeTool={localActiveTool || null}
+          activeTool={localActiveTool}
           selectedBuildingId={selectedBuildingId}
         />
         
