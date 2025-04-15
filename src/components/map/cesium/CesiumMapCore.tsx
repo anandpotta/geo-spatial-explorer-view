@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import * as Cesium from 'cesium';
-import { useCesiumGlobeVisibility } from './hooks/useCesiumGlobeVisibility';
 import CesiumViewer from './CesiumViewer';
 import CesiumLocationHandler from './CesiumLocationHandler';
 import { Location } from '@/utils/location/types';
@@ -25,8 +24,11 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
   cinematicFlight = true,
   onViewerReady
 }) => {
+  // All state declarations must be at the top level and same order on every render
   const [isFlying, setIsFlying] = useState(false);
   const [viewerReady, setViewerReady] = useState(false);
+  
+  // All refs must be declared before any conditional logic
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const entityRef = useRef<Cesium.Entity | null>(null);
   
@@ -39,40 +41,17 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
     }
 
     // Force multiple renders to ensure the globe is visible
-    for (let i = 0; i < 50; i++) {
-      viewer.scene.requestRender();
-    }
-    
-    // Force immediate globe visibility
-    forceGlobeVisibility(viewer);
-    
-    console.log("CesiumMapCore: Viewer is ready, forcing globe visibility");
-  };
-
-  // Use the globe visibility hook
-  useCesiumGlobeVisibility(viewerRef, viewerReady);
-
-  // Force globe visibility at specific intervals
-  useEffect(() => {
-    const intervals = [100, 500, 1000, 2000, 3000];
-    
-    intervals.forEach(interval => {
-      const timeout = setTimeout(() => {
-        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-          console.log(`Forcing globe visibility at ${interval}ms`);
-          forceGlobeVisibility(viewerRef.current);
-          
-          // Resize viewer and force renders
-          viewerRef.current.resize();
-          for (let i = 0; i < 5; i++) {
-            viewerRef.current.scene.requestRender();
-          }
-        }
-      }, interval);
+    if (viewer && !viewer.isDestroyed()) {
+      for (let i = 0; i < 50; i++) {
+        viewer.scene.requestRender();
+      }
       
-      return () => clearTimeout(timeout);
-    });
-  }, [viewerReady]);
+      // Force immediate globe visibility
+      forceGlobeVisibility(viewer);
+      
+      console.log("CesiumMapCore: Viewer is ready, forcing globe visibility");
+    }
+  };
 
   // Handle fly operations start/end
   const handleFlyComplete = () => {
@@ -81,6 +60,36 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
       onFlyComplete();
     }
   };
+
+  // Ensure consistent globe visibility - always declare this effect, never conditionally
+  useEffect(() => {
+    if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+      // Force multiple renders
+      for (let i = 0; i < 25; i++) {
+        viewerRef.current.scene.requestRender();
+      }
+      
+      // Force globe visibility at key intervals
+      const intervals = [100, 500, 1000, 2000, 3000];
+      
+      intervals.forEach(interval => {
+        const timeout = setTimeout(() => {
+          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+            console.log(`Forcing globe visibility at ${interval}ms`);
+            forceGlobeVisibility(viewerRef.current);
+            
+            // Resize viewer and force renders
+            viewerRef.current.resize();
+            for (let i = 0; i < 5; i++) {
+              viewerRef.current.scene.requestRender();
+            }
+          }
+        }, interval);
+        
+        return () => clearTimeout(timeout);
+      });
+    }
+  }, [viewerReady]);
   
   return (
     <>
