@@ -1,4 +1,3 @@
-
 import { toast } from "@/components/ui/use-toast";
 
 // API configuration
@@ -17,6 +16,7 @@ let isBackendAvailable = false;
 // Check if backend is available - this function now immediately returns false in offline mode
 export async function checkBackendAvailability(): Promise<boolean> {
   if (API_CONFIG.OFFLINE_MODE || !isOnline) {
+    console.log('Offline mode enabled, skipping backend availability check');
     return false;
   }
   
@@ -58,14 +58,8 @@ export async function checkBackendAvailability(): Promise<boolean> {
 }
 
 // Check backend status immediately but don't show toast initially
-// In offline mode, don't even try to check
-if (!API_CONFIG.OFFLINE_MODE) {
-  checkBackendAvailability().then(available => {
-    if (!available) {
-      console.log('Working in offline mode - backend not available');
-    }
-  });
-}
+// Just log the offline mode status
+console.log('API Service initialized - OFFLINE_MODE:', API_CONFIG.OFFLINE_MODE);
 
 // Network status event listeners
 window.addEventListener('online', async () => {
@@ -98,13 +92,15 @@ export async function apiCall<T>(
   options: RequestInit = {}, 
   retries = API_CONFIG.RETRY_COUNT
 ): Promise<T> {
-  // If offline mode is enabled, reject immediately
+  // If offline mode is enabled, reject immediately with a clear message
   if (API_CONFIG.OFFLINE_MODE) {
+    console.log(`API Call skipped (offline mode): ${endpoint}`);
     return Promise.reject(new Error('Offline mode enabled'));
   }
   
   // If offline or backend not available, reject immediately
   if (!isOnline || !isBackendAvailable) {
+    console.log(`API Call skipped (not connected): ${endpoint}`);
     return Promise.reject(new Error('Backend not available'));
   }
   

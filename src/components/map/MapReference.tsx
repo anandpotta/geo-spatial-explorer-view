@@ -19,8 +19,8 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     }
   }, [map, onMapReady]);
   
+  // Return null instead of trying to access a ref prop
   return null;
 };
 
 export default MapReference;
-
