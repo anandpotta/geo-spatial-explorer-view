@@ -5,7 +5,7 @@ import DrawingToolButton from './DrawingToolButton';
 import React from 'react';
 
 // Custom polygon icon since it's not available in lucide-react
-const PolygonIcon: LucideIcon = React.forwardRef((props, ref) => (
+const PolygonIcon = React.forwardRef<SVGSVGElement>((props, ref) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -40,7 +40,7 @@ const ShapeTools = ({ activeTool, onToolSelect }: ShapeToolsProps) => {
         onClick={() => onToolSelect('marker')}
       />
       <DrawingToolButton
-        icon={PolygonIcon}
+        icon={PolygonIcon as LucideIcon}
         label="Draw Polygon"
         isActive={activeTool === 'polygon'}
         onClick={() => onToolSelect('polygon')}
