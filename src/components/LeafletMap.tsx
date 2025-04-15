@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -17,6 +17,7 @@ import { MapLayers } from './map/layers/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
 import { useMarkers } from '@/hooks/useMarkers';
 import { useDrawing } from '@/hooks/useDrawing';
+import { getAllSavedBuildings } from '@/utils/building-utils';
 
 setupLeafletIcons();
 
@@ -24,9 +25,10 @@ interface LeafletMapProps {
   selectedLocation?: Location;
   onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
+  selectedBuildingId?: string | null;
 }
 
-const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
+const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuildingId }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const { position, zoom } = useMapState(selectedLocation);
   const [localActiveTool, setLocalActiveTool] = useState<string | null>(activeTool || null);
@@ -60,6 +62,22 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       onMapReady(map);
     }
   };
+
+  // Effect to fly to building location if selectedBuildingId changes
+  useEffect(() => {
+    if (selectedBuildingId && mapRef.current) {
+      const buildings = getAllSavedBuildings();
+      const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
+      
+      if (selectedBuilding && selectedBuilding.location) {
+        mapRef.current.flyTo(
+          [selectedBuilding.location.y, selectedBuilding.location.x], 
+          18, 
+          { animate: true, duration: 1 }
+        );
+      }
+    }
+  }, [selectedBuildingId]);
 
   // Update local tool state when prop changes
   React.useEffect(() => {
@@ -96,6 +114,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         <DrawingControls 
           onCreated={handleCreatedShape}
           activeTool={localActiveTool || null}
+          selectedBuildingId={selectedBuildingId}
         />
         
         <MarkersList

@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
 import { toast } from 'sonner';
@@ -9,10 +9,12 @@ import L from 'leaflet';
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool?: string | null;
+  selectedBuildingId?: string | null;
 }
 
-const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
+const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingControlsProps) => {
   const editControlRef = useRef<any>(null);
+  const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
   
   // If we want to react to activeTool changes in the future
   useEffect(() => {
@@ -43,6 +45,45 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
       }
     }
   }, [activeTool]);
+
+  // Effect to highlight the selected building
+  useEffect(() => {
+    if (selectedBuildingId) {
+      // Reset all layers to default style first
+      Object.entries(drawnLayers).forEach(([id, layer]) => {
+        // Check if the layer is a Path type and has setStyle
+        if ('setStyle' in layer) {
+          const pathLayer = layer as L.Path;
+          pathLayer.setStyle({
+            color: '#1EAEDB',
+            weight: 3,
+            opacity: 0.8,
+            fillColor: '#D3E4FD',
+            fillOpacity: 0.5
+          });
+        }
+      });
+      
+      // Highlight the selected building
+      if (drawnLayers[selectedBuildingId] && 'setStyle' in drawnLayers[selectedBuildingId]) {
+        const selectedLayer = drawnLayers[selectedBuildingId] as L.Path;
+        selectedLayer.setStyle({
+          color: '#FFA500',       // Orange border
+          weight: 4,              // Thicker border
+          opacity: 1,             // Full opacity
+          fillColor: '#FFD700',   // Gold fill
+          fillOpacity: 0.7        // More opaque
+        });
+        
+        // Bring to front to ensure visibility
+        if ('bringToFront' in selectedLayer) {
+          selectedLayer.bringToFront();
+        }
+        
+        toast.info("Selected building highlighted on map");
+      }
+    }
+  }, [selectedBuildingId, drawnLayers]);
   
   return (
     <FeatureGroup>
@@ -91,6 +132,12 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
             (options as any).id = id;
             (options as any).isDrawn = true;
             (options as any).buildingId = id;
+            
+            // Store the layer reference for later highlighting
+            setDrawnLayers(prev => ({
+              ...prev,
+              [id]: layer
+            }));
             
             // Convert to GeoJSON for storage
             const geoJSON = layer.toGeoJSON();

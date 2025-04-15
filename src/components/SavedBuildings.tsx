@@ -7,7 +7,7 @@ import { Building2, Trash2, MapPin } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface SavedBuildingsProps {
-  onBuildingSelect: (location: { x: number, y: number, label: string }) => void;
+  onBuildingSelect: (building: { id: string, name: string, x: number, y: number, label: string }) => void;
 }
 
 const SavedBuildings = ({ onBuildingSelect }: SavedBuildingsProps) => {
@@ -39,8 +39,14 @@ const SavedBuildings = ({ onBuildingSelect }: SavedBuildingsProps) => {
     loadBuildings();
   };
   
-  const handleSelect = (location: { x: number, y: number, label: string }) => {
-    onBuildingSelect(location);
+  const handleSelect = (building: Building) => {
+    onBuildingSelect({
+      id: building.id,
+      name: building.name,
+      x: building.location.x,
+      y: building.location.y,
+      label: building.location.label
+    });
   };
   
   if (buildings.length === 0) {
@@ -66,7 +72,7 @@ const SavedBuildings = ({ onBuildingSelect }: SavedBuildingsProps) => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => handleSelect(buildingsGroup[0].location)}
+                onClick={() => handleSelect(buildingsGroup[0])}
               >
                 View
               </Button>
@@ -88,14 +94,24 @@ const SavedBuildings = ({ onBuildingSelect }: SavedBuildingsProps) => {
                     </div>
                   </div>
                   
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => handleDelete(building.id)}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
+                  <div className="flex items-center">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleSelect(building)}
+                    >
+                      <MapPin size={14} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleDelete(building.id)}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

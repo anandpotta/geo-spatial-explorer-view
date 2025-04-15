@@ -5,9 +5,12 @@ import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';
+import { Building } from '@/utils/building-utils';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium'); // Always start with cesium
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
@@ -23,6 +26,10 @@ const GeoSpatialExplorer = () => {
   const handleLocationSelect = (location: Location) => {
     console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
+    
+    // Reset selected building when changing location
+    setSelectedBuildingId(null);
+    setSelectedBuilding(null);
     
     // Always force cesium view when selecting a new location
     setCurrentView('cesium');
@@ -64,15 +71,45 @@ const GeoSpatialExplorer = () => {
     setFlyCompleted(false);
   };
   
+  const handleBuildingSelect = (building: Building) => {
+    setSelectedBuildingId(building.id);
+    setSelectedBuilding(building);
+    
+    // If we're not in Leaflet view, switch to it after Cesium view
+    if (currentView !== 'leaflet') {
+      setCurrentView('cesium');
+      setFlyCompleted(false);
+      
+      // Make sure we have the location set
+      setSelectedLocation(building.location);
+      
+      // We'll transition to leaflet view after fly complete
+      toast({
+        title: 'Building selected',
+        description: `Navigating to ${building.name}`,
+        duration: 3000,
+      });
+    } else {
+      // If already in leaflet view, just highlight the building
+      toast({
+        title: 'Building selected',
+        description: `${building.name} highlighted on map`,
+        duration: 3000,
+      });
+    }
+  };
+  
   return (
     <div className="w-full h-screen flex bg-black overflow-hidden">
       {/* Left Panel */}
       <ExplorerSidebar 
         selectedLocation={selectedLocation}
+        selectedBuilding={selectedBuilding}
         currentView={currentView}
         flyCompleted={flyCompleted}
         setCurrentView={setCurrentView}
         onSavedLocationSelect={handleSavedLocationSelect}
+        onBuildingSelect={handleBuildingSelect}
       />
       
       {/* Right Panel - Map View */}
@@ -81,6 +118,7 @@ const GeoSpatialExplorer = () => {
         <MapContent 
           currentView={currentView}
           selectedLocation={selectedLocation}
+          selectedBuildingId={selectedBuildingId}
           onMapReady={() => setIsMapReady(true)}
           onFlyComplete={handleFlyComplete}
           onLocationSelect={handleLocationSelect}

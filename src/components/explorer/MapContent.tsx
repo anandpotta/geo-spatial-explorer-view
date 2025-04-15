@@ -12,6 +12,7 @@ import ShapeTools from '../drawing/ShapeTools';
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
   selectedLocation: Location | undefined;
+  selectedBuildingId?: string | null;
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
@@ -20,6 +21,7 @@ interface MapContentProps {
 const MapContent = ({ 
   currentView, 
   selectedLocation, 
+  selectedBuildingId,
   onMapReady, 
   onFlyComplete,
   onLocationSelect 
@@ -104,6 +106,7 @@ const MapContent = ({
             selectedLocation={selectedLocation} 
             onMapReady={handleLeafletMapRef}
             activeTool={activeTool}
+            selectedBuildingId={selectedBuildingId}
           />
         </div>
         

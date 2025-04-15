@@ -2,26 +2,32 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, MapPin, Map, Layers, UserRoundSearch } from 'lucide-react';
+import { Building2, MapPin, Map, Layers, UserRoundSearch, X } from 'lucide-react';
 import { Location } from '@/utils/geo-utils';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SavedLocations from '../SavedLocations';
 import SavedBuildings from '../SavedBuildings';
+import { Building } from '@/utils/building-utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface ExplorerSidebarProps {
   selectedLocation?: Location;
+  selectedBuilding?: Building | null;
   currentView: 'cesium' | 'leaflet';
   flyCompleted: boolean;
   setCurrentView: (view: 'cesium' | 'leaflet') => void;
   onSavedLocationSelect: (position: [number, number]) => void;
+  onBuildingSelect: (building: Building) => void;
 }
 
 const ExplorerSidebar = ({ 
   selectedLocation, 
+  selectedBuilding,
   currentView, 
   flyCompleted, 
   setCurrentView,
-  onSavedLocationSelect 
+  onSavedLocationSelect,
+  onBuildingSelect
 }: ExplorerSidebarProps) => {
   const [tab, setTab] = useState<string>("locations");
   
@@ -29,17 +35,23 @@ const ExplorerSidebar = ({
     setCurrentView(view);
   };
   
-  const handleBuildingSelect = (location: { x: number, y: number, label: string }) => {
-    // Create a Location object from the building location
-    const locationObj: Location = {
-      id: `loc-${location.x}-${location.y}`,
-      label: location.label,
-      x: location.x,
-      y: location.y
+  const handleBuildingSelect = (location: { x: number, y: number, label: string, id: string, name: string }) => {
+    // Create a Building object using the data we have
+    const buildingObj: Building = {
+      id: location.id,
+      name: location.name,
+      locationKey: `${location.y}-${location.x}`,
+      location: {
+        id: `loc-${location.x}-${location.y}`,
+        label: location.label,
+        x: location.x,
+        y: location.y
+      },
+      createdAt: new Date()
     };
     
-    // Similar to onSavedLocationSelect, but with the Location object
-    onSavedLocationSelect([location.y, location.x]);
+    // Pass to parent handler
+    onBuildingSelect(buildingObj);
   };
   
   return (
@@ -73,8 +85,34 @@ const ExplorerSidebar = ({
         </div>
       </div>
       
+      {/* Selected Building Info */}
+      {selectedBuilding && (
+        <div className="p-4 border-b bg-accent/20">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-medium flex items-center">
+              <Building2 className="mr-1 h-4 w-4" /> Selected Building
+            </h2>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6"
+              onClick={() => onBuildingSelect({ ...selectedBuilding, id: '' })} // Clear selection
+            >
+              <X size={14} />
+            </Button>
+          </div>
+          <p className="text-sm font-semibold">{selectedBuilding.name}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {selectedBuilding.location.label}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Created {formatDistanceToNow(selectedBuilding.createdAt, { addSuffix: true })}
+          </p>
+        </div>
+      )}
+      
       {/* Location Info */}
-      {selectedLocation && (
+      {selectedLocation && !selectedBuilding && (
         <div className="p-4 border-b">
           <h2 className="text-sm font-medium mb-1">Selected Location</h2>
           <p className="text-sm font-semibold">{selectedLocation.label}</p>
