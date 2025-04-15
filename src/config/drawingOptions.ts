@@ -8,7 +8,8 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       fillColor: '#D3E4FD',
       fillOpacity: 0.5,
       dashArray: '5, 10'
-    }
+    },
+    showArea: false // Disable area measurement to avoid the error
   },
   polygon: {
     shapeOptions: {
@@ -24,7 +25,7 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       color: '#e1e100',
       message: '<strong>Drawing error:</strong> Shapes cannot intersect!'
     },
-    showArea: true
+    showArea: false // Disable area measurement to avoid the error
   },
   circle: {
     shapeOptions: {
