@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, MapPin, Map, Layers, UserRoundSearch, X } from 'lucide-react';
-import { Location } from '@/utils/geo-utils';
+import { Location } from '@/utils/location/types';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SavedLocations from '../SavedLocations';
 import SavedBuildings from '../SavedBuildings';
@@ -45,7 +44,8 @@ const ExplorerSidebar = ({
         id: uuidv4(),
         label: location.label,
         x: location.x,
-        y: location.y
+        y: location.y,
+        id: uuidv4()
       },
       createdAt: new Date(),
       type: 'polygon',

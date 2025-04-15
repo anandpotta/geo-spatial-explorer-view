@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Location } from '@/utils/geo-utils';
+import { Location } from '@/utils/location/types';
 import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
