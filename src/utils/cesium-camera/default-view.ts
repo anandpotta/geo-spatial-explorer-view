@@ -13,14 +13,15 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   try {
     // Force a bright, visible blue globe with improved settings
     if (viewer.scene && viewer.scene.globe) {
-      // Use an even brighter, more vibrant blue
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+      // Use an even brighter, more vibrant blue to improve visibility
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.8, 1.0, 1.0);
       viewer.scene.globe.show = true;
       
       // Force globe visibility with enhanced settings
       viewer.scene.globe.showGroundAtmosphere = true;
       viewer.scene.globe.enableLighting = true;
       viewer.scene.skyAtmosphere.show = true;
+      viewer.scene.skyAtmosphere.brightness = 5.0; // Increase atmosphere brightness
       viewer.scene.fog.enabled = false; // Disable fog for better visibility
       
       // Ensure the globe is fully opaque - using the correct type
@@ -28,23 +29,26 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
         viewer.scene.globe.translucency.enabled = false;
       }
       
-      // Set stronger lighting
+      // Set stronger lighting for better visibility
       viewer.scene.light = new Cesium.DirectionalLight({
         direction: Cesium.Cartesian3.normalize(
           new Cesium.Cartesian3(1, 0, -1),
           new Cesium.Cartesian3()
         ),
         color: new Cesium.Color(1.0, 1.0, 1.0, 1.0),
-        intensity: 2.0
+        intensity: 5.0  // Increase light intensity
       });
+      
+      // Make sure shadows are disabled for better performance and visibility
+      viewer.scene.shadowMap.enabled = false;
     }
     
     // Position the camera at a better angle and closer for improved visibility
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 8000000.0), // Closer to Earth, slightly tilted view
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 10000000.0), // Even closer to Earth
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-45.0), // Increased angle looking down at globe
+        pitch: Cesium.Math.toRadians(-30.0), // Adjusted angle for better visibility
         roll: 0.0
       }
     });
@@ -57,7 +61,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
     
     // Force immediate renders with multiple calls
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 100; i++) { // Increased render calls
       viewer.scene.requestRender();
     }
     
