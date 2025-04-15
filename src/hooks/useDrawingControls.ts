@@ -6,8 +6,9 @@ import L from 'leaflet';
 export const useDrawingControls = (activeTool: string | null) => {
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
-  // Use a ref to track if the control has already been mounted
+  // Use refs to track mounting and previous active tool state
   const controlMountedRef = useRef(false);
+  const prevActiveToolRef = useRef<string | null>(null);
 
   const onDrawControlMounted = useCallback((drawingControl: any) => {
     if (drawingControl && !controlMountedRef.current) {
@@ -19,8 +20,12 @@ export const useDrawingControls = (activeTool: string | null) => {
 
   // Use useEffect to handle activeTool changes
   useEffect(() => {
-    if (!activeTool || !drawControl) return;
+    // Skip if no active tool or draw control, or if the tool hasn't changed
+    if (!activeTool || !drawControl || activeTool === prevActiveToolRef.current) return;
 
+    // Update the previous active tool ref
+    prevActiveToolRef.current = activeTool;
+    
     try {
       const toolbar = drawControl._toolbars?.draw;
       if (!toolbar) return;
