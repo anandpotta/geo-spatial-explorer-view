@@ -39,6 +39,10 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Sync deletion with backend
-  deleteMarkerFromBackend(id);
+  // Sync deletion with backend using the syncMarkersWithBackend function
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    // Pass the updated list of markers to sync
+    syncMarkersWithBackend(filteredMarkers);
+  }
 }

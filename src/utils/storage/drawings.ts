@@ -40,6 +40,10 @@ export function deleteDrawing(id: string): void {
   const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);
   localStorage.setItem('savedDrawings', JSON.stringify(filteredDrawings));
   
-  // Sync deletion with backend
-  deleteDrawingFromBackend(id);
+  // Sync deletion with backend using the syncDrawingsWithBackend function
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    // Pass the updated list of drawings to sync
+    syncDrawingsWithBackend(filteredDrawings);
+  }
 }

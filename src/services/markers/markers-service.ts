@@ -18,7 +18,10 @@ export async function fetchMarkers(): Promise<LocationMarker[]> {
   // Try to fetch from backend
   try {
     const markers = await apiCall<LocationMarker[]>('markers');
-    markersStorage.saveMarker(markers);
+    // Store markers individually to avoid type mismatch
+    markers.forEach(marker => {
+      markersStorage.saveMarker(marker);
+    });
     return markers;
   } catch (error) {
     console.error('Error fetching markers:', error);
