@@ -16,7 +16,7 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
   
-  // Use a callback to get the reference from the ref prop
+  // Use a callback to get the reference from the EditControl
   const handleEditControlReady = useCallback((editControl: any) => {
     if (editControl) {
       setDrawControl(editControl);
