@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,16 +37,16 @@ const ExplorerSidebar = ({
   };
   
   const handleBuildingSelect = (location: { x: number, y: number, label: string, name: string }) => {
+    const locationId = uuidv4();
     const buildingObj: Building = {
       id: uuidv4(),
       name: location.name,
       locationKey: `${location.y}-${location.x}`,
       location: {
-        id: uuidv4(),
+        id: locationId,
         label: location.label,
         x: location.x,
-        y: location.y,
-        id: uuidv4()
+        y: location.y
       },
       createdAt: new Date(),
       type: 'polygon',
