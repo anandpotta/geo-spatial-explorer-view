@@ -7,31 +7,42 @@ interface CesiumContainerProps {
 
 /**
  * Dedicated container component for Cesium viewer with enhanced visibility
+ * and optimized rendering performance
  */
 const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
   // Force visibility using an effect with more aggressive approach
+  // but with optimized performance
   useEffect(() => {
     // Ensure the container is fully visible
     if (containerRef.current) {
-      // Apply critical visibility styles
-      containerRef.current.style.visibility = 'visible';
-      containerRef.current.style.display = 'block';
-      containerRef.current.style.opacity = '1';
-      containerRef.current.style.zIndex = '99999'; // Maximum z-index
-      containerRef.current.dataset.cesiumContainer = "true";
+      // Batch style changes to avoid multiple reflows
+      const applyStyles = () => {
+        // Apply critical visibility styles
+        containerRef.current!.style.cssText = `
+          visibility: visible !important;
+          display: block !important;
+          opacity: 1 !important;
+          z-index: 99999 !important;
+          width: 100% !important;
+          height: 100% !important;
+          min-height: 500px !important;
+          background: black !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          pointer-events: auto !important;
+          isolation: isolate !important;
+        `;
+        
+        containerRef.current!.dataset.cesiumContainer = "true";
+      };
       
-      // Force dimensions
-      containerRef.current.style.width = '100%';
-      containerRef.current.style.height = '100%';
-      containerRef.current.style.minHeight = '500px';
+      // Use requestAnimationFrame to batch style changes
+      requestAnimationFrame(applyStyles);
       
-      // Force repaint by triggering layout
-      void containerRef.current.offsetHeight;
-      
-      // Clear any existing background
-      containerRef.current.style.background = 'black';
-      
-      // Add an always-visible style to all Cesium elements
+      // Add an always-visible style to all Cesium elements (once)
       const existingStyle = document.getElementById('cesium-force-visibility');
       if (!existingStyle) {
         const style = document.createElement('style');
@@ -56,9 +67,6 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         `;
         document.head.appendChild(style);
       }
-      
-      // Explicitly set the position to absolute instead of fixed
-      containerRef.current.style.position = 'absolute';
     }
   }, [containerRef]);
   
