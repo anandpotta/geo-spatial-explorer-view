@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -6,6 +5,7 @@ import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import { Building } from '@/utils/building-utils';
+import { v4 as uuidv4 } from 'uuid';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
@@ -16,7 +16,6 @@ const GeoSpatialExplorer = () => {
   const [flyCompleted, setFlyCompleted] = useState(false);
   const { toast } = useToast();
   
-  // Effect to handle initial map load
   useEffect(() => {
     if (isMapReady) {
       console.log('Map is ready for interactions');
@@ -27,11 +26,9 @@ const GeoSpatialExplorer = () => {
     console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
     
-    // Reset selected building when changing location
     setSelectedBuildingId(null);
     setSelectedBuilding(null);
     
-    // Always force cesium view when selecting a new location
     setCurrentView('cesium');
     setFlyCompleted(false);
     
@@ -46,7 +43,6 @@ const GeoSpatialExplorer = () => {
     console.log('Fly complete in Explorer, switching to leaflet view');
     setFlyCompleted(true);
     
-    // Short delay before switching to leaflet view for a smoother transition
     setTimeout(() => {
       setCurrentView('leaflet');
       toast({
@@ -58,16 +54,15 @@ const GeoSpatialExplorer = () => {
   };
   
   const handleSavedLocationSelect = (position: [number, number]) => {
-    // Create a simple location object from coordinates with a unique ID
     const location: Location = {
-      id: `loc-${position[0]}-${position[1]}`,
+      id: uuidv4(),
       label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
       y: position[0],
       x: position[1]
     };
     
     setSelectedLocation(location);
-    setCurrentView('cesium'); // Start with Cesium view for the full experience
+    setCurrentView('cesium');
     setFlyCompleted(false);
   };
   
@@ -75,22 +70,18 @@ const GeoSpatialExplorer = () => {
     setSelectedBuildingId(building.id);
     setSelectedBuilding(building);
     
-    // If we're not in Leaflet view, switch to it after Cesium view
     if (currentView !== 'leaflet') {
       setCurrentView('cesium');
       setFlyCompleted(false);
       
-      // Make sure we have the location set
       setSelectedLocation(building.location);
       
-      // We'll transition to leaflet view after fly complete
       toast({
         title: 'Building selected',
         description: `Navigating to ${building.name}`,
         duration: 3000,
       });
     } else {
-      // If already in leaflet view, just highlight the building
       toast({
         title: 'Building selected',
         description: `${building.name} highlighted on map`,
@@ -101,7 +92,6 @@ const GeoSpatialExplorer = () => {
   
   return (
     <div className="w-full h-screen flex bg-black overflow-hidden">
-      {/* Left Panel */}
       <ExplorerSidebar 
         selectedLocation={selectedLocation}
         selectedBuilding={selectedBuilding}
@@ -112,9 +102,7 @@ const GeoSpatialExplorer = () => {
         onBuildingSelect={handleBuildingSelect}
       />
       
-      {/* Right Panel - Map View */}
       <div className="flex-1 relative bg-black">
-        {/* Map content */}
         <MapContent 
           currentView={currentView}
           selectedLocation={selectedLocation}
@@ -124,7 +112,6 @@ const GeoSpatialExplorer = () => {
           onLocationSelect={handleLocationSelect}
         />
         
-        {/* Sync status indicator */}
         <div className="absolute bottom-5 right-5 z-[10001]">
           <SyncStatusIndicator />
         </div>

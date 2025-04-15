@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +8,7 @@ import SavedLocations from '../SavedLocations';
 import SavedBuildings from '../SavedBuildings';
 import { Building } from '@/utils/building-utils';
 import { formatDistanceToNow } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ExplorerSidebarProps {
   selectedLocation?: Location;
@@ -35,14 +35,13 @@ const ExplorerSidebar = ({
     setCurrentView(view);
   };
   
-  const handleBuildingSelect = (location: { id: string, x: number, y: number, label: string, name: string }) => {
-    // Create a Building object using the data we have
+  const handleBuildingSelect = (location: { x: number, y: number, label: string, name: string }) => {
     const buildingObj: Building = {
-      id: location.id,
+      id: uuidv4(),
       name: location.name,
       locationKey: `${location.y}-${location.x}`,
       location: {
-        id: location.id,
+        id: uuidv4(),
         label: location.label,
         x: location.x,
         y: location.y
@@ -52,7 +51,6 @@ const ExplorerSidebar = ({
       geoJSON: {}
     };
     
-    // Pass to parent handler
     onBuildingSelect(buildingObj);
   };
   
