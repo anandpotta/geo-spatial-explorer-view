@@ -2,9 +2,10 @@
 import { MapPin, Square, Circle } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 import DrawingToolButton from './DrawingToolButton';
+import React from 'react';
 
 // Custom polygon icon since it's not available in lucide-react
-const PolygonIcon: LucideIcon = (props) => (
+const PolygonIcon: LucideIcon = React.forwardRef((props, ref) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -15,11 +16,14 @@ const PolygonIcon: LucideIcon = (props) => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    ref={ref}
     {...props}
   >
     <path d="M12 4l8 4v8l-8 4-8-4V8l8-4z" />
   </svg>
-);
+));
+
+PolygonIcon.displayName = 'PolygonIcon';
 
 interface ShapeToolsProps {
   activeTool: string | null;
