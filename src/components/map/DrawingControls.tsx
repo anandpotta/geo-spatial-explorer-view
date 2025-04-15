@@ -62,6 +62,25 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
             const layerWithOptions = layer as L.Path;
             const options = layerWithOptions.options || {};
             
+            // Apply styling to the drawn shapes
+            if (layerType === 'polygon' || layerType === 'rectangle') {
+              layer.setStyle({
+                color: '#1EAEDB',       // Border color - bright blue
+                weight: 3,              // Border width
+                opacity: 0.8,           // Border opacity
+                fillColor: '#D3E4FD',   // Fill color - soft blue
+                fillOpacity: 0.5        // Fill opacity
+              });
+            } else if (layerType === 'circle') {
+              layer.setStyle({
+                color: '#1EAEDB',       // Border color - bright blue
+                weight: 3,              // Border width
+                opacity: 0.8,           // Border opacity
+                fillColor: '#D3E4FD',   // Fill color - soft blue
+                fillOpacity: 0.5        // Fill opacity
+              });
+            }
+            
             (options as any).id = id;
             (options as any).isDrawn = true;
             (options as any).buildingId = id;
@@ -82,9 +101,38 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
           }
         }}
         draw={{
-          rectangle: true,
-          polygon: true,
-          circle: true,
+          rectangle: {
+            shapeOptions: {
+              color: '#1EAEDB',     // Border color
+              weight: 3,            // Border width
+              opacity: 0.8,         // Border opacity
+              fillColor: '#D3E4FD', // Fill color
+              fillOpacity: 0.5      // Fill opacity
+            }
+          },
+          polygon: {
+            shapeOptions: {
+              color: '#1EAEDB',     // Border color
+              weight: 3,            // Border width
+              opacity: 0.8,         // Border opacity
+              fillColor: '#D3E4FD', // Fill color
+              fillOpacity: 0.5      // Fill opacity
+            },
+            allowIntersection: false,
+            drawError: {
+              color: '#e1e100',
+              message: '<strong>Drawing error:</strong> Shapes cannot intersect!'
+            }
+          },
+          circle: {
+            shapeOptions: {
+              color: '#1EAEDB',     // Border color
+              weight: 3,            // Border width
+              opacity: 0.8,         // Border opacity
+              fillColor: '#D3E4FD', // Fill color
+              fillOpacity: 0.5      // Fill opacity
+            }
+          },
           circlemarker: false,
           marker: true,
           polyline: false

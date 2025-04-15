@@ -7,6 +7,7 @@ import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
+import ShapeTools from '../drawing/ShapeTools';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
@@ -61,6 +62,10 @@ const MapContent = ({
     }
   };
 
+  const handleToolSelect = (tool: string) => {
+    setActiveTool(prev => prev === tool ? null : tool);
+  };
+
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
@@ -107,6 +112,15 @@ const MapContent = ({
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
         />
+
+        {currentView === 'leaflet' && (
+          <div className="absolute right-4 top-20 z-[10000]">
+            <ShapeTools 
+              activeTool={activeTool} 
+              onToolSelect={handleToolSelect} 
+            />
+          </div>
+        )}
       </div>
       
       <div 

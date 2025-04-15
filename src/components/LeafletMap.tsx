@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -11,6 +11,7 @@ import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
 import MarkersList from './map/markers/MarkersList';
 import BuildingDialog from './map/buildings/BuildingDialog';
+import ShapeTools from './drawing/ShapeTools';
 import { useMapState } from '@/hooks/useMapState';
 import { MapLayers } from './map/layers/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
@@ -28,6 +29,8 @@ interface LeafletMapProps {
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const { position, zoom } = useMapState(selectedLocation);
+  const [localActiveTool, setLocalActiveTool] = useState<string | null>(activeTool || null);
+  
   const {
     markers,
     tempMarker,
@@ -58,6 +61,15 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   };
 
+  // Update local tool state when prop changes
+  React.useEffect(() => {
+    setLocalActiveTool(activeTool || null);
+  }, [activeTool]);
+
+  const handleToolSelect = (tool: string) => {
+    setLocalActiveTool(tool);
+  };
+
   return (
     <div className="w-full h-full relative">
       <MapContainer 
@@ -83,7 +95,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         
         <DrawingControls 
           onCreated={handleCreatedShape}
-          activeTool={activeTool || null}
+          activeTool={localActiveTool || null}
         />
         
         <MarkersList
@@ -97,8 +109,15 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
           setMarkerType={setMarkerType}
         />
         
-        <MapEvents onMapClick={(latlng) => handleMapClick(latlng, activeTool)} />
+        <MapEvents onMapClick={(latlng) => handleMapClick(latlng, localActiveTool)} />
       </MapContainer>
+
+      <div className="absolute right-4 top-4 z-[1000]">
+        <ShapeTools 
+          activeTool={localActiveTool} 
+          onToolSelect={handleToolSelect}
+        />
+      </div>
 
       <BuildingDialog
         show={showDrawingDialog}
