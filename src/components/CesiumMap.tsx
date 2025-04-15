@@ -49,7 +49,8 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
     document.head.appendChild(style);
     
     // Modify global cesium debug settings if available
-    if (window.CESIUM_BASE_URL) {
+    // Use type assertion or safe check for the CESIUM_BASE_URL property
+    if (typeof (window as any).CESIUM_BASE_URL !== 'undefined') {
       console.log("Setting Cesium debug mode ON to better visualize the globe");
     }
     
