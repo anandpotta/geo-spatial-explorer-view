@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
-import MapContent from './explorer/MapContent';
+import MapContent from './MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import { Building } from '@/utils/building-utils';
 import { v4 as uuidv4 } from 'uuid';
