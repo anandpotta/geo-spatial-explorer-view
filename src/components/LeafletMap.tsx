@@ -4,8 +4,7 @@ import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
-import { v4 as uuidv4 } from 'uuid';
+import { Location } from '@/utils/geo-utils';
 import { setupLeafletIcons } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
@@ -16,7 +15,7 @@ import BuildingDialog from './map/BuildingDialog';
 import { useMapState } from '@/hooks/useMapState';
 import { MapLayers } from './map/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
-import { toast } from 'sonner';
+import { useMarkers } from '@/hooks/useMarkers';
 
 setupLeafletIcons();
 
@@ -28,18 +27,18 @@ interface LeafletMapProps {
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
+  const { position, zoom } = useMapState(selectedLocation);
   const {
-    position,
-    zoom,
     markers,
-    setMarkers,
     tempMarker,
-    setTempMarker,
     markerName,
-    setMarkerName,
     markerType,
-    setMarkerType
-  } = useMapState(selectedLocation);
+    setMarkerName,
+    setMarkerType,
+    handleSaveMarker,
+    handleDeleteMarker,
+    handleMapClick
+  } = useMarkers();
 
   const {
     showBuildingDialog,
@@ -51,48 +50,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     handleSaveBuilding,
     loadSavedBuildings
   } = useBuildings(mapRef, selectedLocation);
-
-  const handleMapClick = (latlng: L.LatLng) => {
-    if (activeTool === 'marker' || (!activeTool && !tempMarker)) {
-      setTempMarker([latlng.lat, latlng.lng]);
-      setMarkerName(selectedLocation?.label || 'New Building');
-    }
-  };
-
-  const handleShapeCreated = (shape: any) => {
-    if (shape.type === 'marker') {
-      setTempMarker(shape.position);
-      setMarkerName('New Marker');
-    } else {
-      setCurrentDrawing(shape);
-      setBuildingName(selectedLocation?.label ? `Building at ${selectedLocation.label}` : 'New Building');
-      setShowBuildingDialog(true);
-    }
-  };
-
-  const handleSaveMarker = () => {
-    if (!tempMarker || !markerName.trim()) return;
-    
-    const newMarker: LocationMarker = {
-      id: uuidv4(),
-      name: markerName,
-      position: tempMarker,
-      type: markerType,
-      createdAt: new Date()
-    };
-    
-    saveMarker(newMarker);
-    setMarkers([...markers, newMarker]);
-    setTempMarker(null);
-    setMarkerName('');
-    toast.success("Location saved successfully");
-  };
-
-  const handleDeleteMarker = (id: string) => {
-    deleteMarker(id);
-    setMarkers(markers.filter(marker => marker.id !== id));
-    toast.success("Location removed");
-  };
 
   const handleSetMapRef = (map: L.Map) => {
     mapRef.current = map;
@@ -125,7 +82,15 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         )}
         
         <DrawingControls 
-          onCreated={handleShapeCreated} 
+          onCreated={(shape) => {
+            if (shape.type === 'marker') {
+              handleMapClick(shape.position, activeTool);
+            } else {
+              setCurrentDrawing(shape);
+              setBuildingName(selectedLocation?.label ? `Building at ${selectedLocation.label}` : 'New Building');
+              setShowBuildingDialog(true);
+            }
+          }}
           activeTool={activeTool || null}
         />
         
@@ -140,7 +105,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
           setMarkerType={setMarkerType}
         />
         
-        <MapEvents onMapClick={handleMapClick} />
+        <MapEvents onMapClick={(latlng) => handleMapClick(latlng, activeTool)} />
       </MapContainer>
 
       <BuildingDialog
