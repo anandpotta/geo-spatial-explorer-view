@@ -48,7 +48,7 @@ export const useDrawing = () => {
         geoJSON: currentDrawing.geoJSON,
         locationKey: `${coords[1].toFixed(4)}_${coords[0].toFixed(4)}`,
         location: {
-          id: locationId,
+          id: locationId, // Add the missing id property
           label: drawingName,
           y: coords[1],
           x: coords[0]

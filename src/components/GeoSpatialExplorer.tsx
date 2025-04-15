@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location } from '@/utils/location/types';
 import { useToast } from '@/components/ui/use-toast';
@@ -55,7 +56,7 @@ const GeoSpatialExplorer = () => {
   
   const handleSavedLocationSelect = (position: [number, number]) => {
     const location: Location = {
-      id: uuidv4(),
+      id: uuidv4(), // Add the missing id property
       label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
       y: position[0],
       x: position[1]
