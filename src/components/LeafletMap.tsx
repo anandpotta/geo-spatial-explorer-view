@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
@@ -11,7 +10,6 @@ import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
 import MarkersList from './map/markers/MarkersList';
 import BuildingDialog from './map/buildings/BuildingDialog';
-import ShapeTools from './drawing/ShapeTools';
 import { useMapState } from '@/hooks/useMapState';
 import { MapLayers } from './map/layers/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
@@ -20,6 +18,7 @@ import { useDrawing } from '@/hooks/useDrawing';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { getAllSavedBuildings } from '@/utils/building-utils';
 import { toast } from 'sonner';
+import DraggableDrawingTools from './drawing/DraggableDrawingTools';
 
 // Initialize Leaflet icons
 setupLeafletIcons();
@@ -67,10 +66,8 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
     }
   };
 
-  // Use the map events hook
   useMapEvents(mapRef.current, selectedLocation);
 
-  // Effect to fly to building location if selectedBuildingId changes
   useEffect(() => {
     if (selectedBuildingId && mapRef.current) {
       const buildings = getAllSavedBuildings();
@@ -89,7 +86,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
     }
   }, [selectedBuildingId]);
 
-  // Update local tool state when prop changes
   React.useEffect(() => {
     setLocalActiveTool(activeTool || null);
   }, [activeTool]);
@@ -144,12 +140,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
         <MapEvents onMapClick={(latlng) => handleMapClick(latlng, localActiveTool)} />
       </MapContainer>
 
-      <div className="absolute right-4 top-4 z-[10001]">
-        <ShapeTools 
-          activeTool={localActiveTool} 
-          onToolSelect={handleToolSelect}
-        />
-      </div>
+      <DraggableDrawingTools 
+        activeTool={localActiveTool} 
+        onToolSelect={handleToolSelect}
+      />
 
       {showDrawingDialog && (
         <BuildingDialog
