@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -58,10 +59,10 @@ export const useDrawing = () => {
         geoJSON: currentDrawing.geoJSON,
         locationKey: `${coords[1].toFixed(4)}_${coords[0].toFixed(4)}`,
         location: {
-          id: locationId, // Ensure location has an id
+          id: locationId,
           label: drawingName,
-          y: coords[1],
-          x: coords[0]
+          x: coords[0],
+          y: coords[1]
         },
         createdAt: new Date()
       };
