@@ -42,7 +42,7 @@ const ExplorerSidebar = ({
       name: location.name,
       locationKey: `${location.y}-${location.x}`,
       location: {
-        id: `loc-${location.x}-${location.y}`, // Adding id property to location object
+        id: location.id, // Ensure id is set correctly
         label: location.label,
         x: location.x,
         y: location.y

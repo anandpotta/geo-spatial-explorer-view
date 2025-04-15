@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Marker } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
@@ -17,4 +18,3 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
 };
 
 export default UserMarker;
-
