@@ -15,7 +15,7 @@ export const useCesiumGlobeVisibility = (
   useEffect(() => {
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
       // Force initial immediate renders
-      for (let i = 0; i < 60; i++) { // Significantly increased render cycles
+      for (let i = 0; i < 120; i++) { // Significantly increased render cycles
         viewerRef.current.scene.requestRender();
         
         // Ensure the globe is visible with bright color
@@ -26,7 +26,7 @@ export const useCesiumGlobeVisibility = (
       }
       
       // Force strategic renders at various intervals for better loading
-      const renderTimes = [10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000];
+      const renderTimes = [10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
       renderTimes.forEach(time => {
         setTimeout(() => {
           if (viewerRef.current && !viewerRef.current.isDestroyed()) {
@@ -44,7 +44,10 @@ export const useCesiumGlobeVisibility = (
               viewerRef.current.canvas.style.visibility = 'visible';
               viewerRef.current.canvas.style.display = 'block';
               viewerRef.current.canvas.style.opacity = '1';
-              viewerRef.current.canvas.style.zIndex = '999999';
+              viewerRef.current.canvas.style.zIndex = '2147483647';
+              
+              // Force correct dimensions
+              viewerRef.current.resize();
             }
             
             // Add a console log to indicate rendering is happening
@@ -79,14 +82,14 @@ export const useCesiumGlobeVisibility = (
           viewerRef.current.canvas.style.visibility = 'visible';
           viewerRef.current.canvas.style.display = 'block';
           viewerRef.current.canvas.style.opacity = '1';
-          viewerRef.current.canvas.style.zIndex = '999999';
+          viewerRef.current.canvas.style.zIndex = '2147483647';
         }
       } else {
         if (forceRenderRef.current) {
           clearInterval(forceRenderRef.current);
         }
       }
-    }, 50); // More frequent checks for better visibility
+    }, 25); // More frequent checks for better visibility
     
     return () => {
       if (forceRenderRef.current) {

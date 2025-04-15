@@ -17,7 +17,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       containerRef.current.style.visibility = 'visible';
       containerRef.current.style.display = 'block';
       containerRef.current.style.opacity = '1';
-      containerRef.current.style.zIndex = '999999'; // Maximum z-index
+      containerRef.current.style.zIndex = '2147483647'; // Maximum possible z-index
       containerRef.current.dataset.cesiumContainer = "true";
       
       // Force dimensions
@@ -32,26 +32,30 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       containerRef.current.style.background = 'black';
       
       // Add an always-visible style to all Cesium elements
-      const style = document.createElement('style');
-      style.textContent = `
-        [data-cesium-container="true"],
-        .cesium-viewer,
-        .cesium-viewer-cesiumWidgetContainer,
-        .cesium-widget,
-        .cesium-widget canvas {
-          visibility: visible !important;
-          display: block !important;
-          opacity: 1 !important;
-          z-index: 999999 !important;
-          position: absolute !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          background: black !important;
-        }
-      `;
-      document.head.appendChild(style);
+      const existingStyle = document.getElementById('cesium-force-visibility');
+      if (!existingStyle) {
+        const style = document.createElement('style');
+        style.id = 'cesium-force-visibility';
+        style.textContent = `
+          [data-cesium-container="true"],
+          .cesium-viewer,
+          .cesium-viewer-cesiumWidgetContainer,
+          .cesium-widget,
+          .cesium-widget canvas {
+            visibility: visible !important;
+            display: block !important;
+            opacity: 1 !important;
+            z-index: 2147483647 !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: black !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
       
       // Explicitly set the position to fixed to ensure it's above everything
       containerRef.current.style.position = 'fixed';
@@ -71,7 +75,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 999999, // Extremely high z-index
+        zIndex: 2147483647, // Maximum possible z-index
         background: '#000',
         visibility: 'visible',
         display: 'block',
