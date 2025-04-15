@@ -17,7 +17,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       containerRef.current.style.visibility = 'visible';
       containerRef.current.style.display = 'block';
       containerRef.current.style.opacity = '1';
-      containerRef.current.style.zIndex = '10000'; // High but not maximum z-index
+      containerRef.current.style.zIndex = '99999'; // Maximum z-index
       containerRef.current.dataset.cesiumContainer = "true";
       
       // Force dimensions
@@ -51,6 +51,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
             width: 100% !important;
             height: 100% !important;
             background: black !important;
+            z-index: 99999 !important;
           }
         `;
         document.head.appendChild(style);
@@ -79,7 +80,8 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         display: 'block',
         opacity: 1,
         pointerEvents: 'auto',
-        isolation: 'isolate'
+        isolation: 'isolate',
+        zIndex: 99999
       }}
     />
   );
