@@ -35,21 +35,21 @@ const ExplorerSidebar = ({
     setCurrentView(view);
   };
   
-  const handleBuildingSelect = (location: { x: number, y: number, label: string, id: string, name: string }) => {
+  const handleBuildingSelect = (location: { id: string, x: number, y: number, label: string, name: string }) => {
     // Create a Building object using the data we have
     const buildingObj: Building = {
       id: location.id,
       name: location.name,
       locationKey: `${location.y}-${location.x}`,
       location: {
-        id: location.id, // Ensure id is set correctly
+        id: location.id,
         label: location.label,
         x: location.x,
         y: location.y
       },
       createdAt: new Date(),
-      type: 'polygon', // Adding a default type value
-      geoJSON: {} // Adding an empty geoJSON object as a placeholder
+      type: 'polygon',
+      geoJSON: {}
     };
     
     // Pass to parent handler
