@@ -24,13 +24,13 @@ const DrawingToolButton = ({
             variant={isActive ? 'default' : 'outline'} 
             size="icon" 
             onClick={onClick}
-            className={`map-toolbar-button transition-all ${isActive ? 'shadow-md' : ''}`}
+            className={`map-toolbar-button transition-all ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'hover:bg-accent hover:text-accent-foreground'}`}
           >
             <Icon size={20} />
             <span className="sr-only">{label}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="left" className="bg-foreground text-background">
+        <TooltipContent side="left">
           <p>{label}</p>
         </TooltipContent>
       </Tooltip>

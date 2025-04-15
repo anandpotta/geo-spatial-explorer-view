@@ -9,49 +9,32 @@ export const useDrawingControls = (activeTool: string | null) => {
 
   const editControlRef = useCallback((element: any) => {
     if (element) {
-      console.log('EditControl ref received:', element);
       setDrawControl(element);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTool && drawControl) {
-      console.log('Active drawing tool:', activeTool);
-      
-      try {
-        if (drawControl._toolbars && drawControl._toolbars.draw) {
-          const toolbar = drawControl._toolbars.draw;
-          
-          if (activeTool === 'polygon' || activeTool === 'rectangle' || activeTool === 'circle') {
-            toolbar._modes.marker?.handler?.disable();
-          }
-          
-          switch (activeTool) {
-            case 'polygon':
-              if (toolbar._modes.polygon && toolbar._modes.polygon.handler) {
-                toolbar._modes.polygon.handler.enable();
-              }
-              break;
-            case 'rectangle':
-              if (toolbar._modes.rectangle && toolbar._modes.rectangle.handler) {
-                toolbar._modes.rectangle.handler.enable();
-              }
-              break;
-            case 'circle':
-              if (toolbar._modes.circle && toolbar._modes.circle.handler) {
-                toolbar._modes.circle.handler.enable();
-              }
-              break;
-            case 'marker':
-              if (toolbar._modes.marker && toolbar._modes.marker.handler) {
-                toolbar._modes.marker.handler.enable();
-              }
-              break;
-          }
+    if (!activeTool || !drawControl) return;
+
+    try {
+      const toolbar = drawControl._toolbars?.draw;
+      if (!toolbar) return;
+
+      // Disable all handlers first
+      Object.values(toolbar._modes).forEach((mode: any) => {
+        if (mode.handler) {
+          mode.handler.disable();
         }
-      } catch (error) {
-        console.error('Error enabling drawing tool:', error);
+      });
+
+      // Enable the selected tool
+      if (toolbar._modes[activeTool]?.handler) {
+        toolbar._modes[activeTool].handler.enable();
+        console.log(`Enabled ${activeTool} drawing tool`);
       }
+    } catch (error) {
+      console.error('Error enabling drawing tool:', error);
+      toast.error('Failed to enable drawing tool');
     }
   }, [activeTool, drawControl]);
 

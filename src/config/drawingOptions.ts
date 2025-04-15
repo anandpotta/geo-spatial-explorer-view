@@ -6,10 +6,11 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       weight: 3,
       opacity: 1,
       fillColor: '#D3E4FD',
-      fillOpacity: 0.5,
-      dashArray: '5, 10'
+      fillOpacity: 0.5
     },
-    showArea: false // Disable area measurement to avoid the error
+    showArea: true,
+    metric: true,
+    feet: false
   },
   polygon: {
     shapeOptions: {
@@ -17,15 +18,16 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       weight: 3,
       opacity: 1,
       fillColor: '#D3E4FD',
-      fillOpacity: 0.5,
-      dashArray: '5, 10'
+      fillOpacity: 0.5
     },
     allowIntersection: false,
+    showArea: true,
+    metric: true,
+    feet: false,
     drawError: {
       color: '#e1e100',
       message: '<strong>Drawing error:</strong> Shapes cannot intersect!'
-    },
-    showArea: false // Disable area measurement to avoid the error
+    }
   },
   circle: {
     shapeOptions: {
@@ -33,17 +35,17 @@ export const getDrawingOptions = (activeTool: string | null) => ({
       weight: 3,
       opacity: 1,
       fillColor: '#D3E4FD',
-      fillOpacity: 0.5,
-      dashArray: '5, 10'
+      fillOpacity: 0.5
     },
-    showRadius: true
+    showRadius: true,
+    metric: true,
+    feet: false
   },
   polyline: {
     shapeOptions: {
       color: '#1EAEDB',
       weight: 3,
-      opacity: 1,
-      dashArray: '5, 10'
+      opacity: 1
     },
     metric: true,
     feet: false,
@@ -54,11 +56,15 @@ export const getDrawingOptions = (activeTool: string | null) => ({
 });
 
 export const editOptions = {
-  remove: true,
   edit: {
     selectedPathOptions: {
       color: '#fe57a1',
-      dashArray: '5, 10'
+      opacity: 0.6,
+      dashArray: '10, 10',
+      fill: true,
+      fillColor: '#fe57a1',
+      fillOpacity: 0.1,
     }
-  }
+  },
+  remove: true
 };
