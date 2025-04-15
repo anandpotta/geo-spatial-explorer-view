@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+
+import { useEffect, useCallback, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
 import { toast } from 'sonner';
@@ -12,16 +13,21 @@ interface DrawingControlsProps {
 }
 
 const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingControlsProps) => {
-  const editControlRef = useRef<any>(null);
+  const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
   
+  // Use a callback to set the drawing control reference
+  const handleEditControlRef = useCallback((element: any) => {
+    if (element && element.leafletElement) {
+      setDrawControl(element.leafletElement);
+    }
+  }, []);
+  
   useEffect(() => {
-    if (activeTool && editControlRef.current) {
+    if (activeTool && drawControl) {
       console.log('Active drawing tool:', activeTool);
       
-      const drawControl = editControlRef.current?.leafletElement;
-      
-      if (drawControl && drawControl._toolbars && drawControl._toolbars.draw) {
+      if (drawControl._toolbars && drawControl._toolbars.draw) {
         const toolbar = drawControl._toolbars.draw;
         
         if (activeTool === 'polygon' || activeTool === 'rectangle' || activeTool === 'circle') {
@@ -44,7 +50,7 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
         }
       }
     }
-  }, [activeTool]);
+  }, [activeTool, drawControl]);
 
   useEffect(() => {
     if (selectedBuildingId) {
@@ -83,7 +89,8 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   return (
     <FeatureGroup>
       <EditControl
-        ref={editControlRef}
+        // Using onRef instead of ref
+        onRef={handleEditControlRef}
         position="topleft"
         onCreated={e => {
           const { layerType, layer } = e;

@@ -1,6 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
+import { Location } from './location/types';
 
 // Type definitions for building data
 export interface Building {
@@ -9,11 +10,7 @@ export interface Building {
   type: string; // polygon, rectangle, circle, etc.
   geoJSON: any; // GeoJSON representation of the building
   locationKey: string; // A unique key for the location (lat_long)
-  location: {
-    x: number;
-    y: number;
-    label: string;
-  };
+  location: Location;
   createdAt: Date;
 }
 
@@ -33,6 +30,11 @@ export const saveBuilding = (building: Building): void => {
     // Ensure the locationKey exists
     if (!building.locationKey) {
       building.locationKey = `${building.location.x.toFixed(4)}_${building.location.y.toFixed(4)}`;
+    }
+    
+    // Ensure location has an id
+    if (!building.location.id) {
+      building.location.id = uuidv4();
     }
     
     // Get existing buildings
