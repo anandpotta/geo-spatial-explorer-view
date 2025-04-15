@@ -39,7 +39,7 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
     }
 
     // Force multiple renders to ensure the globe is visible
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 50; i++) {
       viewer.scene.requestRender();
     }
     
@@ -52,40 +52,27 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
   // Use the globe visibility hook
   useCesiumGlobeVisibility(viewerRef, viewerReady);
 
-  // Additional attempts to ensure globe visibility
+  // Force globe visibility at specific intervals
   useEffect(() => {
-    if (viewerRef.current && viewerReady) {
-      // Add more aggressive visibility checks at various intervals
-      const intervals = [50, 100, 200, 500, 1000, 2000, 3000, 4000, 5000];
-      
-      intervals.forEach(interval => {
-        setTimeout(() => {
-          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-            console.log(`Forcing globe visibility at ${interval}ms`);
-            forceGlobeVisibility(viewerRef.current);
-            
-            // Set camera to better position to see the globe if not flying
-            if (!isFlying) {
-              viewerRef.current.camera.setView({
-                destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 10000000.0),
-                orientation: {
-                  heading: Cesium.Math.toRadians(0.0),
-                  pitch: Cesium.Math.toRadians(-45.0),
-                  roll: 0.0
-                }
-              });
-            }
-            
-            // Force resize and render
-            viewerRef.current.resize();
-            for (let i = 0; i < 10; i++) {
-              viewerRef.current.scene.requestRender();
-            }
+    const intervals = [100, 500, 1000, 2000, 3000];
+    
+    intervals.forEach(interval => {
+      const timeout = setTimeout(() => {
+        if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+          console.log(`Forcing globe visibility at ${interval}ms`);
+          forceGlobeVisibility(viewerRef.current);
+          
+          // Resize viewer and force renders
+          viewerRef.current.resize();
+          for (let i = 0; i < 5; i++) {
+            viewerRef.current.scene.requestRender();
           }
-        }, interval);
-      });
-    }
-  }, [viewerReady, isFlying]);
+        }
+      }, interval);
+      
+      return () => clearTimeout(timeout);
+    });
+  }, [viewerReady]);
 
   // Handle fly operations start/end
   const handleFlyComplete = () => {
