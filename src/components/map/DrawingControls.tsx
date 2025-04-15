@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
@@ -16,17 +15,18 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
   const editControlRef = useRef<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
   
-  // If we want to react to activeTool changes in the future
   useEffect(() => {
     if (activeTool && editControlRef.current) {
       console.log('Active drawing tool:', activeTool);
       
-      // Get the leaflet draw control
       const drawControl = editControlRef.current?.leafletElement;
       
-      // Activate the appropriate drawing tool based on activeTool
       if (drawControl && drawControl._toolbars && drawControl._toolbars.draw) {
         const toolbar = drawControl._toolbars.draw;
+        
+        if (activeTool === 'polygon' || activeTool === 'rectangle' || activeTool === 'circle') {
+          toolbar._modes.marker?.handler?.disable();
+        }
         
         switch (activeTool) {
           case 'polygon':
@@ -46,12 +46,9 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
     }
   }, [activeTool]);
 
-  // Effect to highlight the selected building
   useEffect(() => {
     if (selectedBuildingId) {
-      // Reset all layers to default style first
       Object.entries(drawnLayers).forEach(([id, layer]) => {
-        // Check if the layer is a Path type and has setStyle
         if ('setStyle' in layer) {
           const pathLayer = layer as L.Path;
           pathLayer.setStyle({
@@ -64,18 +61,16 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
         }
       });
       
-      // Highlight the selected building
       if (drawnLayers[selectedBuildingId] && 'setStyle' in drawnLayers[selectedBuildingId]) {
         const selectedLayer = drawnLayers[selectedBuildingId] as L.Path;
         selectedLayer.setStyle({
-          color: '#FFA500',       // Orange border
-          weight: 4,              // Thicker border
-          opacity: 1,             // Full opacity
-          fillColor: '#FFD700',   // Gold fill
-          fillOpacity: 0.7        // More opaque
+          color: '#FFA500',
+          weight: 4,
+          opacity: 1,
+          fillColor: '#FFD700',
+          fillOpacity: 0.7
         });
         
-        // Bring to front to ensure visibility
         if ('bringToFront' in selectedLayer) {
           selectedLayer.bringToFront();
         }
@@ -95,60 +90,36 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
           
           const id = uuidv4();
           
-          if (layerType === 'marker' && 'getLatLng' in layer) {
-            const markerLayer = layer as L.Marker;
-            const { lat, lng } = markerLayer.getLatLng();
-            onCreated({ type: 'marker', position: [lat, lng], id });
-          } else {
+          if (layerType !== 'marker') {
             const layerWithOptions = layer as L.Path;
             const options = layerWithOptions.options || {};
             
-            // Apply styling to the drawn shapes - only apply to Path types (polygons, circles, rectangles)
-            // Check if it's a Path by checking for setStyle method
-            if (layerType === 'polygon' || layerType === 'rectangle') {
-              // Check if the layer is a Path type and has setStyle
-              if ('setStyle' in layer) {
-                layer.setStyle({
-                  color: '#1EAEDB',       // Border color - bright blue
-                  weight: 3,              // Border width
-                  opacity: 0.8,           // Border opacity
-                  fillColor: '#D3E4FD',   // Fill color - soft blue
-                  fillOpacity: 0.5        // Fill opacity
-                });
-              }
-            } else if (layerType === 'circle') {
-              // Check if the layer is a Path type and has setStyle
-              if ('setStyle' in layer) {
-                layer.setStyle({
-                  color: '#1EAEDB',       // Border color - bright blue
-                  weight: 3,              // Border width
-                  opacity: 0.8,           // Border opacity
-                  fillColor: '#D3E4FD',   // Fill color - soft blue
-                  fillOpacity: 0.5        // Fill opacity
-                });
-              }
+            if ('setStyle' in layer) {
+              layer.setStyle({
+                color: '#1EAEDB',
+                weight: 3,
+                opacity: 0.8,
+                fillColor: '#D3E4FD',
+                fillOpacity: 0.5
+              });
             }
             
             (options as any).id = id;
             (options as any).isDrawn = true;
             (options as any).buildingId = id;
             
-            // Store the layer reference for later highlighting
             setDrawnLayers(prev => ({
               ...prev,
               [id]: layer
             }));
             
-            // Convert to GeoJSON for storage
             const geoJSON = layer.toGeoJSON();
-            console.log('GeoJSON:', geoJSON);
             
             toast.success(`${layerType} created successfully`);
             
-            // Pass the layer to parent for proper tracking
             onCreated({ 
               type: layerType, 
-              layer, // Pass the actual layer reference
+              layer,
               geoJSON,
               id
             });
@@ -157,20 +128,20 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
         draw={{
           rectangle: {
             shapeOptions: {
-              color: '#1EAEDB',     // Border color
-              weight: 3,            // Border width
-              opacity: 0.8,         // Border opacity
-              fillColor: '#D3E4FD', // Fill color
-              fillOpacity: 0.5      // Fill opacity
+              color: '#1EAEDB',
+              weight: 3,
+              opacity: 0.8,
+              fillColor: '#D3E4FD',
+              fillOpacity: 0.5
             }
           },
           polygon: {
             shapeOptions: {
-              color: '#1EAEDB',     // Border color
-              weight: 3,            // Border width
-              opacity: 0.8,         // Border opacity
-              fillColor: '#D3E4FD', // Fill color
-              fillOpacity: 0.5      // Fill opacity
+              color: '#1EAEDB',
+              weight: 3,
+              opacity: 0.8,
+              fillColor: '#D3E4FD',
+              fillOpacity: 0.5
             },
             allowIntersection: false,
             drawError: {
@@ -180,16 +151,15 @@ const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingC
           },
           circle: {
             shapeOptions: {
-              color: '#1EAEDB',     // Border color
-              weight: 3,            // Border width
-              opacity: 0.8,         // Border opacity
-              fillColor: '#D3E4FD', // Fill color
-              fillOpacity: 0.5      // Fill opacity
+              color: '#1EAEDB',
+              weight: 3,
+              opacity: 0.8,
+              fillColor: '#D3E4FD',
+              fillOpacity: 0.5
             }
           },
           circlemarker: false,
-          marker: true,
-          polyline: false
+          marker: activeTool === 'marker'
         }}
       />
     </FeatureGroup>

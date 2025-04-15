@@ -11,7 +11,7 @@ export interface LocationMarker {
   id: string;
   name: string;
   position: [number, number]; // [lat, lng]
-  type: 'pin' | 'area' | 'building';
+  type: 'pin' | 'area' | 'building' | 'department';
   description?: string;
   createdAt: Date;
 }

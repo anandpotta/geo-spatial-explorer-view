@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,12 +18,23 @@ export const useDrawing = () => {
 
     console.log('New shape created:', shape);
     const id = shape.id || uuidv4();
+    
+    // Get coordinates from the geoJSON for location
+    const coords = shape.geoJSON.geometry.coordinates[0][0];
+    const locationId = uuidv4();
+    
     const newDrawing = {
       id,
       type: shape.type,
       geoJSON: shape.geoJSON,
       layer: shape.layer,
-      name: drawingName || `New ${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}`
+      name: drawingName || `New ${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}`,
+      location: {
+        id: locationId,
+        label: drawingName,
+        x: coords[0],
+        y: coords[1]
+      }
     };
 
     setCurrentDrawing(newDrawing);
