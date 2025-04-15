@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -11,10 +11,12 @@ import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
 import MarkersList from './map/MarkersList';
-import { useMapEvents } from '@/hooks/useMapEvents';
-import { toast } from 'sonner';
 import { useBuildings } from '@/hooks/useBuildings';
 import BuildingDialog from './map/BuildingDialog';
+import { useMapState } from '@/hooks/useMapState';
+import { MapLayers } from './map/MapLayers';
+import { MapInitializer } from './map/MapInitializer';
+import { toast } from 'sonner';
 
 setupLeafletIcons();
 
@@ -25,15 +27,19 @@ interface LeafletMapProps {
 }
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
-  const [position, setPosition] = useState<[number, number]>(
-    selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
-  );
-  const [zoom, setZoom] = useState(18);
-  const [markers, setMarkers] = useState<LocationMarker[]>([]);
-  const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
-  const [markerName, setMarkerName] = useState('');
-  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
   const mapRef = useRef<L.Map | null>(null);
+  const {
+    position,
+    zoom,
+    markers,
+    setMarkers,
+    tempMarker,
+    setTempMarker,
+    markerName,
+    setMarkerName,
+    markerType,
+    setMarkerType
+  } = useMapState(selectedLocation);
 
   const {
     showBuildingDialog,
@@ -45,24 +51,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     handleSaveBuilding,
     loadSavedBuildings
   } = useBuildings(mapRef, selectedLocation);
-  
-  // Load markers on initial render
-  useEffect(() => {
-    const loadedMarkers = getSavedMarkers();
-    if (loadedMarkers && loadedMarkers.length > 0) {
-      setMarkers(loadedMarkers);
-    }
-  }, []);
-
-  // Register map events
-  useMapEvents(mapRef.current, selectedLocation);
-
-  // When selected location changes, reload buildings
-  useEffect(() => {
-    if (selectedLocation && mapRef.current) {
-      // This is handled in useBuildings hook now
-    }
-  }, [selectedLocation]);
 
   const handleMapClick = (latlng: L.LatLng) => {
     if (activeTool === 'marker' || (!activeTool && !tempMarker)) {
@@ -76,7 +64,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       setTempMarker(shape.position);
       setMarkerName('New Marker');
     } else {
-      // Store the shape including the layer reference
       setCurrentDrawing(shape);
       setBuildingName(selectedLocation?.label ? `Building at ${selectedLocation.label}` : 'New Building');
       setShowBuildingDialog(true);
@@ -112,63 +99,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     if (onMapReady) {
       onMapReady(map);
     }
-    if (selectedLocation) {
-      map.flyTo([selectedLocation.y, selectedLocation.x], 18);
-    }
-    
-    // Add OSM Buildings layer with CORS error handling
-    addOsmBuildingsLayer(map);
-  };
-
-  // Separate function to add OSM Buildings layer with error handling
-  const addOsmBuildingsLayer = (map: L.Map) => {
-    const probeUrl = 'https://tile.osmbuildings.org/0.2/dixw8kmb/tile/1/1/1.json';
-    
-    // Use a simple HEAD request first to check availability without triggering CORS errors
-    fetch(probeUrl, { 
-      method: 'HEAD',
-      mode: 'no-cors' // This prevents CORS errors during the test
-    })
-    .then(() => {
-      // If we get here, the service might be available, try to add the layer
-      try {
-        L.tileLayer('https://tile.osmbuildings.org/0.2/dixw8kmb/tile/{z}/{x}/{y}.png', {
-          attribution: '© OSM Buildings',
-          maxZoom: 19
-        }).addTo(map);
-        
-        console.log("OSM Buildings layer added");
-      } catch (error) {
-        console.warn("Error adding OSM Buildings layer:", error);
-        addFallbackLayer(map);
-      }
-    })
-    .catch(error => {
-      console.warn("OSM Buildings service unavailable:", error);
-      addFallbackLayer(map);
-    });
-  };
-
-  // Fallback layer if OSM Buildings is unavailable
-  const addFallbackLayer = (map: L.Map) => {
-    console.log("Using fallback map layer");
-    
-    // Create a dedicated pane for buildings to control layer order
-    map.createPane('buildings');
-    if (map.getPane('buildings')) {
-      map.getPane('buildings').style.zIndex = '450';
-    }
-    
-    // Add standard OpenStreetMap layer as fallback
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      pane: 'buildings',
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19
-    }).addTo(map);
-    
-    toast.info("Using standard map. 3D buildings unavailable.", {
-      duration: 3000
-    });
   };
 
   return (
@@ -182,6 +112,17 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         <MapReference onMapReady={handleSetMapRef} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <AttributionControl position="bottomright" prefix={false} />
+        
+        {mapRef.current && (
+          <>
+            <MapLayers map={mapRef.current} />
+            <MapInitializer 
+              map={mapRef.current}
+              selectedLocation={selectedLocation}
+              onMapReady={onMapReady}
+            />
+          </>
+        )}
         
         <DrawingControls 
           onCreated={handleShapeCreated} 
