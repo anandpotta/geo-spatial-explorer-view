@@ -56,7 +56,7 @@ const GeoSpatialExplorer = () => {
   
   const handleSavedLocationSelect = (position: [number, number]) => {
     const location: Location = {
-      id: uuidv4(), // Add the missing id property
+      id: uuidv4(), // Generate unique ID for this location
       label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
       y: position[0],
       x: position[1]
