@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
@@ -57,15 +56,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       
       // Clear previous buildings
       if (mapRef.current) {
-        const layers = mapRef.current._layers;
-        if (layers) {
-          Object.keys(layers).forEach(layerId => {
-            const layer = layers[layerId];
-            if (layer && layer.options && layer.options.buildingId) {
-              mapRef.current?.removeLayer(layer);
-            }
-          });
-        }
+        mapRef.current.eachLayer((layer: L.Layer) => {
+          if (layer && 'options' in layer && layer.options && (layer.options as any).buildingId) {
+            mapRef.current?.removeLayer(layer);
+          }
+        });
       }
       
       // Add saved buildings to the map
