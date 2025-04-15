@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 
@@ -7,13 +7,16 @@ export const useDrawingControls = (activeTool: string | null) => {
   const [drawControl, setDrawControl] = useState<any>(null);
   const [drawnLayers, setDrawnLayers] = useState<Record<string, L.Layer>>({});
 
-  const editControlRef = useCallback((element: any) => {
-    if (element) {
-      setDrawControl(element);
+  const onDrawControlMounted = useCallback((drawingControl: any) => {
+    if (drawingControl) {
+      setDrawControl(drawingControl);
+      console.log("Drawing control mounted:", drawingControl);
     }
   }, []);
 
-  useEffect(() => {
+  // Effect to handle active tool changes is now integrated into this function
+  // which will run whenever drawControl or activeTool changes
+  const activateDrawingTool = useCallback(() => {
     if (!activeTool || !drawControl) return;
 
     try {
@@ -55,6 +58,11 @@ export const useDrawingControls = (activeTool: string | null) => {
     }
   }, [activeTool, drawControl]);
 
+  // Call activateDrawingTool whenever drawControl or activeTool changes
+  if (drawControl && activeTool) {
+    activateDrawingTool();
+  }
+
   const clearDrawnShapes = useCallback(() => {
     Object.values(drawnLayers).forEach(layer => {
       try {
@@ -74,7 +82,7 @@ export const useDrawingControls = (activeTool: string | null) => {
     drawControl,
     drawnLayers,
     setDrawnLayers,
-    editControlRef,
+    onDrawControlMounted,
     clearDrawnShapes
   };
 };
