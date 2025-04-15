@@ -73,16 +73,17 @@ const MapContent = ({
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-50' : 'opacity-0 z-0 pointer-events-none'}`} 
           style={{ 
-            position: 'absolute', 
+            position: currentView === 'cesium' ? 'fixed' : 'absolute',
             top: 0, 
             left: 0, 
             right: 0, 
             bottom: 0, 
             width: '100%', 
             height: '100%',
-            visibility: currentView === 'cesium' ? 'visible' : 'hidden'
+            visibility: currentView === 'cesium' ? 'visible' : 'hidden',
+            zIndex: currentView === 'cesium' ? 999999 : 0,
           }}
           data-map-type="cesium"
         >
@@ -97,9 +98,10 @@ const MapContent = ({
         </div>
         
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-50' : 'opacity-0 z-0 pointer-events-none'}`}
           style={{ 
-            visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
+            visibility: currentView === 'leaflet' ? 'visible' : 'hidden',
+            zIndex: currentView === 'leaflet' ? 100 : 0,
           }}
           data-map-type="leaflet"
         >

@@ -17,7 +17,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       containerRef.current.style.visibility = 'visible';
       containerRef.current.style.display = 'block';
       containerRef.current.style.opacity = '1';
-      containerRef.current.style.zIndex = '99999'; // Maximum z-index
+      containerRef.current.style.zIndex = '999999'; // Maximum z-index
       containerRef.current.dataset.cesiumContainer = "true";
       
       // Force dimensions
@@ -42,7 +42,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
           visibility: visible !important;
           display: block !important;
           opacity: 1 !important;
-          z-index: 99999 !important;
+          z-index: 999999 !important;
           position: absolute !important;
           top: 0 !important;
           left: 0 !important;
@@ -53,24 +53,8 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       `;
       document.head.appendChild(style);
       
-      // Force a full redraw after a short delay
-      setTimeout(() => {
-        if (containerRef.current) {
-          containerRef.current.style.visibility = 'visible';
-          containerRef.current.style.opacity = '1';
-          // Force reflow
-          void containerRef.current.offsetHeight;
-        }
-        
-        // Find any Cesium canvas and make it visible
-        const canvases = document.querySelectorAll('.cesium-widget canvas');
-        canvases.forEach(canvas => {
-          (canvas as HTMLElement).style.visibility = 'visible';
-          (canvas as HTMLElement).style.display = 'block';
-          (canvas as HTMLElement).style.opacity = '1';
-          (canvas as HTMLElement).style.zIndex = '99999';
-        });
-      }, 100);
+      // Explicitly set the position to fixed to ensure it's above everything
+      containerRef.current.style.position = 'fixed';
     }
   }, [containerRef]);
   
@@ -82,12 +66,12 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
       style={{ 
         width: '100%', 
         height: '100%',
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 99999, // Extremely high z-index
+        zIndex: 999999, // Extremely high z-index
         background: '#000',
         visibility: 'visible',
         display: 'block',

@@ -26,7 +26,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       if ('hueShift' in viewer.scene.skyAtmosphere) {
         viewer.scene.skyAtmosphere.hueShift = 0.0;
         viewer.scene.skyAtmosphere.saturationShift = 0.1;
-        viewer.scene.skyAtmosphere.brightnessShift = 3.0; // Increased brightness
+        viewer.scene.skyAtmosphere.brightnessShift = 5.0; // Significantly increased brightness
       }
       viewer.scene.fog.enabled = false; // Disable fog for better visibility
       
@@ -42,7 +42,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
           new Cesium.Cartesian3()
         ),
         color: new Cesium.Color(1.0, 1.0, 1.0, 1.0),
-        intensity: 10.0  // Drastically increase light intensity
+        intensity: 20.0  // Drastically increase light intensity
       });
       
       // Make sure shadows are disabled for better performance and visibility
@@ -51,7 +51,7 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
     
     // Position the camera at a better angle and closer for improved visibility
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 8000000.0), // Even closer to Earth
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 5000000.0), // Even closer to Earth
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
         pitch: Cesium.Math.toRadians(-25.0), // Better viewing angle

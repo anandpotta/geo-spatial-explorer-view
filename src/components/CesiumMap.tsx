@@ -38,7 +38,7 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
         visibility: visible !important;
         display: block !important;
         opacity: 1 !important;
-        z-index: 99999 !important;
+        z-index: 999999 !important;
         position: absolute !important;
         top: 0 !important;
         left: 0 !important;
@@ -51,7 +51,7 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
       .cesium-viewer-toolbar,
       .cesium-viewer-animationContainer,
       .cesium-viewer-timelineContainer {
-        z-index: 100000 !important;
+        z-index: 1000000 !important;
         position: relative !important;
       }
     `;
@@ -61,7 +61,7 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
     const loadingIndicator = document.createElement('div');
     loadingIndicator.id = 'cesium-loading-indicator';
     loadingIndicator.innerHTML = '<b>Initializing 3D Globe...</b><br>Please wait while the globe renders...';
-    loadingIndicator.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; z-index: 999999; text-align: center; font-family: sans-serif; box-shadow: 0 0 10px rgba(255,255,255,0.3);';
+    loadingIndicator.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; z-index: 9999999; text-align: center; font-family: sans-serif; box-shadow: 0 0 10px rgba(255,255,255,0.3);';
     document.body.appendChild(loadingIndicator);
     
     // Remove the loading indicator after a longer time
@@ -79,13 +79,13 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   
   return (
     <div className="w-full h-full relative" style={{
-      position: 'absolute',
+      position: 'fixed',
       top: 0,
       left: 0,
       width: '100%',
       height: '100%',
       background: 'black',
-      zIndex: 99999,
+      zIndex: 999999,
       visibility: 'visible',
       opacity: 1
     }}>

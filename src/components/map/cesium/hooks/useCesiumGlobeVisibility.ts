@@ -15,18 +15,18 @@ export const useCesiumGlobeVisibility = (
   useEffect(() => {
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
       // Force initial immediate renders
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 60; i++) { // Significantly increased render cycles
         viewerRef.current.scene.requestRender();
         
         // Ensure the globe is visible with bright color
         if (viewerRef.current.scene && viewerRef.current.scene.globe) {
           viewerRef.current.scene.globe.show = true;
-          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
+          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.8, 1.0, 1.0); // Brighter blue
         }
       }
       
       // Force strategic renders at various intervals for better loading
-      const renderTimes = [10, 20, 50, 100, 200, 300, 500, 750, 1000, 2000, 3000, 5000];
+      const renderTimes = [10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000];
       renderTimes.forEach(time => {
         setTimeout(() => {
           if (viewerRef.current && !viewerRef.current.isDestroyed()) {
@@ -36,7 +36,7 @@ export const useCesiumGlobeVisibility = (
             // Ensure the globe is visible with bright color
             if (viewerRef.current.scene && viewerRef.current.scene.globe) {
               viewerRef.current.scene.globe.show = true;
-              viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
+              viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.8, 1.0, 1.0); // Brighter blue
             }
             
             // Ensure canvas is visible
@@ -44,6 +44,7 @@ export const useCesiumGlobeVisibility = (
               viewerRef.current.canvas.style.visibility = 'visible';
               viewerRef.current.canvas.style.display = 'block';
               viewerRef.current.canvas.style.opacity = '1';
+              viewerRef.current.canvas.style.zIndex = '999999';
             }
             
             // Add a console log to indicate rendering is happening
@@ -65,7 +66,7 @@ export const useCesiumGlobeVisibility = (
         // Ensure globe is visible with distinct color
         if (viewerRef.current.scene && viewerRef.current.scene.globe) {
           viewerRef.current.scene.globe.show = true;
-          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
+          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.8, 1.0, 1.0);
           
           // Add sun lighting effect if available
           if (viewerRef.current.scene.sun) {
@@ -78,13 +79,14 @@ export const useCesiumGlobeVisibility = (
           viewerRef.current.canvas.style.visibility = 'visible';
           viewerRef.current.canvas.style.display = 'block';
           viewerRef.current.canvas.style.opacity = '1';
+          viewerRef.current.canvas.style.zIndex = '999999';
         }
       } else {
         if (forceRenderRef.current) {
           clearInterval(forceRenderRef.current);
         }
       }
-    }, 100); // More frequent checks for better visibility
+    }, 50); // More frequent checks for better visibility
     
     return () => {
       if (forceRenderRef.current) {
