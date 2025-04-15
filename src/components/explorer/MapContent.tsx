@@ -61,30 +61,6 @@ const MapContent = ({
     }
   };
 
-  const handleToolSelect = (tool: string) => {
-    console.log(`Tool selected: ${tool}`);
-    setActiveTool(tool === activeTool ? null : tool);
-    
-    if (currentView === 'cesium') {
-      if (tool === 'clear') {
-        toast.info('Clearing all shapes');
-      }
-    } else if (currentView === 'leaflet') {
-      if (tool === 'clear' && leafletMapRef.current) {
-        const layers = leafletMapRef.current._layers;
-        if (layers) {
-          Object.keys(layers).forEach(layerId => {
-            const layer = layers[layerId];
-            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-              leafletMapRef.current.removeLayer(layer);
-            }
-          });
-          toast.info('All shapes cleared');
-        }
-      }
-    }
-  };
-
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">

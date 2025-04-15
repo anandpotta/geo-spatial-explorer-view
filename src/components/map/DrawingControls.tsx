@@ -18,7 +18,29 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
   useEffect(() => {
     if (activeTool && editControlRef.current) {
       console.log('Active drawing tool:', activeTool);
-      // We could trigger drawing modes based on activeTool here if needed
+      
+      // Get the leaflet draw control
+      const drawControl = editControlRef.current?.leafletElement;
+      
+      // Activate the appropriate drawing tool based on activeTool
+      if (drawControl && drawControl._toolbars && drawControl._toolbars.draw) {
+        const toolbar = drawControl._toolbars.draw;
+        
+        switch (activeTool) {
+          case 'polygon':
+            toolbar._modes.polygon.handler.enable();
+            break;
+          case 'rectangle':
+            toolbar._modes.rectangle.handler.enable();
+            break;
+          case 'circle':
+            toolbar._modes.circle.handler.enable();
+            break;
+          case 'marker':
+            toolbar._modes.marker.handler.enable();
+            break;
+        }
+      }
     }
   }, [activeTool]);
   
@@ -42,6 +64,7 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
             
             (options as any).id = id;
             (options as any).isDrawn = true;
+            (options as any).buildingId = id;
             
             const geoJSON = layer.toGeoJSON();
             console.log('GeoJSON:', geoJSON);

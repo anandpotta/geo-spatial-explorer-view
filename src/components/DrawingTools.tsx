@@ -1,7 +1,6 @@
 
 import { useState, useRef, useEffect } from 'react';
-import DrawingToolButton from './drawing/DrawingToolButton';
-import MapControls from './drawing/MapControls';
+import { ZoomIn, ZoomOut, RefreshCcw } from 'lucide-react';
 
 interface Position {
   x: number;
@@ -78,11 +77,29 @@ const DrawingTools = ({
       onMouseDown={handleMouseDown}
     >
       <div className="flex flex-col space-y-2">
-        <MapControls 
-          onZoomIn={onZoomIn}
-          onZoomOut={onZoomOut}
-          onReset={onReset}
-        />
+        <div className="grid grid-cols-1 gap-2">
+          <button
+            onClick={onZoomIn}
+            className="p-2 bg-white hover:bg-gray-100 rounded-md flex items-center justify-center"
+            title="Zoom In"
+          >
+            <ZoomIn size={18} />
+          </button>
+          <button
+            onClick={onZoomOut}
+            className="p-2 bg-white hover:bg-gray-100 rounded-md flex items-center justify-center"
+            title="Zoom Out"
+          >
+            <ZoomOut size={18} />
+          </button>
+          <button
+            onClick={onReset}
+            className="p-2 bg-white hover:bg-gray-100 rounded-md flex items-center justify-center"
+            title="Reset View"
+          >
+            <RefreshCcw size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );
