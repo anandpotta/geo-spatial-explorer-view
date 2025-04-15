@@ -36,18 +36,22 @@ export const useDrawing = () => {
     if (!currentDrawing || !drawingName.trim()) return;
 
     try {
+      // Get coordinates from the geoJSON for location
+      const coords = currentDrawing.geoJSON.geometry.coordinates[0][0];
+      const locationId = uuidv4();
+      
       // Create building object with required fields
       const buildingData: Building = {
         id: currentDrawing.id,
         name: drawingName,
         type: currentDrawing.type,
         geoJSON: currentDrawing.geoJSON,
-        locationKey: `${currentDrawing.geoJSON.geometry.coordinates[0][0][1].toFixed(4)}_${currentDrawing.geoJSON.geometry.coordinates[0][0][0].toFixed(4)}`,
+        locationKey: `${coords[1].toFixed(4)}_${coords[0].toFixed(4)}`,
         location: {
-          id: uuidv4(),
+          id: locationId,
           label: drawingName,
-          y: currentDrawing.geoJSON.geometry.coordinates[0][0][1],
-          x: currentDrawing.geoJSON.geometry.coordinates[0][0][0]
+          y: coords[1],
+          x: coords[0]
         },
         createdAt: new Date()
       };

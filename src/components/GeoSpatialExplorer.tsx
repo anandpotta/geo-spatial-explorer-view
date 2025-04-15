@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location } from '@/utils/location/types';
 import { useToast } from '@/components/ui/use-toast';
