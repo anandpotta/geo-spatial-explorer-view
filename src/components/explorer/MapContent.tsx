@@ -65,7 +65,6 @@ const MapContent = ({
   };
 
   const handleToolSelect = (tool: string) => {
-    console.log("MapContent: Selected tool:", tool);
     setActiveTool(prev => prev === tool ? null : tool);
   };
 
@@ -83,7 +82,7 @@ const MapContent = ({
             width: '100%', 
             height: '100%',
             visibility: currentView === 'cesium' ? 'visible' : 'hidden',
-            zIndex: currentView === 'cesium' ? 999999 : 0,
+            zIndex: currentView === 'cesium' ? 99999 : 0,
           }}
           data-map-type="cesium"
         >

@@ -12,7 +12,7 @@ const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
-  const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium'); // Always start with cesium
+  const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium');
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
   const { toast } = useToast();
@@ -56,7 +56,7 @@ const GeoSpatialExplorer = () => {
   
   const handleSavedLocationSelect = (position: [number, number]) => {
     const location: Location = {
-      id: uuidv4(), // Generate unique ID for this location
+      id: uuidv4(),
       label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
       y: position[0],
       x: position[1]
@@ -75,9 +75,7 @@ const GeoSpatialExplorer = () => {
       setCurrentView('cesium');
       setFlyCompleted(false);
       
-      // Make sure the building location has a valid id
       if (building.location) {
-        // Create a complete location object with an id if it doesn't have one
         const locationWithId: Location = {
           id: building.location.id || uuidv4(),
           label: building.location.label,

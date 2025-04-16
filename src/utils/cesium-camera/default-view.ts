@@ -11,24 +11,15 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
   }
 
   try {
-    // Force a bright, visible blue globe with improved settings and better performance
+    // Configure globe for visibility
     if (viewer.scene && viewer.scene.globe) {
-      // Use a vibrant but slightly darker blue for better visibility
-      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+      viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
       viewer.scene.globe.show = true;
-      
-      // Disable expensive effects for better performance
-      viewer.scene.globe.enableLighting = false;
+      viewer.scene.globe.enableLighting = true;
       viewer.scene.globe.showGroundAtmosphere = true;
       viewer.scene.skyAtmosphere.show = true;
-      viewer.scene.fog.enabled = false;
       
-      // Ensure the globe is fully opaque to avoid costly transparency calculations
-      if (viewer.scene.globe.translucency) {
-        viewer.scene.globe.translucency.enabled = false;
-      }
-      
-      // Use a simple light for better performance
+      // Add lighting for better visibility
       viewer.scene.light = new Cesium.DirectionalLight({
         direction: Cesium.Cartesian3.normalize(
           new Cesium.Cartesian3(1, 0, -1),
@@ -37,34 +28,31 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
         color: new Cesium.Color(1.0, 1.0, 1.0, 1.0),
         intensity: 2.0
       });
-      
-      // Disable shadows for better performance
-      viewer.scene.shadowMap.enabled = false;
     }
     
-    // Position the camera closer to Earth
+    // Position the camera for a good Earth view
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 15000000.0),
+      destination: Cesium.Cartesian3.fromDegrees(0.0, 15.0, 15000000.0),
       orientation: {
         heading: Cesium.Math.toRadians(0.0),
-        pitch: Cesium.Math.toRadians(-35.0),
+        pitch: Cesium.Math.toRadians(-30.0),
         roll: 0.0
       }
     });
     
-    // Optimize camera settings for performance
+    // Set camera limits
     viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000;
     viewer.scene.screenSpaceCameraController.maximumZoomDistance = 25000000;
     
-    // Set black background for better contrast and performance
+    // Set black background
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
     
-    // Force immediate renders but limit to reduce CPU usage
-    for (let i = 0; i < 5; i++) {
+    // Force multiple renders
+    for (let i = 0; i < 10; i++) {
       viewer.scene.requestRender();
     }
     
-    console.log('Enhanced Earth view set with improved colors and visibility');
+    console.log('Enhanced Earth view set with improved visibility');
   } catch (error) {
     console.error('Failed to set default camera view:', error);
   }

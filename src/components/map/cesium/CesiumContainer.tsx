@@ -11,13 +11,9 @@ interface CesiumContainerProps {
  */
 const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
   // Force visibility using an effect with more aggressive approach
-  // but with optimized performance
   useEffect(() => {
-    // Ensure the container is fully visible
     if (containerRef.current) {
-      // Batch style changes to avoid multiple reflows
       const applyStyles = () => {
-        // Apply critical visibility styles
         containerRef.current!.style.cssText = `
           visibility: visible !important;
           display: block !important;
@@ -39,15 +35,18 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         containerRef.current!.dataset.cesiumContainer = "true";
       };
       
-      // Use requestAnimationFrame to batch style changes
       requestAnimationFrame(applyStyles);
       
-      // Add an always-visible style to all Cesium elements (once)
+      // Add an always-visible style to all Cesium elements
       const existingStyle = document.getElementById('cesium-force-visibility');
       if (!existingStyle) {
         const style = document.createElement('style');
         style.id = 'cesium-force-visibility';
         style.textContent = `
+          body {
+            overflow: hidden;
+          }
+          
           [data-cesium-container="true"],
           .cesium-viewer,
           .cesium-viewer-cesiumWidgetContainer,
@@ -56,13 +55,14 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
             visibility: visible !important;
             display: block !important;
             opacity: 1 !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            background: black !important;
-            z-index: 99999 !important;
+            z-index: 9999 !important;
+          }
+          
+          /* Force UI elements to stay visible */
+          .cesium-viewer-toolbar,
+          .cesium-viewer-timelineContainer,
+          .cesium-viewer-animationContainer {
+            z-index: 10000 !important;
           }
         `;
         document.head.appendChild(style);
@@ -89,7 +89,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         opacity: 1,
         pointerEvents: 'auto',
         isolation: 'isolate',
-        zIndex: 99999
+        zIndex: 999
       }}
     />
   );
