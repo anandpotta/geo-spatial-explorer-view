@@ -8,13 +8,14 @@ interface MapReferenceProps {
 
 /**
  * Component that passes the map reference to parent components
- * Uses useMap hook instead of directly accessing ref prop
+ * Uses useMap hook to get the Leaflet map instance
  */
 const MapReference: React.FC<MapReferenceProps> = ({ onMapReady }) => {
-  // Get map instance using the useMap hook from react-leaflet
+  // Get the map instance using the useMap hook from react-leaflet
   const map = useMap();
   
   useEffect(() => {
+    // When the map is available and onMapReady callback is provided, call it
     if (map && onMapReady) {
       onMapReady(map);
     }
