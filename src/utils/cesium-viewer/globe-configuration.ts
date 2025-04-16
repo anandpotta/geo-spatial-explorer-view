@@ -70,3 +70,62 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     viewer.scene.requestRender();
   }
 }
+
+/**
+ * Configures the scene background and celestial bodies
+ */
+export function configureSceneBackground(viewer: Cesium.Viewer): void {
+  if (!viewer || !viewer.scene) {
+    return;
+  }
+
+  try {
+    // Set background color to black for better contrast with the blue globe
+    viewer.scene.backgroundColor = Cesium.Color.BLACK;
+    
+    // Disable skybox to avoid distractions
+    if (viewer.scene.skyBox) {
+      viewer.scene.skyBox.show = false;
+    }
+    
+    // Ensure the globe is shown
+    if (viewer.scene.globe) {
+      viewer.scene.globe.show = true;
+    }
+    
+    // Force multiple renders
+    for (let i = 0; i < 10; i++) {
+      viewer.scene.requestRender();
+    }
+    
+    console.log('Scene background configured');
+  } catch (error) {
+    console.error('Failed to configure scene background:', error);
+  }
+}
+
+/**
+ * Configures camera controls for better user experience
+ */
+export function configureCameraControls(viewer: Cesium.Viewer): void {
+  if (!viewer || !viewer.scene || !viewer.camera) {
+    return;
+  }
+
+  try {
+    // Set camera limits
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 1000000; // Don't allow zooming too close
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = 50000000; // Don't allow zooming too far
+    
+    // Improve camera movement
+    viewer.scene.screenSpaceCameraController.enableRotate = true;
+    viewer.scene.screenSpaceCameraController.enableTranslate = true;
+    viewer.scene.screenSpaceCameraController.enableZoom = true;
+    viewer.scene.screenSpaceCameraController.enableTilt = true;
+    viewer.scene.screenSpaceCameraController.enableLook = false;
+    
+    console.log('Camera controls configured');
+  } catch (error) {
+    console.error('Failed to configure camera controls:', error);
+  }
+}
