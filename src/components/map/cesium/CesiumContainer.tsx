@@ -14,6 +14,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
   useEffect(() => {
     if (containerRef.current) {
       const applyStyles = () => {
+        // Apply critical visibility styles directly to ensure the container is visible
         containerRef.current!.style.cssText = `
           visibility: visible !important;
           display: block !important;
@@ -23,13 +24,14 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
           height: 100% !important;
           min-height: 500px !important;
           background: black !important;
-          position: absolute !important;
+          position: fixed !important;
           top: 0 !important;
           left: 0 !important;
           right: 0 !important;
           bottom: 0 !important;
           pointer-events: auto !important;
           isolation: isolate !important;
+          overflow: hidden !important;
         `;
         
         containerRef.current!.dataset.cesiumContainer = "true";
@@ -46,7 +48,8 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         style.id = 'cesium-force-visibility';
         style.textContent = `
           body {
-            overflow: hidden;
+            overflow: hidden !important;
+            background-color: #000 !important;
           }
           
           [data-cesium-container="true"],
@@ -57,14 +60,19 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
             visibility: visible !important;
             display: block !important;
             opacity: 1 !important;
-            z-index: 9999 !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
           }
           
           /* Force UI elements to stay visible */
           .cesium-viewer-toolbar,
           .cesium-viewer-timelineContainer,
           .cesium-viewer-animationContainer {
-            z-index: 10000 !important;
+            z-index: 100000 !important;
           }
         `;
         document.head.appendChild(style);
@@ -76,11 +84,11 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
     <div 
       ref={containerRef} 
       data-cesium-container="true"
-      className="absolute inset-0 w-full h-full"
+      className="fixed inset-0 w-full h-full"
       style={{ 
         width: '100%', 
         height: '100%',
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
@@ -91,7 +99,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         opacity: 1,
         pointerEvents: 'auto',
         isolation: 'isolate',
-        zIndex: 999
+        zIndex: 999999
       }}
     />
   );

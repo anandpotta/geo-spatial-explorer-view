@@ -11,20 +11,23 @@ export function configureGlobeAppearance(viewer: Cesium.Viewer): void {
   }
 
   try {
-    // Set globe appearance
+    // Set globe appearance with more vibrant colors
     viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
     viewer.scene.globe.enableLighting = true;
     viewer.scene.globe.showGroundAtmosphere = true;
     viewer.scene.skyAtmosphere.show = true;
     
-    // Set background color to black
+    // Force visibility
+    viewer.scene.globe.show = true;
+    
+    // Set background color to black for better contrast
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
     
     // Ensure the globe is visible
     forceGlobeVisibility(viewer);
     
-    // Force rendering
-    for (let i = 0; i < 20; i++) {
+    // Force rendering multiple times
+    for (let i = 0; i < 50; i++) { // Increased render cycles
       viewer.scene.requestRender();
     }
     
@@ -45,6 +48,9 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   // Ensure the globe is visible
   viewer.scene.globe.show = true;
   
+  // Set more vibrant color
+  viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.6, 1.0, 1.0);
+  
   // Force opacity settings
   if ('_surface' in viewer.scene.globe) {
     const globe = viewer.scene.globe as any;
@@ -57,16 +63,33 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     }
   }
   
-  // Force sky atmosphere on
+  // Force sky atmosphere on with high brightness
   if (viewer.scene.skyAtmosphere) {
     viewer.scene.skyAtmosphere.show = true;
+    // Add lighting for better visibility
+    viewer.scene.light = new Cesium.DirectionalLight({
+      direction: Cesium.Cartesian3.normalize(
+        new Cesium.Cartesian3(1, 0, -1), 
+        new Cesium.Cartesian3()
+      ),
+      color: new Cesium.Color(1.0, 1.0, 1.0, 1.0),
+      intensity: 5.0  // Increased intensity
+    });
+  }
+  
+  // Ensure the canvas is properly sized and visible
+  if (viewer.canvas) {
+    viewer.canvas.style.visibility = 'visible';
+    viewer.canvas.style.display = 'block';
+    viewer.canvas.style.opacity = '1';
+    viewer.canvas.style.zIndex = '9999';
   }
   
   // Ensure the canvas is properly sized
   viewer.resize();
   
   // Request render multiple times
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 30; i++) { // Increased render cycles
     viewer.scene.requestRender();
   }
 }
