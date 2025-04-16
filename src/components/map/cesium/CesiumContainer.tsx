@@ -35,6 +35,8 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
         containerRef.current!.dataset.cesiumContainer = "true";
       };
       
+      // Apply styles immediately and in the next frame
+      applyStyles();
       requestAnimationFrame(applyStyles);
       
       // Add an always-visible style to all Cesium elements
