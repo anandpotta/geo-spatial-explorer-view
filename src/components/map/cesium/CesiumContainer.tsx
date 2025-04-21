@@ -19,7 +19,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
           visibility: visible !important;
           display: block !important;
           opacity: 1 !important;
-          z-index: 99999 !important;
+          z-index: 999999 !important;
           width: 100% !important;
           height: 100% !important;
           min-height: 500px !important;
@@ -60,7 +60,7 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
             visibility: visible !important;
             display: block !important;
             opacity: 1 !important;
-            z-index: 99999 !important;
+            z-index: 999999 !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -72,7 +72,17 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
           .cesium-viewer-toolbar,
           .cesium-viewer-timelineContainer,
           .cesium-viewer-animationContainer {
-            z-index: 100000 !important;
+            z-index: 1000000 !important;
+          }
+          
+          /* Override any hidden elements */
+          .cesium-widget canvas[style*="visibility: hidden"],
+          .cesium-widget[style*="visibility: hidden"],
+          .cesium-viewer[style*="visibility: hidden"],
+          [data-cesium-container="true"][style*="visibility: hidden"] {
+            visibility: visible !important;
+            display: block !important;
+            opacity: 1 !important;
           }
         `;
         document.head.appendChild(style);

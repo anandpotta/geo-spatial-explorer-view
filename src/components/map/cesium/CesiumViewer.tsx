@@ -34,6 +34,8 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
     
     // Mark as initialized
     hasInitializedRef.current = true;
+    
+    console.log("CesiumViewer: Map ready callback executed");
   });
 
   // Initialize custom hooks
@@ -41,6 +43,9 @@ const CesiumViewer = ({ isFlying, onViewerReady, onMapReady }: CesiumViewerProps
   useCesiumCanvasVisibility(cesiumContainer);
   const renderIntervalRef = useForceRenderCycles(isInitialized, viewerRef);
   useViewerReadyEffect(viewerRef, isInitialized, onViewerReady);
+  
+  // Add a console log to verify rendering
+  console.log("CesiumViewer rendering, initialized:", isInitialized, "loading:", isLoadingMap);
   
   return (
     <>

@@ -19,29 +19,44 @@ export const useForceRenderCycles = (
       return;
     }
     
-    // Make absolutely sure the globe is visible
+    console.log("ForceRenderCycles: Starting render cycles for globe visibility");
     
     // Clear any previous render interval
     if (renderIntervalRef.current) {
       clearInterval(renderIntervalRef.current);
     }
     
-    // Force globe visibility
+    // Force globe visibility immediately
     forceGlobeVisibility(viewer);
     
-    // Set up a short interval to keep forcing visibility for a few seconds
+    // Force resize
+    viewer.resize();
+    
+    // Set up a short interval to keep forcing visibility
     let renderCount = 0;
     renderIntervalRef.current = setInterval(() => {
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        // Force globe visibility
         forceGlobeVisibility(viewerRef.current);
-        renderCount++;
         
-        // For the first several renders, also force resize
-        if (renderCount < 20) {
-          viewerRef.current.resize();
+        // Also resize viewer
+        viewerRef.current.resize();
+        
+        // Request multiple renders
+        for (let i = 0; i < 5; i++) {
+          viewerRef.current.scene.requestRender();
         }
         
-        if (renderCount >= 60) { // Keep trying longer
+        renderCount++;
+        
+        // Log progress
+        if (renderCount % 10 === 0) {
+          console.log(`ForceRenderCycles: Executed ${renderCount} render cycles`);
+        }
+        
+        // Run for a full minute to ensure visibility
+        if (renderCount >= 120) {
+          console.log("ForceRenderCycles: Completed all render cycles");
           if (renderIntervalRef.current) {
             clearInterval(renderIntervalRef.current);
             renderIntervalRef.current = null;
@@ -54,9 +69,10 @@ export const useForceRenderCycles = (
           renderIntervalRef.current = null;
         }
       }
-    }, 100); // More frequent checks
+    }, 500); // Every half second
     
     return () => {
+      console.log("ForceRenderCycles: Cleaning up render interval");
       if (renderIntervalRef.current) {
         clearInterval(renderIntervalRef.current);
         renderIntervalRef.current = null;

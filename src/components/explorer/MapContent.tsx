@@ -82,7 +82,7 @@ const MapContent = ({
             width: '100%', 
             height: '100%',
             visibility: currentView === 'cesium' ? 'visible' : 'hidden',
-            zIndex: currentView === 'cesium' ? 99999 : 0,
+            zIndex: currentView === 'cesium' ? 999999 : 0,
           }}
           data-map-type="cesium"
         >
@@ -137,8 +137,8 @@ const MapContent = ({
       </div>
       
       <div 
-        className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
-        style={{ maxWidth: '400px' }}
+        className="absolute top-4 left-0 right-0 z-[10000]" 
+        style={{ maxWidth: '400px', margin: '0 auto' }}
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
