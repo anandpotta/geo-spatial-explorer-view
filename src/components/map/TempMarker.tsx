@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
@@ -22,17 +22,24 @@ const TempMarker = ({
 }: TempMarkerProps) => {
   // Generate a unique key for the marker based on its position to prevent remounting issues
   const markerKey = `temp-marker-${position[0]}-${position[1]}-${Date.now()}`;
+  // Use a ref to track marker initialization
+  const isInitializedRef = useRef(false);
+  // Keep reference to any cleanup interval
+  const flagIntervalRef = useRef<number | null>(null);
   
   useEffect(() => {
-    // Immediately and aggressively set these flags to prevent ANY map navigation
+    // Only run this once per marker instance
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+    
+    // Set these flags immediately to prevent ANY map navigation
     window.tempMarkerPlaced = true;
     window.userHasInteracted = true;
     
     console.log('TempMarker mounted - enforcing tempMarkerPlaced=true and userHasInteracted=true');
     
-    // Make sure window.tempMarkerPositionUpdate exists
+    // Update position if the window function exists
     if (window.tempMarkerPositionUpdate) {
-      // Initial update to ensure correct position
       window.tempMarkerPositionUpdate([...position]);
     }
     
@@ -43,14 +50,18 @@ const TempMarker = ({
       console.error('Failed to store marker in localStorage:', error);
     }
     
-    // Set interval to continuously reinforce flags
-    const flagInterval = setInterval(() => {
+    // Set interval to periodically reinforce flags but not too frequently
+    flagIntervalRef.current = window.setInterval(() => {
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
-    }, 500);
+    }, 2000); // Less frequent updates
     
     return () => {
-      clearInterval(flagInterval);
+      // Clean up interval
+      if (flagIntervalRef.current !== null) {
+        clearInterval(flagIntervalRef.current);
+        flagIntervalRef.current = null;
+      }
       
       // Keep flags set even after unmount
       window.tempMarkerPlaced = true;

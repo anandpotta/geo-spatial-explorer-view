@@ -12,6 +12,7 @@ export const useMapEvents = (
   const initializedRef = useRef<boolean>(false);
   const userInteractionRef = useRef<boolean>(false);
   const markerPresenceCheckerRef = useRef<number | null>(null);
+  const lastCheckRef = useRef<number>(0);
   
   // Cleanup timers on unmount
   useEffect(() => {
@@ -22,10 +23,17 @@ export const useMapEvents = (
     };
   }, []);
 
-  // Set up marker presence checker to continuously reinforce flags when markers exist
+  // Set up marker presence checker - but with rate limiting to prevent excessive updates
   useEffect(() => {
     // Check for marker presence and reinforce flags if needed
     const checkForMarkers = () => {
+      // Rate limit checks to once per second
+      const now = Date.now();
+      if (now - lastCheckRef.current < 1000) {
+        return;
+      }
+      lastCheckRef.current = now;
+      
       const tempMarkerPosition = localStorage.getItem('tempMarkerPosition');
       
       if (tempMarkerPosition || window.tempMarkerPlaced) {
@@ -38,8 +46,8 @@ export const useMapEvents = (
     // Initial check
     checkForMarkers();
     
-    // Set up interval for continuous checking
-    markerPresenceCheckerRef.current = window.setInterval(checkForMarkers, 1000);
+    // Set up interval for continuous checking - longer interval to reduce rendering pressure
+    markerPresenceCheckerRef.current = window.setInterval(checkForMarkers, 2000);
     
     return () => {
       if (markerPresenceCheckerRef.current !== null) {
@@ -69,22 +77,17 @@ export const useMapEvents = (
     };
   }, [map]);
 
+  // Handle automatic navigation (this is the critical section for preventing infinite loops)
   useEffect(() => {
     // Skip if dependencies aren't available
     if (!selectedLocation || !map) return;
     
-    // Check for marker presence before proceeding
-    const tempMarkerPosition = localStorage.getItem('tempMarkerPosition');
-    
-    // Super aggressive check - if ANY of these conditions are true, skip navigation completely
-    if (
-      window.tempMarkerPlaced || 
-      window.userHasInteracted || 
-      userInteractionRef.current || 
-      tempMarkerPosition ||
-      document.querySelectorAll('.leaflet-marker-icon').length > 0
-    ) {
+    // If a marker is already placed, skip navigation entirely
+    if (window.tempMarkerPlaced || window.userHasInteracted || localStorage.getItem('tempMarkerPosition')) {
       console.log('Marker detected or user interaction recorded, skipping ALL automatic navigation');
+      if (initialNavigationDone) {
+        initialNavigationDone.current = true;
+      }
       return;
     }
     
@@ -103,17 +106,14 @@ export const useMapEvents = (
     console.log('Selected location in Leaflet map:', selectedLocation);
     const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
     
+    // Perform only a single navigation attempt to avoid repeat renders
+    initializedRef.current = true;
+    
     // Wait for map to be fully initialized before flying
     initCheckTimerRef.current = window.setTimeout(() => {
       try {
-        // One more check for user interaction or marker presence
-        if (
-          window.userHasInteracted || 
-          window.tempMarkerPlaced ||
-          userInteractionRef.current ||
-          document.querySelectorAll('.leaflet-marker-icon').length > 0 ||
-          localStorage.getItem('tempMarkerPosition')
-        ) {
+        // Final safety check for user interaction or marker presence
+        if (window.userHasInteracted || window.tempMarkerPlaced || localStorage.getItem('tempMarkerPosition')) {
           console.log('Late detection: User interaction or marker detected, skipping automatic navigation');
           return;
         }
@@ -124,17 +124,14 @@ export const useMapEvents = (
           return;
         }
         
-        // Mark as initialized to prevent multiple navigation attempts
-        initializedRef.current = true;
-        
         // First invalidate size to ensure proper rendering
         map.invalidateSize(true);
         
-        // Set view first for immediate position update
+        // Set view with no animation to prevent render issues
         try {
           map.setView(newPosition, 18, { animate: false });
           
-          // If we have the initialNavigationDone ref, mark it as done
+          // Mark navigation as done
           if (initialNavigationDone) {
             initialNavigationDone.current = true;
           }
@@ -144,11 +141,9 @@ export const useMapEvents = (
       } catch (error) {
         console.error('Error in map navigation:', error);
       }
-    }, 1500); // Much longer initial delay
+    }, 1500);
     
     return () => {
-      // Clean up timers
-      if (flyTimerRef.current !== null) clearTimeout(flyTimerRef.current);
       if (initCheckTimerRef.current !== null) clearTimeout(initCheckTimerRef.current);
     };
   }, [selectedLocation, map, initialNavigationDone]);
