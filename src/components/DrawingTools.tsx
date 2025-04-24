@@ -45,21 +45,27 @@ const DrawingTools = ({
 
   const handleClearAll = () => {
     const markers = getSavedMarkers();
+    const drawings = getSavedDrawings();
+
+    // Clear all markers
     markers.forEach(marker => {
       deleteMarker(marker.id);
     });
 
-    const drawings = getSavedDrawings();
+    // Clear all drawings
     drawings.forEach(drawing => {
       deleteDrawing(drawing.id);
     });
 
-    // Force update markers list
-    window.dispatchEvent(new Event('markersUpdated'));
-    // Force update drawings list
+    // Clear local storage
+    localStorage.removeItem('savedMarkers');
+    localStorage.removeItem('savedDrawings');
+
+    // Notify components about storage changes
     window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('markersUpdated'));
     
-    // Notify parent component to reset any temporary state
+    // Reset map state through parent component
     if (onClearAll) {
       onClearAll();
     }

@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
+import { LocationMarker, getSavedMarkers, deleteMarker, deleteDrawing } from '@/utils/marker-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,10 +55,29 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   }, []);
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent dropdown from closing
-    deleteMarker(id);
-    loadMarkers();
-    toast.success("Location removed");
+    event.stopPropagation();
+    
+    // Get the marker being deleted
+    const markerToDelete = markers.find(m => m.id === id);
+    
+    if (markerToDelete) {
+      // Delete the marker
+      deleteMarker(id);
+      
+      // If there's an associated drawing, delete it too
+      if (markerToDelete.associatedDrawing) {
+        deleteDrawing(markerToDelete.associatedDrawing);
+      }
+      
+      // Refresh markers list
+      loadMarkers();
+      
+      // Trigger storage events to update UI
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      
+      toast.success("Location and associated data removed");
+    }
   };
   
   const handleLocationSelect = (position: [number, number]) => {
