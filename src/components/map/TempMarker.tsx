@@ -33,6 +33,15 @@ const TempMarker = ({
       window.tempMarkerPositionUpdate(safePosition);
     }
     
+    // Set flag to prevent map from automatically resetting
+    if (window.tempMarkerPlaced === undefined) {
+      window.tempMarkerPlaced = true;
+    }
+    
+    if (window.userHasInteracted === undefined) {
+      window.userHasInteracted = true;
+    }
+    
     return () => {
       // If component unmounts, set the temp marker to null
       if (window.tempMarkerPositionUpdate) {
@@ -51,6 +60,10 @@ const TempMarker = ({
         dragend: (e) => {
           const marker = e.target;
           const newPosition = marker.getLatLng();
+          
+          // Set user interaction flag when marker is dragged
+          window.userHasInteracted = true;
+          
           // Update the marker position in parent component state
           if (window.tempMarkerPositionUpdate) {
             window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);

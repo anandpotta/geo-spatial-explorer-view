@@ -58,16 +58,27 @@ const LeafletMap = ({
 
   // Reset marker tracking when component mounts
   useEffect(() => {
+    // Initialize tracking flags
     window.tempMarkerPlaced = false;
+    window.userHasInteracted = false;
+    
     return () => {
+      // Clean up global flags when component unmounts
       delete window.tempMarkerPlaced;
+      delete window.userHasInteracted;
     };
   }, []);
 
   // Handle location changes with improved timing, but only for initial navigation
   useEffect(() => {
     // Skip if location or map isn't ready
-    if (!selectedLocation || !mapRef.current || !needsInitialNavigation.current || window.tempMarkerPlaced) {
+    if (!selectedLocation || !mapRef.current || !needsInitialNavigation.current) {
+      return;
+    }
+    
+    // Skip if user has placed a marker or interacted with the map
+    if (window.tempMarkerPlaced || window.userHasInteracted) {
+      console.log('User has placed a marker or interacted with map, skipping automatic navigation');
       return;
     }
     
@@ -81,9 +92,9 @@ const LeafletMap = ({
         return;
       }
       
-      // Don't navigate if user has placed a marker manually
-      if (window.tempMarkerPlaced) {
-        console.log('User has placed a marker, skipping automatic navigation');
+      // Double check for user interactions
+      if (window.tempMarkerPlaced || window.userHasInteracted) {
+        console.log('User has placed a marker or interacted with map, skipping automatic navigation');
         return;
       }
       
@@ -101,9 +112,9 @@ const LeafletMap = ({
         
         // Add a small delay before actual navigation
         const flyTimer = setTimeout(() => {
-          // Don't navigate if user has placed a marker manually (double-check)
-          if (window.tempMarkerPlaced) {
-            console.log('User has placed a marker, skipping automatic navigation');
+          // Triple check for user interactions before navigation
+          if (window.tempMarkerPlaced || window.userHasInteracted) {
+            console.log('User has placed a marker or interacted with map, skipping automatic navigation');
             return;
           }
           
@@ -114,7 +125,7 @@ const LeafletMap = ({
             lat, 
             lng,
             18,
-            true // Force the navigation
+            false // Don't force navigation if user has interacted
           );
           
           // Only reset map if flyTo completely failed and we're not already cleaning up
@@ -147,12 +158,15 @@ const LeafletMap = ({
 
   const handleSavedLocationSelect = (position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
+    
+    // Reset the userHasInteracted flag when explicitly selecting a new location
+    window.userHasInteracted = false;
+    window.tempMarkerPlaced = false;
+    
     handleLocationSelect(position, onLocationSelect);
     
     // Mark that we should perform navigation again
     needsInitialNavigation.current = true;
-    // Reset the marker placed flag
-    window.tempMarkerPlaced = false;
     
     const [lat, lng] = position;
     if (mapRef.current && isMapInitialized && !cleanupInProgress.current) {
@@ -160,8 +174,12 @@ const LeafletMap = ({
         // Add a delay before navigation
         setTimeout(() => {
           if (!mapRef.current || !isMapInitialized || cleanupInProgress.current) return;
-          // Force navigation when explicitly selected by user
-          safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng, 18, true);
+          
+          // Only navigate if the user hasn't interacted with the map since location selection
+          if (!window.userHasInteracted && !window.tempMarkerPlaced) {
+            // Force navigation when explicitly selected by user
+            safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng, 18, true);
+          }
         }, 500);
       } catch (err) {
         console.error('Error flying to location:', err);

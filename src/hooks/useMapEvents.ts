@@ -30,6 +30,7 @@ export const useMapEvents = (
     
     const handleUserInteraction = () => {
       userInteractionRef.current = true;
+      window.userHasInteracted = true; // Set global flag
       console.log('User has manually interacted with map, disabling auto-centering');
     };
     
@@ -60,9 +61,9 @@ export const useMapEvents = (
       return;
     }
     
-    // Skip if user has manually interacted with the map
-    if (userInteractionRef.current) {
-      console.log('User has manually positioned the map, skipping automatic centering');
+    // Skip if user has manually interacted with the map or placed a marker
+    if (userInteractionRef.current || window.userHasInteracted || window.tempMarkerPlaced) {
+      console.log('User has manually positioned the map or placed a marker, skipping automatic centering');
       return;
     }
     
@@ -73,6 +74,12 @@ export const useMapEvents = (
     // Use a much longer delay to ensure map is really ready
     initCheckTimerRef.current = window.setTimeout(() => {
       try {
+        // Skip if the user has interacted with the map by now
+        if (window.userHasInteracted || window.tempMarkerPlaced) {
+          console.log('User interaction detected, skipping automatic navigation');
+          return;
+        }
+        
         // Skip if the map is no longer available
         if (!map || !map.getContainer() || !document.body.contains(map.getContainer())) {
           console.log('Map not fully initialized for navigation, skipping');

@@ -18,10 +18,9 @@ export function useMarkerHandlers(mapState: any) {
       setTimeout(() => {
         // Double-check we don't already have a marker in progress
         if (!mapState.tempMarker) {
-          // Stop automatic map navigation
-          if (window.tempMarkerPlaced) {
-            window.tempMarkerPlaced = true;
-          }
+          // Flag that a marker has been manually placed - CRITICAL to prevent map reset
+          window.tempMarkerPlaced = true;
+          window.userHasInteracted = true; // Add this flag to prevent any automatic navigation
           
           mapState.setTempMarker(exactPosition);
           mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
@@ -51,10 +50,9 @@ export function useMarkerHandlers(mapState: any) {
       
       console.log('Created marker shape at:', exactPosition);
       
-      // Track that a marker has been placed manually
-      if (window.tempMarkerPlaced !== undefined) {
-        window.tempMarkerPlaced = true;
-      }
+      // Track that a marker has been placed manually - CRITICAL for preventing map reset
+      window.tempMarkerPlaced = true;
+      window.userHasInteracted = true; // Add this flag to prevent any automatic navigation
       
       mapState.setTempMarker(exactPosition);
       mapState.setMarkerName('New Marker');
@@ -94,10 +92,11 @@ export function useMarkerHandlers(mapState: any) {
   };
 }
 
-// Add global tracking for marker placement
+// Add global tracking for marker placement and user interaction
 declare global {
   interface Window {
     tempMarkerPlaced?: boolean;
+    userHasInteracted?: boolean;
     tempMarkerPositionUpdate?: (pos: [number, number] | null) => void;
   }
 }

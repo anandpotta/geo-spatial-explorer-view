@@ -1,3 +1,4 @@
+
 import { useCallback, useRef } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -20,6 +21,12 @@ export const useLeafletMapNavigation = () => {
     if (!map || !isMapInitialized || cleanupInProgress) {
       console.log('Map not initialized for flyTo');
       return false;
+    }
+    
+    // Check for user interaction flags
+    if (!forceNavigation && (window.userHasInteracted || window.tempMarkerPlaced)) {
+      console.log('User has interacted with map or placed a marker, skipping automatic flyTo');
+      return true; // Return true to prevent map recreation
     }
     
     // Skip navigation if we've already done initial navigation (unless forced)
@@ -55,7 +62,8 @@ export const useLeafletMapNavigation = () => {
       setTimeout(() => {
         try {
           // Double check map is still available before animating
-          if (!map || cleanupInProgress) return;
+          // And check that user hasn't interacted with map during the delay
+          if (!map || cleanupInProgress || (!forceNavigation && (window.userHasInteracted || window.tempMarkerPlaced))) return;
           
           if (map.getContainer() && document.body.contains(map.getContainer())) {
             // Now attempt the smooth animation
