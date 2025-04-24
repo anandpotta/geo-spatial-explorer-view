@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { Popup } from 'react-leaflet';
-import { LocationMarker } from '@/utils/geo-utils';
+import { LocationMarker } from '@/utils/marker-utils';
 import { Button } from '@/components/ui/button';
 import { MapPin, MapPinOff, Trash2 } from 'lucide-react';
 

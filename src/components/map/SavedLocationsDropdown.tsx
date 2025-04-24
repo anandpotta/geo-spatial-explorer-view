@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { LocationMarker, getSavedMarkers } from '@/utils/geo-utils';
+import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
