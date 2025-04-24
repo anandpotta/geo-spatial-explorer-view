@@ -1,9 +1,9 @@
 
-import React from 'react';
+import { useState } from 'react';
 import { Popup } from 'react-leaflet';
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
 import { LocationMarker } from '@/utils/geo-utils';
+import { Button } from '@/components/ui/button';
+import { MapPin, MapPinOff, Trash2 } from 'lucide-react';
 
 interface MarkerPopupProps {
   marker: LocationMarker;
@@ -11,22 +11,53 @@ interface MarkerPopupProps {
 }
 
 const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
+  const [isPinned, setIsPinned] = useState(marker.isPinned || false);
+
+  const handlePinToggle = () => {
+    const updatedPinnedState = !isPinned;
+    setIsPinned(updatedPinnedState);
+    
+    // Update the marker in localStorage
+    const markers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
+    const updatedMarkers = markers.map((m: LocationMarker) => 
+      m.id === marker.id ? { ...m, isPinned: updatedPinnedState } : m
+    );
+    localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
+  };
+
   return (
     <Popup>
-      <div className="p-1">
-        <h3 className="font-medium">{marker.name}</h3>
-        <p className="text-xs text-muted-foreground">{marker.type}</p>
-        <p className="text-xs">
-          {marker.position[0].toFixed(6)}, {marker.position[1].toFixed(6)}
-        </p>
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          className="mt-2"
-          onClick={() => onDelete(marker.id)}
-        >
-          <Trash2 size={14} className="mr-1" /> Remove
-        </Button>
+      <div className="p-2">
+        <h3 className="font-medium mb-2">{marker.name}</h3>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePinToggle}
+            className="flex items-center gap-1"
+          >
+            {isPinned ? (
+              <>
+                <MapPinOff size={16} />
+                Unpin
+              </>
+            ) : (
+              <>
+                <MapPin size={16} />
+                Pin
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDelete(marker.id)}
+            className="flex items-center gap-1"
+          >
+            <Trash2 size={16} />
+            Delete
+          </Button>
+        </div>
       </div>
     </Popup>
   );

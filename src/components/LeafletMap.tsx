@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
@@ -13,9 +12,7 @@ import DrawingControls from './map/DrawingControls';
 import MarkersList from './map/MarkersList';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { toast } from 'sonner';
-
-// Initialize leaflet icons
-setupLeafletIcons();
+import SavedLocationsDropdown from './map/SavedLocationsDropdown';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -108,8 +105,20 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   };
 
+  const handleLocationSelect = (position: [number, number]) => {
+    if (mapRef.current) {
+      mapRef.current.flyTo(position, 18, {
+        duration: 2
+      });
+    }
+  };
+
   return (
     <div className="w-full h-full relative">
+      <div className="absolute top-4 right-4 z-[1000]">
+        <SavedLocationsDropdown onLocationSelect={handleLocationSelect} />
+      </div>
+      
       <MapContainer 
         className="w-full h-full"
         attributionControl={false}

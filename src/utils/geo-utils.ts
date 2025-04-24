@@ -1,4 +1,3 @@
-
 import { OpenStreetMapProvider } from 'leaflet-geosearch';
 import { getConnectionStatus } from './api-service';
 
@@ -17,6 +16,7 @@ export interface LocationMarker {
   type: 'pin' | 'area' | 'building';
   description?: string;
   createdAt: Date;
+  isPinned?: boolean;
 }
 
 // Initialize the provider
