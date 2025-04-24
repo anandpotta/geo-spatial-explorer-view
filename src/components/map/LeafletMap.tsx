@@ -87,21 +87,32 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         console.log('Map container verified, storing reference');
         mapRef.current = map;
         
-        // Force invalidate size to ensure proper rendering
-        map.invalidateSize(true);
-        
-        // Only fly to location if we have one and the map is ready
+        // Fly to location after a short delay to ensure the map is ready
         if (selectedLocation) {
           console.log('Flying to initial location');
           setTimeout(() => {
-            if (map.getContainer()) {
-              map.flyTo([selectedLocation.y, selectedLocation.x], 18);
+            try {
+              if (mapRef.current && mapRef.current.getContainer()) {
+                mapRef.current.invalidateSize(true);
+                mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
+              }
+            } catch (err) {
+              console.error('Error flying to location after delay:', err);
             }
-          }, 200);
+          }, 500);
         }
         
+        // Call onMapReady callback if provided
         if (onMapReady) {
-          onMapReady(map);
+          setTimeout(() => {
+            try {
+              if (mapRef.current) {
+                onMapReady(mapRef.current);
+              }
+            } catch (err) {
+              console.error('Error in onMapReady callback:', err);
+            }
+          }, 100);
         }
       }
     } catch (err) {

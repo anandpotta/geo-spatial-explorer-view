@@ -27,43 +27,30 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         try {
           // Make sure the map and its container still exist
           if (map && map.getContainer && map.getContainer()) {
-            // Use the internal map to check initialization status
-            const internalMap = map as LeafletMapWithInternals;
-            
-            // Check if the map is properly initialized with all required properties
-            if (internalMap._mapPane && internalMap._mapPane._leaflet_pos) {
-              hasCalledOnReady.current = true;
-              console.log('Map container verified, calling onMapReady');
-              
-              // Safely invalidate size with a try-catch
-              try {
-                map.invalidateSize(true);
-              } catch (err) {
-                console.warn('Error invalidating map size, but continuing:', err);
-              }
-              
-              onMapReady(map);
-            } else {
-              console.log('Map not fully initialized yet, delaying onMapReady call');
-              
-              // Wait a bit longer for full initialization
-              setTimeout(() => {
-                try {
-                  if (map && map.getContainer()) {
-                    hasCalledOnReady.current = true;
-                    console.log('Map container verified after delay, calling onMapReady');
-                    onMapReady(map);
-                  }
-                } catch (error) {
-                  console.error('Map initialization failed after delay:', error);
-                }
-              }, 500);
+            // Start by invalidating the map size
+            try {
+              map.invalidateSize(true);
+            } catch (err) {
+              console.warn('Initial invalidateSize failed, but continuing:', err);
             }
+            
+            // Wait a bit more to ensure map is fully rendered
+            setTimeout(() => {
+              try {
+                if (map && map.getContainer()) {
+                  hasCalledOnReady.current = true;
+                  console.log('Map container verified, calling onMapReady');
+                  onMapReady(map);
+                }
+              } catch (error) {
+                console.error('Map initialization failed after delay:', error);
+              }
+            }, 300);
           }
         } catch (err) {
           console.error('Error in map initialization:', err);
         }
-      }, 200); // Increased delay for better initialization
+      }, 200);
     }
     
     // Clean up function
