@@ -8,7 +8,7 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -31,6 +31,7 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
+  mapContainerId?: string;
 }
 
 const MapView = ({
@@ -50,12 +51,11 @@ const MapView = ({
   onShapeCreated,
   activeTool,
   onRegionClick,
-  onClearAll
+  onClearAll,
+  mapContainerId = 'leaflet-map'
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
-  // Use a random key to force a new map instance when needed
-  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
@@ -79,14 +79,17 @@ const MapView = ({
     );
   }
 
+  // Generate a unique ID for this map instance to avoid reuse issues
+  const uniqueMapId = `${mapContainerId}-${Math.random().toString(36).substring(2, 9)}`;
+
   return (
     <div className="w-full h-full relative">
-      <div className="absolute top-4 right-4 z-[1000]">
+      <div className="absolute top-4 right-4 z-[1000]" role="region" aria-label="Map controls">
         <SavedLocationsDropdown onLocationSelect={handleLocationSelect} />
       </div>
       
       <MapContainer 
-        key={mapKey}
+        id={uniqueMapId}
         className="w-full h-full"
         attributionControl={false}
         center={position}
@@ -95,6 +98,7 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
+        key={uniqueMapId} // Key helps React recreate the component when ID changes
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
@@ -110,7 +114,7 @@ const MapView = ({
         <DrawingControlsContainer
           onShapeCreated={onShapeCreated}
           activeTool={activeTool}
-          onRegionClick={handleRegionClick}
+          onRegionClick={onRegionClick}
           onClearAll={onClearAll}
         />
         

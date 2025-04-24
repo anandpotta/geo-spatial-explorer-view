@@ -3,6 +3,13 @@ import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
+// Extend the Map type to include our custom property
+declare module 'leaflet' {
+  interface Map {
+    hasMapClickHandler?: boolean;
+  }
+}
+
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
 }
@@ -13,33 +20,50 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   
   useEffect(() => {
     // Only call onMapReady once per instance
-    if (map && onMapReady && !hasCalledOnReady.current) {
-      console.log('Map is ready, will call onMapReady after initialization');
-      
-      // Make sure map is properly initialized
-      setTimeout(() => {
-        try {
-          if (map && map.getContainer()) {
-            hasCalledOnReady.current = true;
-            map.invalidateSize();
-            console.log('Map container verified, calling onMapReady');
-            
-            // Ensure proper event handlers are set up
+    if (!map || hasCalledOnReady.current) return;
+    
+    console.log('Map is ready in MapReference');
+    
+    // Small timeout to ensure DOM is fully rendered
+    const timeoutId = setTimeout(() => {
+      try {
+        // Make sure map is fully initialized and has a valid container
+        if (map && map.getContainer()) {
+          // Ensure the map is properly sized
+          map.invalidateSize(true);
+          
+          // Ensure we don't add duplicate click handlers
+          if (!map.hasMapClickHandler) {
             map.on('click', (e) => {
               console.log('Map was clicked at:', e.latlng);
             });
-            
-            onMapReady(map);
+            map.hasMapClickHandler = true;
           }
-        } catch (err) {
-          console.error('Error in map initialization:', err);
+          
+          // Mark as called to prevent duplicate calls
+          hasCalledOnReady.current = true;
+          
+          // Call the callback
+          onMapReady(map);
         }
-      }, 100);
-    }
+      } catch (err) {
+        console.error('Error in map initialization:', err);
+      }
+    }, 100);
     
     // Clean up function
     return () => {
-      hasCalledOnReady.current = false;
+      clearTimeout(timeoutId);
+      // Only remove event listeners if map exists and is valid
+      if (map && !map._isDestroyed) {
+        try {
+          // Remove click event listener to prevent memory leaks
+          map.off('click');
+          delete map.hasMapClickHandler;
+        } catch (error) {
+          console.error('Error cleaning up map reference:', error);
+        }
+      }
     };
   }, [map, onMapReady]);
   

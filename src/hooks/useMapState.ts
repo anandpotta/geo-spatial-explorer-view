@@ -90,9 +90,14 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
+    // Clear the temporary marker immediately to prevent duplicate markers
     setTempMarker(null);
     setMarkerName('');
     setCurrentDrawing(null);
+    
+    // Disable any active tool after saving to prevent immediate re-creation of marker
+    setActiveTool(null);
+    
     toast.success("Location saved successfully");
   };
 
