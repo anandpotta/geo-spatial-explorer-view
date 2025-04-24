@@ -86,7 +86,9 @@ const TempMarker = ({
       eventHandlers={{
         dragstart: (e) => {
           // Prevent event propagation
-          L.DomEvent.stopPropagation(e.originalEvent);
+          if (e.sourceTarget && e.sourceTarget._map) {
+            e.sourceTarget._map._stop();
+          }
           
           // Reinforce interaction flags
           window.userHasInteracted = true;
@@ -94,7 +96,9 @@ const TempMarker = ({
         },
         dragend: (e) => {
           // Prevent event propagation
-          L.DomEvent.stopPropagation(e.originalEvent);
+          if (e.sourceTarget && e.sourceTarget._map) {
+            e.sourceTarget._map._stop();
+          }
           
           const marker = e.target;
           const newPosition = marker.getLatLng();
@@ -116,12 +120,16 @@ const TempMarker = ({
           }
         },
         click: (e) => {
-          // Prevent event propagation to stop map clicks from interfering
-          L.DomEvent.stopPropagation(e.originalEvent);
+          // Prevent event propagation
+          if (e.sourceTarget && e.sourceTarget._map) {
+            e.sourceTarget._map._stop();
+          }
         },
         popupopen: (e) => {
           // Prevent event propagation
-          L.DomEvent.stopPropagation(e.originalEvent);
+          if (e.sourceTarget && e.sourceTarget._map) {
+            e.sourceTarget._map._stop();
+          }
         }
       }}
     >
