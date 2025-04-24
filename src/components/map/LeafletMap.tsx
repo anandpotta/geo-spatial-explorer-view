@@ -24,9 +24,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
   const [mapReadyAttempts, setMapReadyAttempts] = useState<number>(0);
+  const cleanupInProgress = useRef<boolean>(false);
   
   // Generate a truly unique container ID that won't be reused
-  const mapContainerId = useRef<string>(`map-container-${mapInstanceKey}`);
+  const mapContainerId = useRef<string>(`map-container-${mapInstanceKey}-${Math.random().toString(36).substring(2, 9)}`);
   
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
@@ -44,46 +45,137 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       document.head.appendChild(link);
     }
     
-    // Force recreation of container on key change
+    // Create a new container to avoid reuse issues
     return () => {
+      cleanupInProgress.current = true;
+      
+      // If we have a map reference, clean it up properly
+      if (mapRef.current) {
+        try {
+          console.log('Cleaning up Leaflet map instance');
+          
+          // First remove all event listeners
+          mapRef.current.off();
+          
+          // Then remove all layers
+          mapRef.current.eachLayer(layer => {
+            try {
+              mapRef.current?.removeLayer(layer);
+            } catch (e) {
+              console.warn('Error removing layer:', e);
+            }
+          });
+          
+          // Then remove the map itself if it has a container
+          try {
+            if (mapRef.current.getContainer()) {
+              mapRef.current.remove();
+            }
+          } catch (e) {
+            console.warn('Error removing map:', e);
+          }
+          
+          // Clear the reference
+          mapRef.current = null;
+        } catch (err) {
+          console.error('Error cleaning up map:', err);
+        }
+      }
+      
       // Clean up the old container to prevent reuse
       const oldContainer = document.getElementById(mapContainerId.current);
       if (oldContainer) {
         // We'll replace it with a fresh one
         const parent = oldContainer.parentElement;
         if (parent) {
-          const newContainer = document.createElement('div');
-          newContainer.id = mapContainerId.current;
-          newContainer.style.width = '100%';
-          newContainer.style.height = '100%';
-          parent.replaceChild(newContainer, oldContainer);
+          try {
+            parent.removeChild(oldContainer);
+            
+            const newContainer = document.createElement('div');
+            newContainer.id = `map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+            newContainer.style.width = '100%';
+            newContainer.style.height = '100%';
+            parent.appendChild(newContainer);
+          } catch (e) {
+            console.warn('Error replacing container:', e);
+          }
         }
       }
+      
+      cleanupInProgress.current = false;
     };
   }, [mapInstanceKey]);
   
-  // Clean up map on unmount or key change
-  useEffect(() => {
-    return () => {
-      if (mapRef.current) {
-        console.log('Cleaning up Leaflet map instance');
-        try {
-          // First remove all layers and handlers to ensure proper cleanup
-          mapRef.current.eachLayer(layer => {
-            mapRef.current?.removeLayer(layer);
-          });
-          mapRef.current.remove();
-          mapRef.current = null;
-        } catch (err) {
-          console.error('Error cleaning up map:', err);
+  // Handle map reference and initialization
+  const handleSetMapRef = useCallback((map: L.Map) => {
+    console.log('Map reference provided');
+    
+    // Don't set up the map if cleanup is in progress
+    if (cleanupInProgress.current) {
+      console.warn('Cleanup in progress, skipping map setup');
+      return;
+    }
+    
+    // Store the map reference
+    mapRef.current = map;
+    
+    // Force invalidate size to ensure proper rendering
+    setTimeout(() => {
+      if (!mapRef.current || cleanupInProgress.current) return;
+      
+      try {
+        if (mapRef.current.getContainer()) {
+          // Perform multiple invalidations to ensure rendering
+          mapRef.current.invalidateSize(true);
+          
+          // Set a small timeout for the second invalidation
+          setTimeout(() => {
+            if (!mapRef.current || cleanupInProgress.current) return;
+            
+            try {
+              mapRef.current.invalidateSize(true);
+              setIsMapInitialized(true);
+              
+              // Only fly to location if we have one and the map is ready
+              if (selectedLocation) {
+                const lat = selectedLocation.y;
+                const lng = selectedLocation.x;
+                
+                // Validate coordinates before flying
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  console.log('Flying to initial location');
+                  safeMapFlyTo(lat, lng, 18);
+                }
+              }
+              
+              if (onMapReady && mapRef.current) {
+                onMapReady(mapRef.current);
+              }
+            } catch (err) {
+              console.error('Error initializing map:', err);
+              
+              if (mapReadyAttempts < 3) {
+                setMapReadyAttempts(prev => prev + 1);
+                // Try again with a delay
+                setTimeout(() => {
+                  if (mapRef.current && !cleanupInProgress.current) {
+                    setIsMapInitialized(true);
+                    if (onMapReady) onMapReady(mapRef.current);
+                  }
+                }, 500);
+              }
+            }
+          }, 300);
         }
+      } catch (err) {
+        console.error('Error in map initialization:', err);
       }
-    };
-  }, [mapInstanceKey]);
+    }, 200);
+  }, [selectedLocation, onMapReady, mapReadyAttempts]);
 
   // Safe flyTo function with proper error handling
-  const safeMapFlyTo = (lat: number, lng: number, zoom: number = 18) => {
-    if (!mapRef.current || !isMapInitialized) {
+  const safeMapFlyTo = useCallback((lat: number, lng: number, zoom: number = 18) => {
+    if (!mapRef.current || !isMapInitialized || cleanupInProgress.current) {
       console.error('Map not initialized for flyTo');
       return false;
     }
@@ -91,44 +183,74 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     try {
       // Check if the map is in a valid state for flying
       if (mapRef.current.getContainer()) {
-        const center = mapRef.current.getCenter();
-        
         // First invalidate size to ensure proper rendering
         mapRef.current.invalidateSize(true);
         
-        // Use a timeout to ensure the DOM is ready
-        setTimeout(() => {
-          try {
-            // Double check the map is still valid
-            if (mapRef.current && mapRef.current.getContainer()) {
-              mapRef.current.flyTo([lat, lng], zoom, {
-                animate: true,
-                duration: 1.5
-              });
-            }
-          } catch (innerError) {
-            console.error('Inner flyTo error:', innerError);
-            // As a fallback, try setView which is more reliable
-            try {
-              mapRef.current?.setView([lat, lng], zoom);
-            } catch (setViewError) {
-              console.error('setView fallback error:', setViewError);
-            }
-          }
-        }, 100);
+        // Check if map has _leaflet_pos through a safe method
+        let hasValidCenter = false;
+        try {
+          const center = mapRef.current.getCenter();
+          hasValidCenter = true;
+        } catch (e) {
+          console.warn('Map center not available, deferring navigation');
+          hasValidCenter = false;
+        }
         
-        return true;
+        if (hasValidCenter) {
+          // Use a timeout to ensure the DOM is ready
+          setTimeout(() => {
+            if (!mapRef.current || cleanupInProgress.current) return;
+            
+            try {
+              // Double check the map is still valid
+              if (mapRef.current.getContainer()) {
+                // Try flyTo for smooth animation
+                mapRef.current.flyTo([lat, lng], zoom, {
+                  animate: true,
+                  duration: 1.5
+                });
+              }
+            } catch (innerError) {
+              console.error('Inner flyTo error:', innerError);
+              // As a fallback, try setView which is more reliable
+              try {
+                if (mapRef.current && !cleanupInProgress.current) {
+                  mapRef.current.setView([lat, lng], zoom);
+                }
+              } catch (setViewError) {
+                console.error('setView fallback error:', setViewError);
+              }
+            }
+          }, 200);
+          
+          return true;
+        } else {
+          // If we can't get the center, use setView directly
+          setTimeout(() => {
+            if (!mapRef.current || cleanupInProgress.current) return;
+            
+            try {
+              if (mapRef.current.getContainer()) {
+                mapRef.current.setView([lat, lng], zoom);
+              }
+            } catch (err) {
+              console.error('Error in setView fallback:', err);
+            }
+          }, 200);
+          
+          return true;
+        }
       }
       return false;
     } catch (err) {
       console.error('Error in safeMapFlyTo:', err);
       return false;
     }
-  };
+  }, [isMapInitialized]);
 
   // Handle location changes
   useEffect(() => {
-    if (selectedLocation && mapRef.current && isMapInitialized) {
+    if (selectedLocation && mapRef.current && isMapInitialized && !cleanupInProgress.current) {
       try {
         const lat = selectedLocation.y;
         const lng = selectedLocation.x;
@@ -145,72 +267,26 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         // Use our safe fly function
         if (!safeMapFlyTo(lat, lng, 18)) {
           console.warn('Safe flyTo failed, recreating map');
-          setMapInstanceKey(Date.now());
-          mapContainerId.current = `map-container-${Date.now()}`;
+          
+          // Generate new keys to force recreation
+          const newKey = Date.now();
+          setMapInstanceKey(newKey);
+          mapContainerId.current = `map-container-${newKey}-${Math.random().toString(36).substring(2, 9)}`;
         }
       } catch (err) {
         console.error('Error flying to location:', err);
         // If there's an error, recreate the map
-        setMapInstanceKey(Date.now());
-        mapContainerId.current = `map-container-${Date.now()}`;
+        const newKey = Date.now();
+        setMapInstanceKey(newKey);
+        mapContainerId.current = `map-container-${newKey}-${Math.random().toString(36).substring(2, 9)}`;
       }
     }
-  }, [selectedLocation, isMapInitialized]);
+  }, [selectedLocation, isMapInitialized, safeMapFlyTo]);
 
-  const handleSetMapRef = useCallback((map: L.Map) => {
-    console.log('Map reference provided');
-    
-    // Store the map reference
-    mapRef.current = map;
-    
-    // Force invalidate size to ensure proper rendering
-    setTimeout(() => {
-      if (mapRef.current && mapRef.current.getContainer()) {
-        try {
-          // Perform multiple invalidations to ensure rendering
-          mapRef.current.invalidateSize(true);
-          
-          // Set a small timeout for the second invalidation
-          setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.invalidateSize(true);
-              setIsMapInitialized(true);
-              
-              // Only fly to location if we have one and the map is ready
-              if (selectedLocation) {
-                const lat = selectedLocation.y;
-                const lng = selectedLocation.x;
-                
-                // Validate coordinates before flying
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  console.log('Flying to initial location');
-                  safeMapFlyTo(lat, lng, 18);
-                }
-              }
-              
-              if (onMapReady) {
-                onMapReady(map);
-              }
-            }
-          }, 300);
-        } catch (err) {
-          console.error('Error initializing map:', err);
-          if (mapReadyAttempts < 3) {
-            setMapReadyAttempts(prev => prev + 1);
-            // Try again with a delay
-            setTimeout(() => {
-              if (mapRef.current) {
-                setIsMapInitialized(true);
-                if (onMapReady) onMapReady(map);
-              }
-            }, 500);
-          }
-        }
-      }
-    }, 200);
-  }, [selectedLocation, onMapReady, mapReadyAttempts]);
+  // Use mapEvents hook with safeguards
+  useMapEvents(isMapInitialized ? mapRef.current : null, selectedLocation);
 
-  const handleLocationSelect = (position: [number, number]) => {
+  const handleLocationSelect = useCallback((position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
     
     if (!position || !Array.isArray(position) || position.length < 2) {
@@ -227,7 +303,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       return;
     }
     
-    if (mapRef.current && isMapInitialized) {
+    if (mapRef.current && isMapInitialized && !cleanupInProgress.current) {
       try {
         // Use our safe fly function
         safeMapFlyTo(lat, lng);
@@ -246,25 +322,26 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         console.error('Error flying to location:', err);
       }
     }
-  };
+  }, [isMapInitialized, safeMapFlyTo, onLocationSelect]);
 
   // Adding the handleClearAll function that was missing
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
     mapState.setMarkerType('building');
     mapState.setCurrentDrawing(null);
     mapState.setShowFloorPlan(false);
     mapState.setSelectedDrawing(null);
+    mapState.setActiveTool(null);
     
-    if (mapRef.current && isMapInitialized) {
+    if (mapRef.current && isMapInitialized && !cleanupInProgress.current) {
       try {
         mapRef.current.invalidateSize();
       } catch (err) {
         console.error('Error invalidating map size:', err);
       }
     }
-  };
+  }, [mapState, isMapInitialized]);
 
   if (mapState.showFloorPlan) {
     return (
@@ -274,6 +351,15 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       />
     );
   }
+
+  // Reset the local mapInstanceKey to force rerender if needed
+  const resetMap = () => {
+    const newKey = Date.now();
+    setMapInstanceKey(newKey);
+    mapContainerId.current = `map-container-${newKey}-${Math.random().toString(36).substring(2, 9)}`;
+    setIsMapInitialized(false);
+    setMapReadyAttempts(0);
+  };
 
   return (
     <MapView

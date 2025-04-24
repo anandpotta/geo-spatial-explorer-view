@@ -17,6 +17,16 @@ interface MapReferenceProps {
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
   const hasCalledOnReady = useRef(false);
+  const initTimeoutRef = useRef<number | null>(null);
+  
+  // Clear any pending timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (initTimeoutRef.current !== null) {
+        clearTimeout(initTimeoutRef.current);
+      }
+    };
+  }, []);
   
   useEffect(() => {
     // Only call onMapReady once per instance
@@ -25,7 +35,9 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     console.log('Map is ready in MapReference');
     
     // Small timeout to ensure DOM is fully rendered
-    const timeoutId = setTimeout(() => {
+    initTimeoutRef.current = window.setTimeout(() => {
+      initTimeoutRef.current = null;
+      
       try {
         // Make sure map is fully initialized and has a valid container
         if (map && map.getContainer()) {
@@ -48,7 +60,10 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         } else {
           // If map isn't ready, try again in a bit
           console.log('Map not fully initialized, retrying...');
-          setTimeout(() => {
+          
+          initTimeoutRef.current = window.setTimeout(() => {
+            initTimeoutRef.current = null;
+            
             if (map && map.getContainer()) {
               map.invalidateSize(true);
               hasCalledOnReady.current = true;
@@ -59,17 +74,23 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       } catch (err) {
         console.error('Error in map initialization:', err);
       }
-    }, 100);
+    }, 200);
     
     // Clean up function
     return () => {
-      clearTimeout(timeoutId);
+      if (initTimeoutRef.current !== null) {
+        clearTimeout(initTimeoutRef.current);
+      }
+      
       // Only remove event listeners if map exists and has container
-      if (map && map.getContainer()) {
+      if (map) {
         try {
-          // Remove click event listener to prevent memory leaks
-          map.off('click');
-          delete map.hasMapClickHandler;
+          // Check if container exists before removing listeners
+          if (map.getContainer()) {
+            // Remove click event listener to prevent memory leaks
+            map.off('click');
+            delete map.hasMapClickHandler;
+          }
         } catch (error) {
           console.error('Error cleaning up map reference:', error);
         }
