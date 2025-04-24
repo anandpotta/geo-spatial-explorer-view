@@ -9,6 +9,7 @@ const API_CONFIG = {
   TIMEOUT: 8000, // 8 seconds timeout
   RETRY_COUNT: 2,
   RETRY_DELAY: 1500,
+  OFFLINE_MODE: true // Set to true to enable full offline mode
 };
 
 // Network and backend status
@@ -17,7 +18,7 @@ let isBackendAvailable = false;
 
 // Check if backend is available
 export async function checkBackendAvailability(): Promise<boolean> {
-  if (!isOnline) {
+  if (!isOnline || API_CONFIG.OFFLINE_MODE) {
     return false;
   }
   
@@ -63,20 +64,21 @@ checkBackendAvailability().then(available => {
   if (!available) {
     console.log('Working in offline mode - backend not available');
     // Don't show toast on initial load to avoid confusion
-    // Users will still see the connectivity indicator
   }
 });
 
 // Network status event listeners
 window.addEventListener('online', async () => {
   isOnline = true;
-  const backendAvailable = await checkBackendAvailability();
-  
-  if (backendAvailable) {
-    toast({
-      title: "Back online",
-      description: "Connected to backend service. Syncing data...",
-    });
+  if (!API_CONFIG.OFFLINE_MODE) {
+    const backendAvailable = await checkBackendAvailability();
+    
+    if (backendAvailable) {
+      toast({
+        title: "Back online",
+        description: "Connected to backend service. Syncing data...",
+      });
+    }
   }
 });
 
@@ -96,8 +98,8 @@ export async function apiCall<T>(
   options: RequestInit = {}, 
   retries = API_CONFIG.RETRY_COUNT
 ): Promise<T> {
-  // If offline or backend not available, reject immediately
-  if (!isOnline || !isBackendAvailable) {
+  // If offline, offline mode is enabled, or backend not available, reject immediately
+  if (!isOnline || API_CONFIG.OFFLINE_MODE || !isBackendAvailable) {
     return Promise.reject(new Error('Backend not available'));
   }
   
@@ -138,14 +140,16 @@ export async function apiCall<T>(
   } catch (error) {
     clearTimeout(timeoutId);
     
-    if (retries > 0 && isOnline) {
+    if (retries > 0 && isOnline && !API_CONFIG.OFFLINE_MODE) {
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
       return apiCall<T>(endpoint, options, retries - 1);
     }
     
     // If we're out of retries, check if backend is still available
-    checkBackendAvailability();
+    if (!API_CONFIG.OFFLINE_MODE) {
+      checkBackendAvailability();
+    }
     throw error;
   }
 }
@@ -153,7 +157,7 @@ export async function apiCall<T>(
 // Get backend status
 export function getConnectionStatus() {
   return {
-    isOnline,
-    isBackendAvailable
+    isOnline: isOnline && !API_CONFIG.OFFLINE_MODE,
+    isBackendAvailable: isBackendAvailable && !API_CONFIG.OFFLINE_MODE
   };
 }

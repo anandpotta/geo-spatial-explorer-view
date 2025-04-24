@@ -5,7 +5,7 @@ import { Wifi, WifiOff, RefreshCw, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { checkBackendAvailability } from '@/utils/api-client';
+import { checkBackendAvailability, getConnectionStatus } from '@/utils/api-service';
 
 const SyncStatusIndicator: React.FC = () => {
   // Default values when not wrapped in ApiSyncProvider
@@ -31,6 +31,13 @@ const SyncStatusIndicator: React.FC = () => {
   const contextIsSyncing = apiSyncContext?.isSyncing ?? isSyncing;
   const contextLastSynced = apiSyncContext?.lastSynced ?? lastSynced;
   const syncNow = apiSyncContext?.syncNow ?? (() => console.log('Sync not available in fallback mode'));
+  
+  // Check connection status directly
+  useEffect(() => {
+    const { isOnline: online, isBackendAvailable } = getConnectionStatus();
+    setIsOnline(online);
+    setIsBackendReachable(isBackendAvailable);
+  }, []);
   
   // Check backend status on mount and when online status changes
   useEffect(() => {
@@ -75,7 +82,7 @@ const SyncStatusIndicator: React.FC = () => {
   const connectionStatus = contextIsOnline 
     ? isBackendReachable 
       ? { label: 'Server Connected', color: 'text-green-500' } 
-      : { label: 'Local Only', color: 'text-orange-500' }
+      : { label: 'Offline Mode', color: 'text-orange-500' }
     : { label: 'Offline', color: 'text-yellow-500' };
   
   return (
@@ -103,7 +110,7 @@ const SyncStatusIndicator: React.FC = () => {
               {contextIsOnline 
                 ? isBackendReachable 
                   ? 'Connected to server - data will sync automatically' 
-                  : 'Online but server is unreachable - working with local data only'
+                  : 'Working in offline mode - data is stored locally only'
                 : 'Working offline - data is stored locally'}
             </p>
           </TooltipContent>
