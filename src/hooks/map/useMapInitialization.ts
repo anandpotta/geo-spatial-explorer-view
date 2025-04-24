@@ -1,6 +1,7 @@
 
 import { useEffect } from 'react';
 import { Map } from 'leaflet';
+import '../types/leaflet-extended.d.ts';
 
 interface MapInitProps {
   map: Map | null;

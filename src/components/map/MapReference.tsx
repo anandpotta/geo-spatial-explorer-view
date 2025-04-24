@@ -6,6 +6,9 @@ import { useMapContainer } from '@/hooks/map/useMapContainer';
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapCleanup } from '@/hooks/map/useMapCleanup';
 
+// Import our extended types
+import '../types/leaflet-extended.d.ts';
+
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
 }
@@ -30,9 +33,11 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       try {
         if (initAttempts >= maxAttempts) {
           console.warn('Maximum map initialization attempts reached. Proceeding with limited functionality.');
-          map.isMapFullyInitialized = true;
-          hasCalledOnReady.current = true;
-          onMapReady(map);
+          if (map) {
+            map.isMapFullyInitialized = true;
+            hasCalledOnReady.current = true;
+            onMapReady(map);
+          }
           return;
         }
 

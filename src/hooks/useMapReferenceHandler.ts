@@ -1,9 +1,7 @@
-
-// Import the extended Leaflet types
 import { useCallback } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
-import '../types/leaflet-extended.d.ts'; // Import our extended types with correct extension
+import './types/leaflet-extended.d.ts'; // Import our extended types with correct path
 
 export const useMapReferenceHandler = (
   mapRef: React.MutableRefObject<L.Map | null>,
