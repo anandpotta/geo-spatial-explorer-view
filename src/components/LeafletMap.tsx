@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
@@ -46,20 +45,20 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   useEffect(() => {
     const loadSavedData = () => {
       const loadedMarkers = getSavedMarkers();
-      if (loadedMarkers && loadedMarkers.length > 0) {
-        setMarkers(loadedMarkers);
-      }
+      setMarkers(loadedMarkers);
       
       const loadedDrawings = getSavedDrawings();
-      if (loadedDrawings && loadedDrawings.length > 0) {
-        setDrawings(loadedDrawings);
-      }
+      setDrawings(loadedDrawings);
     };
     
     loadSavedData();
     
     window.addEventListener('storage', loadSavedData);
-    return () => window.removeEventListener('storage', loadSavedData);
+    window.addEventListener('markersUpdated', loadSavedData);
+    return () => {
+      window.removeEventListener('storage', loadSavedData);
+      window.removeEventListener('markersUpdated', loadSavedData);
+    };
   }, []);
 
   useMapEvents(mapRef.current, selectedLocation);

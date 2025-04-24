@@ -32,13 +32,19 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   useEffect(() => {
     loadMarkers();
     window.addEventListener('storage', loadMarkers);
-    return () => window.removeEventListener('storage', loadMarkers);
+    window.addEventListener('markersUpdated', loadMarkers);
+    return () => {
+      window.removeEventListener('storage', loadMarkers);
+      window.removeEventListener('markersUpdated', loadMarkers);
+    };
   }, []);
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent dropdown from closing
     deleteMarker(id);
     loadMarkers();
+    // Dispatch custom event to notify map to refresh markers
+    window.dispatchEvent(new CustomEvent('markersUpdated'));
     toast.success("Location removed");
   };
 
