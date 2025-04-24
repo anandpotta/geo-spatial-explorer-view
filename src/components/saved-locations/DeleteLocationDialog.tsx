@@ -10,7 +10,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface DeleteLocationDialogProps {
   isOpen: boolean;
@@ -28,16 +28,32 @@ const DeleteLocationDialog = ({
   onCancel,
 }: DeleteLocationDialogProps) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
-
+  
+  // Handle dialog closing
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+      onCancel();
+    }
+  };
+  
+  // Ensure dialog doesn't trap focus after it's closed
+  useEffect(() => {
+    if (!isOpen) {
+      // Return focus to the body element if dialog closes
+      // This helps reset focus state when the dialog is dismissed
+      setTimeout(() => {
+        document.body.focus();
+      }, 0);
+    }
+  }, [isOpen]);
+  
   return (
     <AlertDialog 
       open={isOpen} 
-      onOpenChange={(open) => {
-        onOpenChange(open);
-        if (!open) onCancel();
-      }}
+      onOpenChange={handleOpenChange}
     >
-      <AlertDialogContent>
+      <AlertDialogContent onEscapeKeyDown={onCancel} onPointerDownOutside={onCancel}>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Location</AlertDialogTitle>
           <AlertDialogDescription>
@@ -45,10 +61,20 @@ const DeleteLocationDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel ref={cancelRef} onClick={onCancel}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel 
+            ref={cancelRef} 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCancel();
+            }}
+          >
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction 
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               onConfirmDelete();
             }}
           >

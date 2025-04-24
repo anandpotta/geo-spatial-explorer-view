@@ -35,6 +35,12 @@ export const useSavedLocations = () => {
   }, []);
 
   const handleDelete = (id: string, event?: React.MouseEvent) => {
+    // Prevent event propagation to avoid triggering parent elements
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    
     // Store the element that triggered the deletion for focus return
     if (event?.currentTarget) {
       returnFocusRef.current = event.currentTarget as HTMLElement;
@@ -50,23 +56,29 @@ export const useSavedLocations = () => {
   const confirmDelete = () => {
     if (markerToDelete) {
       deleteMarker(markerToDelete.id);
-      loadMarkers();
+      loadMarkers(); // Reload markers immediately after deletion
       setIsDeleteDialogOpen(false);
       setMarkerToDelete(null);
       toast.success("Location removed");
       
-      // Return focus to a safe element after dialog closes
-      setTimeout(() => {
-        if (returnFocusRef.current) {
-          try {
+      // Reset focus to document.body as a fallback
+      document.body.focus();
+      
+      // Wait for next frame before trying to return focus
+      requestAnimationFrame(() => {
+        try {
+          if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
             returnFocusRef.current.focus();
-          } catch (e) {
-            // If we can't focus the original element, focus the document body
+          } else {
             document.body.focus();
           }
+        } catch (e) {
+          console.error("Error restoring focus:", e);
+          document.body.focus();
+        } finally {
           returnFocusRef.current = null;
         }
-      }, 0);
+      });
     }
   };
 
@@ -74,17 +86,24 @@ export const useSavedLocations = () => {
     setIsDeleteDialogOpen(false);
     setMarkerToDelete(null);
     
-    // Return focus to trigger element
-    setTimeout(() => {
-      if (returnFocusRef.current) {
-        try {
+    // Reset focus to document.body as a fallback
+    document.body.focus();
+    
+    // Wait for next frame before trying to return focus
+    requestAnimationFrame(() => {
+      try {
+        if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
           returnFocusRef.current.focus();
-        } catch (e) {
+        } else {
           document.body.focus();
         }
+      } catch (e) {
+        console.error("Error restoring focus:", e);
+        document.body.focus();
+      } finally {
         returnFocusRef.current = null;
       }
-    }, 0);
+    });
   };
 
   return {

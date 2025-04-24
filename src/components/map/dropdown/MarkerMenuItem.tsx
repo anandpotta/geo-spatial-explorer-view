@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { MapPin, Trash2 } from "lucide-react";
 import { LocationMarker } from "@/utils/geo-utils";
+import { useState } from "react";
 
 interface MarkerMenuItemProps {
   marker: LocationMarker;
@@ -11,11 +12,36 @@ interface MarkerMenuItemProps {
 }
 
 const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const handleSelect = (e: React.MouseEvent) => {
+    // Don't select if we're trying to delete
+    if (isDeleting) return;
+    
+    e.stopPropagation();
+    onSelect(marker.position);
+  };
+  
+  const handleDelete = (e: React.MouseEvent) => {
+    setIsDeleting(true);
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Add a tiny delay to ensure the event doesn't propagate
+    setTimeout(() => {
+      onDelete(marker.id, e);
+      setIsDeleting(false);
+    }, 10);
+  };
+
   return (
-    <DropdownMenuItem className="flex justify-between items-center">
+    <DropdownMenuItem 
+      className="flex justify-between items-center" 
+      onSelect={(e) => e.preventDefault()}
+    >
       <div
         className="flex items-center flex-1 cursor-pointer"
-        onClick={() => onSelect(marker.position)}
+        onClick={handleSelect}
       >
         <MapPin className="mr-2 h-4 w-4" />
         {marker.name}
@@ -24,9 +50,11 @@ const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => 
         variant="ghost"
         size="icon"
         className="h-6 w-6"
-        onClick={(e) => onDelete(marker.id, e)}
+        onClick={handleDelete}
+        tabIndex={0}
       >
         <Trash2 className="h-4 w-4" />
+        <span className="sr-only">Delete {marker.name}</span>
       </Button>
     </DropdownMenuItem>
   );

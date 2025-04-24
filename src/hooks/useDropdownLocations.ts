@@ -40,6 +40,25 @@ export const useDropdownLocations = () => {
     };
   }, []);
 
+  // Add this function to help with proper cleanup of elements when a marker is deleted
+  const cleanupMarkerReferences = () => {
+    // Force cleanup of any stale elements that might be causing issues
+    const staleDialogs = document.querySelectorAll('[role="dialog"][aria-hidden="true"]');
+    staleDialogs.forEach(dialog => {
+      if (dialog.parentNode) {
+        try {
+          dialog.setAttribute('data-state', 'closed');
+        } catch (e) {
+          console.error("Error cleaning up dialog:", e);
+        }
+      }
+    });
+    
+    // Ensure body is not restricted
+    document.body.style.pointerEvents = '';
+    document.body.removeAttribute('aria-hidden');
+  };
+
   return {
     markers,
     pinnedMarkers,
@@ -47,6 +66,7 @@ export const useDropdownLocations = () => {
     setIsDeleteDialogOpen,
     markerToDelete,
     setMarkerToDelete,
-    returnFocusRef
+    returnFocusRef,
+    cleanupMarkerReferences
   };
 };

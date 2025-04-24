@@ -58,7 +58,9 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   };
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
+    // Prevent event propagation to avoid triggering parent elements
     event.stopPropagation();
+    event.preventDefault();
     
     if (event.currentTarget) {
       returnFocusRef.current = event.currentTarget as HTMLElement;
@@ -78,16 +80,27 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       setMarkerToDelete(null);
       toast.success("Location removed");
       
-      setTimeout(() => {
-        if (returnFocusRef.current) {
-          try {
+      // Reset focus to document.body as a fallback
+      document.body.focus();
+      
+      // Wait for next frame before trying to return focus
+      requestAnimationFrame(() => {
+        try {
+          if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
             returnFocusRef.current.focus();
-          } catch (e) {
-            document.body.focus();
+          } else {
+            // Focus the dropdown trigger as a fallback
+            const trigger = document.querySelector('.dropdown-trigger') as HTMLElement;
+            if (trigger) trigger.focus();
+            else document.body.focus();
           }
+        } catch (e) {
+          console.error("Error restoring focus:", e);
+          document.body.focus();
+        } finally {
           returnFocusRef.current = null;
         }
-      }, 0);
+      });
     }
   };
 
@@ -95,23 +108,34 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     setIsDeleteDialogOpen(false);
     setMarkerToDelete(null);
     
-    setTimeout(() => {
-      if (returnFocusRef.current) {
-        try {
+    // Reset focus to document.body as a fallback
+    document.body.focus();
+    
+    // Wait for next frame before trying to return focus
+    requestAnimationFrame(() => {
+      try {
+        if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
           returnFocusRef.current.focus();
-        } catch (e) {
-          document.body.focus();
+        } else {
+          // Focus the dropdown trigger as a fallback
+          const trigger = document.querySelector('.dropdown-trigger') as HTMLElement;
+          if (trigger) trigger.focus();
+          else document.body.focus();
         }
+      } catch (e) {
+        console.error("Error restoring focus:", e);
+        document.body.focus();
+      } finally {
         returnFocusRef.current = null;
       }
-    }, 0);
+    });
   };
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="w-[200px]">
+          <Button variant="outline" size="sm" className="w-[200px] dropdown-trigger">
             <Navigation className="mr-2 h-4 w-4" />
             Saved Locations {markers.length > 0 && `(${markers.length})`}
           </Button>
@@ -154,7 +178,13 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       </DropdownMenu>
 
       <AlertDialog open={isDeleteDialogOpen}>
-        <AlertDialogContent onEscapeKeyDown={cancelDelete}>
+        <AlertDialogContent 
+          onEscapeKeyDown={cancelDelete}
+          onPointerDownOutside={(e) => {
+            e.preventDefault();
+            cancelDelete();
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Location</AlertDialogTitle>
             <AlertDialogDescription>
@@ -162,8 +192,24 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                cancelDelete();
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                confirmDelete();
+              }}
+            >
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

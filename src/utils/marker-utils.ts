@@ -56,16 +56,36 @@ export function getSavedMarkers(): LocationMarker[] {
 }
 
 export function deleteMarker(id: string): void {
-  const savedMarkers = getSavedMarkers();
-  const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
-  localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
-  
-  // Ensure both events are dispatched
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
-  
-  // Try to sync with backend
-  deleteMarkerFromBackend(id);
+  try {
+    const savedMarkers = getSavedMarkers();
+    const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
+    localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
+    
+    // Ensure both events are dispatched
+    try {
+      // Use requestAnimationFrame to avoid blocking the UI thread
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('markersUpdated'));
+        
+        // Force re-enabling of interactions on the body
+        document.body.style.pointerEvents = '';
+        document.body.removeAttribute('aria-hidden');
+        
+        // Try to sync with backend in the background
+        deleteMarkerFromBackend(id);
+      });
+    } catch (e) {
+      console.error("Error dispatching events:", e);
+      // Fallback method for older browsers
+      setTimeout(() => {
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('markersUpdated'));
+      }, 0);
+    }
+  } catch (e) {
+    console.error("Error deleting marker:", e);
+  }
 }
 
 async function syncMarkersWithBackend(markers: LocationMarker[]): Promise<void> {
