@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
+import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   const [pinnedMarkers, setPinnedMarkers] = useState<LocationMarker[]>([]);
 
   const loadMarkers = () => {
+    console.log("Loading markers for dropdown");
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     const pinned = savedMarkers.filter(marker => marker.isPinned === true);
@@ -30,12 +31,27 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   };
 
   useEffect(() => {
+    // Initial load
     loadMarkers();
-    window.addEventListener('storage', loadMarkers);
-    window.addEventListener('markersUpdated', loadMarkers);
+    
+    // Setup event listeners
+    const handleStorage = () => {
+      console.log("Storage event detected");
+      loadMarkers();
+    };
+    
+    const handleMarkersUpdated = () => {
+      console.log("Markers updated event detected");
+      loadMarkers();
+    };
+    
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    
+    // Cleanup
     return () => {
-      window.removeEventListener('storage', loadMarkers);
-      window.removeEventListener('markersUpdated', loadMarkers);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
     };
   }, []);
 
@@ -43,8 +59,6 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     event.stopPropagation(); // Prevent dropdown from closing
     deleteMarker(id);
     loadMarkers();
-    // Dispatch custom event to notify map to refresh markers
-    window.dispatchEvent(new CustomEvent('markersUpdated'));
     toast.success("Location removed");
   };
 
@@ -53,10 +67,10 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="w-[200px]">
           <Navigation className="mr-2 h-4 w-4" />
-          Saved Locations
+          Saved Locations {markers.length > 0 && `(${markers.length})`}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[200px]">
+      <DropdownMenuContent className="w-[200px] z-50">
         {pinnedMarkers.length > 0 && (
           <>
             <DropdownMenuLabel>Pinned Locations</DropdownMenuLabel>

@@ -1,3 +1,4 @@
+
 import { getConnectionStatus } from './api-service';
 
 export interface LocationMarker {
@@ -15,6 +16,9 @@ export function saveMarker(marker: LocationMarker): void {
   const savedMarkers = getSavedMarkers();
   savedMarkers.push(marker);
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
+  
+  // Dispatch a custom event to notify components that markers have been updated
+  window.dispatchEvent(new CustomEvent('markersUpdated'));
   
   syncMarkersWithBackend(savedMarkers);
 }
@@ -44,6 +48,9 @@ export function deleteMarker(id: string): void {
   const savedMarkers = getSavedMarkers();
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
+  
+  // Dispatch a custom event to notify components that markers have been updated
+  window.dispatchEvent(new CustomEvent('markersUpdated'));
   
   deleteMarkerFromBackend(id);
 }

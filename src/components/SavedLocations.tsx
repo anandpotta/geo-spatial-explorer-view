@@ -13,14 +13,32 @@ interface SavedLocationsProps {
 const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
   
-  useEffect(() => {
-    loadMarkers();
-  }, []);
-  
   const loadMarkers = () => {
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
   };
+  
+  useEffect(() => {
+    loadMarkers();
+    
+    // Setup event listeners
+    const handleStorage = () => {
+      loadMarkers();
+    };
+    
+    const handleMarkersUpdated = () => {
+      loadMarkers();
+    };
+    
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+    };
+  }, []);
   
   const handleDelete = (id: string) => {
     deleteMarker(id);
