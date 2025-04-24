@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
+import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Navigation, MapPin } from "lucide-react";
+import { Navigation, MapPin, Trash2 } from "lucide-react";
+import { toast } from 'sonner';
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
@@ -20,21 +22,25 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
   const [pinnedMarkers, setPinnedMarkers] = useState<LocationMarker[]>([]);
 
-  useEffect(() => {
-    const loadMarkers = () => {
-      const savedMarkers = getSavedMarkers();
-      setMarkers(savedMarkers);
-      
-      // Filter pinned markers
-      const pinned = savedMarkers.filter(marker => marker.isPinned === true);
-      setPinnedMarkers(pinned);
-    };
+  const loadMarkers = () => {
+    const savedMarkers = getSavedMarkers();
+    setMarkers(savedMarkers);
+    const pinned = savedMarkers.filter(marker => marker.isPinned === true);
+    setPinnedMarkers(pinned);
+  };
 
+  useEffect(() => {
     loadMarkers();
-    // Add event listener for storage changes
     window.addEventListener('storage', loadMarkers);
     return () => window.removeEventListener('storage', loadMarkers);
   }, []);
+
+  const handleDelete = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent dropdown from closing
+    deleteMarker(id);
+    loadMarkers();
+    toast.success("Location removed");
+  };
 
   return (
     <DropdownMenu>
@@ -52,10 +58,23 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
               {pinnedMarkers.map((marker) => (
                 <DropdownMenuItem
                   key={`pinned-${marker.id}`}
-                  onClick={() => onLocationSelect(marker.position)}
+                  className="flex justify-between items-center"
                 >
-                  <MapPin className="mr-2 h-4 w-4" />
-                  {marker.name}
+                  <div
+                    className="flex items-center flex-1 cursor-pointer"
+                    onClick={() => onLocationSelect(marker.position)}
+                  >
+                    <MapPin className="mr-2 h-4 w-4" />
+                    {marker.name}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => handleDelete(marker.id, e)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
@@ -72,10 +91,23 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             markers.map((marker) => (
               <DropdownMenuItem
                 key={marker.id}
-                onClick={() => onLocationSelect(marker.position)}
+                className="flex justify-between items-center"
               >
-                <MapPin className="mr-2 h-4 w-4" />
-                {marker.name}
+                <div
+                  className="flex items-center flex-1 cursor-pointer"
+                  onClick={() => onLocationSelect(marker.position)}
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  {marker.name}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => handleDelete(marker.id, e)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </DropdownMenuItem>
             ))
           )}

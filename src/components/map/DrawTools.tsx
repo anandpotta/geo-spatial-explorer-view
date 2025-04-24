@@ -1,9 +1,9 @@
-
+import { useEffect, useRef } from 'react';
 import { EditControl } from "react-leaflet-draw";
-import { useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
+import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
