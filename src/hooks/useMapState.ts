@@ -111,6 +111,23 @@ export function useMapState(selectedLocation?: Location) {
     setShowFloorPlan(true);
   };
 
+  // Add the handleClearAll function to clear map state
+  const handleClearAll = () => {
+    setTempMarker(null);
+    setMarkerName('');
+    setMarkerType('building');
+    setCurrentDrawing(null);
+    setShowFloorPlan(false);
+    setSelectedDrawing(null);
+    setActiveTool(null);
+    
+    // Dispatch events to notify other components about the clearing
+    window.dispatchEvent(new Event('markersUpdated'));
+    window.dispatchEvent(new Event('storage'));
+    
+    toast.success('All active elements cleared');
+  };
+
   return {
     position,
     setPosition,
@@ -136,13 +153,14 @@ export function useMapState(selectedLocation?: Location) {
     setActiveTool,
     handleSaveMarker,
     handleDeleteMarker,
-    handleRegionClick
+    handleRegionClick,
+    handleClearAll
   };
 }
 
 // Extend the Window interface to include our custom property
 declare global {
   interface Window {
-    tempMarkerPositionUpdate?: (pos: [number, number]) => void;
+    tempMarkerPositionUpdate?: (pos: [number, number] | null) => void;
   }
 }

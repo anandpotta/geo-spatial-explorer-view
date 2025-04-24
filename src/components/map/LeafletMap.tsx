@@ -90,7 +90,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     
     try {
       // Check if the map is in a valid state for flying
-      if (mapRef.current._loaded && mapRef.current.getContainer()) {
+      if (mapRef.current.getContainer()) {
         const center = mapRef.current.getCenter();
         
         // First invalidate size to ensure proper rendering
@@ -100,7 +100,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         setTimeout(() => {
           try {
             // Double check the map is still valid
-            if (mapRef.current && !mapRef.current._isDestroyed && mapRef.current.getContainer()) {
+            if (mapRef.current && mapRef.current.getContainer()) {
               mapRef.current.flyTo([lat, lng], zoom, {
                 animate: true,
                 duration: 1.5
@@ -248,6 +248,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     }
   };
 
+  // Adding the handleClearAll function that was missing
   const handleClearAll = () => {
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
@@ -293,7 +294,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       onShapeCreated={handleShapeCreated}
       activeTool={activeTool || mapState.activeTool}
       onRegionClick={mapState.handleRegionClick}
-      onClearAll={mapState.handleClearAll}
+      onClearAll={handleClearAll}
       mapContainerId={mapContainerId.current}
     />
   );

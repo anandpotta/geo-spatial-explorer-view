@@ -28,7 +28,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     const timeoutId = setTimeout(() => {
       try {
         // Make sure map is fully initialized and has a valid container
-        if (map && map.getContainer() && map._loaded) {
+        if (map && map.getContainer()) {
           // Ensure the map is properly sized
           map.invalidateSize(true);
           

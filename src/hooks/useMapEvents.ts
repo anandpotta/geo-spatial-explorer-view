@@ -9,7 +9,7 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
       const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
       
       // Check if map is valid before attempting to fly to location
-      if (map && typeof map.flyTo === 'function' && map.getContainer() && map._loaded) {
+      if (map && typeof map.flyTo === 'function' && map.getContainer()) {
         try {
           // First invalidate size to ensure proper rendering
           map.invalidateSize(true);
@@ -17,8 +17,8 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
           // Small timeout to ensure map is ready
           setTimeout(() => {
             try {
-              // Double-check map is still valid
-              if (map && map.getContainer() && !map._isDestroyed) {
+              // Double-check map is still valid - only use properties available in type definition
+              if (map && map.getContainer()) {
                 map.flyTo(newPosition, 18, {
                   animate: true,
                   duration: 1.5
