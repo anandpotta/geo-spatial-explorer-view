@@ -46,6 +46,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
     
+    // Clear existing layers before re-adding them
     featureGroupRef.current.clearLayers();
     
     savedDrawings.forEach(drawing => {
@@ -58,25 +59,34 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
             fillOpacity: 0.3
           };
           
+          // Create a layer from GeoJSON
           const layer = L.geoJSON(drawing.geoJSON, {
             style: options
           });
           
+          // Set the drawingId property on each layer and feature
           if (layer) {
-            // Set the drawingId as a property on the Layer directly
-            layer.drawingId = drawing.id;
+            layer.eachLayer((l: L.Layer) => {
+              if (l) {
+                l.drawingId = drawing.id;
+                
+                // Add click event to each layer
+                if (onRegionClick) {
+                  l.on('click', () => {
+                    console.log('Layer clicked:', drawing.id);
+                    onRegionClick(drawing);
+                  });
+                }
+              }
+            });
             
-            if (onRegionClick) {
-              layer.on('click', () => {
-                onRegionClick(drawing);
-              });
+            // Add the layer to the feature group
+            layer.addTo(featureGroupRef.current);
+            
+            // Add popup if there's a name
+            if (drawing.properties.name) {
+              layer.bindPopup(drawing.properties.name);
             }
-          }
-          
-          layer.addTo(featureGroupRef.current);
-          
-          if (drawing.properties.name) {
-            layer.bindPopup(drawing.properties.name);
           }
         } catch (error) {
           console.error('Error rendering drawing from GeoJSON:', error);

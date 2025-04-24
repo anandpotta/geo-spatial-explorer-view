@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
@@ -37,6 +38,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
 
   const handleRegionClick = (drawing: DrawingData) => {
+    console.log("Region clicked:", drawing);
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
   };
@@ -139,7 +141,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         </div>
         <div className="w-full h-full flex items-center justify-center bg-black/5">
           <img
-            src="https://images.unsplash.com/photo-147317710440-ffee2f376098"
+            src="https://images.unsplash.com/photo-1473177104440-ffee2f376098"
             alt="Floor Plan"
             className="max-h-[90%] max-w-[90%] object-contain rounded-lg shadow-lg"
           />
