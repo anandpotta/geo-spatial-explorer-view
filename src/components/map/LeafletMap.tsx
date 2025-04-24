@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapState } from '@/hooks/useMapState';
 import { useMapEvents } from '@/hooks/useMapEvents';
@@ -38,9 +38,12 @@ const LeafletMap = ({
     resetMap
   } = useLeafletMapInitialization();
 
-  const { safeMapFlyTo, handleLocationSelect } = useLeafletMapNavigation();
+  const { safeMapFlyTo, handleLocationSelect, initialNavigationDone } = useLeafletMapNavigation();
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
+  
+  // Track if we need to perform initial navigation
+  const needsInitialNavigation = useRef(true);
 
   const handleSetMapRef = useMapReferenceHandler(
     mapRef,
@@ -53,10 +56,10 @@ const LeafletMap = ({
     onMapReady
   );
 
-  // Handle location changes with improved timing
+  // Handle location changes with improved timing, but only for initial navigation
   useEffect(() => {
     // Skip if location or map isn't ready
-    if (!selectedLocation || !mapRef.current) return;
+    if (!selectedLocation || !mapRef.current || !needsInitialNavigation.current) return;
     
     // Add a longer initial delay to ensure map is properly initialized
     const initialDelay = 1000; 
@@ -82,28 +85,43 @@ const LeafletMap = ({
         
         // Add a small delay before actual navigation
         const flyTimer = setTimeout(() => {
-          const flySuccess = safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng, 18);
+          const flySuccess = safeMapFlyTo(
+            mapRef.current, 
+            isMapInitialized, 
+            cleanupInProgress.current, 
+            lat, 
+            lng,
+            18,
+            true // Force the navigation
+          );
           
-          // Only reset map if flyTo failed and we're not already cleaning up
-          if (!flySuccess && !cleanupInProgress.current) {
+          // Only reset map if flyTo completely failed and we're not already cleaning up
+          if (!flySuccess && !cleanupInProgress.current && needsInitialNavigation.current) {
             console.warn('Safe flyTo failed, recreating map');
             resetMap();
+          } else {
+            // Mark that initial navigation is completed
+            needsInitialNavigation.current = false;
           }
         }, 800); // Longer delay for navigation attempt
         
         return () => clearTimeout(flyTimer);
       } catch (err) {
         console.error('Error flying to location:', err);
-        resetMap();
+        // Only reset if truly needed
+        if (needsInitialNavigation.current) {
+          resetMap();
+        }
       }
     }, initialDelay);
     
     // Clean up the timer if component unmounts
     return () => clearTimeout(navigationTimer);
-  }, [selectedLocation, isMapInitialized, mapRef.current, safeMapFlyTo, resetMap, cleanupInProgress]);
+  }, [selectedLocation, isMapInitialized, safeMapFlyTo, resetMap, cleanupInProgress]);
 
   // Use mapEvents hook with safeguards
-  useMapEvents(isMapInitialized ? mapRef.current : null, selectedLocation);
+  // Pass the initialNavigationDone ref to prevent automatic re-navigation
+  useMapEvents(isMapInitialized ? mapRef.current : null, selectedLocation, initialNavigationDone);
 
   const handleSavedLocationSelect = (position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
@@ -115,7 +133,8 @@ const LeafletMap = ({
         // Add a delay before navigation
         setTimeout(() => {
           if (!mapRef.current || !isMapInitialized || cleanupInProgress.current) return;
-          safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng);
+          // Force navigation when explicitly selected by user
+          safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng, 18, true);
         }, 500);
       } catch (err) {
         console.error('Error flying to location:', err);

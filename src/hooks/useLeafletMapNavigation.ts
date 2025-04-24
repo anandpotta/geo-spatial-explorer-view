@@ -1,22 +1,31 @@
-
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { toast } from 'sonner';
 
 export const useLeafletMapNavigation = () => {
+  // Keep track of whether we've already navigated to a location
+  const initialNavigationDone = useRef(false);
+  
   const safeMapFlyTo = useCallback((
     map: L.Map | null,
     isMapInitialized: boolean,
     cleanupInProgress: boolean,
     lat: number,
     lng: number,
-    zoom: number = 18
+    zoom: number = 18,
+    forceNavigation: boolean = false
   ): boolean => {
     // Early return if basic conditions aren't met
     if (!map || !isMapInitialized || cleanupInProgress) {
       console.log('Map not initialized for flyTo');
       return false;
+    }
+    
+    // Skip navigation if we've already done initial navigation (unless forced)
+    if (initialNavigationDone.current && !forceNavigation) {
+      console.log('Initial navigation already done, skipping automatic flyTo');
+      return true;
     }
     
     try {
@@ -38,6 +47,9 @@ export const useLeafletMapNavigation = () => {
       
       // Set view immediately (more reliable than flyTo)
       map.setView([lat, lng], zoom, { animate: false });
+      
+      // Mark that initial navigation is done
+      initialNavigationDone.current = true;
       
       // Add a slight delay before attempting the animated flyTo
       setTimeout(() => {
@@ -87,8 +99,14 @@ export const useLeafletMapNavigation = () => {
     }
   }, []);
 
+  const resetNavigationState = useCallback(() => {
+    initialNavigationDone.current = false;
+  }, []);
+
   return {
     safeMapFlyTo,
-    handleLocationSelect
+    handleLocationSelect,
+    resetNavigationState,
+    initialNavigationDone
   };
 };

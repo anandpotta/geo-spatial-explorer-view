@@ -2,7 +2,11 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 
-export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; y: number }) => {
+export const useMapEvents = (
+  map: L.Map | null, 
+  selectedLocation?: { x: number; y: number },
+  initialNavigationDone?: React.MutableRefObject<boolean>
+) => {
   const flyTimerRef = useRef<number | null>(null);
   const initCheckTimerRef = useRef<number | null>(null);
   const initializedRef = useRef<boolean>(false);
@@ -29,6 +33,12 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
       return;
     }
     
+    // Check if initial navigation is already done
+    if (initialNavigationDone?.current) {
+      console.log('Initial navigation already done, skipping automatic map recentering');
+      return;
+    }
+    
     console.log('Selected location in Leaflet map:', selectedLocation);
     const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
     
@@ -51,28 +61,16 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
         // Set view first for immediate position update
         try {
           map.setView(newPosition, 18, { animate: false });
+          
+          // If we have the initialNavigationDone ref, mark it as done
+          if (initialNavigationDone) {
+            initialNavigationDone.current = true;
+          }
         } catch (setViewErr) {
           console.warn('Error setting initial view:', setViewErr);
         }
         
-        // Small delay before attempting smooth animation
-        flyTimerRef.current = window.setTimeout(() => {
-          try {
-            // Skip flying if map was unmounted
-            if (!map.getContainer() || !document.body.contains(map.getContainer())) {
-              console.log('Map container no longer in DOM, skipping navigation');
-              return;
-            }
-            
-            // Try flyTo for a smoother animation
-            map.flyTo(newPosition, 18, {
-              animate: true,
-              duration: 1.5
-            });
-          } catch (flyToErr) {
-            console.warn('Error during flyTo, but location should be set:', flyToErr);
-          }
-        }, 1000); // Increased timeout for more reliability
+        // Skip animated flyTo to reduce map reset issues
       } catch (error) {
         console.error('Error in map navigation:', error);
       }
@@ -87,5 +85,5 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
         clearTimeout(initCheckTimerRef.current);
       }
     };
-  }, [selectedLocation, map]);
+  }, [selectedLocation, map, initialNavigationDone]);
 };
