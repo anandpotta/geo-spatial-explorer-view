@@ -16,11 +16,11 @@ export function useMarkerPlacement(mapState: MarkerPlacementState) {
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       
-      // Set interaction flags
+      // Set interaction flags without triggering a refresh
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
       
-      // Store position in localStorage
+      // Store position in localStorage with a try/catch to prevent errors
       try {
         localStorage.setItem('tempMarkerPosition', JSON.stringify(exactPosition));
         localStorage.setItem('tempMarkerName', mapState.selectedLocation?.label || 'New Building');
@@ -28,14 +28,17 @@ export function useMarkerPlacement(mapState: MarkerPlacementState) {
         console.error('Failed to store marker in localStorage:', error);
       }
       
-      // Update marker state
-      mapState.setTempMarker(exactPosition);
-      mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
-      
-      toast.info('Click "Save Location" to confirm marker placement', {
-        duration: 5000,
-        id: 'marker-placement',
-      });
+      // Update marker state with the position first, then name
+      // Using setTimeout to prevent state batching issues
+      setTimeout(() => {
+        mapState.setTempMarker(exactPosition);
+        mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
+        
+        toast.info('Click "Save Location" to confirm marker placement', {
+          duration: 5000,
+          id: 'marker-placement',
+        });
+      }, 0);
     }
   };
 

@@ -9,7 +9,7 @@ interface NewMarkerFormProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
+  onSave: (e?: React.MouseEvent) => void;
 }
 
 const NewMarkerForm = ({
@@ -19,9 +19,16 @@ const NewMarkerForm = ({
   setMarkerType,
   onSave
 }: NewMarkerFormProps) => {
+  // Handle form submission to prevent default refresh behavior
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSave();
+  };
+
   return (
     <Popup>
-      <div className="p-2">
+      <form onSubmit={handleSubmit} className="p-2">
         <Input 
           type="text"
           placeholder="Location name"
@@ -59,13 +66,13 @@ const NewMarkerForm = ({
           </Button>
         </div>
         <Button 
-          onClick={onSave}
+          type="submit"
           disabled={!markerName.trim()}
           className="w-full"
         >
           Save Location
         </Button>
-      </div>
+      </form>
     </Popup>
   );
 };
