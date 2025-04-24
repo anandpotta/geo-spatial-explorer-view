@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef } from 'react';
 import { useLeafletContext } from '@react-leaflet/core';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,25 +13,21 @@ interface DrawToolsProps {
   onClearAll?: () => void;
 }
 
-// The key fix: Using our wrapper component instead of directly using EditControl
 const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onClearAll }, ref) => {
   const context = useLeafletContext();
   const hasInitialized = useRef<boolean>(false);
   const editControlRef = useRef<any>(null);
 
-  // Check if map is ready before rendering EditControl
   useEffect(() => {
     if (!context || !context.map || !activeTool) return;
     
     const map = context.map;
     
-    // Ensure map is fully initialized before proceeding
     if (!map.getContainer() || !document.contains(map.getContainer())) {
       console.warn('Map container not ready for drawing tools');
       return;
     }
     
-    // Access the EditControl instance via ref
     if (!editControlRef.current || !editControlRef.current.leafletElement) {
       console.warn('EditControl not initialized yet');
       return;
@@ -46,7 +41,6 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
 
     hasInitialized.current = true;
     
-    // Disable all active tools first
     Object.keys(leafletElement._modes).forEach((mode) => {
       if (leafletElement._modes[mode].handler && 
           leafletElement._modes[mode].handler.enabled && 
@@ -66,7 +60,6 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
       rectangle: "Click on map to draw rectangle"
     };
 
-    // Enable the requested tool if it exists
     if (leafletElement._modes[activeTool] && leafletElement._modes[activeTool].handler) {
       try {
         leafletElement._modes[activeTool].handler.enable();
@@ -77,7 +70,6 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
     }
 
     return () => {
-      // Cleanup when tool changes or component unmounts
       if (leafletElement && leafletElement._modes && leafletElement._modes[activeTool]?.handler?.enabled?.()) {
         try {
           leafletElement._modes[activeTool].handler.disable();
@@ -127,18 +119,15 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
     onCreated({ type: layerType, layer, geoJSON: layer.toGeoJSON(), id });
   };
 
-  // Only render if context is ready
   if (!context || !context.map) {
     return null;
   }
 
-  // The key fix: Using our DrawToolsWrapper component with forwardRef
   return (
     <div className="leaflet-draw-container">
       <DrawToolsWrapper
         ref={(ecRef) => {
           editControlRef.current = ecRef;
-          // Also pass the ref to the parent component if provided
           if (typeof ref === 'function') {
             ref(ecRef);
           } else if (ref) {
@@ -160,7 +149,6 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
   );
 });
 
-// Add display name for debugging
 DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;
