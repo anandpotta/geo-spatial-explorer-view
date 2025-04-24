@@ -1,7 +1,9 @@
 
+// Import the extended Leaflet types
 import { useCallback } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
+import '../types/leaflet-extended'; // Import our extended types
 
 export const useMapReferenceHandler = (
   mapRef: React.MutableRefObject<L.Map | null>,
@@ -107,7 +109,7 @@ export const useMapReferenceHandler = (
             // Force pane creation if not already created
             if (mapRef.current && !mapRef.current._panes) {
               console.log('Forcing pane creation');
-              mapRef.current._initPathRoot();
+              mapRef.current._initPathRoot && mapRef.current._initPathRoot();
             }
             
             // Final stage with progressive validation

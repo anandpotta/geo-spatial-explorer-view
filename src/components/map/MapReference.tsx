@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import '../../types/leaflet-extended'; // Import our extended types
 
 // Extend the Map type to include our custom property
 declare module 'leaflet' {
