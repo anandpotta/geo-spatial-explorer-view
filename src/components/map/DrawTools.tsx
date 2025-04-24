@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;

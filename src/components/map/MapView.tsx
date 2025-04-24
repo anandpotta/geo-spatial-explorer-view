@@ -1,4 +1,3 @@
-
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
@@ -11,6 +10,7 @@ import FloorPlanView from './FloorPlanView';
 import { useState, useEffect } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface MapViewProps {
   position: [number, number];
@@ -53,9 +53,7 @@ const MapView = ({
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [mapKey, setMapKey] = useState<number>(0);
 
-  // Force a remount of the MapContainer to ensure proper tile loading
   useEffect(() => {
-    // Set a unique key to force a re-render of the map component
     setMapKey(prevKey => prevKey + 1);
   }, []);
 

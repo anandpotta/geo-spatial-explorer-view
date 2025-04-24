@@ -6,6 +6,7 @@ import { useDrawings } from '@/hooks/useDrawings';
 import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-drawing-config';
 import DrawTools from './DrawTools';
 import { getSavedMarkers } from '@/utils/marker-utils';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;

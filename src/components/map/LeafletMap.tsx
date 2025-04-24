@@ -9,6 +9,7 @@ import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
