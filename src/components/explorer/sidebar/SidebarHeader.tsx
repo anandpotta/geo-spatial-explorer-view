@@ -1,37 +1,24 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
 
 const SidebarHeader = () => {
-  const { toggleSidebar, state } = useSidebar();
-
-  const handleToggleClick = () => {
-    console.log("Toggle sidebar clicked, current state:", state);
-    toggleSidebar();
-  };
+  const { toggleSidebar } = useSidebar();
 
   return (
-    <div className={cn(
-      "p-4 border-b flex transition-all duration-300",
-      state === "expanded" ? "justify-between" : "justify-center"
-    )}>
+    <div className="p-4 border-b flex justify-between items-center">
       <div className="flex items-center">
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={handleToggleClick}
+          onClick={toggleSidebar}
           className="mr-2"
         >
-          {state === "expanded" ? <ChevronLeft size={24} /> : <ChevronRight size={24} />}
-          <span className="sr-only">Toggle sidebar</span>
+          <Menu size={24} />
         </Button>
-        <div className={cn(
-          "transition-opacity duration-300",
-          state === "expanded" ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}>
+        <div>
           <h1 className="text-2xl font-bold">GeoSpatial Explorer</h1>
           <p className="text-muted-foreground">Search, navigate and mark locations</p>
         </div>

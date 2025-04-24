@@ -24,9 +24,9 @@ export const useLocationSearch = (): UseLocationSearchResult => {
     setCurrentView('cesium');
     setFlyCompleted(false);
     
-    // Fix: Using the correct sonner toast API
-    toast.success(`Navigating to ${location.label}`, {
-      description: `Coordinates: ${location.y.toFixed(4)}, ${location.x.toFixed(4)}`,
+    toast({
+      title: 'Location selected',
+      description: `Navigating to ${location.label}`,
       duration: 3000,
     });
   };
