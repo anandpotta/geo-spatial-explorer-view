@@ -11,33 +11,18 @@ export function useMarkerHandlers(mapState: any) {
       
       console.log('Setting temporary marker at position:', exactPosition);
       
-      // Clear any existing temporary marker before setting a new one
-      mapState.setTempMarker(null);
+      mapState.setTempMarker(exactPosition);
+      mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
       
-      // Short delay to ensure the previous marker is cleared first
-      setTimeout(() => {
-        // Double-check we don't already have a marker in progress
-        if (!mapState.tempMarker) {
-          mapState.setTempMarker(exactPosition);
-          mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
-          
-          // Show a toast to indicate marker can be saved
-          toast.info('Click "Save Location" to confirm marker placement', {
-            duration: 3000,
-          });
-        }
-      }, 10);
+      // Show a toast to indicate marker can be saved
+      toast.info('Click "Save Location" to confirm marker placement', {
+        duration: 3000,
+      });
     }
   };
 
   const handleShapeCreated = (shape: any) => {
     if (shape.type === 'marker') {
-      // Ensure we don't already have a temporary marker active
-      if (mapState.tempMarker) {
-        console.log('Ignoring marker creation, temporary marker already exists');
-        return;
-      }
-      
       // Ensure we get the precise coordinates
       const exactPosition: [number, number] = [
         shape.position[0],

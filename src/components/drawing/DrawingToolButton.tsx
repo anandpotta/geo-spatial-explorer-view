@@ -25,13 +25,8 @@ const DrawingToolButton = ({
             size="icon" 
             onClick={onClick}
             className="map-toolbar-button"
-            // Remove any aria-hidden that might be inherited
-            aria-hidden={undefined}
-            // Add proper labeling
-            aria-label={label}
           >
             <Icon size={20} />
-            <span className="sr-only">{label}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">
