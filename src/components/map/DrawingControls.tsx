@@ -13,7 +13,7 @@ interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick?: (drawing: DrawingData) => void;
-  onClearAll?: () => void; // Add new prop for clearing all state
+  onClearAll?: () => void;
 }
 
 declare module 'leaflet' {
@@ -29,43 +29,60 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
     
-    featureGroupRef.current.clearLayers();
-    const markers = getSavedMarkers();
-    
-    savedDrawings.forEach(drawing => {
-      if (drawing.geoJSON) {
-        try {
-          const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
-          const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
-          
-          if (layer) {
-            layer.eachLayer((l: L.Layer) => {
-              if (l) {
-                l.drawingId = drawing.id;
-                
-                if (onRegionClick) {
-                  l.on('click', () => {
-                    onRegionClick(drawing);
-                  });
-                }
-              }
-            });
+    try {
+      featureGroupRef.current.clearLayers();
+      const markers = getSavedMarkers();
+      
+      savedDrawings.forEach(drawing => {
+        if (drawing.geoJSON) {
+          try {
+            const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
+            const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
             
-            layer.addTo(featureGroupRef.current!);
+            if (layer) {
+              layer.eachLayer((l: L.Layer) => {
+                if (l) {
+                  l.drawingId = drawing.id;
+                  
+                  if (onRegionClick) {
+                    l.on('click', () => {
+                      onRegionClick(drawing);
+                    });
+                  }
+                }
+              });
+              
+              if (featureGroupRef.current) {
+                layer.addTo(featureGroupRef.current);
+              }
+            }
+          } catch (err) {
+            console.error('Error adding drawing layer:', err);
           }
-        } catch (err) {
-          console.error('Error adding drawing layer:', err);
         }
-      }
-    });
+      });
+    } catch (err) {
+      console.error('Error updating drawings:', err);
+    }
   }, [savedDrawings, onRegionClick]);
+
+  // Add handler for clear all
+  const handleClearAll = () => {
+    if (featureGroupRef.current) {
+      featureGroupRef.current.clearLayers();
+    }
+    
+    if (onClearAll) {
+      onClearAll();
+    }
+  };
 
   return (
     <FeatureGroup ref={featureGroupRef}>
       <DrawTools 
         onCreated={onCreated} 
-        activeTool={activeTool} 
-        onClearAll={onClearAll} 
+        activeTool={activeTool}
+        onClearAll={handleClearAll}
       />
     </FeatureGroup>
   );

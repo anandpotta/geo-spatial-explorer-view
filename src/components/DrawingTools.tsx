@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
@@ -78,6 +79,7 @@ const DrawingTools = ({
       // Notify components about storage changes
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));
+      window.dispatchEvent(new CustomEvent('clearAllDrawings'));
       
       // Reset map state through parent component
       if (onClearAll) {

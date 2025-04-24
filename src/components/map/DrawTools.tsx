@@ -10,7 +10,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
-  onClearAll?: () => void; // Add onClearAll prop
+  onClearAll?: () => void;
 }
 
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
@@ -52,6 +52,21 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }
     }
   }, [activeTool]);
+
+  // Add an effect to handle the onClearAll prop
+  useEffect(() => {
+    const handleClearEvent = () => {
+      if (onClearAll) {
+        onClearAll();
+      }
+    };
+    
+    // Listen for a custom event that can be triggered by the clear all button
+    window.addEventListener('clearAllDrawings', handleClearEvent);
+    return () => {
+      window.removeEventListener('clearAllDrawings', handleClearEvent);
+    };
+  }, [onClearAll]);
 
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;

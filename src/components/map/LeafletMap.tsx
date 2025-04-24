@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -57,11 +58,14 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   }, [mapInstanceKey]);
 
   useEffect(() => {
-    if (selectedLocation) {
-      if (mapRef.current) {
-        mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
-      } else {
-        setMapInstanceKey(Date.now());
+    if (selectedLocation && mapRef.current) {
+      try {
+        // Make sure the map is valid before attempting to fly to a location
+        if (mapRef.current.getContainer()) {
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
+        }
+      } catch (err) {
+        console.error('Error flying to location:', err);
       }
     }
   }, [selectedLocation]);
@@ -78,23 +82,33 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       onMapReady(map);
     }
     
-    if (selectedLocation) {
-      map.flyTo([selectedLocation.y, selectedLocation.x], 18);
-    }
-    
+    // Ensure the map is fully initialized before trying any operations
     setTimeout(() => {
+      try {
+        if (mapRef.current && selectedLocation && mapRef.current.getContainer()) {
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
+        }
+      } catch (err) {
+        console.error('Error flying to location after map ready:', err);
+      }
+      
+      // Make sure the map is invalidated to handle any sizing issues
       if (mapRef.current && mapRef.current.getContainer()) {
         mapRef.current.invalidateSize(true);
       }
-    }, 100);
+    }, 500); // Increased from 100ms to 500ms
   };
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
-    if (mapRef.current) {
-      mapRef.current.flyTo(position, 18, {
-        duration: 2
-      });
+    try {
+      if (mapRef.current && mapRef.current.getContainer()) {
+        mapRef.current.flyTo(position, 18, {
+          duration: 2
+        });
+      }
+    } catch (err) {
+      console.error('Error flying to selected location:', err);
     }
   };
 
@@ -110,13 +124,18 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     mapState.setSelectedDrawing(null);
     
     // Force map to refresh
-    if (mapRef.current) {
-      mapRef.current.invalidateSize();
-      setTimeout(() => {
-        // Force reload the map instance to clear all layers
-        setMapInstanceKey(Date.now());
-      }, 100);
+    try {
+      if (mapRef.current && mapRef.current.getContainer()) {
+        mapRef.current.invalidateSize();
+      }
+    } catch (err) {
+      console.error('Error invalidating map size:', err);
     }
+    
+    // Force reload the map instance to clear all layers
+    setTimeout(() => {
+      setMapInstanceKey(Date.now());
+    }, 100);
   };
 
   if (mapState.showFloorPlan) {

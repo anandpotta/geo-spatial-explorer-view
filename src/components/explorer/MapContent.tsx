@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
-import LeafletMap from '../map/LeafletMap'; // Update the import path
+import LeafletMap from '../map/LeafletMap';
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
@@ -70,25 +70,12 @@ const MapContent = ({
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
     setActiveTool(tool === activeTool ? null : tool);
-    
-    if (currentView === 'cesium') {
-      if (tool === 'clear') {
-        toast.info('Clearing all shapes');
-      }
-    } else if (currentView === 'leaflet') {
-      if (tool === 'clear' && leafletMapRef.current) {
-        const layers = leafletMapRef.current._layers;
-        if (layers) {
-          Object.keys(layers).forEach(layerId => {
-            const layer = layers[layerId];
-            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-              leafletMapRef.current.removeLayer(layer);
-            }
-          });
-          toast.info('All shapes cleared');
-        }
-      }
-    }
+  };
+
+  const handleClearAll = () => {
+    // Reset map key to force a remount of the map component
+    setMapKey(Date.now());
+    toast.info('All layers cleared');
   };
 
   return (
@@ -142,6 +129,7 @@ const MapContent = ({
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
+          onClearAll={handleClearAll}
         />
       </div>
       
