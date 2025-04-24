@@ -31,14 +31,18 @@ export default function Earth({ onLocationSelect }) {
   useEffect(() => {
     if (texturesLoaded && textures) {
       try {
-        const allValid = Object.values(textures).every(texture => 
-          texture && texture.image && texture.image.complete
-        );
+        // Type check each texture before accessing properties
+        const allValid = Object.entries(textures).every(([key, texture]) => {
+          // Make sure texture is a valid THREE.Texture with image property
+          return texture instanceof THREE.Texture && 
+                 texture.image !== undefined && 
+                 texture.image !== null;
+        });
         
         if (!allValid) {
           console.error('One or more earth textures failed to load completely');
           setTextureError(true);
-        } else if (textures.bumpMap) {
+        } else if (textures.bumpMap && textures.bumpMap instanceof THREE.Texture) {
           // Apply texture settings safely
           textures.bumpMap.wrapS = THREE.RepeatWrapping;
           textures.bumpMap.wrapT = THREE.RepeatWrapping;
