@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { useMapState } from '@/hooks/useMapState';
@@ -22,7 +22,7 @@ interface LeafletMapProps {
 }
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect }: LeafletMapProps) => {
-  const mapRef = useRef<L.Map | null>(null); // This is now implicitly a MutableRefObject
+  const mapRef = useRef<L.Map | null>(null);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const mapContainerIdRef = useRef<string>(`map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   
@@ -41,49 +41,56 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     mapContainerIdRef.current = `map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   });
 
+  // Create a stable reference to the map setting function
   const handleSetMapRef = useMapReference(mapRef, selectedLocation, onMapReady);
 
-  const handleLocationSelect = (position: [number, number]) => {
-    console.log("Location selected in LeafletMap:", position);
-    if (mapRef.current) {
-      try {
-        // Use flyTo with animation for smooth transition
-        mapRef.current.flyTo(position, 18, {
-          animate: true,
-          duration: 1.5
-        });
-        
-        if (onLocationSelect) {
-          const location: Location = {
-            id: `loc-${position[0]}-${position[1]}`,
-            label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-            x: position[1],
-            y: position[0]
-          };
-          onLocationSelect(location);
+  // Create a stable function reference with useMemo
+  const handleLocationSelect = useMemo(() => {
+    return (position: [number, number]) => {
+      console.log("Location selected in LeafletMap:", position);
+      if (mapRef.current) {
+        try {
+          // Use flyTo with animation for smooth transition
+          mapRef.current.flyTo(position, 18, {
+            animate: true,
+            duration: 1.5
+          });
+          
+          if (onLocationSelect) {
+            const location: Location = {
+              id: `loc-${position[0]}-${position[1]}`,
+              label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+              x: position[1],
+              y: position[0]
+            };
+            onLocationSelect(location);
+          }
+        } catch (err) {
+          console.error('Error flying to location:', err);
         }
-      } catch (err) {
-        console.error('Error flying to location:', err);
       }
-    }
-  };
+    };
+  }, [onLocationSelect]);
 
-  const handleClearAll = () => {
-    mapState.setTempMarker(null);
-    mapState.setMarkerName('');
-    mapState.setMarkerType('building');
-    mapState.setCurrentDrawing(null);
-    mapState.setShowFloorPlan(false);
-    mapState.setSelectedDrawing(null);
-    
-    if (mapRef.current) {
-      try {
-        mapRef.current.invalidateSize();
-      } catch (err) {
-        console.error('Error invalidating map size:', err);
+  // Create a stable function reference with useMemo
+  const handleClearAll = useMemo(() => {
+    return () => {
+      mapState.setTempMarker(null);
+      mapState.setMarkerName('');
+      mapState.setMarkerType('building');
+      mapState.setCurrentDrawing(null);
+      mapState.setShowFloorPlan(false);
+      mapState.setSelectedDrawing(null);
+      
+      if (mapRef.current) {
+        try {
+          mapRef.current.invalidateSize();
+        } catch (err) {
+          console.error('Error invalidating map size:', err);
+        }
       }
-    }
-  };
+    };
+  }, [mapState]);
 
   if (mapState.showFloorPlan) {
     return <FloorPlanView onBack={() => mapState.setShowFloorPlan(false)} drawing={mapState.selectedDrawing} />;
