@@ -6,81 +6,54 @@ export function useDrawingToolActivation(activeTool: string | null) {
   const editControlRef = useRef<any>(null);
   
   useEffect(() => {
-    if (!activeTool) return;
+    if (!activeTool || !editControlRef.current) return;
     
-    const handleDrawingActivation = () => {
-      if (!editControlRef.current) {
-        console.log('Edit control reference not available yet');
-        return;
-      }
-      
-      if (!editControlRef.current._toolbars || !editControlRef.current._toolbars.draw) {
-        console.log('Drawing toolbar not initialized yet');
-        return;
-      }
-      
-      console.log('Activating drawing tool:', activeTool);
-      
-      // First, disable all drawing handlers safely
+    const handleToolActivation = () => {
       try {
-        Object.keys(editControlRef.current._toolbars.draw._modes).forEach(mode => {
-          try {
-            const handler = editControlRef.current._toolbars.draw._modes[mode].handler;
-            if (handler && typeof handler.disable === 'function') {
-              handler.disable();
-            }
-          } catch (err) {
-            console.error('Error disabling drawing handler:', err);
-          }
-        });
-      } catch (err) {
-        console.error('Error accessing drawing handlers:', err);
-      }
-      
-      // Then enable only the selected tool
-      try {
+        // Map Leaflet tool names to our custom tool names
         const toolMap: Record<string, string> = {
-          'polygon': 'polygon',
           'marker': 'marker',
-          'circle': 'circle',
-          'rectangle': 'rectangle'
+          'polygon': 'polygon',
+          'rectangle': 'rectangle',
+          'circle': 'circle'
         };
         
         const leafletTool = toolMap[activeTool];
         
-        if (leafletTool && 
-            editControlRef.current._toolbars.draw._modes[leafletTool] && 
-            editControlRef.current._toolbars.draw._modes[leafletTool].handler) {
-          
-          const handler = editControlRef.current._toolbars.draw._modes[leafletTool].handler;
-          if (typeof handler.enable === 'function') {
-            handler.enable();
-          } else {
-            console.error('Enable method not found on drawing handler');
-          }
+        if (!leafletTool) {
+          console.warn(`Unsupported tool: ${activeTool}`);
+          return;
         }
-      } catch (err) {
-        console.error('Error enabling drawing tool:', err);
-        toast.error('Failed to activate drawing tool. Please try again.');
+        
+        const drawControl = editControlRef.current;
+        const handlers = drawControl._toolbars.draw._modes;
+        
+        // Disable all drawing modes first
+        Object.keys(handlers).forEach(mode => {
+          const handler = handlers[mode].handler;
+          if (handler && handler.disable) {
+            handler.disable();
+          }
+        });
+        
+        // Enable only the selected tool
+        const selectedHandler = handlers[leafletTool]?.handler;
+        if (selectedHandler && selectedHandler.enable) {
+          selectedHandler.enable();
+        }
+        
+        toast.info(`${activeTool} drawing mode activated`);
+      } catch (error) {
+        console.error('Error activating drawing tool:', error);
+        toast.error('Failed to activate drawing tool');
       }
     };
     
-    // Use a slightly longer timeout to ensure Leaflet is fully initialized
-    const timer = setTimeout(handleDrawingActivation, 300);
-    
-    const toolMessages = {
-      polygon: "Click on map to start drawing polygon",
-      marker: "Click on map to place marker",
-      circle: "Click on map to draw circle",
-      rectangle: "Click on map to draw rectangle"
-    };
-    
-    toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
+    // Use a timeout to ensure Leaflet is fully initialized
+    const timer = setTimeout(handleToolActivation, 300);
     
     return () => clearTimeout(timer);
   }, [activeTool]);
-
-  return {
-    editControlRef
-  };
+  
+  return { editControlRef };
 }

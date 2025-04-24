@@ -16,125 +16,23 @@ interface DrawingControlsProps {
   onClearAll?: () => void;
 }
 
-declare module 'leaflet' {
-  interface Layer {
-    drawingId?: string;
-  }
-}
-
-const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps) => {
+const DrawingControls = ({ 
+  onCreated, 
+  activeTool, 
+  onRegionClick, 
+  onClearAll 
+}: DrawingControlsProps) => {
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const { savedDrawings } = useDrawings();
   const [wasCleared, setWasCleared] = useState(false);
   
-  // Effect to update drawings whenever they change
-  useEffect(() => {
-    if (!featureGroupRef.current) return;
-    
-    try {
-      console.log('Updating drawings in DrawingControls, count:', savedDrawings.length);
-      
-      // Skip updates if we just cleared the layers - this prevents old drawings from reappearing
-      if (wasCleared && savedDrawings.length === 0) {
-        console.log('Skipping drawing update after clear operation');
-        return;
-      }
-      
-      // If we have drawings, clear the wasCleared flag
-      if (savedDrawings.length > 0 && !wasCleared) {
-        // We don't want to reset wasCleared flag too soon, only when we have actual new drawings
-        console.log('New drawings detected, resetting wasCleared flag');
-      }
-      
-      // Clear existing layers
-      featureGroupRef.current.clearLayers();
-      
-      // Only add layers if we have drawings and we're not in a cleared state
-      if (savedDrawings.length > 0 && !wasCleared) {
-        const markers = getSavedMarkers();
-        
-        savedDrawings.forEach(drawing => {
-          if (drawing.geoJSON) {
-            try {
-              const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
-              const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
-              
-              if (layer) {
-                layer.eachLayer((l: L.Layer) => {
-                  if (l) {
-                    l.drawingId = drawing.id;
-                    
-                    if (onRegionClick) {
-                      l.on('click', () => {
-                        onRegionClick(drawing);
-                      });
-                    }
-                  }
-                });
-                
-                if (featureGroupRef.current) {
-                  layer.addTo(featureGroupRef.current);
-                }
-              }
-            } catch (err) {
-              console.error('Error adding drawing layer:', err);
-            }
-          }
-        });
-      } else {
-        console.log('No drawings to display or in cleared state');
-      }
-    } catch (err) {
-      console.error('Error updating drawings:', err);
-    }
-  }, [savedDrawings, onRegionClick, wasCleared]);
-
-  // Listen for clearing events and handle them
-  useEffect(() => {
-    const handleClearEvent = () => {
-      console.log('Clear event received in DrawingControls');
-      if (featureGroupRef.current) {
-        console.log('Clearing all layers in feature group');
-        featureGroupRef.current.clearLayers();
-        setWasCleared(true);
-        
-        // Reset the wasCleared flag after a longer delay
-        setTimeout(() => {
-          console.log('Resetting wasCleared flag');
-          setWasCleared(false);
-        }, 2000); // Increased delay for more reliability
-      }
-      
-      if (onClearAll) {
-        onClearAll();
-      }
-    };
-    
-    window.addEventListener('clearAllDrawings', handleClearEvent);
-    
-    return () => {
-      window.removeEventListener('clearAllDrawings', handleClearEvent);
-    };
-  }, [onClearAll]);
-
-  // Add handler for clear all
-  const handleClearAll = () => {
-    if (featureGroupRef.current) {
-      featureGroupRef.current.clearLayers();
-      setWasCleared(true);
-    }
-    
-    if (onClearAll) {
-      onClearAll();
-    }
-  };
-
+  // Ensure feature group is always rendered
   return (
     <FeatureGroup ref={featureGroupRef}>
       <DrawTools 
         onCreated={onCreated} 
         activeTool={activeTool}
-        onClearAll={handleClearAll}
+        onClearAll={onClearAll}
       />
     </FeatureGroup>
   );

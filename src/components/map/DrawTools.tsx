@@ -19,17 +19,17 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     handleDrawingCreated(e, wasRecentlyCleared, onCreated);
   };
 
-  // Make sure we only enable the currently active tool
+  // Define all drawing options, default to false
   const drawOptions = {
     polyline: false,
-    circlemarker: false,
+    polygon: false,
     rectangle: false,
     circle: false,
-    polygon: false,
     marker: false,
+    circlemarker: false
   };
   
-  // Only set the active tool to true
+  // Enable only the active tool
   if (activeTool && drawOptions.hasOwnProperty(activeTool)) {
     (drawOptions as any)[activeTool] = true;
   }
@@ -43,8 +43,8 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }}
       draw={drawOptions}
       edit={{
-        edit: false,  // Disable editing by default to prevent errors
-        remove: false // Disable remove by default
+        edit: false,
+        remove: false
       }}
     />
   );
