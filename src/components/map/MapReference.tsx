@@ -12,11 +12,21 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const hasCalledOnReady = useRef(false);
   
   useEffect(() => {
+    // Only call onMapReady once per instance
     if (map && onMapReady && !hasCalledOnReady.current) {
       hasCalledOnReady.current = true;
       console.log('Map is ready, calling onMapReady');
-      onMapReady(map);
+      
+      // Add a small delay to ensure the map is fully initialized
+      setTimeout(() => {
+        onMapReady(map);
+      }, 50);
     }
+    
+    // Clean up function
+    return () => {
+      hasCalledOnReady.current = false;
+    };
   }, [map, onMapReady]);
   
   return null;

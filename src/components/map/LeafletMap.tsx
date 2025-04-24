@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { setupLeafletIcons } from './LeafletMapIcons';
@@ -20,18 +20,17 @@ interface LeafletMapProps {
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const loadedMarkersRef = useRef(false);
+  const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   
-  useMapEvents(mapRef.current, selectedLocation);
-
-  // Initialize Leaflet icons and ensure CSS is loaded
+  // Reset map instance when component unmounts or updates
   useEffect(() => {
     // Initialize Leaflet icons
     setupLeafletIcons();
     
-    // Make sure Leaflet CSS is loaded
+    // Ensure CSS is loaded
     if (!document.querySelector('link[href*="leaflet.css"]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -41,27 +40,41 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       document.head.appendChild(link);
     }
     
-    // Cleanup
+    // Clean up on unmount
     return () => {
       if (mapRef.current) {
+        console.log('Cleaning up Leaflet map instance');
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [mapInstanceKey]);
+
+  // Force a new map instance when selectedLocation changes
+  useEffect(() => {
+    // Generate a new key to force re-render of the map component
+    setMapInstanceKey(Date.now());
+  }, [selectedLocation]);
 
   const handleSetMapRef = (map: L.Map) => {
+    if (mapRef.current) {
+      // Clean up previous map instance if exists
+      mapRef.current.remove();
+    }
+    
     mapRef.current = map;
+    
     if (onMapReady) {
       onMapReady(map);
     }
+    
     if (selectedLocation) {
       map.flyTo([selectedLocation.y, selectedLocation.x], 18);
     }
     
     // Force map to recalculate size after initialization
     setTimeout(() => {
-      if (mapRef.current) {
+      if (mapRef.current && !mapRef.current._container._leaflet_id) {
         mapRef.current.invalidateSize(true);
       }
     }, 100);
@@ -86,6 +99,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
 
   return (
     <MapView
+      key={`map-view-${mapInstanceKey}`}
       position={mapState.position}
       zoom={mapState.zoom}
       markers={mapState.markers}

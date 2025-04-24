@@ -1,3 +1,4 @@
+
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
@@ -51,11 +52,8 @@ const MapView = ({
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
-  const [mapKey, setMapKey] = useState<number>(0);
-
-  useEffect(() => {
-    setMapKey(prevKey => prevKey + 1);
-  }, []);
+  // Use a random key to force a new map instance when needed
+  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);

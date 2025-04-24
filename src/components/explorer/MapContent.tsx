@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
 import LeafletMap from '../map/LeafletMap'; // Update the import path
@@ -26,6 +26,12 @@ const MapContent = ({
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<any>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [mapKey, setMapKey] = useState<number>(Date.now());
+  
+  // Reset map instance when view changes
+  useEffect(() => {
+    setMapKey(Date.now());
+  }, [currentView]);
 
   const handleCesiumViewerRef = (viewer: any) => {
     cesiumViewerRef.current = viewer;
@@ -102,14 +108,16 @@ const MapContent = ({
           }}
           data-map-type="cesium"
         >
-          <CesiumMap 
-            selectedLocation={selectedLocation}
-            onMapReady={onMapReady}
-            onFlyComplete={onFlyComplete}
-            cinematicFlight={true}
-            key="cesium-map-instance"
-            onViewerReady={handleCesiumViewerRef}
-          />
+          {currentView === 'cesium' && (
+            <CesiumMap 
+              selectedLocation={selectedLocation}
+              onMapReady={onMapReady}
+              onFlyComplete={onFlyComplete}
+              cinematicFlight={true}
+              key={`cesium-${mapKey}`}
+              onViewerReady={handleCesiumViewerRef}
+            />
+          )}
         </div>
         
         <div 
@@ -119,11 +127,14 @@ const MapContent = ({
           }}
           data-map-type="leaflet"
         >
-          <LeafletMap 
-            selectedLocation={selectedLocation} 
-            onMapReady={handleLeafletMapRef}
-            activeTool={activeTool}
-          />
+          {currentView === 'leaflet' && (
+            <LeafletMap 
+              selectedLocation={selectedLocation} 
+              onMapReady={handleLeafletMapRef}
+              activeTool={activeTool}
+              key={`leaflet-${mapKey}`}
+            />
+          )}
         </div>
         
         <DrawingTools 
