@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
@@ -7,6 +6,16 @@ import ShapeTools from './drawing/ShapeTools';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 interface Position {
   x: number;
@@ -18,7 +27,7 @@ interface DrawingToolsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
-  onClearAll?: () => void; // Add new prop for clearing all state
+  onClearAll?: () => void;
 }
 
 const DrawingTools = ({ 
@@ -31,10 +40,11 @@ const DrawingTools = ({
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   
   const handleToolClick = (tool: string) => {
     if (tool === 'clear') {
-      handleClearAll();
+      setIsClearDialogOpen(true);
       return;
     }
     
@@ -70,6 +80,7 @@ const DrawingTools = ({
       onClearAll();
     }
     
+    setIsClearDialogOpen(false);
     toast.success('All layers cleared');
   };
 
@@ -91,41 +102,58 @@ const DrawingTools = ({
   };
   
   return (
-    <div 
-      className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move"
-      style={{ 
-        left: position.x,
-        top: position.y,
-        zIndex: 20000,
-        isolation: 'isolate',
-        userSelect: 'none',
-      }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      <ShapeTools 
-        activeTool={activeTool} 
-        onToolSelect={handleToolClick} 
-      />
-      
-      <div className="h-4" />
-      
-      <MapControls 
-        onZoomIn={onZoomIn}
-        onZoomOut={onZoomOut}
-        onReset={onReset}
-      />
-      
-      <div className="h-4" />
-      
-      <DrawingToolButton
-        icon={Trash2}
-        label="Clear All"
-        onClick={() => handleToolClick('clear')}
-      />
-    </div>
+    <>
+      <div 
+        className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move"
+        style={{ 
+          left: position.x,
+          top: position.y,
+          zIndex: 20000,
+          isolation: 'isolate',
+          userSelect: 'none',
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <ShapeTools 
+          activeTool={activeTool} 
+          onToolSelect={handleToolClick} 
+        />
+        
+        <div className="h-4" />
+        
+        <MapControls 
+          onZoomIn={onZoomIn}
+          onZoomOut={onZoomOut}
+          onReset={onReset}
+        />
+        
+        <div className="h-4" />
+        
+        <DrawingToolButton
+          icon={Trash2}
+          label="Clear All"
+          onClick={() => handleToolClick('clear')}
+        />
+      </div>
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear all drawings and markers? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearAll}>Clear All</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
