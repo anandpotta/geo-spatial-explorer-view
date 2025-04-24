@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
@@ -13,8 +13,10 @@ interface DrawToolsProps {
   onClearAll?: () => void;
 }
 
-// Use forwardRef to fix the ref warning
+// Track if we're in a cleared state to prevent old drawings from reappearing
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
+  const wasRecentlyCleared = useRef(false);
+  
   // Instead of using refs, use event listeners to control tools
   const handleDrawingActivation = useCallback(() => {
     if (!activeTool) return;
@@ -42,6 +44,14 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
 
   useEffect(() => {
     const handleClearEvent = () => {
+      console.log('DrawTools detected clear event');
+      wasRecentlyCleared.current = true;
+      
+      // Reset the flag after a short delay to allow new drawings
+      setTimeout(() => {
+        wasRecentlyCleared.current = false;
+      }, 500);
+      
       if (onClearAll) {
         onClearAll();
       }
@@ -56,6 +66,12 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
     const id = uuidv4();
+    
+    // Skip saving if we recently cleared all drawings
+    if (wasRecentlyCleared.current) {
+      console.log('Skipping save because drawings were recently cleared');
+      return;
+    }
     
     if (layerType === 'marker' && 'getLatLng' in layer) {
       const markerLayer = layer as L.Marker;

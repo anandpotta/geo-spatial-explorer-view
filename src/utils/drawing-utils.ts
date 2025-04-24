@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 
 export interface DrawingData {
@@ -16,10 +15,15 @@ export interface DrawingData {
   };
 }
 
+let hasBeenCleared = false;
+
 export function saveDrawing(drawing: DrawingData): void {
+  if (hasBeenCleared) {
+    hasBeenCleared = false;
+  }
+  
   const savedDrawings = getSavedDrawings();
   
-  // Check if drawing with same ID exists and update it
   const existingIndex = savedDrawings.findIndex(d => d.id === drawing.id);
   
   if (existingIndex >= 0) {
@@ -30,17 +34,23 @@ export function saveDrawing(drawing: DrawingData): void {
   
   localStorage.setItem('savedDrawings', JSON.stringify(savedDrawings));
   
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
+  const event = new StorageEvent('storage', {
+    key: 'savedDrawings',
+    newValue: JSON.stringify(savedDrawings)
+  });
+  window.dispatchEvent(event);
   
-  // Sync with backend
   syncDrawingsWithBackend(savedDrawings);
 }
 
 export function getSavedDrawings(): DrawingData[] {
+  if (hasBeenCleared) {
+    console.log('getSavedDrawings: returning empty array due to recent clear');
+    return [];
+  }
+  
   const drawingsJson = localStorage.getItem('savedDrawings');
   if (!drawingsJson) {
-    // Try to fetch from backend first if localStorage is empty
     fetchDrawingsFromBackend();
     return [];
   }
@@ -65,21 +75,33 @@ export function deleteDrawing(id: string): void {
   const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);
   localStorage.setItem('savedDrawings', JSON.stringify(filteredDrawings));
   
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
+  const event = new StorageEvent('storage', {
+    key: 'savedDrawings',
+    newValue: JSON.stringify(filteredDrawings)
+  });
+  window.dispatchEvent(event);
   
-  // Sync deletion with backend
   deleteDrawingFromBackend(id);
 }
 
-// New function to clear all drawings at once
 export function clearAllDrawings(): void {
+  console.log('Clearing all drawings from storage');
   localStorage.setItem('savedDrawings', JSON.stringify([]));
+  hasBeenCleared = true;
   
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
+  setTimeout(() => {
+    hasBeenCleared = false;
+  }, 10000);
   
-  // Also tell backend to clear all drawings (optional, depending on your backend design)
+  const event = new StorageEvent('storage', {
+    key: 'savedDrawings',
+    newValue: '[]'
+  });
+  window.dispatchEvent(event);
+  
+  const clearEvent = new Event('clearAllDrawings');
+  window.dispatchEvent(clearEvent);
+  
   clearAllDrawingsFromBackend();
 }
 
@@ -104,6 +126,10 @@ async function syncDrawingsWithBackend(drawings: DrawingData[]): Promise<void> {
 }
 
 async function fetchDrawingsFromBackend(): Promise<void> {
+  if (hasBeenCleared) {
+    return;
+  }
+  
   try {
     const response = await fetch('/api/drawings');
     
@@ -135,7 +161,6 @@ async function deleteDrawingFromBackend(id: string): Promise<void> {
   }
 }
 
-// New function to request clearing all drawings from the backend
 async function clearAllDrawingsFromBackend(): Promise<void> {
   try {
     const response = await fetch('/api/drawings/clear', {
@@ -149,6 +174,5 @@ async function clearAllDrawingsFromBackend(): Promise<void> {
     console.log('All drawings successfully cleared from backend');
   } catch (error) {
     console.error('Error clearing all drawings from backend:', error);
-    // Continue anyway since local storage is cleared
   }
 }

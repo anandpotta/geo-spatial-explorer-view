@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -25,6 +25,7 @@ declare module 'leaflet' {
 const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps) => {
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const { savedDrawings } = useDrawings();
+  const [wasCleared, setWasCleared] = useState(false);
   
   // Effect to update drawings whenever they change
   useEffect(() => {
@@ -32,6 +33,17 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
     
     try {
       console.log('Updating drawings in DrawingControls, count:', savedDrawings.length);
+      
+      // Skip updates if we just cleared the layers - this prevents old drawings from reappearing
+      if (wasCleared && savedDrawings.length === 0) {
+        console.log('Skipping drawing update after clear operation');
+        return;
+      }
+      
+      // If we have drawings, clear the wasCleared flag
+      if (savedDrawings.length > 0) {
+        setWasCleared(false);
+      }
       
       // Clear existing layers
       featureGroupRef.current.clearLayers();
@@ -74,7 +86,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
     } catch (err) {
       console.error('Error updating drawings:', err);
     }
-  }, [savedDrawings, onRegionClick]);
+  }, [savedDrawings, onRegionClick, wasCleared]);
 
   // Listen for clearing events and handle them
   useEffect(() => {
@@ -83,6 +95,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
       if (featureGroupRef.current) {
         console.log('Clearing all layers in feature group');
         featureGroupRef.current.clearLayers();
+        setWasCleared(true);
       }
       
       if (onClearAll) {
@@ -115,6 +128,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
   const handleClearAll = () => {
     if (featureGroupRef.current) {
       featureGroupRef.current.clearLayers();
+      setWasCleared(true);
     }
     
     if (onClearAll) {
