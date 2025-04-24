@@ -10,16 +10,22 @@ interface MapReferenceProps {
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
   const hasCalledOnReady = useRef(false);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
-    // Only call onMapReady once per instance
+    // Only call onMapReady once per instance and only if not already called
     if (map && onMapReady && !hasCalledOnReady.current) {
       console.log('Map is ready, will call onMapReady after initialization');
       
+      // Clear any existing timeout to prevent multiple calls
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
+      
       // Wait until the map is fully initialized before calling onMapReady
-      setTimeout(() => {
+      initTimeoutRef.current = setTimeout(() => {
         try {
-          if (map && map.getContainer && typeof map.getContainer === 'function') {
+          if (map && typeof map.getContainer === 'function') {
             // Check if the map has a valid container and is properly initialized
             const container = map.getContainer();
             if (container && document.body.contains(container)) {
@@ -29,7 +35,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
               onMapReady(map);
             } else {
               console.warn('Map container not properly attached to DOM, delaying onMapReady');
-              setTimeout(() => {
+              initTimeoutRef.current = setTimeout(() => {
                 // Check if map is valid without accessing internal properties
                 if (map && !map.getContainer()) {
                   console.warn('Map initialization incomplete, skipping onMapReady');
@@ -49,6 +55,9 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     
     // Clean up function
     return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
       hasCalledOnReady.current = false;
     };
   }, [map, onMapReady]);

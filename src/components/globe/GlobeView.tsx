@@ -1,5 +1,5 @@
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useRef, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -24,15 +24,19 @@ function EarthErrorFallback() {
 
 export default function GlobeView({ onLocationSelect }) {
   const [hasError, setHasError] = useState(false);
+  const errorHandled = useRef(false);
   
-  // Enhanced error handler
-  const handleError = (error) => {
-    console.error('Globe rendering error:', error);
-    setHasError(true);
-  };
+  // Enhanced error handler with ref to prevent multiple state updates
+  const handleError = useCallback((error) => {
+    if (!errorHandled.current) {
+      console.error('Globe rendering error:', error);
+      setHasError(true);
+      errorHandled.current = true;
+    }
+  }, []);
   
-  // Safe wrapper for location selection
-  const handleLocationSelect = (coords) => {
+  // Safe wrapper for location selection with callback to prevent re-renders
+  const handleLocationSelect = useCallback((coords) => {
     try {
       if (coords && onLocationSelect) {
         onLocationSelect(coords);
@@ -40,7 +44,7 @@ export default function GlobeView({ onLocationSelect }) {
     } catch (err) {
       console.error('Error selecting location on globe:', err);
     }
-  };
+  }, [onLocationSelect]);
 
   return (
     <div className="w-full h-full">
