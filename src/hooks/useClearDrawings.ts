@@ -10,11 +10,15 @@ export function useClearDrawings(onClearAll?: () => void) {
       wasRecentlyCleared.current = true;
       
       setTimeout(() => {
+        console.log('Resetting wasRecentlyCleared flag after timeout');
         wasRecentlyCleared.current = false;
-      }, 1000);
+      }, 1500);
       
       if (onClearAll) {
-        onClearAll();
+        // Slight delay to ensure leaflet had time to process the clear operation
+        setTimeout(() => {
+          onClearAll();
+        }, 50);
       }
     };
     

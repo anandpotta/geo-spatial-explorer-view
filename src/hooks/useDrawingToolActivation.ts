@@ -9,45 +9,64 @@ export function useDrawingToolActivation(activeTool: string | null) {
     if (!activeTool) return;
     
     const handleDrawingActivation = () => {
-      if (editControlRef.current && editControlRef.current._toolbars && editControlRef.current._toolbars.draw) {
-        console.log('Activating drawing tool:', activeTool);
-        
-        // First, disable all drawing handlers
+      if (!editControlRef.current) {
+        console.log('Edit control reference not available yet');
+        return;
+      }
+      
+      if (!editControlRef.current._toolbars || !editControlRef.current._toolbars.draw) {
+        console.log('Drawing toolbar not initialized yet');
+        return;
+      }
+      
+      console.log('Activating drawing tool:', activeTool);
+      
+      // First, disable all drawing handlers safely
+      try {
         Object.keys(editControlRef.current._toolbars.draw._modes).forEach(mode => {
           try {
             const handler = editControlRef.current._toolbars.draw._modes[mode].handler;
-            if (handler && handler.disable) {
+            if (handler && typeof handler.disable === 'function') {
               handler.disable();
             }
           } catch (err) {
             console.error('Error disabling drawing handler:', err);
           }
         });
+      } catch (err) {
+        console.error('Error accessing drawing handlers:', err);
+      }
+      
+      // Then enable only the selected tool
+      try {
+        const toolMap: Record<string, string> = {
+          'polygon': 'polygon',
+          'marker': 'marker',
+          'circle': 'circle',
+          'rectangle': 'rectangle'
+        };
         
-        // Then enable only the selected tool
-        try {
-          const toolMap: Record<string, string> = {
-            'polygon': 'polygon',
-            'marker': 'marker',
-            'circle': 'circle',
-            'rectangle': 'rectangle'
-          };
+        const leafletTool = toolMap[activeTool];
+        
+        if (leafletTool && 
+            editControlRef.current._toolbars.draw._modes[leafletTool] && 
+            editControlRef.current._toolbars.draw._modes[leafletTool].handler) {
           
-          const leafletTool = toolMap[activeTool];
-          
-          if (leafletTool && editControlRef.current._toolbars.draw._modes[leafletTool]) {
-            const handler = editControlRef.current._toolbars.draw._modes[leafletTool].handler;
-            if (handler && handler.enable) {
-              handler.enable();
-            }
+          const handler = editControlRef.current._toolbars.draw._modes[leafletTool].handler;
+          if (typeof handler.enable === 'function') {
+            handler.enable();
+          } else {
+            console.error('Enable method not found on drawing handler');
           }
-        } catch (err) {
-          console.error('Error enabling drawing tool:', err);
         }
+      } catch (err) {
+        console.error('Error enabling drawing tool:', err);
+        toast.error('Failed to activate drawing tool. Please try again.');
       }
     };
     
-    const timer = setTimeout(handleDrawingActivation, 100);
+    // Use a slightly longer timeout to ensure Leaflet is fully initialized
+    const timer = setTimeout(handleDrawingActivation, 300);
     
     const toolMessages = {
       polygon: "Click on map to start drawing polygon",

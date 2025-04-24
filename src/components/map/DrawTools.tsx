@@ -19,6 +19,21 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     handleDrawingCreated(e, wasRecentlyCleared, onCreated);
   };
 
+  // Make sure we only enable the currently active tool
+  const drawOptions = {
+    polyline: false,
+    circlemarker: false,
+    rectangle: false,
+    circle: false,
+    polygon: false,
+    marker: false,
+  };
+  
+  // Only set the active tool to true
+  if (activeTool && drawOptions.hasOwnProperty(activeTool)) {
+    (drawOptions as any)[activeTool] = true;
+  }
+
   return (
     <EditControl
       position="topright"
@@ -26,13 +41,10 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       onMounted={(editControlInstance: any) => {
         editControlRef.current = editControlInstance;
       }}
-      draw={{
-        rectangle: activeTool === 'rectangle',
-        polygon: activeTool === 'polygon',
-        circle: activeTool === 'circle',
-        circlemarker: false,
-        marker: activeTool === 'marker',
-        polyline: false
+      draw={drawOptions}
+      edit={{
+        edit: false,  // Disable editing by default to prevent errors
+        remove: false // Disable remove by default
       }}
     />
   );
