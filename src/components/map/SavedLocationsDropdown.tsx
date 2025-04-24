@@ -61,6 +61,19 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     loadMarkers();
     toast.success("Location removed");
   };
+  
+  const handleLocationSelect = (position: [number, number]) => {
+    // Close the dropdown menu when a location is selected
+    const dropdown = document.querySelector('[data-state="open"]');
+    if (dropdown) {
+      const trigger = dropdown.previousElementSibling as HTMLButtonElement;
+      if (trigger) trigger.click();
+    }
+    
+    console.log("Location selected from dropdown:", position);
+    onLocationSelect(position);
+    toast.success("Navigating to saved location");
+  };
 
   return (
     <DropdownMenu>
@@ -82,7 +95,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
                 >
                   <div
                     className="flex items-center flex-1 cursor-pointer"
-                    onClick={() => onLocationSelect(marker.position)}
+                    onClick={() => handleLocationSelect(marker.position)}
                   >
                     <MapPin className="mr-2 h-4 w-4" />
                     {marker.name}
@@ -115,7 +128,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
               >
                 <div
                   className="flex items-center flex-1 cursor-pointer"
-                  onClick={() => onLocationSelect(marker.position)}
+                  onClick={() => handleLocationSelect(marker.position)}
                 >
                   <MapPin className="mr-2 h-4 w-4" />
                   {marker.name}

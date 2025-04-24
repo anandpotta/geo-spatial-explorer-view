@@ -81,6 +81,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   };
 
   const handleLocationSelect = (position: [number, number]) => {
+    console.log("Location selected in LeafletMap:", position);
     if (mapRef.current) {
       mapRef.current.flyTo(position, 18, {
         duration: 2

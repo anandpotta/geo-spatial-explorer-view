@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
 
 interface SavedLocationsProps {
   onLocationSelect: (position: [number, number]) => void;
@@ -43,10 +44,13 @@ const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
   const handleDelete = (id: string) => {
     deleteMarker(id);
     loadMarkers();
+    toast.success("Location removed");
   };
   
   const handleSelect = (position: [number, number]) => {
+    console.log("Location selected in SavedLocations:", position);
     onLocationSelect(position);
+    toast.success("Navigating to saved location");
   };
   
   if (markers.length === 0) {
