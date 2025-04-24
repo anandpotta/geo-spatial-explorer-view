@@ -46,14 +46,26 @@ const DeleteLocationDialog = ({
         document.body.focus();
       }, 0);
     }
-  }, [isOpen]);
+
+    // Add escape key handling
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (isOpen && event.key === 'Escape') {
+        onCancel();
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isOpen, onCancel]);
   
   return (
     <AlertDialog 
       open={isOpen} 
       onOpenChange={handleOpenChange}
     >
-      <AlertDialogContent onEscapeKeyDown={onCancel} onPointerDownOutside={onCancel}>
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Location</AlertDialogTitle>
           <AlertDialogDescription>

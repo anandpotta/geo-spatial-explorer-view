@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
 import { deleteMarker } from "@/utils/marker-utils";
+import { useEffect } from "react";
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
@@ -37,8 +38,23 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     setIsDeleteDialogOpen,
     markerToDelete,
     setMarkerToDelete,
-    returnFocusRef
+    returnFocusRef,
+    cleanupMarkerReferences
   } = useDropdownLocations();
+
+  // Add effect for escape key handling
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (isDeleteDialogOpen && event.key === 'Escape') {
+        cancelDelete();
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isDeleteDialogOpen]);
 
   const handleLocationSelect = (position: [number, number]) => {
     // Close dropdown when a location is selected
@@ -80,6 +96,9 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       setMarkerToDelete(null);
       toast.success("Location removed");
       
+      // Clean up any stale elements first
+      cleanupMarkerReferences();
+      
       // Reset focus to document.body as a fallback
       document.body.focus();
       
@@ -107,6 +126,9 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   const cancelDelete = () => {
     setIsDeleteDialogOpen(false);
     setMarkerToDelete(null);
+    
+    // Clean up any stale elements first
+    cleanupMarkerReferences();
     
     // Reset focus to document.body as a fallback
     document.body.focus();
@@ -177,14 +199,10 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen}>
-        <AlertDialogContent 
-          onEscapeKeyDown={cancelDelete}
-          onPointerDownOutside={(e) => {
-            e.preventDefault();
-            cancelDelete();
-          }}
-        >
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        if (!open) cancelDelete();
+      }}>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Location</AlertDialogTitle>
             <AlertDialogDescription>
