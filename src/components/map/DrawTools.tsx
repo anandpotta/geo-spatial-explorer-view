@@ -10,9 +10,10 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
+  onClearAll?: () => void; // Add onClearAll prop
 }
 
-const DrawTools = ({ onCreated, activeTool }: DrawToolsProps) => {
+const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   const editControlRef = useRef<any>(null);
 
   useEffect(() => {

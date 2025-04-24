@@ -44,22 +44,37 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     return () => {
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
-        mapRef.current.remove();
+        try {
+          // Remove the map instance more safely
+          if (mapRef.current && mapRef.current.remove && !mapRef.current._container._leaflet_id) {
+            mapRef.current.remove();
+          }
+        } catch (err) {
+          console.error('Error cleaning up map:', err);
+        }
         mapRef.current = null;
       }
     };
   }, [mapInstanceKey]);
 
-  // Force a new map instance when selectedLocation changes
+  // Force a new map instance when selectedLocation changes - but do it properly
   useEffect(() => {
-    // Generate a new key to force re-render of the map component
-    setMapInstanceKey(Date.now());
+    if (selectedLocation) {
+      // Instead of forcing a full re-render, just fly to the new location
+      if (mapRef.current) {
+        mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
+      } else {
+        // Generate a new key to force re-render of the map component only if map isn't initialized
+        setMapInstanceKey(Date.now());
+      }
+    }
   }, [selectedLocation]);
 
   const handleSetMapRef = (map: L.Map) => {
+    // Don't reassign map reference if one already exists
     if (mapRef.current) {
-      // Clean up previous map instance if exists
-      mapRef.current.remove();
+      console.log('Map reference already exists, skipping assignment');
+      return;
     }
     
     mapRef.current = map;
