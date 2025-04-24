@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Navigation } from "lucide-react";
+import { Navigation, MapPin } from "lucide-react";
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
