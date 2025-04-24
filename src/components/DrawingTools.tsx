@@ -18,13 +18,15 @@ interface DrawingToolsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  onClearAll?: () => void; // Add new prop for clearing all state
 }
 
 const DrawingTools = ({ 
   onToolSelect, 
   onZoomIn, 
   onZoomOut, 
-  onReset 
+  onReset,
+  onClearAll
 }: DrawingToolsProps) => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
@@ -56,6 +58,11 @@ const DrawingTools = ({
     window.dispatchEvent(new Event('markersUpdated'));
     // Force update drawings list
     window.dispatchEvent(new Event('storage'));
+    
+    // Notify parent component to reset any temporary state
+    if (onClearAll) {
+      onClearAll();
+    }
     
     toast.success('All layers cleared');
   };

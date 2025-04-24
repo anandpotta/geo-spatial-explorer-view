@@ -30,6 +30,7 @@ interface MapViewProps {
   onShapeCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
+  onClearAll?: () => void; // Add new prop for clearing all state
 }
 
 const MapView = ({
@@ -48,7 +49,8 @@ const MapView = ({
   setMarkerType,
   onShapeCreated,
   activeTool,
-  onRegionClick
+  onRegionClick,
+  onClearAll
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
@@ -101,6 +103,7 @@ const MapView = ({
           onShapeCreated={onShapeCreated}
           activeTool={activeTool}
           onRegionClick={handleRegionClick}
+          onClearAll={onClearAll}
         />
         
         <MarkersContainer

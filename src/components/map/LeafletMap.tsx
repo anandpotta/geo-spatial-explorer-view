@@ -89,6 +89,20 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   };
 
+  // Handler for clearing all map state
+  const handleClearAll = () => {
+    // Reset any temporary state in mapState
+    mapState.setTempMarker(null);
+    mapState.setMarkerName('');
+    mapState.setMarkerType('building');
+    mapState.setCurrentDrawing(null);
+    
+    // Force redraw of the map to clear any visual artifacts
+    if (mapRef.current) {
+      mapRef.current.invalidateSize();
+    }
+  };
+
   if (mapState.showFloorPlan) {
     return (
       <FloorPlanView 
@@ -117,6 +131,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       onShapeCreated={handleShapeCreated}
       activeTool={activeTool || null}
       onRegionClick={mapState.handleRegionClick}
+      onClearAll={handleClearAll}
     />
   );
 };
