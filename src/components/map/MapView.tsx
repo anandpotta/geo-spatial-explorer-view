@@ -79,6 +79,14 @@ const MapView = ({
     );
   }
 
+  // Create a handler function to pass to whenReady that accepts a map parameter
+  const handleMapReady = (map: L.Map) => {
+    // Short timeout to ensure all DOM elements are properly set up
+    setTimeout(() => {
+      if (onMapReady) onMapReady(map);
+    }, 100);
+  };
+
   return (
     <div className="w-full h-full relative">
       <div className="absolute top-4 right-4 z-[1000]">
@@ -95,12 +103,7 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenReady={(map) => {
-          // Short timeout to ensure all DOM elements are properly set up
-          setTimeout(() => {
-            if (onMapReady) onMapReady(map.target);
-          }, 100);
-        }}
+        whenReady={(mapEvent) => handleMapReady(mapEvent.target)}
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 

@@ -86,7 +86,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       
       // Force invalidate size to ensure proper rendering
       setTimeout(() => {
-        if (map && !map._container._leaflet_id) {
+        if (map && map.getContainer()) { // Fixed: use getContainer() instead of _container
           map.invalidateSize(true);
           
           // Only fly to location if we have one and the map is ready
