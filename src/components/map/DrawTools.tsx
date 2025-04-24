@@ -46,7 +46,6 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
         marker: true,
       }}
       edit={{
-        featureGroup: null, // Will be set internally by react-leaflet-draw
         edit: { 
           // Add required edit options here
           selectedPathOptions: {
