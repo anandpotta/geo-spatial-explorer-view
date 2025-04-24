@@ -23,19 +23,24 @@ export function useMapState(selectedLocation?: Location) {
 
   // Load saved markers on component mount
   useEffect(() => {
-    const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
+    const loadMarkers = () => {
+      const savedMarkers = getSavedMarkers();
+      setMarkers(savedMarkers);
+    };
+    
+    loadMarkers();
 
     // Listen for marker updates
     const handleMarkersUpdated = () => {
-      const updatedMarkers = getSavedMarkers();
-      setMarkers(updatedMarkers);
+      loadMarkers();
     };
 
     window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
     };
   }, []);
 

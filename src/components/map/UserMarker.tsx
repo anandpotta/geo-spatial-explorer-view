@@ -28,7 +28,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     
     localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
     
-    // Dispatch event to update other components
+    // Dispatch custom event to update other components
     window.dispatchEvent(new CustomEvent('markersUpdated'));
   };
   

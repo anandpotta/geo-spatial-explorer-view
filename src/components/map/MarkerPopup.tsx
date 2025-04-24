@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { LocationMarker } from '@/utils/marker-utils';
@@ -23,8 +24,8 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
     );
     localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
     
-    // Dispatch storage event to notify other components
-    window.dispatchEvent(new Event('storage'));
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('markersUpdated'));
   };
 
   return (

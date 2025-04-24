@@ -1,4 +1,3 @@
-
 import { getConnectionStatus } from './api-service';
 
 export interface LocationMarker {
@@ -60,9 +59,9 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Ensure both events are dispatched
+  // Dispatch both events to ensure all components update
+  window.dispatchEvent(new CustomEvent('markersUpdated'));
   window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
   
   // Try to sync with backend
   deleteMarkerFromBackend(id);
