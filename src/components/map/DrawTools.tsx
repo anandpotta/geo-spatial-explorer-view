@@ -20,14 +20,14 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     handleDrawingCreated(e, wasRecentlyCleared, onCreated);
   };
 
-  // Define all drawing options
+  // Define all drawing options with proper typing
   const drawOptions = {
-    polyline: activeTool === 'polyline',
-    polygon: activeTool === 'polygon',
-    rectangle: activeTool === 'rectangle',
-    circle: activeTool === 'circle',
-    marker: activeTool === 'marker',
-    circlemarker: activeTool === 'circlemarker'
+    polyline: false,
+    polygon: true,
+    rectangle: true,
+    circle: true,
+    marker: true,
+    circlemarker: false
   };
 
   return (
@@ -37,17 +37,9 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }}
       position="topright"
       onCreated={handleCreated}
-      draw={{
-        ...drawOptions,
-        // Enable tools based on activeTool state, but also show them in toolbar
-        polygon: true,
-        rectangle: true, 
-        circle: true,
-        marker: true,
-      }}
+      draw={drawOptions}
       edit={{
         edit: { 
-          // Add required edit options here
           selectedPathOptions: {
             color: '#fe57a1',
             opacity: 0.6,
