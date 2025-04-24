@@ -1,17 +1,13 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Sphere, useTexture } from '@react-three/drei';
+import { Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 
 export default function Earth() {
   const earthRef = useRef<THREE.Mesh>(null);
   const [textureError, setTextureError] = useState(false);
-  const [textures, setTextures] = useState<{
-    map?: THREE.Texture;
-    bumpMap?: THREE.Texture;
-    specularMap?: THREE.Texture;
-  } | null>(null);
+  const [earthMaterial, setEarthMaterial] = useState<THREE.Material | null>(null);
   
   // Create fallback material outside of render
   const fallbackMaterial = new THREE.MeshPhongMaterial({
@@ -21,30 +17,56 @@ export default function Earth() {
     shininess: 10
   });
   
-  // Move texture loading to useEffect to prevent render loop
+  // Load textures in useEffect
   useEffect(() => {
     try {
-      // Load textures using Three.js TextureLoader instead of useTexture hook
       const textureLoader = new THREE.TextureLoader();
-      const loadedTextures = {
-        map: textureLoader.load('/earth-texture.jpg', undefined, undefined, () => setTextureError(true)),
-        bumpMap: textureLoader.load('/earth-bump.jpg', undefined, undefined, () => setTextureError(true)),
-        specularMap: textureLoader.load('/earth-specular.jpg', undefined, undefined, () => setTextureError(true))
-      };
+      const mapTexture = textureLoader.load(
+        '/earth-texture.jpg',
+        undefined,
+        undefined,
+        () => setTextureError(true)
+      );
       
-      setTextures(loadedTextures);
+      const bumpTexture = textureLoader.load(
+        '/earth-bump.jpg',
+        undefined,
+        undefined,
+        () => setTextureError(true)
+      );
+      
+      const specularTexture = textureLoader.load(
+        '/earth-specular.jpg',
+        undefined,
+        undefined,
+        () => setTextureError(true)
+      );
+      
+      // Create the material with loaded textures
+      const material = new THREE.MeshPhongMaterial({
+        map: mapTexture,
+        bumpMap: bumpTexture,
+        bumpScale: 0.15,
+        specularMap: specularTexture,
+        specular: new THREE.Color('grey'),
+        shininess: 10
+      });
+      
+      setEarthMaterial(material);
+      
     } catch (error) {
       console.error('Error loading textures:', error);
       setTextureError(true);
+      setEarthMaterial(fallbackMaterial);
     }
     
     // Cleanup function
     return () => {
-      // Dispose textures when component unmounts
-      if (textures) {
-        if (textures.map) textures.map.dispose();
-        if (textures.bumpMap) textures.bumpMap.dispose();
-        if (textures.specularMap) textures.specularMap.dispose();
+      if (earthMaterial && earthMaterial instanceof THREE.MeshPhongMaterial) {
+        if (earthMaterial.map) earthMaterial.map.dispose();
+        if (earthMaterial.bumpMap) earthMaterial.bumpMap.dispose();
+        if (earthMaterial.specularMap) earthMaterial.specularMap.dispose();
+        earthMaterial.dispose();
       }
     };
   }, []);
@@ -57,17 +79,10 @@ export default function Earth() {
 
   return (
     <Sphere ref={earthRef} args={[1, 64, 64]}>
-      {!textureError && textures ? (
-        <meshPhongMaterial
-          map={textures.map}
-          bumpMap={textures.bumpMap}
-          bumpScale={0.15}
-          specularMap={textures.specularMap}
-          specular={new THREE.Color('grey')}
-          shininess={10}
-        />
+      {earthMaterial ? (
+        <primitive object={earthMaterial} attach="material" />
       ) : (
-        <primitive object={fallbackMaterial} />
+        <primitive object={fallbackMaterial} attach="material" />
       )}
     </Sphere>
   );
