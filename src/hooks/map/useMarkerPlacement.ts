@@ -29,16 +29,21 @@ export function useMarkerPlacement(mapState: MarkerPlacementState) {
       }
       
       // Update marker state with the position first, then name
-      // Using setTimeout to prevent state batching issues
+      // Using a small delay to prevent state update issues
+      const markerName = mapState.selectedLocation?.label || 'New Building';
+      
+      // First set temp marker
+      mapState.setTempMarker(exactPosition);
+      
+      // Then set name in the next tick
       setTimeout(() => {
-        mapState.setTempMarker(exactPosition);
-        mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
+        mapState.setMarkerName(markerName);
         
         toast.info('Click "Save Location" to confirm marker placement', {
           duration: 5000,
           id: 'marker-placement',
         });
-      }, 0);
+      }, 10);
     }
   };
 

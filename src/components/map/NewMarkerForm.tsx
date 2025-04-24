@@ -25,15 +25,23 @@ const NewMarkerForm = ({
     e.stopPropagation();
     onSave();
   };
+  
+  // Handle input changes separately to prevent refreshes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMarkerName(e.target.value);
+  };
 
   return (
     <Popup>
-      <form onSubmit={handleSubmit} className="p-2">
+      <form onSubmit={handleSubmit} className="p-2" onClick={(e) => e.stopPropagation()}>
         <Input 
           type="text"
           placeholder="Location name"
           value={markerName}
-          onChange={(e) => setMarkerName(e.target.value)}
+          onChange={handleInputChange}
+          onClick={(e) => e.stopPropagation()}
           className="mb-2"
         />
         <div className="flex mb-2">
@@ -42,7 +50,10 @@ const NewMarkerForm = ({
             size="sm"
             variant={markerType === 'pin' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={() => setMarkerType('pin')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMarkerType('pin');
+            }}
           >
             Pin
           </Button>
@@ -51,7 +62,10 @@ const NewMarkerForm = ({
             size="sm"
             variant={markerType === 'area' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={() => setMarkerType('area')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMarkerType('area');
+            }}
           >
             Area
           </Button>
@@ -60,7 +74,10 @@ const NewMarkerForm = ({
             size="sm"
             variant={markerType === 'building' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={() => setMarkerType('building')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMarkerType('building');
+            }}
           >
             Building
           </Button>
@@ -69,6 +86,9 @@ const NewMarkerForm = ({
           type="submit"
           disabled={!markerName.trim()}
           className="w-full"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
         >
           Save Location
         </Button>

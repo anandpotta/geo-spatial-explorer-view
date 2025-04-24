@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
 
@@ -69,18 +69,33 @@ const TempMarker = ({
     };
   }, [position]);
   
+  // Handler for saving the marker that prevents propagation
+  const handleSave = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    onSave();
+  };
+  
   return (
     <Marker 
       key={markerKey}
       position={position} 
       draggable={true}
       eventHandlers={{
-        dragstart: () => {
+        dragstart: (e) => {
+          // Prevent event propagation
+          L.DomEvent.stopPropagation(e.originalEvent);
+          
           // Reinforce interaction flags
           window.userHasInteracted = true;
           window.tempMarkerPlaced = true;
         },
         dragend: (e) => {
+          // Prevent event propagation
+          L.DomEvent.stopPropagation(e.originalEvent);
+          
           const marker = e.target;
           const newPosition = marker.getLatLng();
           
@@ -99,6 +114,14 @@ const TempMarker = ({
               console.error('Failed to store marker position in localStorage:', error);
             }
           }
+        },
+        click: (e) => {
+          // Prevent event propagation to stop map clicks from interfering
+          L.DomEvent.stopPropagation(e.originalEvent);
+        },
+        popupopen: (e) => {
+          // Prevent event propagation
+          L.DomEvent.stopPropagation(e.originalEvent);
         }
       }}
     >
@@ -107,7 +130,7 @@ const TempMarker = ({
         setMarkerName={setMarkerName}
         markerType={markerType}
         setMarkerType={setMarkerType}
-        onSave={onSave}
+        onSave={handleSave}
       />
     </Marker>
   );
