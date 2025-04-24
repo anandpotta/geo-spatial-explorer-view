@@ -6,6 +6,7 @@ import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
 import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-drawing-config';
 import DrawTools from './DrawTools';
+import { getSavedMarkers } from '@/utils/marker-utils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -27,9 +28,11 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
     if (!featureGroupRef.current || !savedDrawings.length) return;
     
     featureGroupRef.current.clearLayers();
+    const markers = getSavedMarkers();
     
     savedDrawings.forEach(drawing => {
       if (drawing.geoJSON) {
+        const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
         const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
         
         if (layer) {
@@ -37,7 +40,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
             if (l) {
               l.drawingId = drawing.id;
               
-              if (onRegionClick) {
+              if (onRegionClick && associatedMarker) {
                 l.on('click', () => {
                   console.log('Layer clicked:', drawing.id);
                   onRegionClick(drawing);
@@ -48,8 +51,8 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
           
           layer.addTo(featureGroupRef.current);
           
-          if (drawing.properties.name) {
-            layer.bindPopup(drawing.properties.name);
+          if (associatedMarker) {
+            layer.bindPopup(associatedMarker.name);
           }
         }
       }

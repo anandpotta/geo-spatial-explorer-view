@@ -1,30 +1,27 @@
-
 import { getConnectionStatus } from './api-service';
 
 export interface LocationMarker {
   id: string;
   name: string;
-  position: [number, number]; // [lat, lng]
+  position: [number, number];
   type: 'pin' | 'area' | 'building';
   description?: string;
   createdAt: Date;
   isPinned?: boolean;
+  associatedDrawing?: string;
 }
 
-// Storage functions for saved markers
 export function saveMarker(marker: LocationMarker): void {
   const savedMarkers = getSavedMarkers();
   savedMarkers.push(marker);
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Sync with backend
   syncMarkersWithBackend(savedMarkers);
 }
 
 export function getSavedMarkers(): LocationMarker[] {
   const markersJson = localStorage.getItem('savedMarkers');
   if (!markersJson) {
-    // Try to fetch from backend first if localStorage is empty, but don't await
     fetchMarkersFromBackend().catch(() => {
       console.log('Could not fetch markers from backend, using local storage');
     });
@@ -48,11 +45,9 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Sync deletion with backend
   deleteMarkerFromBackend(id);
 }
 
-// Backend synchronization functions
 async function syncMarkersWithBackend(markers: LocationMarker[]): Promise<void> {
   const { isOnline, isBackendAvailable } = getConnectionStatus();
   if (!isOnline || !isBackendAvailable) return;
@@ -89,7 +84,6 @@ async function fetchMarkersFromBackend(): Promise<void> {
       throw new Error('Failed to fetch markers from backend');
     }
     
-    // Check content type to avoid parsing HTML as JSON
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error('Invalid response format from backend');
