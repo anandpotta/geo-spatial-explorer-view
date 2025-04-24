@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
@@ -51,6 +52,11 @@ const DrawingTools = ({
       deleteDrawing(drawing.id);
     });
 
+    // Force update markers list
+    window.dispatchEvent(new Event('markersUpdated'));
+    // Force update drawings list
+    window.dispatchEvent(new Event('storage'));
+    
     toast.success('All layers cleared');
   };
 
