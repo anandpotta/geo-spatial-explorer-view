@@ -7,11 +7,10 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import ShapeToolsContainer from '../drawing/ShapeToolsContainer';
 
 interface MapViewProps {
   position: [number, number];
@@ -125,11 +124,6 @@ const MapView = ({
         
         <MapEvents onMapClick={onMapClick} />
       </MapContainer>
-
-      <ShapeToolsContainer
-        activeTool={activeTool}
-        onToolSelect={(tool) => onShapeCreated({ type: tool })}
-      />
     </div>
   );
 };
