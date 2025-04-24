@@ -53,9 +53,21 @@ const LeafletMap = ({
     onMapReady
   );
 
-  // Handle location changes
+  // Handle location changes with improved timing
   useEffect(() => {
-    if (selectedLocation && mapRef.current && isMapInitialized && !cleanupInProgress.current) {
+    // Skip if location or map isn't ready
+    if (!selectedLocation || !mapRef.current) return;
+    
+    // Add a longer initial delay to ensure map is properly initialized
+    const initialDelay = 1000; 
+    
+    // Use a timer to wait for map to be fully initialized
+    const navigationTimer = setTimeout(() => {
+      if (!isMapInitialized || !mapRef.current || cleanupInProgress.current) {
+        console.log('Map not ready for navigation yet');
+        return;
+      }
+      
       try {
         const lat = selectedLocation.y;
         const lng = selectedLocation.x;
@@ -68,20 +80,27 @@ const LeafletMap = ({
         
         console.log('Flying to location:', { lat, lng });
         
-        setTimeout(() => {
+        // Add a small delay before actual navigation
+        const flyTimer = setTimeout(() => {
           const flySuccess = safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng, 18);
           
-          if (!flySuccess) {
+          // Only reset map if flyTo failed and we're not already cleaning up
+          if (!flySuccess && !cleanupInProgress.current) {
             console.warn('Safe flyTo failed, recreating map');
             resetMap();
           }
-        }, 500);
+        }, 800); // Longer delay for navigation attempt
+        
+        return () => clearTimeout(flyTimer);
       } catch (err) {
         console.error('Error flying to location:', err);
         resetMap();
       }
-    }
-  }, [selectedLocation, isMapInitialized, safeMapFlyTo, resetMap]);
+    }, initialDelay);
+    
+    // Clean up the timer if component unmounts
+    return () => clearTimeout(navigationTimer);
+  }, [selectedLocation, isMapInitialized, mapRef.current, safeMapFlyTo, resetMap, cleanupInProgress]);
 
   // Use mapEvents hook with safeguards
   useMapEvents(isMapInitialized ? mapRef.current : null, selectedLocation);
@@ -93,7 +112,11 @@ const LeafletMap = ({
     const [lat, lng] = position;
     if (mapRef.current && isMapInitialized && !cleanupInProgress.current) {
       try {
-        setTimeout(() => safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng), 200);
+        // Add a delay before navigation
+        setTimeout(() => {
+          if (!mapRef.current || !isMapInitialized || cleanupInProgress.current) return;
+          safeMapFlyTo(mapRef.current, isMapInitialized, cleanupInProgress.current, lat, lng);
+        }, 500);
       } catch (err) {
         console.error('Error flying to location:', err);
       }

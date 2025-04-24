@@ -13,48 +13,49 @@ export const useLeafletMapNavigation = () => {
     lng: number,
     zoom: number = 18
   ): boolean => {
+    // Early return if basic conditions aren't met
     if (!map || !isMapInitialized || cleanupInProgress) {
-      console.error('Map not initialized for flyTo');
+      console.log('Map not initialized for flyTo');
       return false;
     }
     
     try {
-      if (!map.getContainer() || !document.contains(map.getContainer())) {
+      // Ensure map container exists and is in DOM
+      if (!map.getContainer() || !document.body.contains(map.getContainer())) {
         console.warn('Map container not available for flyTo');
         return false;
       }
       
+      // Make sure essential map elements are available
       const mapPane = map.getContainer().querySelector('.leaflet-map-pane');
       if (!mapPane) {
         console.warn('Map pane not found, map may not be ready for flyTo');
         return false;
       }
       
+      // Update map size first to ensure proper rendering
       map.invalidateSize(true);
       
+      // Set view immediately (more reliable than flyTo)
+      map.setView([lat, lng], zoom, { animate: false });
+      
+      // Add a slight delay before attempting the animated flyTo
       setTimeout(() => {
         try {
-          map.setView([lat, lng], zoom);
+          // Double check map is still available before animating
+          if (!map || cleanupInProgress) return;
           
-          setTimeout(() => {
-            if (!map || cleanupInProgress) return;
-            
-            try {
-              if (map.getContainer() && document.contains(map.getContainer())) {
-                map.flyTo([lat, lng], zoom, {
-                  animate: true,
-                  duration: 1.5
-                });
-              }
-            } catch (flyErr) {
-              console.warn('Error during flyTo, but position should be set:', flyErr);
-            }
-          }, 500);
-        } catch (err) {
-          console.error('Error in safeMapFlyTo:', err);
-          return false;
+          if (map.getContainer() && document.body.contains(map.getContainer())) {
+            // Now attempt the smooth animation
+            map.flyTo([lat, lng], zoom, {
+              animate: true,
+              duration: 1.5
+            });
+          }
+        } catch (flyErr) {
+          console.warn('Error during flyTo, but position should be set:', flyErr);
         }
-      }, 300);
+      }, 800); // Increased timeout for better reliability
       
       return true;
     } catch (err) {
