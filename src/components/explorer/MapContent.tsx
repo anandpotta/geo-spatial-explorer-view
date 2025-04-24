@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
-import LeafletMap from '../LeafletMap';
+import LeafletMap from '../map/LeafletMap'; // Update the import path
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
