@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
@@ -6,18 +5,20 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import L from 'leaflet';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
+import { Button } from "@/components/ui/button";
+import { FlipHorizontal } from "lucide-react";
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
+  onRegionClick?: (drawing: DrawingData) => void;
 }
 
-const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
+const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingControlsProps) => {
   const editControlRef = useRef<any>(null);
   const featureGroupRef = useRef<any>(null);
   const [savedDrawings, setSavedDrawings] = useState<DrawingData[]>([]);
   
-  // Load saved drawings when component mounts
   useEffect(() => {
     const loadDrawings = () => {
       const drawings = getSavedDrawings();
@@ -26,23 +27,18 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
     
     loadDrawings();
     
-    // Listen for storage changes
     window.addEventListener('storage', loadDrawings);
     return () => window.removeEventListener('storage', loadDrawings);
   }, []);
   
-  // Render saved drawings
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
     
-    // Clear previous drawings
     featureGroupRef.current.clearLayers();
     
-    // Add saved drawings to the map
     savedDrawings.forEach(drawing => {
       if (drawing.geoJSON) {
         try {
-          // Store the ID in a way that doesn't conflict with TypeScript
           const options = {
             color: drawing.properties.color || '#3388ff',
             weight: 3,
@@ -54,15 +50,18 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
             style: options
           });
           
-          // Store the ID as a property on the layer object instead
           if (layer) {
-            // @ts-ignore - Adding custom property
             layer.drawingId = drawing.id;
+            
+            if (onRegionClick) {
+              layer.on('click', () => {
+                onRegionClick(drawing);
+              });
+            }
           }
           
           layer.addTo(featureGroupRef.current);
           
-          // Add popup with drawing name if available
           if (drawing.properties.name) {
             layer.bindPopup(drawing.properties.name);
           }
@@ -71,7 +70,7 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
         }
       }
     });
-  }, [savedDrawings]);
+  }, [savedDrawings, onRegionClick]);
   
   useEffect(() => {
     if (!editControlRef.current || !activeTool) return;
@@ -113,13 +112,10 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
       const layerWithOptions = layer as L.Path;
       const options = layerWithOptions.options || {};
       
-      // Store ID separately rather than on the options object
-      // @ts-ignore - Adding custom property
       layer.drawingId = id;
       
       const geoJSON = layer.toGeoJSON();
       
-      // Save the drawing to localStorage
       const drawingData: DrawingData = {
         id,
         type: layerType as any,
@@ -150,7 +146,6 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
     }
   };
   
-  // Helper function to extract coordinates from different layer types
   const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {
     if (layerType === 'polygon' || layerType === 'polyline') {
       return layer.getLatLngs()[0].map((latlng: L.LatLng) => [latlng.lat, latlng.lng]);
