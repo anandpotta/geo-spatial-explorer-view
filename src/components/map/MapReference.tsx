@@ -54,8 +54,8 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     // Clean up function
     return () => {
       clearTimeout(timeoutId);
-      // Only remove event listeners if map exists and is valid
-      if (map && !map._isDestroyed) {
+      // Only remove event listeners if map exists and has container
+      if (map && map.getContainer()) {
         try {
           // Remove click event listener to prevent memory leaks
           map.off('click');
