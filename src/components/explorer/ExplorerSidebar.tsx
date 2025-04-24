@@ -1,56 +1,39 @@
 
 import React from 'react';
-import { Location } from '@/utils/geo-utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapIcon, Bookmark } from 'lucide-react';
+import { useLocationSearch } from '@/hooks/useLocationSearch';
 import SidebarHeader from './sidebar/SidebarHeader';
-import LocationSearch from './sidebar/LocationSearch';
-import SavedLocationsTab from './sidebar/SavedLocationsTab';
+import ExplorerTabs from './sidebar/ExplorerTabs';
 
-interface ExplorerSidebarProps {
-  selectedLocation: Location | undefined;
-  currentView: 'cesium' | 'leaflet';
-  flyCompleted: boolean;
-  setCurrentView: (view: 'cesium' | 'leaflet') => void;
-  onSavedLocationSelect: (position: [number, number]) => void;
-}
+const ExplorerSidebar = () => {
+  const {
+    selectedLocation,
+    currentView,
+    flyCompleted,
+    setCurrentView,
+    handleLocationSelect,
+    setFlyCompleted,
+  } = useLocationSearch();
 
-const ExplorerSidebar = ({
-  selectedLocation,
-  currentView,
-  flyCompleted,
-  setCurrentView,
-  onSavedLocationSelect
-}: ExplorerSidebarProps) => {
+  const handleSavedLocationSelect = (position: [number, number]) => {
+    const location = {
+      id: `loc-${position[0]}-${position[1]}`,
+      label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+      y: position[0],
+      x: position[1]
+    };
+    handleLocationSelect(location);
+  };
+
   return (
     <div className="w-96 h-full bg-card border-r overflow-hidden flex flex-col">
       <SidebarHeader />
-      
-      <Tabs defaultValue="search" className="flex-1 flex flex-col">
-        <div className="border-b px-4">
-          <TabsList className="w-full">
-            <TabsTrigger value="search" className="flex-1">
-              <MapIcon size={16} className="mr-2" /> Search
-            </TabsTrigger>
-            <TabsTrigger value="saved" className="flex-1">
-              <Bookmark size={16} className="mr-2" /> Saved
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="search" className="flex-1 p-4">
-          <LocationSearch
-            currentView={currentView}
-            flyCompleted={flyCompleted}
-            selectedLocation={selectedLocation}
-            setCurrentView={setCurrentView}
-          />
-        </TabsContent>
-        
-        <TabsContent value="saved" className="flex-1 p-4">
-          <SavedLocationsTab onLocationSelect={onSavedLocationSelect} />
-        </TabsContent>
-      </Tabs>
+      <ExplorerTabs
+        currentView={currentView}
+        flyCompleted={flyCompleted}
+        selectedLocation={selectedLocation}
+        setCurrentView={setCurrentView}
+        onSavedLocationSelect={handleSavedLocationSelect}
+      />
     </div>
   );
 };
