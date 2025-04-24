@@ -65,6 +65,7 @@ const MapContent = ({
   };
 
   const handleToolSelect = (tool: string) => {
+    console.log("MapContent: Selected tool:", tool);
     setActiveTool(prev => prev === tool ? null : tool);
   };
 
@@ -72,17 +73,16 @@ const MapContent = ({
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-50' : 'opacity-0 z-0 pointer-events-none'}`} 
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
           style={{ 
-            position: currentView === 'cesium' ? 'fixed' : 'absolute',
+            position: 'absolute', 
             top: 0, 
             left: 0, 
             right: 0, 
             bottom: 0, 
             width: '100%', 
             height: '100%',
-            visibility: currentView === 'cesium' ? 'visible' : 'hidden',
-            zIndex: currentView === 'cesium' ? 999999 : 0,
+            visibility: currentView === 'cesium' ? 'visible' : 'hidden'
           }}
           data-map-type="cesium"
         >
@@ -97,10 +97,9 @@ const MapContent = ({
         </div>
         
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-50' : 'opacity-0 z-0 pointer-events-none'}`}
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
           style={{ 
-            visibility: currentView === 'leaflet' ? 'visible' : 'hidden',
-            zIndex: currentView === 'leaflet' ? 100 : 0,
+            visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
           }}
           data-map-type="leaflet"
         >
@@ -137,8 +136,8 @@ const MapContent = ({
       </div>
       
       <div 
-        className="absolute top-4 left-0 right-0 z-[10000]" 
-        style={{ maxWidth: '400px', margin: '0 auto' }}
+        className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
+        style={{ maxWidth: '400px' }}
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>

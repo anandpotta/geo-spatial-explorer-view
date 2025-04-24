@@ -1,28 +1,26 @@
 
-import React, { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
+import L from 'leaflet';
 
 interface MapReferenceProps {
-  onMapReady?: (map: L.Map) => void;
+  onMapReady: (map: L.Map) => void;
 }
 
-/**
- * Component that passes the map reference to parent components
- * Uses useMap hook to get the Leaflet map instance
- */
-const MapReference: React.FC<MapReferenceProps> = ({ onMapReady }) => {
-  // Get the map instance using the useMap hook from react-leaflet
+const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
+  const hasCalledOnReady = useRef(false);
   
   useEffect(() => {
-    // When the map is available and onMapReady callback is provided, call it
-    if (map && onMapReady) {
+    if (map && onMapReady && !hasCalledOnReady.current) {
+      hasCalledOnReady.current = true;
+      console.log('Map is ready, calling onMapReady');
       onMapReady(map);
     }
   }, [map, onMapReady]);
   
-  // This component doesn't render anything visible
   return null;
 };
 
 export default MapReference;
+

@@ -40,5 +40,4 @@ export async function syncLocalDataWithBackend(): Promise<void> {
   }
 }
 
-// Re-export for use by other components
 export { checkBackendAvailability };

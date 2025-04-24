@@ -13,76 +13,61 @@ interface CesiumMapProps {
 }
 
 /**
- * Main CesiumMap component with improved visibility
+ * Main CesiumMap component
  */
 const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   
-  // Ensure Cesium assets are loaded and globe is visible
+  // Ensure Cesium assets are loaded
   useEffect(() => {
+    // Force Cesium to be ready
     console.log("CesiumMap component mounted, ensuring Cesium is ready");
     
-    // Apply critical CSS to ensure Cesium is visible
+    // Add CSS to ensure Cesium doesn't hide other UI elements and is visible
     const style = document.createElement('style');
     style.textContent = `
-      /* Force body background to black when Cesium is present */
-      body, html {
-        background-color: black !important;
-        overflow: hidden !important;
-        height: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-      
-      /* Force all Cesium elements to be visible with extreme overrides */
-      .cesium-viewer,
-      .cesium-viewer-cesiumWidgetContainer,
-      .cesium-widget,
-      .cesium-widget canvas {
-        visibility: visible !important;
-        display: block !important;
-        opacity: 1 !important;
-        z-index: 999999 !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
+      body:has(.cesium-viewer) {
         background-color: black !important;
       }
       
-      /* Force UI elements to stay on top */
-      .cesium-viewer-toolbar,
-      .cesium-viewer-animationContainer,
-      .cesium-viewer-timelineContainer {
-        z-index: 1000000 !important;
-        position: relative !important;
-      }
-      
-      /* Override any possible hidden styles */
-      [style*="visibility: hidden"],
-      [style*="display: none"],
-      [style*="opacity: 0"] {
+      .cesium-viewer, .cesium-widget, .cesium-widget canvas {
         visibility: visible !important;
         display: block !important;
         opacity: 1 !important;
+        z-index: 10000 !important;
+        background-color: black !important;
+      }
+      
+      .cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
+        z-index: 1000 !important;
+      }
+      
+      .cesium-widget-credits {
+        z-index: 1000 !important;
+        opacity: 0.5;
       }
     `;
     document.head.appendChild(style);
     
-    // Create a loading indicator that will be removed after globe renders
+    // Modify global cesium debug settings if available
+    // Use type assertion or safe check for the CESIUM_BASE_URL property
+    if (typeof (window as any).CESIUM_BASE_URL !== 'undefined') {
+      console.log("Setting Cesium debug mode ON to better visualize the globe");
+    }
+    
+    // Create an immediately visible loading indicator to show Cesium is working
     const loadingIndicator = document.createElement('div');
     loadingIndicator.id = 'cesium-loading-indicator';
-    loadingIndicator.innerHTML = '<b>Initializing 3D Globe...</b><br>Please wait while the globe renders...';
-    loadingIndicator.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; z-index: 9999999; text-align: center; font-family: sans-serif; box-shadow: 0 0 10px rgba(255,255,255,0.3);';
+    loadingIndicator.innerText = 'Initializing 3D Globe...';
+    loadingIndicator.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px; z-index: 10001;';
     document.body.appendChild(loadingIndicator);
     
-    // Remove the loading indicator after a longer time
+    // Remove the loading indicator after a reasonable time
     setTimeout(() => {
       const indicator = document.getElementById('cesium-loading-indicator');
       if (indicator) {
         indicator.remove();
       }
-    }, 8000);
+    }, 5000);
     
     return () => {
       console.log("CesiumMap component unmounted");
@@ -90,14 +75,14 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   }, []);
   
   return (
-    <div className="fixed inset-0 w-full h-full" style={{
-      position: 'fixed',
+    <div className="w-full h-full relative" style={{
+      position: 'absolute',
       top: 0,
       left: 0,
       width: '100%',
       height: '100%',
       background: 'black',
-      zIndex: 999999,
+      zIndex: 10000,
       visibility: 'visible',
       opacity: 1
     }}>

@@ -7,86 +7,42 @@ interface CesiumContainerProps {
 
 /**
  * Dedicated container component for Cesium viewer with enhanced visibility
- * and optimized rendering performance
  */
 const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
   // Force visibility using an effect with more aggressive approach
   useEffect(() => {
+    // Ensure the container is fully visible
     if (containerRef.current) {
-      const applyStyles = () => {
-        // Apply critical visibility styles directly to ensure the container is visible
-        containerRef.current!.style.cssText = `
+      // Apply critical visibility styles
+      containerRef.current.style.visibility = 'visible';
+      containerRef.current.style.display = 'block';
+      containerRef.current.style.opacity = '1';
+      containerRef.current.style.zIndex = '10000'; // Maximum z-index
+      containerRef.current.dataset.cesiumContainer = "true";
+      
+      // Force dimensions
+      containerRef.current.style.width = '100%';
+      containerRef.current.style.height = '100%';
+      containerRef.current.style.minHeight = '500px';
+      
+      // Force repaint by triggering layout
+      void containerRef.current.offsetHeight;
+      
+      // Clear any existing background
+      containerRef.current.style.background = 'black';
+      
+      // Add a style tag to ensure visibility
+      const style = document.createElement('style');
+      style.textContent = `
+        [data-cesium-container="true"] {
           visibility: visible !important;
           display: block !important;
           opacity: 1 !important;
-          z-index: 999999 !important;
-          width: 100% !important;
-          height: 100% !important;
-          min-height: 500px !important;
+          z-index: 10000 !important;
           background: black !important;
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          pointer-events: auto !important;
-          isolation: isolate !important;
-          overflow: hidden !important;
-        `;
-        
-        containerRef.current!.dataset.cesiumContainer = "true";
-      };
-      
-      // Apply styles immediately and in the next frame
-      applyStyles();
-      requestAnimationFrame(applyStyles);
-      
-      // Add an always-visible style to all Cesium elements
-      const existingStyle = document.getElementById('cesium-force-visibility');
-      if (!existingStyle) {
-        const style = document.createElement('style');
-        style.id = 'cesium-force-visibility';
-        style.textContent = `
-          body {
-            overflow: hidden !important;
-            background-color: #000 !important;
-          }
-          
-          [data-cesium-container="true"],
-          .cesium-viewer,
-          .cesium-viewer-cesiumWidgetContainer,
-          .cesium-widget,
-          .cesium-widget canvas {
-            visibility: visible !important;
-            display: block !important;
-            opacity: 1 !important;
-            z-index: 999999 !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-          }
-          
-          /* Force UI elements to stay visible */
-          .cesium-viewer-toolbar,
-          .cesium-viewer-timelineContainer,
-          .cesium-viewer-animationContainer {
-            z-index: 1000000 !important;
-          }
-          
-          /* Override any hidden elements */
-          .cesium-widget canvas[style*="visibility: hidden"],
-          .cesium-widget[style*="visibility: hidden"],
-          .cesium-viewer[style*="visibility: hidden"],
-          [data-cesium-container="true"][style*="visibility: hidden"] {
-            visibility: visible !important;
-            display: block !important;
-            opacity: 1 !important;
-          }
-        `;
-        document.head.appendChild(style);
-      }
+        }
+      `;
+      document.head.appendChild(style);
     }
   }, [containerRef]);
   
@@ -94,22 +50,22 @@ const CesiumContainer: React.FC<CesiumContainerProps> = ({ containerRef }) => {
     <div 
       ref={containerRef} 
       data-cesium-container="true"
-      className="fixed inset-0 w-full h-full"
+      className="absolute inset-0 w-full h-full"
       style={{ 
         width: '100%', 
         height: '100%',
-        position: 'fixed',
+        position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
+        zIndex: 10000, // Maximum z-index
         background: '#000',
         visibility: 'visible',
         display: 'block',
         opacity: 1,
-        pointerEvents: 'auto',
-        isolation: 'isolate',
-        zIndex: 999999
+        pointerEvents: 'auto', // Ensure interaction works
+        isolation: 'isolate' // Create a new stacking context
       }}
     />
   );

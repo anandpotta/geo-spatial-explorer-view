@@ -10,34 +10,33 @@ export const useCesiumGlobeVisibility = (
   viewerReady: boolean
 ) => {
   const forceRenderRef = useRef<NodeJS.Timeout | null>(null);
-  const renderCountRef = useRef(0);
 
   // Force renders periodically to ensure globe visibility
   useEffect(() => {
     if (viewerRef.current && !viewerRef.current.isDestroyed()) {
       // Force initial immediate renders
-      for (let i = 0; i < 25; i++) { // Reduced render cycles
+      for (let i = 0; i < 30; i++) {
         viewerRef.current.scene.requestRender();
         
         // Ensure the globe is visible with bright color
         if (viewerRef.current.scene && viewerRef.current.scene.globe) {
           viewerRef.current.scene.globe.show = true;
-          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0); // Slightly darker blue
+          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
         }
       }
       
-      // Request strategic renders at key intervals
-      const renderTimes = [100, 250, 500, 1000, 2000, 3000];
+      // Force strategic renders at various intervals for better loading
+      const renderTimes = [10, 20, 50, 100, 200, 300, 500, 750, 1000, 2000, 3000, 5000];
       renderTimes.forEach(time => {
         setTimeout(() => {
           if (viewerRef.current && !viewerRef.current.isDestroyed()) {
             // Request render
             viewerRef.current.scene.requestRender();
             
-            // Ensure the globe is visible with good color
+            // Ensure the globe is visible with bright color
             if (viewerRef.current.scene && viewerRef.current.scene.globe) {
               viewerRef.current.scene.globe.show = true;
-              viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+              viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
             }
             
             // Ensure canvas is visible
@@ -45,44 +44,47 @@ export const useCesiumGlobeVisibility = (
               viewerRef.current.canvas.style.visibility = 'visible';
               viewerRef.current.canvas.style.display = 'block';
               viewerRef.current.canvas.style.opacity = '1';
-              
-              // Force correct dimensions
-              viewerRef.current.resize();
             }
+            
+            // Add a console log to indicate rendering is happening
+            console.log(`Forcing globe visibility at ${time}ms`);
           }
         }, time);
       });
     }
     
-    // Set a render cycle to ensure globe visibility
+    // Set a continuous render cycle to ensure globe visibility
     if (forceRenderRef.current) {
       clearInterval(forceRenderRef.current);
     }
     
     forceRenderRef.current = setInterval(() => {
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-        renderCountRef.current++;
-        
         viewerRef.current.scene.requestRender();
         
-        // Ensure globe is visible
+        // Ensure globe is visible with distinct color
         if (viewerRef.current.scene && viewerRef.current.scene.globe) {
           viewerRef.current.scene.globe.show = true;
-          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.3, 0.8, 1.0);
+          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.3, 0.6, 1.0, 1.0);
+          
+          // Add sun lighting effect if available
+          if (viewerRef.current.scene.sun) {
+            viewerRef.current.scene.sun.show = true;
+          }
         }
         
-        // Stop interval after sufficient renders
-        if (renderCountRef.current > 60) {
-          if (forceRenderRef.current) {
-            clearInterval(forceRenderRef.current);
-          }
+        // Ensure canvas visibility
+        if (viewerRef.current.canvas) {
+          viewerRef.current.canvas.style.visibility = 'visible';
+          viewerRef.current.canvas.style.display = 'block';
+          viewerRef.current.canvas.style.opacity = '1';
         }
       } else {
         if (forceRenderRef.current) {
           clearInterval(forceRenderRef.current);
         }
       }
-    }, 50);
+    }, 100); // More frequent checks for better visibility
     
     return () => {
       if (forceRenderRef.current) {

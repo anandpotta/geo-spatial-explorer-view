@@ -19,44 +19,29 @@ export const useForceRenderCycles = (
       return;
     }
     
-    console.log("ForceRenderCycles: Starting render cycles for globe visibility");
+    // Make absolutely sure the globe is visible
     
     // Clear any previous render interval
     if (renderIntervalRef.current) {
       clearInterval(renderIntervalRef.current);
     }
     
-    // Force globe visibility immediately
+    // Force globe visibility
     forceGlobeVisibility(viewer);
     
-    // Force resize
-    viewer.resize();
-    
-    // Set up a short interval to keep forcing visibility
+    // Set up a short interval to keep forcing visibility for a few seconds
     let renderCount = 0;
     renderIntervalRef.current = setInterval(() => {
       if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-        // Force globe visibility
         forceGlobeVisibility(viewerRef.current);
-        
-        // Also resize viewer
-        viewerRef.current.resize();
-        
-        // Request multiple renders
-        for (let i = 0; i < 5; i++) {
-          viewerRef.current.scene.requestRender();
-        }
-        
         renderCount++;
         
-        // Log progress
-        if (renderCount % 10 === 0) {
-          console.log(`ForceRenderCycles: Executed ${renderCount} render cycles`);
+        // For the first several renders, also force resize
+        if (renderCount < 20) {
+          viewerRef.current.resize();
         }
         
-        // Run for a full minute to ensure visibility
-        if (renderCount >= 120) {
-          console.log("ForceRenderCycles: Completed all render cycles");
+        if (renderCount >= 60) { // Keep trying longer
           if (renderIntervalRef.current) {
             clearInterval(renderIntervalRef.current);
             renderIntervalRef.current = null;
@@ -69,10 +54,9 @@ export const useForceRenderCycles = (
           renderIntervalRef.current = null;
         }
       }
-    }, 500); // Every half second
+    }, 100); // More frequent checks
     
     return () => {
-      console.log("ForceRenderCycles: Cleaning up render interval");
       if (renderIntervalRef.current) {
         clearInterval(renderIntervalRef.current);
         renderIntervalRef.current = null;
