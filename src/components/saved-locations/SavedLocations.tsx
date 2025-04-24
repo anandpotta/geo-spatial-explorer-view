@@ -15,9 +15,9 @@ const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
     markerToDelete,
-    setMarkerToDelete,
     handleDelete,
-    confirmDelete
+    confirmDelete,
+    cancelDelete
   } = useSavedLocations();
   
   const handleSelect = (position: [number, number]) => {
@@ -42,7 +42,7 @@ const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
               key={marker.id}
               marker={marker}
               onSelect={handleSelect}
-              onDelete={handleDelete}
+              onDelete={(id, e) => handleDelete(id, e)}
             />
           ))}
         </div>
@@ -53,7 +53,7 @@ const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
         onOpenChange={setIsDeleteDialogOpen}
         markerToDelete={markerToDelete}
         onConfirmDelete={confirmDelete}
-        onCancel={() => setMarkerToDelete(null)}
+        onCancel={cancelDelete}
       />
     </>
   );

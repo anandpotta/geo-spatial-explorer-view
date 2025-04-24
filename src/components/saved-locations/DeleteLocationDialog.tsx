@@ -10,6 +10,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { useRef } from 'react';
 
 interface DeleteLocationDialogProps {
   isOpen: boolean;
@@ -26,8 +27,16 @@ const DeleteLocationDialog = ({
   onConfirmDelete,
   onCancel,
 }: DeleteLocationDialogProps) => {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+    <AlertDialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (!open) onCancel();
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Location</AlertDialogTitle>
@@ -36,8 +45,15 @@ const DeleteLocationDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirmDelete}>Delete</AlertDialogAction>
+          <AlertDialogCancel ref={cancelRef} onClick={onCancel}>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirmDelete();
+            }}
+          >
+            Delete
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

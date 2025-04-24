@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
 import { deleteDrawing } from '@/utils/drawing-utils';
 import {
@@ -33,6 +34,8 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   const [pinnedMarkers, setPinnedMarkers] = useState<LocationMarker[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   const loadMarkers = () => {
     console.log("Loading markers for dropdown");
@@ -70,6 +73,11 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   const handleDelete = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
     
+    // Store reference to the button for focus return
+    if (event.currentTarget) {
+      returnFocusRef.current = event.currentTarget as HTMLElement;
+    }
+    
     // Find the marker to delete and store it
     const marker = markers.find(m => m.id === id);
     if (marker) {
@@ -98,7 +106,34 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       toast.success("Location and associated data removed");
       setIsDeleteDialogOpen(false);
       setMarkerToDelete(null);
+      
+      // Return focus after state updates and dialog closes
+      setTimeout(() => {
+        if (returnFocusRef.current) {
+          try {
+            returnFocusRef.current.focus();
+          } catch (e) {
+            document.body.focus();
+          }
+        }
+      }, 0);
     }
+  };
+  
+  const cancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setMarkerToDelete(null);
+    
+    // Return focus
+    setTimeout(() => {
+      if (returnFocusRef.current) {
+        try {
+          returnFocusRef.current.focus();
+        } catch (e) {
+          document.body.focus();
+        }
+      }
+    }, 0);
   };
   
   const handleLocationSelect = (position: [number, number]) => {
@@ -188,8 +223,14 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+      <AlertDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) cancelDelete();
+        }}
+      >
+        <AlertDialogContent onEscapeKeyDown={cancelDelete} onPointerDownOutside={cancelDelete}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Location</AlertDialogTitle>
             <AlertDialogDescription>
@@ -197,7 +238,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setMarkerToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel ref={cancelButtonRef} onClick={cancelDelete}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface LocationListItemProps {
   marker: LocationMarker;
   onSelect: (position: [number, number]) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, event?: React.MouseEvent) => void;
 }
 
 const LocationListItem = ({ marker, onSelect, onDelete }: LocationListItemProps) => {
@@ -36,7 +36,7 @@ const LocationListItem = ({ marker, onSelect, onDelete }: LocationListItemProps)
         <Button 
           variant="ghost" 
           size="icon"
-          onClick={() => onDelete(marker.id)}
+          onClick={(e) => onDelete(marker.id, e)}
         >
           <Trash2 size={16} />
         </Button>
