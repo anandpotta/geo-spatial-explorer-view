@@ -49,9 +49,9 @@ export const useMapReference = (
             }
             
             timeoutRef.current = setTimeout(() => {
-              if (map && typeof map.flyTo === 'function') {
+              if (mapRef.current && typeof mapRef.current.flyTo === 'function') {
                 try {
-                  map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+                  mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
                     animate: true,
                     duration: 1.5
                   });
@@ -72,7 +72,7 @@ export const useMapReference = (
           }
           
           timeoutRef.current = setTimeout(() => {
-            if (map && typeof map.getContainer === 'function' && map.getContainer()) {
+            if (!hasSetRef.current && map && typeof map.getContainer === 'function' && map.getContainer()) {
               mapRef.current = map;
               hasSetRef.current = true;
               map.invalidateSize(true);

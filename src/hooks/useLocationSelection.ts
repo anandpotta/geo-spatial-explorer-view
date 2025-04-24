@@ -1,15 +1,26 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import L from 'leaflet';
 
 export const useLocationSelection = (
   selectedLocation: Location | undefined,
-  mapRef: React.MutableRefObject<L.Map | null>, // Changed from RefObject to MutableRefObject
+  mapRef: React.MutableRefObject<L.Map | null>,
   onMapInstanceReset: () => void
 ) => {
+  const previousLocationRef = useRef<string | null>(null);
+  const currentLocationId = selectedLocation?.id || null;
+  
   useEffect(() => {
-    if (selectedLocation && mapRef.current) {
+    // Skip if we're trying to fly to the same location or if no location is selected
+    if (!selectedLocation || currentLocationId === previousLocationRef.current) {
+      return;
+    }
+    
+    // Update the previous location reference
+    previousLocationRef.current = currentLocationId;
+    
+    if (mapRef.current) {
       try {
         // Only try to fly if the map is properly initialized
         if (mapRef.current.getContainer()) {
@@ -25,5 +36,5 @@ export const useLocationSelection = (
         onMapInstanceReset();
       }
     }
-  }, [selectedLocation, mapRef, onMapInstanceReset]);
+  }, [selectedLocation, mapRef, onMapInstanceReset, currentLocationId]);
 };

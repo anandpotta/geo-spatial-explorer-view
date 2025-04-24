@@ -35,16 +35,18 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
               onMapReady(map);
             } else {
               console.warn('Map container not properly attached to DOM, delaying onMapReady');
+              // Single retry attempt with timeout
+              if (initTimeoutRef.current) {
+                clearTimeout(initTimeoutRef.current);
+              }
+              
               initTimeoutRef.current = setTimeout(() => {
-                if (!map || !map.getContainer()) {
-                  console.warn('Map initialization incomplete, skipping onMapReady');
-                  return;
+                if (!hasCalledOnReady.current && map && typeof map.getContainer === 'function') {
+                  hasCalledOnReady.current = true; // Mark as called
+                  map.invalidateSize();
+                  console.log('Delayed map initialization complete, calling onMapReady');
+                  onMapReady(map);
                 }
-                
-                hasCalledOnReady.current = true; // Mark as called first before calling the callback
-                map.invalidateSize();
-                console.log('Delayed map initialization complete, calling onMapReady');
-                onMapReady(map);
               }, 300);
             }
           }

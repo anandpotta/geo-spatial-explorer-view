@@ -72,7 +72,10 @@ const MapViewsContainer = ({
         style={{ visibility: currentView === 'globe' ? 'visible' : 'hidden' }}
         data-map-type="globe"
       >
-        <GlobeView onLocationSelect={onLocationSelect} />
+        <GlobeView 
+          onLocationSelect={onLocationSelect}
+          key={`globe-view-${currentView === 'globe' ? 'active' : 'inactive'}`}
+        />
       </div>
     </>
   );

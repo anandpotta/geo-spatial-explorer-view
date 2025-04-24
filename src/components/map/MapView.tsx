@@ -8,7 +8,7 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -31,7 +31,7 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
-  containerId?: string; // Add containerId prop
+  containerId?: string;
 }
 
 const MapView = ({
@@ -52,25 +52,25 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
-  containerId // Use the containerId prop
+  containerId
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   // Use a random key to force a new map instance when needed
-  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
+  const [mapKey] = useState<string>(`map-${Date.now()}`);
 
-  const handleRegionClick = (drawing: DrawingData) => {
+  const handleRegionClick = useCallback((drawing: DrawingData) => {
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
-  };
+  }, []);
 
   // Handle location selection from the dropdown
-  const handleLocationSelect = (position: [number, number]) => {
+  const handleLocationSelect = useCallback((position: [number, number]) => {
     console.log("Location selected in MapView:", position);
     if (onLocationSelect) {
       onLocationSelect(position);
     }
-  };
+  }, [onLocationSelect]);
 
   if (showFloorPlan) {
     return (
@@ -134,5 +134,5 @@ const MapView = ({
   );
 };
 
-export default MapView;
-
+// Use memo to prevent unnecessary re-renders
+export default memo(MapView);
