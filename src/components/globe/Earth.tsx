@@ -9,40 +9,46 @@ export default function Earth({ onLocationSelect }) {
   const [rotationSpeed] = useState(0.001);
   const [textureError, setTextureError] = useState(false);
   
-  // Load earth textures with error handling
+  // Load earth textures with a try-catch approach
+  const textureUrls = [
+    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2074&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop'
+  ];
+  
+  // Use try-catch within useTexture's callback function
   const [map, bumpMap, specularMap] = useTexture(
-    [
-      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2074&auto=format&fit=crop',
-      'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop'
-    ],
-    (textures) => {
+    textureUrls,
+    (loadedTextures) => {
       console.log('Earth textures loaded successfully');
       setTextureError(false);
     }
   );
   
-  // Handle texture loading errors
+  // Handle texture loading errors by checking texture properties
   useEffect(() => {
-    const handleError = () => {
-      console.error('Failed to load earth textures');
-      setTextureError(true);
+    // Function to check if textures loaded successfully
+    const checkTextureValidity = () => {
+      try {
+        const allValid = [map, bumpMap, specularMap].every(texture => 
+          texture && texture.image && texture.image.complete && texture.image.width > 0
+        );
+        
+        if (!allValid) {
+          console.error('One or more earth textures failed to load completely');
+          setTextureError(true);
+        }
+      } catch (err) {
+        console.error('Error checking texture validity:', err);
+        setTextureError(true);
+      }
     };
     
-    // Add error handlers to textures
-    [map, bumpMap, specularMap].forEach(texture => {
-      if (texture) {
-        texture.onError = handleError;
-      }
-    });
+    // Check textures after a short delay to allow loading to complete
+    const timerId = setTimeout(checkTextureValidity, 3000);
     
     return () => {
-      // Cleanup
-      [map, bumpMap, specularMap].forEach(texture => {
-        if (texture) {
-          texture.onError = null;
-        }
-      });
+      clearTimeout(timerId);
     };
   }, [map, bumpMap, specularMap]);
   
