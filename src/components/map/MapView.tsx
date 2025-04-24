@@ -8,7 +8,7 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -30,7 +30,7 @@ interface MapViewProps {
   onShapeCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
-  onClearAll?: () => void;
+  onClearAll?: () => void; // Add new prop for clearing all state
 }
 
 const MapView = ({
@@ -54,7 +54,8 @@ const MapView = ({
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
-  const [mapKey] = useState<string>(`map-${Date.now()}`);
+  // Use a random key to force a new map instance when needed
+  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
@@ -86,7 +87,6 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        id="leaflet-map-container"
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 

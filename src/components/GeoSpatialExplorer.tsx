@@ -5,7 +5,6 @@ import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';
-import { SidebarProvider } from '@/components/ui/sidebar';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
@@ -66,29 +65,33 @@ const GeoSpatialExplorer = () => {
   };
   
   return (
-    <SidebarProvider>
-      <div className="w-full h-screen flex bg-black overflow-hidden">
-        {/* Left Panel */}
-        <ExplorerSidebar />
+    <div className="w-full h-screen flex bg-black overflow-hidden">
+      {/* Left Panel */}
+      <ExplorerSidebar 
+        selectedLocation={selectedLocation}
+        currentView={currentView}
+        flyCompleted={flyCompleted}
+        setCurrentView={setCurrentView}
+        onSavedLocationSelect={handleSavedLocationSelect}
+      />
+      
+      {/* Right Panel - Map View */}
+      <div className="flex-1 relative bg-black">
+        {/* Map content */}
+        <MapContent 
+          currentView={currentView}
+          selectedLocation={selectedLocation}
+          onMapReady={() => setIsMapReady(true)}
+          onFlyComplete={handleFlyComplete}
+          onLocationSelect={handleLocationSelect}
+        />
         
-        {/* Right Panel - Map View */}
-        <div className="flex-1 relative bg-black">
-          {/* Map content */}
-          <MapContent 
-            currentView={currentView}
-            selectedLocation={selectedLocation}
-            onMapReady={() => setIsMapReady(true)}
-            onFlyComplete={handleFlyComplete}
-            onLocationSelect={handleLocationSelect}
-          />
-          
-          {/* Sync status indicator */}
-          <div className="absolute bottom-5 right-5 z-[10001]">
-            <SyncStatusIndicator />
-          </div>
+        {/* Sync status indicator */}
+        <div className="absolute bottom-5 right-5 z-[10001]">
+          <SyncStatusIndicator />
         </div>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 
