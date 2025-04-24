@@ -11,6 +11,7 @@ const GeoSpatialExplorer = () => {
   const [currentView, setCurrentView] = useState<'cesium' | 'leaflet' | 'globe'>('globe');
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -22,12 +23,13 @@ const GeoSpatialExplorer = () => {
   const handleLocationSelect = (location: Location) => {
     console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
+    setIsTransitioning(true);
     
-    // Changed from setting to 'cesium' directly to using a transition effect
+    // Start transition sequence
     if (currentView === 'globe') {
       toast({
-        title: 'Location selected on globe',
-        description: `Transitioning to 3D view for ${location.label || 'selected location'}`,
+        title: 'Starting journey',
+        description: `Traveling to ${location.label || 'selected location'}`,
         duration: 3000,
       });
       
@@ -49,18 +51,19 @@ const GeoSpatialExplorer = () => {
   };
   
   const handleFlyComplete = () => {
-    console.log('Fly complete in Explorer, switching to leaflet view');
+    console.log('Fly complete in Explorer, transition to map view');
     setFlyCompleted(true);
     
     // Add a smoother transition between Cesium and Leaflet views
     setTimeout(() => {
       setCurrentView('leaflet');
+      setIsTransitioning(false);
       toast({
-        title: 'Navigation complete',
-        description: 'You can now draw building boundaries on the map',
+        title: 'Destination reached',
+        description: 'You can now explore the area or draw boundaries on the map',
         duration: 5000,
       });
-    }, 500);
+    }, 800); // Slightly longer delay for smoother transition
   };
   
   const handleSavedLocationSelect = (position: [number, number]) => {
@@ -72,12 +75,13 @@ const GeoSpatialExplorer = () => {
     };
     
     setSelectedLocation(location);
+    setIsTransitioning(true);
     setCurrentView('cesium');
     setFlyCompleted(false);
     
     toast({
-      title: 'Location selected',
-      description: `Navigating to ${location.label}`,
+      title: 'Starting journey',
+      description: `Traveling to ${location.label}`,
       duration: 3000,
     });
   };
@@ -90,6 +94,7 @@ const GeoSpatialExplorer = () => {
         flyCompleted={flyCompleted}
         setCurrentView={setCurrentView}
         onSavedLocationSelect={handleSavedLocationSelect}
+        isTransitioning={isTransitioning}
       />
       
       <div className="flex-1 relative bg-black">
@@ -99,6 +104,7 @@ const GeoSpatialExplorer = () => {
           onMapReady={() => setIsMapReady(true)}
           onFlyComplete={handleFlyComplete}
           onLocationSelect={handleLocationSelect}
+          isTransitioning={isTransitioning}
         />
         
         <div className="absolute bottom-5 right-5 z-[10001]">

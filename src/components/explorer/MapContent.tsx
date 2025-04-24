@@ -15,6 +15,7 @@ interface MapContentProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
+  isTransitioning?: boolean;
 }
 
 const MapContent = ({ 
@@ -22,7 +23,8 @@ const MapContent = ({
   selectedLocation, 
   onMapReady, 
   onFlyComplete,
-  onLocationSelect 
+  onLocationSelect,
+  isTransitioning = false
 }: MapContentProps) => {
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<any>(null);
@@ -105,83 +107,107 @@ const MapContent = ({
     }
   };
 
+  // Determine CSS class based on transition state
+  const getViewClasses = (viewType: string) => {
+    const baseClasses = "absolute inset-0 transition-opacity duration-500";
+    
+    if (currentView === viewType) {
+      return `${baseClasses} opacity-100 z-10`;
+    }
+    
+    return `${baseClasses} opacity-0 z-0 pointer-events-none`;
+  };
+
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
-        {/* Cesium Map */}
-        {currentView === 'cesium' && (
-          <div 
-            className="absolute inset-0 transition-opacity duration-500 opacity-100 z-10"
-            style={{ 
-              position: 'absolute', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              bottom: 0, 
-              width: '100%', 
-              height: '100%',
-              visibility: 'visible'
-            }}
-            data-map-type="cesium"
-          >
-            <CesiumMap 
-              selectedLocation={selectedLocation}
-              onMapReady={onMapReady}
-              onFlyComplete={onFlyComplete}
-              cinematicFlight={true}
-              key={`cesium-${mapKey}`}
-              onViewerReady={handleCesiumViewerRef}
-            />
-          </div>
-        )}
+        {/* Cesium Map - always render for smooth transitions */}
+        <div 
+          className={getViewClasses('cesium')}
+          style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            width: '100%', 
+            height: '100%',
+            visibility: currentView === 'cesium' ? 'visible' : 'hidden'
+          }}
+          data-map-type="cesium"
+        >
+          <CesiumMap 
+            selectedLocation={selectedLocation}
+            onMapReady={onMapReady}
+            onFlyComplete={onFlyComplete}
+            cinematicFlight={true}
+            key={`cesium-${mapKey}`}
+            onViewerReady={handleCesiumViewerRef}
+          />
+        </div>
         
-        {/* Leaflet Map */}
-        {currentView === 'leaflet' && (
-          <div 
-            className="absolute inset-0 transition-opacity duration-500 opacity-100 z-10"
-            style={{ visibility: 'visible' }}
-            data-map-type="leaflet"
-          >
-            <LeafletMap 
-              selectedLocation={selectedLocation} 
-              onMapReady={handleLeafletMapRef}
-              activeTool={activeTool}
-              key={`leaflet-${mapKey}`}
-              onLocationSelect={onLocationSelect}
-            />
-          </div>
-        )}
+        {/* Leaflet Map - always render for smooth transitions */}
+        <div 
+          className={getViewClasses('leaflet')}
+          style={{ 
+            visibility: currentView === 'leaflet' ? 'visible' : 'hidden'
+          }}
+          data-map-type="leaflet"
+        >
+          <LeafletMap 
+            selectedLocation={selectedLocation} 
+            onMapReady={handleLeafletMapRef}
+            activeTool={activeTool}
+            key={`leaflet-${mapKey}`}
+            onLocationSelect={onLocationSelect}
+          />
+        </div>
 
         {/* Globe View */}
-        {currentView === 'globe' && (
-          <div 
-            className="absolute inset-0 transition-opacity duration-500 opacity-100 z-10"
-            style={{ visibility: 'visible' }}
-            data-map-type="globe"
-          >
-            <GlobeView 
-              key={`globe-${mapKey}`}
-              onLocationSelect={handleGlobeLocationSelect}
-            />
-          </div>
-        )}
+        <div 
+          className={getViewClasses('globe')}
+          style={{ 
+            visibility: currentView === 'globe' ? 'visible' : 'hidden'
+          }}
+          data-map-type="globe"
+        >
+          <GlobeView 
+            key={`globe-${mapKey}`}
+            onLocationSelect={handleGlobeLocationSelect}
+          />
+        </div>
         
-        <DrawingTools 
-          onToolSelect={handleToolSelect}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onReset={handleResetView}
-        />
+        {!isTransitioning && (
+          <DrawingTools 
+            onToolSelect={handleToolSelect}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onReset={handleResetView}
+          />
+        )}
       </div>
       
       <div 
-        className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
+        className="absolute top-4 left-0 right-0 z-[10000] mx-auto transition-opacity duration-300" 
         style={{ 
           maxWidth: '400px',
+          opacity: isTransitioning ? 0.6 : 1,
+          pointerEvents: isTransitioning ? 'none' : 'auto'
         }}
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
+      
+      {isTransitioning && (
+        <div className="absolute inset-0 flex items-center justify-center z-[10002] pointer-events-none">
+          <div className="bg-background/70 rounded-lg p-4 shadow-lg backdrop-blur-sm">
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+              <p className="text-lg font-semibold text-primary">Traveling to destination...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

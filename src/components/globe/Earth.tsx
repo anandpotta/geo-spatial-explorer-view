@@ -16,14 +16,11 @@ export default function Earth({ onLocationSelect }) {
     'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop'
   ];
   
-  // Use try-catch within useTexture's callback function
-  const [map, bumpMap, specularMap] = useTexture(
-    textureUrls,
-    (loadedTextures) => {
-      console.log('Earth textures loaded successfully');
-      setTextureError(false);
-    }
-  );
+  // Use useTexture with proper arguments
+  const [map, bumpMap, specularMap] = useTexture(textureUrls, (loadedTextures) => {
+    console.log('Earth textures loaded successfully');
+    setTextureError(false);
+  });
   
   // Handle texture loading errors by checking texture properties
   useEffect(() => {

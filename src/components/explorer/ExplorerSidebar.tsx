@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Globe2, Map as MapIcon, Bookmark } from 'lucide-react';
+import { Globe2, Map as MapIcon, Bookmark, Loader2 } from 'lucide-react';
 import SavedLocations from '../saved-locations/SavedLocations';
 
 interface ExplorerSidebarProps {
@@ -12,6 +13,7 @@ interface ExplorerSidebarProps {
   flyCompleted: boolean;
   setCurrentView: (view: 'cesium' | 'leaflet' | 'globe') => void;
   onSavedLocationSelect: (position: [number, number]) => void;
+  isTransitioning?: boolean;
 }
 
 const ExplorerSidebar = ({
@@ -19,7 +21,8 @@ const ExplorerSidebar = ({
   currentView,
   flyCompleted,
   setCurrentView,
-  onSavedLocationSelect
+  onSavedLocationSelect,
+  isTransitioning = false
 }: ExplorerSidebarProps) => {
   return (
     <div className="w-96 h-full bg-card border-r overflow-hidden flex flex-col">
@@ -77,17 +80,28 @@ const ExplorerSidebar = ({
                     size="sm"
                     className="flex-1"
                     onClick={() => setCurrentView('cesium')}
+                    disabled={isTransitioning}
                   >
-                    <Globe2 size={16} className="mr-2" /> 3D Globe
+                    {isTransitioning && currentView === 'cesium' ? (
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                    ) : (
+                      <Globe2 size={16} className="mr-2" />
+                    )} 
+                    3D Globe
                   </Button>
                   <Button
                     variant={currentView === 'leaflet' ? 'default' : 'outline'}
                     size="sm"
                     className="flex-1"
                     onClick={() => setCurrentView('leaflet')}
-                    disabled={!flyCompleted && !selectedLocation}
+                    disabled={isTransitioning || (!flyCompleted && !selectedLocation)}
                   >
-                    <MapIcon size={16} className="mr-2" /> Map View
+                    {isTransitioning && currentView === 'leaflet' ? (
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                    ) : (
+                      <MapIcon size={16} className="mr-2" />
+                    )}
+                    Map View
                   </Button>
                 </div>
               </div>
@@ -98,6 +112,13 @@ const ExplorerSidebar = ({
                   <p className="text-sm text-muted-foreground">
                     Lat: {selectedLocation.y.toFixed(6)}, Lng: {selectedLocation.x.toFixed(6)}
                   </p>
+                </div>
+              )}
+              
+              {isTransitioning && (
+                <div className="mt-4 flex items-center justify-center space-x-2 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <p className="text-sm text-muted-foreground">Transitioning to destination...</p>
                 </div>
               )}
             </CardContent>
