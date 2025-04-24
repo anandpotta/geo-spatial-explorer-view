@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
 import MapControls from './drawing/MapControls';
-import ShapeTools from './drawing/ShapeTools';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
@@ -37,7 +36,6 @@ const DrawingTools = ({
   onReset,
   onClearAll
 }: DrawingToolsProps) => {
-  const [activeTool, setActiveTool] = useState<string | null>(null);
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
@@ -47,9 +45,6 @@ const DrawingTools = ({
       setIsClearDialogOpen(true);
       return;
     }
-    
-    const newActiveTool = tool === activeTool ? null : tool;
-    setActiveTool(newActiveTool);
     onToolSelect(tool);
   };
 
@@ -57,25 +52,20 @@ const DrawingTools = ({
     const markers = getSavedMarkers();
     const drawings = getSavedDrawings();
 
-    // Clear all markers
     markers.forEach(marker => {
       deleteMarker(marker.id);
     });
 
-    // Clear all drawings
     drawings.forEach(drawing => {
       deleteDrawing(drawing.id);
     });
 
-    // Clear local storage
     localStorage.removeItem('savedMarkers');
     localStorage.removeItem('savedDrawings');
 
-    // Notify components about storage changes
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('markersUpdated'));
     
-    // Reset map state through parent component
     if (onClearAll) {
       onClearAll();
     }
@@ -86,6 +76,7 @@ const DrawingTools = ({
 
   const handleMouseDown = (event: React.MouseEvent) => {
     setIsDragging(true);
+    event.preventDefault();
   };
 
   const handleMouseMove = (event: React.MouseEvent) => {
@@ -104,26 +95,18 @@ const DrawingTools = ({
   return (
     <>
       <div 
-        className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move"
+        className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move select-none"
         style={{ 
           left: position.x,
           top: position.y,
           zIndex: 20000,
           isolation: 'isolate',
-          userSelect: 'none',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        <ShapeTools 
-          activeTool={activeTool} 
-          onToolSelect={handleToolClick} 
-        />
-        
-        <div className="h-4" />
-        
         <MapControls 
           onZoomIn={onZoomIn}
           onZoomOut={onZoomOut}

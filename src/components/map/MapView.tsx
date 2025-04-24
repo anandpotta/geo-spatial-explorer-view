@@ -1,4 +1,3 @@
-
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
@@ -12,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import ShapeToolsContainer from '../drawing/ShapeToolsContainer';
 
 interface MapViewProps {
   position: [number, number];
@@ -54,7 +54,6 @@ const MapView = ({
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
-  // Use a random key to force a new map instance when needed
   const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
 
   const handleRegionClick = (drawing: DrawingData) => {
@@ -62,7 +61,6 @@ const MapView = ({
     setShowFloorPlan(true);
   };
 
-  // Handle location selection from the dropdown
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
     if (onLocationSelect) {
@@ -127,6 +125,11 @@ const MapView = ({
         
         <MapEvents onMapClick={onMapClick} />
       </MapContainer>
+
+      <ShapeToolsContainer
+        activeTool={activeTool}
+        onToolSelect={(tool) => onShapeCreated({ type: tool })}
+      />
     </div>
   );
 };
