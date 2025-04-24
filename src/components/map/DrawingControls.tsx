@@ -26,7 +26,22 @@ const DrawingControls = ({
   const { savedDrawings } = useDrawings();
   const [wasCleared, setWasCleared] = useState(false);
   
-  // Ensure feature group is always rendered
+  // Load saved drawings when component mounts
+  useEffect(() => {
+    if (featureGroupRef.current && savedDrawings.length > 0) {
+      // Clear existing layers first
+      featureGroupRef.current.clearLayers();
+      
+      // Add saved drawings to the feature group
+      savedDrawings.forEach(drawing => {
+        const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
+        if (layer) {
+          layer.addTo(featureGroupRef.current!);
+        }
+      });
+    }
+  }, [savedDrawings]);
+  
   return (
     <FeatureGroup ref={featureGroupRef}>
       <DrawTools 

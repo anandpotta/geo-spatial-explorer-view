@@ -3,6 +3,7 @@ import { EditControl } from "react-leaflet-draw";
 import { useDrawingToolActivation } from '@/hooks/useDrawingToolActivation';
 import { useClearDrawings } from '@/hooks/useClearDrawings';
 import { handleDrawingCreated } from '@/utils/drawing-creation';
+import { useEffect } from 'react';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
@@ -19,32 +20,35 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     handleDrawingCreated(e, wasRecentlyCleared, onCreated);
   };
 
-  // Define all drawing options, default to false
+  // Define all drawing options
   const drawOptions = {
-    polyline: false,
-    polygon: false,
-    rectangle: false,
-    circle: false,
-    marker: false,
-    circlemarker: false
+    polyline: activeTool === 'polyline',
+    polygon: activeTool === 'polygon',
+    rectangle: activeTool === 'rectangle',
+    circle: activeTool === 'circle',
+    marker: activeTool === 'marker',
+    circlemarker: activeTool === 'circlemarker'
   };
-  
-  // Enable only the active tool
-  if (activeTool && drawOptions.hasOwnProperty(activeTool)) {
-    (drawOptions as any)[activeTool] = true;
-  }
 
   return (
     <EditControl
+      ref={(editControl: any) => {
+        editControlRef.current = editControl;
+      }}
       position="topright"
       onCreated={handleCreated}
-      onMounted={(editControlInstance: any) => {
-        editControlRef.current = editControlInstance;
+      draw={{
+        ...drawOptions,
+        // Always show these tools in the toolbar
+        polygon: true,
+        rectangle: true, 
+        circle: true,
+        marker: true,
       }}
-      draw={drawOptions}
       edit={{
-        edit: false,
-        remove: false
+        edit: true,
+        remove: true,
+        featureGroup: null, // Will be set internally by react-leaflet-draw
       }}
     />
   );
