@@ -25,9 +25,12 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             map.invalidateSize(true);
             
             // Ensure proper event handlers are set up
-            map.on('click', (e) => {
-              console.log('Map was clicked at:', e.latlng);
-            });
+            if (!map._hasMapClickHandler) {
+              map.on('click', (e) => {
+                console.log('Map was clicked at:', e.latlng);
+              });
+              map._hasMapClickHandler = true;
+            }
             
             // Mark as called to prevent duplicate calls
             hasCalledOnReady.current = true;
@@ -46,6 +49,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       if (map) {
         // Remove click event listener to prevent memory leaks
         map.off('click');
+        delete map._hasMapClickHandler;
       }
     };
   }, [map, onMapReady]);
