@@ -13,7 +13,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
-    // Only call onMapReady once per instance and only if not already called
+    // Only call onMapReady once per instance
     if (map && onMapReady && !hasCalledOnReady.current) {
       console.log('Map is ready, will call onMapReady after initialization');
       
@@ -26,23 +26,24 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       initTimeoutRef.current = setTimeout(() => {
         try {
           if (map && typeof map.getContainer === 'function') {
-            // Check if the map has a valid container and is properly initialized
+            // Check if the map has a valid container
             const container = map.getContainer();
             if (container && document.body.contains(container)) {
-              hasCalledOnReady.current = true;
+              hasCalledOnReady.current = true; // Mark as called first
               map.invalidateSize();
               console.log('Map container verified, calling onMapReady');
               onMapReady(map);
             } else {
               console.warn('Map container not properly attached to DOM, delaying onMapReady');
               initTimeoutRef.current = setTimeout(() => {
-                // Check if map is valid without accessing internal properties
-                if (map && !map.getContainer()) {
+                if (!map || !map.getContainer()) {
                   console.warn('Map initialization incomplete, skipping onMapReady');
                   return;
                 }
-                hasCalledOnReady.current = true;
+                
+                hasCalledOnReady.current = true; // Mark as called first before calling the callback
                 map.invalidateSize();
+                console.log('Delayed map initialization complete, calling onMapReady');
                 onMapReady(map);
               }, 300);
             }
@@ -50,7 +51,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         } catch (err) {
           console.error('Error in map initialization:', err);
         }
-      }, 200); // Increased timeout for better initialization
+      }, 200);
     }
     
     // Clean up function
@@ -58,9 +59,8 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current);
       }
-      hasCalledOnReady.current = false;
     };
-  }, [map, onMapReady]);
+  }, [map, onMapReady]); // Only re-run if map or onMapReady changes
   
   return null;
 };
