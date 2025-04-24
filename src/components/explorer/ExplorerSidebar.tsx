@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Globe2, Map as MapIcon, Bookmark } from 'lucide-react';
-import SavedLocations from '../SavedLocations';
+import SavedLocations from '../saved-locations/SavedLocations';
 
 interface ExplorerSidebarProps {
   selectedLocation: Location | undefined;
