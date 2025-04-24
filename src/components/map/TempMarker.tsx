@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Marker } from 'react-leaflet';
+import { useMap } from 'react-leaflet';
 import { useMarkerEvents } from '@/hooks/useMarkerEvents';
 import { usePopupStyles } from '@/hooks/usePopupStyles';
 import NewMarkerForm from './marker/NewMarkerForm';
@@ -22,7 +23,7 @@ const TempMarker = ({
   setMarkerType,
   onSave
 }: TempMarkerProps) => {
-  const map = useMapEvents({});
+  const map = useMap(); // Using useMap from react-leaflet instead of useMapEvents
   useMarkerEvents(map);
   usePopupStyles();
 
@@ -62,4 +63,3 @@ const TempMarker = ({
 };
 
 export default TempMarker;
-
