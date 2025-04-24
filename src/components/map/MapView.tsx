@@ -31,6 +31,7 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
+  containerId?: string; // Add containerId prop
 }
 
 const MapView = ({
@@ -50,7 +51,8 @@ const MapView = ({
   onShapeCreated,
   activeTool,
   onRegionClick,
-  onClearAll
+  onClearAll,
+  containerId // Use the containerId prop
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
@@ -87,6 +89,7 @@ const MapView = ({
       
       <MapContainer 
         key={mapKey}
+        id={containerId || `map-container-${mapKey}`} 
         className="w-full h-full"
         attributionControl={false}
         center={position}
@@ -132,3 +135,4 @@ const MapView = ({
 };
 
 export default MapView;
+

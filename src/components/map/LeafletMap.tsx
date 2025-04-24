@@ -23,6 +23,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   const mapRef = useRef<L.Map | null>(null);
   const loadedMarkersRef = useRef(false);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
+  const mapContainerIdRef = useRef<string>(`map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
@@ -47,18 +48,17 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
         try {
-          if (mapRef.current && mapRef.current.remove) {
-            try {
-              mapRef.current.getContainer();
-              mapRef.current.remove();
-            } catch (e) {
-              console.log('Map already removed');
-            }
-          }
+          // Important: Remove all layers first before removing the map
+          mapRef.current.eachLayer((layer) => {
+            mapRef.current?.removeLayer(layer);
+          });
+          
+          // Then properly remove the map
+          mapRef.current.remove();
+          mapRef.current = null;
         } catch (err) {
           console.error('Error cleaning up map:', err);
         }
-        mapRef.current = null;
       }
     };
   }, [mapInstanceKey]);
@@ -93,8 +93,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         }
       } catch (err) {
         console.error('Error flying to location:', err);
-        // If there's an error, recreate the map
+        // If there's an error, recreate the map with a new ID
         setMapInstanceKey(Date.now());
+        mapContainerIdRef.current = `map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       }
     }
   }, [selectedLocation]);
@@ -120,7 +121,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         if (selectedLocation) {
           console.log('Flying to initial location');
           setTimeout(() => {
-            if (map.getContainer()) {
+            if (map && !map._isDestroyed && map.getContainer()) {
               map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
                 animate: true,
                 duration: 1.5
@@ -193,6 +194,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   return (
     <MapView
       key={`map-view-${mapInstanceKey}`}
+      containerId={mapContainerIdRef.current}
       position={mapState.position}
       zoom={mapState.zoom}
       markers={mapState.markers}
@@ -215,3 +217,4 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
 };
 
 export default LeafletMap;
+

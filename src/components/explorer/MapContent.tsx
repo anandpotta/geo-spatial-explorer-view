@@ -95,21 +95,22 @@ const MapContent = ({
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
-        <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
-          style={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            width: '100%', 
-            height: '100%',
-            visibility: currentView === 'cesium' ? 'visible' : 'hidden'
-          }}
-          data-map-type="cesium"
-        >
-          {currentView === 'cesium' && (
+        {/* Cesium Map */}
+        {currentView === 'cesium' && (
+          <div 
+            className="absolute inset-0 transition-opacity duration-500 opacity-100 z-10"
+            style={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              width: '100%', 
+              height: '100%',
+              visibility: 'visible'
+            }}
+            data-map-type="cesium"
+          >
             <CesiumMap 
               selectedLocation={selectedLocation}
               onMapReady={onMapReady}
@@ -118,37 +119,35 @@ const MapContent = ({
               key={`cesium-${mapKey}`}
               onViewerReady={handleCesiumViewerRef}
             />
-          )}
-        </div>
+          </div>
+        )}
         
-        <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
-          style={{ 
-            visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
-          }}
-          data-map-type="leaflet"
-        >
-          {currentView === 'leaflet' && (
+        {/* Leaflet Map */}
+        {currentView === 'leaflet' && (
+          <div 
+            className="absolute inset-0 transition-opacity duration-500 opacity-100 z-10"
+            style={{ visibility: 'visible' }}
+            data-map-type="leaflet"
+          >
             <LeafletMap 
               selectedLocation={selectedLocation} 
               onMapReady={handleLeafletMapRef}
               activeTool={activeTool}
               key={`leaflet-${mapKey}`}
             />
-          )}
-        </div>
+          </div>
+        )}
 
-        <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'globe' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
-          style={{ 
-            visibility: currentView === 'globe' ? 'visible' : 'hidden' 
-          }}
-          data-map-type="globe"
-        >
-          {currentView === 'globe' && (
-            <GlobeView />
-          )}
-        </div>
+        {/* Globe View */}
+        {currentView === 'globe' && (
+          <div 
+            className="absolute inset-0 transition-opacity duration-500 opacity-100 z-10"
+            style={{ visibility: 'visible' }}
+            data-map-type="globe"
+          >
+            <GlobeView key={`globe-${mapKey}`} />
+          </div>
+        )}
         
         <DrawingTools 
           onToolSelect={handleToolSelect}
@@ -171,3 +170,4 @@ const MapContent = ({
 };
 
 export default MapContent;
+
