@@ -2,8 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { MapPin, Trash2 } from "lucide-react";
-import { LocationMarker } from "@/utils/geo-utils";
-import { useState } from "react";
+import { LocationMarker } from "@/utils/marker-utils";
 
 interface MarkerMenuItemProps {
   marker: LocationMarker;
@@ -12,7 +11,7 @@ interface MarkerMenuItemProps {
 }
 
 const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => {
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   
   const handleSelect = (e: React.MouseEvent) => {
     // Don't select if we're trying to delete

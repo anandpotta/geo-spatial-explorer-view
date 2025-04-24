@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDropdownLocations } from '@/hooks/useDropdownLocations';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -8,13 +8,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
-import { deleteMarker } from "@/utils/marker-utils";
+import { deleteMarker, saveMarker, createMarker as createMarkerUtil, LocationMarker } from "@/utils/marker-utils";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DeleteLocationDialog from '@/components/saved-locations/DeleteLocationDialog';
-import { LocationMarker } from '@/utils/geo-utils';
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
@@ -43,9 +42,16 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     onLocationSelect(position);
   };
 
-  const handleDeleteClick = (marker: LocationMarker) => {
-    setMarkerToDelete(marker);
-    setIsDeleteDialogOpen(true);
+  // Modified to match MarkerMenuItem's expected signature
+  const handleDeleteClick = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
+    
+    const marker = markers.find(m => m.id === id);
+    if (marker) {
+      setMarkerToDelete(marker);
+      setIsDeleteDialogOpen(true);
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -100,18 +106,15 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       return;
     }
 
-    const newMarker = {
+    const newMarker: Partial<LocationMarker> = {
       name: newLocationName,
       position: [newLocationLat, newLocationLng] as [number, number],
-      id: crypto.randomUUID(),
       type: 'pin' as const,
-      createdAt: new Date(),
     };
 
     try {
-      // Save the marker using the utility function
-      deleteMarker(newMarker.id); // First remove any existing marker with same ID if it exists
-      saveMarker(newMarker); // Then save the new marker
+      // Use the createMarkerUtil function from marker-utils.ts
+      createMarkerUtil(newMarker);
       
       toast({
         title: "Success",
@@ -149,13 +152,13 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
             />
           ))}
           {!isAddingLocation ? (
-            <DropdownMenuContent className="p-2">
+            <div className="p-2">
               <Button variant="ghost" onClick={toggleAddLocation}>
                 <Plus className="mr-2 h-4 w-4" /> Add Location
               </Button>
-            </DropdownMenuContent>
+            </div>
           ) : (
-            <DropdownMenuContent className="p-2">
+            <div className="p-2">
               <div className="grid gap-2">
                 <div className="grid gap-1">
                   <Label htmlFor="name">Name</Label>
@@ -191,7 +194,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
                   Save Location
                 </Button>
               </div>
-            </DropdownMenuContent>
+            </div>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
