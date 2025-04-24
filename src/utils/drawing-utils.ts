@@ -78,7 +78,9 @@ export function getSavedDrawings(): DrawingData[] {
   
   const drawingsJson = localStorage.getItem('savedDrawings');
   if (!drawingsJson) {
-    fetchDrawingsFromBackend();
+    fetchDrawingsFromBackend().catch(err => {
+      console.log('Failed to fetch from backend, using local storage only');
+    });
     return [];
   }
   
@@ -154,8 +156,16 @@ async function syncDrawingsWithBackend(drawings: DrawingData[]): Promise<void> {
       body: JSON.stringify(drawings),
     });
     
+    // Check if the response is JSON before trying to parse it
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.log('Response from backend is not JSON, skipping sync');
+      return;
+    }
+    
     if (!response.ok) {
-      throw new Error('Failed to sync drawings with backend');
+      console.error('Failed to sync drawings with backend:', await response.text());
+      return;
     }
     
     console.log('Drawings successfully synced with backend');
@@ -170,7 +180,21 @@ async function fetchDrawingsFromBackend(): Promise<void> {
   }
   
   try {
-    const response = await fetch('/api/drawings');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch('/api/drawings', {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Check if the response is JSON before trying to parse it
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.log('Response from backend is not JSON, using local storage');
+      return;
+    }
     
     if (!response.ok) {
       throw new Error('Failed to fetch drawings from backend');

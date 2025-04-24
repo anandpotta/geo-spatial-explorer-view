@@ -15,7 +15,28 @@ export async function fetchDrawings(): Promise<DrawingData[]> {
       return localDrawings;
     }
     
-    const drawings = await apiCall<DrawingData[]>('drawings');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch('/api/drawings', {
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Check if the response is actually JSON before trying to parse it
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.log('Backend returned non-JSON response, using local drawings');
+      return localDrawings;
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch drawings: ${response.status} ${response.statusText}`);
+    }
+    
+    const drawings = await response.json();
     
     // Update local storage with latest data from server
     localStorage.setItem('savedDrawings', JSON.stringify(drawings));
@@ -36,11 +57,26 @@ export async function createDrawing(drawing: DrawingData): Promise<DrawingData> 
   try {
     const { isOnline, isBackendAvailable } = getConnectionStatus();
     if (isOnline && isBackendAvailable) {
-      const serverDrawing = await apiCall<DrawingData>('drawings', {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch('/api/drawings', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(drawing),
+        signal: controller.signal
       });
-      return serverDrawing;
+      
+      clearTimeout(timeoutId);
+      
+      // Check if the response is JSON before trying to parse it
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json') && response.ok) {
+        return await response.json();
+      }
     }
   } catch (error) {
     console.error('Error creating drawing on server:', error);
@@ -59,9 +95,19 @@ export async function deleteDrawingApi(id: string): Promise<void> {
   try {
     const { isOnline, isBackendAvailable } = getConnectionStatus();
     if (isOnline && isBackendAvailable) {
-      await apiCall(`drawings/${id}`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`/api/drawings/${id}`, {
         method: 'DELETE',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        console.warn('Backend may not have deleted the drawing:', response.status);
+      }
     }
   } catch (error) {
     console.error('Error deleting drawing on server:', error);
