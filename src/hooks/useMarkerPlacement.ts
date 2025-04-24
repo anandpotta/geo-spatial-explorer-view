@@ -9,13 +9,16 @@ export function useMarkerPlacement(mapState: any) {
       
       console.log('Setting temporary marker at position:', exactPosition);
       
+      // Explicitly set these flags BEFORE setting the marker to prevent map navigation
+      window.tempMarkerPlaced = true;
+      window.userHasInteracted = true;
+      
+      // Clear any existing temporary marker first
       mapState.setTempMarker(null);
       
+      // Use a short timeout to ensure the state update completes
       setTimeout(() => {
         if (!mapState.tempMarker) {
-          window.tempMarkerPlaced = true;
-          window.userHasInteracted = true;
-          
           mapState.setTempMarker(exactPosition);
           mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
           
@@ -23,10 +26,9 @@ export function useMarkerPlacement(mapState: any) {
             duration: 3000,
           });
         }
-      }, 10);
+      }, 50);
     }
   };
 
   return handleMapClick;
 }
-

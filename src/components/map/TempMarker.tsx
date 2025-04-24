@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
@@ -26,6 +25,11 @@ const TempMarker = ({
   
   // Update global reference for position updates and set flags
   useEffect(() => {
+    // Immediately and aggressively set these flags to prevent map from moving
+    window.tempMarkerPlaced = true;
+    window.userHasInteracted = true;
+    console.log('TempMarker mounted - enforcing tempMarkerPlaced=true and userHasInteracted=true');
+    
     // Make sure window.tempMarkerPositionUpdate exists
     if (window.tempMarkerPositionUpdate) {
       // Initial update to ensure correct position
@@ -33,14 +37,8 @@ const TempMarker = ({
       window.tempMarkerPositionUpdate(safePosition);
     }
     
-    // Explicitly set these flags to prevent map from automatically moving
-    window.tempMarkerPlaced = true;
-    window.userHasInteracted = true;
-    
-    console.log('TempMarker mounted - setting tempMarkerPlaced=true and userHasInteracted=true');
-    
     return () => {
-      // If component unmounts, set the temp marker to null
+      // If component unmounts, set the temp marker to null, but KEEP the flags
       if (window.tempMarkerPositionUpdate) {
         // We use setTimeout to avoid state updates during render
         setTimeout(() => window.tempMarkerPositionUpdate && window.tempMarkerPositionUpdate(null), 0);
@@ -58,7 +56,7 @@ const TempMarker = ({
           const marker = e.target;
           const newPosition = marker.getLatLng();
           
-          // Set user interaction flag when marker is dragged
+          // Reinforce user interaction flags when marker is dragged
           window.userHasInteracted = true;
           window.tempMarkerPlaced = true;
           

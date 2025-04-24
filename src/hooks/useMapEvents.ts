@@ -49,9 +49,10 @@ export const useMapEvents = (
     // Skip if dependencies aren't available
     if (!selectedLocation || !map) return;
     
-    // Skip if we detect a temporary marker is placed
-    if (window.tempMarkerPlaced) {
-      console.log('Temporary marker detected, skipping automatic navigation');
+    // Aggressively check for marker presence and user interaction
+    // Skip navigation if ANY of these conditions are true
+    if (window.tempMarkerPlaced || window.userHasInteracted) {
+      console.log('Marker detected or user interaction recorded, skipping ALL automatic navigation');
       return;
     }
     
@@ -68,8 +69,8 @@ export const useMapEvents = (
     }
     
     // Skip if user has manually interacted with the map or placed a marker
-    if (userInteractionRef.current || window.userHasInteracted || window.tempMarkerPlaced) {
-      console.log('User has manually positioned the map or placed a marker, skipping automatic centering');
+    if (userInteractionRef.current) {
+      console.log('User has manually positioned the map, skipping automatic centering');
       return;
     }
     
@@ -80,9 +81,9 @@ export const useMapEvents = (
     // Use a much longer delay to ensure map is really ready
     initCheckTimerRef.current = window.setTimeout(() => {
       try {
-        // Skip if the user has interacted with the map by now
+        // One more check for user interaction or marker presence
         if (window.userHasInteracted || window.tempMarkerPlaced) {
-          console.log('User interaction detected, skipping automatic navigation');
+          console.log('Late detection: User interaction or marker detected, skipping automatic navigation');
           return;
         }
         

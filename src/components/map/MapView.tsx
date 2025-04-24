@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import { DrawingData } from '@/utils/drawing-utils';
 import FloorPlanView from './FloorPlanView';
@@ -56,18 +56,19 @@ const MapView = ({
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
 
-  const handleRegionClick = (drawing: DrawingData) => {
+  const handleRegionClick = useCallback((drawing: DrawingData) => {
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
-  };
+  }, []);
 
-  const handleLocationSelect = (position: [number, number]) => {
+  const handleLocationSelect = useCallback((position: [number, number]) => {
     console.log("Location selected in MapView:", position);
     if (onLocationSelect) {
       onLocationSelect(position);
     }
-  };
+  }, [onLocationSelect]);
 
+  // Early return for floor plan view to prevent unnecessary map rendering
   if (showFloorPlan) {
     return (
       <FloorPlanView 
@@ -77,7 +78,8 @@ const MapView = ({
     );
   }
 
-  const uniqueMapId = `${mapContainerId}-${Math.random().toString(36).substring(2, 9)}`;
+  // Use a stable ID to avoid unnecessary remounting of the map
+  const uniqueMapId = `${mapContainerId}-${Math.floor(Math.random() * 1000)}`;
 
   return (
     <div className="w-full h-full relative">

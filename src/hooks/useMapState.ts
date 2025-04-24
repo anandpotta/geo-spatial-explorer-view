@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
@@ -46,14 +45,28 @@ export function useMapState(selectedLocation?: Location) {
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
-    window.tempMarkerPositionUpdate = setTempMarker;
+    window.tempMarkerPositionUpdate = (pos) => {
+      // If position is null, don't clear state immediately
+      // This prevents marker from disappearing during map navigation
+      if (pos === null) {
+        // Use timeout to be sure it's intentional
+        setTimeout(() => {
+          setTempMarker(null);
+        }, 100);
+      } else {
+        setTempMarker(pos);
+        // Reinforce flags to prevent map navigation
+        window.tempMarkerPlaced = true;
+        window.userHasInteracted = true;
+      }
+    };
     
     return () => {
       delete window.tempMarkerPositionUpdate;
     };
   }, []);
 
-  const handleSaveMarker = () => {
+  const handleSaveMarker = useCallback(() => {
     if (!tempMarker || !markerName.trim()) {
       toast.error('Please provide a name for the marker');
       return;
@@ -78,7 +91,7 @@ export function useMapState(selectedLocation?: Location) {
         geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
           type: currentDrawing.geoJSON.type,
           geometry: currentDrawing.geoJSON.geometry,
-          properties: currentDrawing.geoJSON.properties
+          properties: currentDrawing.geoJSON.properties || {}
         })) : undefined,
         properties: {
           ...currentDrawing.properties,
@@ -91,6 +104,7 @@ export function useMapState(selectedLocation?: Location) {
     }
     
     // Clear the temporary marker immediately to prevent duplicate markers
+    // But keep the flags set to prevent map reloading
     setTempMarker(null);
     setMarkerName('');
     setCurrentDrawing(null);
@@ -99,20 +113,20 @@ export function useMapState(selectedLocation?: Location) {
     setActiveTool(null);
     
     toast.success("Location saved successfully");
-  };
+  }, [tempMarker, markerName, markerType, currentDrawing]);
 
-  const handleDeleteMarker = (id: string) => {
+  const handleDeleteMarker = useCallback((id: string) => {
     deleteMarker(id);
     toast.success("Location removed");
-  };
+  }, []);
 
-  const handleRegionClick = (drawing: DrawingData) => {
+  const handleRegionClick = useCallback((drawing: DrawingData) => {
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
-  };
+  }, []);
 
   // Add the handleClearAll function to clear map state
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     setTempMarker(null);
     setMarkerName('');
     setMarkerType('building');
@@ -126,7 +140,7 @@ export function useMapState(selectedLocation?: Location) {
     window.dispatchEvent(new Event('storage'));
     
     toast.success('All active elements cleared');
-  };
+  }, []);
 
   return {
     position,
@@ -158,9 +172,11 @@ export function useMapState(selectedLocation?: Location) {
   };
 }
 
-// Extend the Window interface to include our custom property
+// Extend the Window interface to include our custom properties
 declare global {
   interface Window {
     tempMarkerPositionUpdate?: (pos: [number, number] | null) => void;
+    tempMarkerPlaced?: boolean;
+    userHasInteracted?: boolean;
   }
 }
