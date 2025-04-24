@@ -32,18 +32,31 @@ export function useMarkerPlacement(mapState: MarkerPlacementState) {
       // Using a small delay to prevent state update issues
       const markerName = mapState.selectedLocation?.label || 'New Building';
       
-      // First set temp marker
-      mapState.setTempMarker(exactPosition);
+      // Clear existing marker first if exists
+      if (mapState.tempMarker) {
+        mapState.setTempMarker(null);
+        // Small delay before setting new marker
+        setTimeout(() => {
+          mapState.setTempMarker(exactPosition);
+          setTimeout(() => {
+            mapState.setMarkerName(markerName);
+          }, 10);
+        }, 10);
+      } else {
+        // Set temp marker directly if no marker exists
+        mapState.setTempMarker(exactPosition);
+        setTimeout(() => {
+          mapState.setMarkerName(markerName);
+        }, 10);
+      }
       
-      // Then set name in the next tick
+      // Show toast after a slight delay to ensure marker is visible
       setTimeout(() => {
-        mapState.setMarkerName(markerName);
-        
         toast.info('Click "Save Location" to confirm marker placement', {
           duration: 5000,
           id: 'marker-placement',
         });
-      }, 10);
+      }, 100);
     }
   };
 

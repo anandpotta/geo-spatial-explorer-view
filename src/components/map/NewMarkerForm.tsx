@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,23 +26,76 @@ const NewMarkerForm = ({
     onSave();
   };
   
-  // Handle input changes separately to prevent refreshes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Create a memoized input change handler
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // First ensure user interaction flags are set
+    window.tempMarkerPlaced = true;
+    window.userHasInteracted = true;
+    
+    // Update the name with the new value
     setMarkerName(e.target.value);
-  };
+    
+    // Reinforce flags after state update
+    setTimeout(() => {
+      window.tempMarkerPlaced = true;
+      window.userHasInteracted = true;
+    }, 0);
+  }, [setMarkerName]);
+  
+  // Handle button clicks without propagation
+  const handleTypeSelect = useCallback((e: React.MouseEvent, type: 'pin' | 'area' | 'building') => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Set flags first
+    window.tempMarkerPlaced = true;
+    window.userHasInteracted = true;
+    
+    // Update type
+    setMarkerType(type);
+    
+    // Reinforce flags
+    setTimeout(() => {
+      window.tempMarkerPlaced = true;
+      window.userHasInteracted = true;
+    }, 0);
+  }, [setMarkerType]);
+  
+  // Handle save click
+  const handleSaveClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSave(e);
+  }, [onSave]);
 
   return (
-    <Popup>
-      <form onSubmit={handleSubmit} className="p-2" onClick={(e) => e.stopPropagation()}>
+    <Popup closeButton={false} autoClose={false} autoPan={false}>
+      <form 
+        onSubmit={handleSubmit} 
+        className="p-2" 
+        onClick={(e) => {
+          e.stopPropagation();
+          // Set flags to prevent map interactions
+          window.tempMarkerPlaced = true;
+          window.userHasInteracted = true;
+        }}
+      >
         <Input 
           type="text"
           placeholder="Location name"
           value={markerName}
           onChange={handleInputChange}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            // Set flags when clicking input
+            window.tempMarkerPlaced = true;
+            window.userHasInteracted = true;
+          }}
           className="mb-2"
+          autoFocus
         />
         <div className="flex mb-2">
           <Button
@@ -50,10 +103,7 @@ const NewMarkerForm = ({
             size="sm"
             variant={markerType === 'pin' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMarkerType('pin');
-            }}
+            onClick={(e) => handleTypeSelect(e, 'pin')}
           >
             Pin
           </Button>
@@ -62,10 +112,7 @@ const NewMarkerForm = ({
             size="sm"
             variant={markerType === 'area' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMarkerType('area');
-            }}
+            onClick={(e) => handleTypeSelect(e, 'area')}
           >
             Area
           </Button>
@@ -74,10 +121,7 @@ const NewMarkerForm = ({
             size="sm"
             variant={markerType === 'building' ? 'default' : 'outline'}
             className="flex-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMarkerType('building');
-            }}
+            onClick={(e) => handleTypeSelect(e, 'building')}
           >
             Building
           </Button>
@@ -86,9 +130,7 @@ const NewMarkerForm = ({
           type="submit"
           disabled={!markerName.trim()}
           className="w-full"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
+          onClick={handleSaveClick}
         >
           Save Location
         </Button>

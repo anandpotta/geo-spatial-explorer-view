@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Marker } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
@@ -22,10 +23,9 @@ const TempMarker = ({
 }: TempMarkerProps) => {
   // Generate a unique key for the marker based on its position to prevent remounting issues
   const markerKey = `temp-marker-${position[0]}-${position[1]}-${Date.now()}`;
-  // Use a ref to track marker initialization
+  // Use refs to track state and prevent unnecessary renders
   const isInitializedRef = useRef(false);
-  // Keep reference to any cleanup interval
-  const flagIntervalRef = useRef<number | null>(null);
+  const flagIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   useEffect(() => {
     // Only run this once per marker instance
@@ -51,7 +51,8 @@ const TempMarker = ({
     }
     
     // Set interval to periodically reinforce flags but not too frequently
-    flagIntervalRef.current = window.setInterval(() => {
+    flagIntervalRef.current = setInterval(() => {
+      console.info('Marker detected, reinforcing interaction flags');
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
     }, 2000); // Less frequent updates

@@ -14,6 +14,7 @@ interface DrawToolsProps {
   onClearAll?: () => void;
 }
 
+// The key fix: EditControl is a class component that expects a properly forwarded ref
 const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onClearAll }, ref) => {
   const context = useLeafletContext();
   const hasInitialized = useRef<boolean>(false);
@@ -131,7 +132,7 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
     return null;
   }
 
-  // The key is to wrap EditControl in a div so it's available when the ref is set
+  // The key fix: properly pass and handle the ref to EditControl
   return (
     <div className="leaflet-draw-container">
       <EditControl
