@@ -1,20 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+
+import { useRef, useEffect } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker, DrawingData, getSavedDrawings, saveDrawing } from '@/utils/geo-utils';
+import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker, DrawingData, saveDrawing } from '@/utils/geo-utils';
 import { v4 as uuidv4 } from 'uuid';
-import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
-import MapEvents from '@/components/map/MapEvents';
-import MapReference from '@/components/map/MapReference';
-import DrawingControls from '@/components/map/DrawingControls';
-import MarkersList from '@/components/map/MarkersList';
+import { setupLeafletIcons } from './LeafletMapIcons';
+import { useMapState } from '@/hooks/useMapState';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { toast } from 'sonner';
-import SavedLocationsDropdown from '@/components/map/SavedLocationsDropdown';
-import { Button } from "@/components/ui/button";
-import { FlipHorizontal } from "lucide-react";
+import MapView from './MapView';
+import FloorPlanView from './FloorPlanView';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -23,24 +19,27 @@ interface LeafletMapProps {
 }
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
-  const [position, setPosition] = useState<[number, number]>(
-    selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
-  );
-  const [zoom, setZoom] = useState(18);
-  const [markers, setMarkers] = useState<LocationMarker[]>([]);
-  const [drawings, setDrawings] = useState<DrawingData[]>([]);
-  const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
-  const [markerName, setMarkerName] = useState('');
-  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
-  const [currentDrawing, setCurrentDrawing] = useState<DrawingData | null>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const [showFloorPlan, setShowFloorPlan] = useState(false);
-  const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+  const {
+    position,
+    zoom,
+    markers,
+    setMarkers,
+    tempMarker,
+    setTempMarker,
+    markerName,
+    setMarkerName,
+    markerType,
+    setMarkerType,
+    currentDrawing,
+    setCurrentDrawing,
+    showFloorPlan,
+    setShowFloorPlan,
+    selectedDrawing,
+    setSelectedDrawing
+  } = useMapState(selectedLocation);
 
-  const handleRegionClick = (drawing: DrawingData) => {
-    setSelectedDrawing(drawing);
-    setShowFloorPlan(true);
-  };
+  useMapEvents(mapRef.current, selectedLocation);
   
   useEffect(() => {
     const loadSavedData = () => {
@@ -48,20 +47,12 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       if (loadedMarkers && loadedMarkers.length > 0) {
         setMarkers(loadedMarkers);
       }
-      
-      const loadedDrawings = getSavedDrawings();
-      if (loadedDrawings && loadedDrawings.length > 0) {
-        setDrawings(loadedDrawings);
-      }
     };
     
     loadSavedData();
-    
     window.addEventListener('storage', loadSavedData);
     return () => window.removeEventListener('storage', loadSavedData);
-  }, []);
-
-  useMapEvents(mapRef.current, selectedLocation);
+  }, [setMarkers]);
 
   const handleMapClick = (latlng: L.LatLng) => {
     if (activeTool === 'marker' || (!activeTool && !tempMarker)) {
@@ -71,8 +62,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   };
 
   const handleShapeCreated = (shape: any) => {
-    console.log("Shape created:", shape);
-    
     if (shape.type === 'marker') {
       setTempMarker(shape.position);
       setMarkerName('New Marker');
@@ -140,66 +129,34 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     }
   };
 
+  const handleRegionClick = (drawing: DrawingData) => {
+    setSelectedDrawing(drawing);
+    setShowFloorPlan(true);
+  };
+
   if (showFloorPlan) {
-    return (
-      <div className="relative w-full h-full">
-        <div className="absolute top-4 right-4 z-50">
-          <Button
-            variant="outline"
-            onClick={() => setShowFloorPlan(false)}
-            className="bg-white/80 backdrop-blur-sm"
-          >
-            <FlipHorizontal className="mr-2 h-4 w-4" />
-            Back to Map
-          </Button>
-        </div>
-        <div className="w-full h-full flex items-center justify-center bg-black/5">
-          <img
-            src="https://images.unsplash.com/photo-1473177104440-ffee2f376098"
-            alt="Floor Plan"
-            className="max-h-[90%] max-w-[90%] object-contain rounded-lg shadow-lg"
-          />
-        </div>
-      </div>
-    );
+    return <FloorPlanView onBack={() => setShowFloorPlan(false)} />;
   }
 
   return (
-    <div className="w-full h-full relative">
-      <div className="absolute top-4 right-4 z-[1000]">
-        <SavedLocationsDropdown onLocationSelect={handleLocationSelect} />
-      </div>
-      
-      <MapContainer 
-        className="w-full h-full"
-        attributionControl={false}
-        center={position}
-        zoom={zoom}
-      >
-        <MapReference onMapReady={handleSetMapRef} />
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <AttributionControl position="bottomright" prefix={false} />
-        
-        <DrawingControls 
-          onCreated={handleShapeCreated} 
-          activeTool={activeTool || null}
-          onRegionClick={handleRegionClick}
-        />
-        
-        <MarkersList
-          markers={markers}
-          tempMarker={tempMarker}
-          markerName={markerName}
-          markerType={markerType}
-          onDeleteMarker={handleDeleteMarker}
-          onSaveMarker={handleSaveMarker}
-          setMarkerName={setMarkerName}
-          setMarkerType={setMarkerType}
-        />
-        
-        <MapEvents onMapClick={handleMapClick} />
-      </MapContainer>
-    </div>
+    <MapView
+      position={position}
+      zoom={zoom}
+      markers={markers}
+      tempMarker={tempMarker}
+      markerName={markerName}
+      markerType={markerType}
+      onMapReady={handleSetMapRef}
+      onLocationSelect={handleLocationSelect}
+      onMapClick={handleMapClick}
+      onDeleteMarker={handleDeleteMarker}
+      onSaveMarker={handleSaveMarker}
+      setMarkerName={setMarkerName}
+      setMarkerType={setMarkerType}
+      onShapeCreated={handleShapeCreated}
+      activeTool={activeTool || null}
+      onRegionClick={handleRegionClick}
+    />
   );
 };
 
