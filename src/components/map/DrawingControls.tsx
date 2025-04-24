@@ -17,6 +17,10 @@ interface DrawingControlsProps {
 
 // Extend the GeoJSON type to include our custom properties
 declare module 'leaflet' {
+  interface GeoJSON {
+    drawingId?: string;
+  }
+  
   interface Layer {
     drawingId?: string;
   }

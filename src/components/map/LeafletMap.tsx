@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
@@ -5,14 +6,14 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker, DrawingData, getSavedDrawings } from '@/utils/geo-utils';
 import { v4 as uuidv4 } from 'uuid';
-import { setupLeafletIcons } from './map/LeafletMapIcons';
-import MapEvents from './map/MapEvents';
-import MapReference from './map/MapReference';
-import DrawingControls from './map/DrawingControls';
-import MarkersList from './map/MarkersList';
+import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
+import MapEvents from '@/components/map/MapEvents';
+import MapReference from '@/components/map/MapReference';
+import DrawingControls from '@/components/map/DrawingControls';
+import MarkersList from '@/components/map/MarkersList';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { toast } from 'sonner';
-import SavedLocationsDropdown from './map/SavedLocationsDropdown';
+import SavedLocationsDropdown from '@/components/map/SavedLocationsDropdown';
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal } from "lucide-react";
 
