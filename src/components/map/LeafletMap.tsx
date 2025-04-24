@@ -6,10 +6,10 @@ import { useMapEvents } from '@/hooks/useMapEvents';
 import { useLeafletMapInitialization } from '@/hooks/useLeafletMapInitialization';
 import { useLeafletMapNavigation } from '@/hooks/useLeafletMapNavigation';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
+import { useMapReferenceHandler } from '@/hooks/useMapReferenceHandler';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import MapCleanup from './MapCleanup';
-import { toast } from 'sonner';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -41,93 +41,16 @@ const LeafletMap = ({
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
 
-  // Handle map reference and initialization
-  const handleSetMapRef = (map: L.Map) => {
-    console.log('Map reference provided');
-    
-    if (cleanupInProgress.current) {
-      console.warn('Cleanup in progress, skipping map setup');
-      return;
-    }
-    
-    mapRef.current = map;
-    
-    setTimeout(() => {
-      if (!mapRef.current || cleanupInProgress.current) return;
-      
-      try {
-        if (!mapRef.current.getContainer() || !document.contains(mapRef.current.getContainer())) {
-          console.warn('Map container not found or not in DOM');
-          return;
-        }
-        
-        mapRef.current.invalidateSize(true);
-        
-        setTimeout(() => {
-          if (!mapRef.current || cleanupInProgress.current) return;
-          
-          try {
-            if (!mapRef.current.getContainer() || !document.contains(mapRef.current.getContainer())) {
-              console.warn('Map container disappeared during initialization');
-              return;
-            }
-            
-            mapRef.current.invalidateSize(true);
-            
-            setTimeout(() => {
-              if (!mapRef.current || cleanupInProgress.current) return;
-              
-              try {
-                if (!mapRef.current.getContainer() || !document.contains(mapRef.current.getContainer())) {
-                  console.warn('Map container disappeared during final initialization');
-                  return;
-                }
-                
-                const mapPane = mapRef.current.getContainer().querySelector('.leaflet-map-pane');
-                if (!mapPane) {
-                  console.warn('Map pane not found, map may not be ready');
-                  
-                  if (mapReadyAttempts < 5) {
-                    setMapReadyAttempts(prev => prev + 1);
-                    return;
-                  }
-                }
-                
-                mapRef.current.invalidateSize(true);
-                
-                setTimeout(() => {
-                  if (!mapRef.current || cleanupInProgress.current) return;
-                  
-                  setIsMapInitialized(true);
-                  mapInitializedSuccessfully.current = true;
-                  
-                  console.log('Map successfully initialized');
-                  
-                  if (onMapReady && mapRef.current) {
-                    onMapReady(mapRef.current);
-                  }
-                }, 100);
-              } catch (err) {
-                console.error('Error during final map initialization:', err);
-                
-                if (mapReadyAttempts < 5) {
-                  setMapReadyAttempts(prev => prev + 1);
-                }
-              }
-            }, 300);
-          } catch (err) {
-            console.error('Error in second initialization step:', err);
-            
-            if (mapReadyAttempts < 5) {
-              setMapReadyAttempts(prev => prev + 1);
-            }
-          }
-        }, 300);
-      } catch (err) {
-        console.error('Error in map initialization:', err);
-      }
-    }, 300);
-  };
+  const handleSetMapRef = useMapReferenceHandler(
+    mapRef,
+    isMapInitialized,
+    cleanupInProgress,
+    setIsMapInitialized,
+    mapInitializedSuccessfully,
+    mapReadyAttempts,
+    setMapReadyAttempts,
+    onMapReady
+  );
 
   // Handle location changes
   useEffect(() => {
@@ -219,3 +142,4 @@ const LeafletMap = ({
 };
 
 export default LeafletMap;
+
