@@ -2,6 +2,7 @@
 export type { Location } from './location-utils';
 export type { LocationMarker } from './marker-utils';
 export type { DrawingData } from './drawing-utils';
+export type { Annotation } from './annotation-utils';
 
 export {
   searchLocations,
@@ -20,3 +21,9 @@ export {
   getSavedDrawings,
   deleteDrawing,
 } from './drawing-utils';
+
+export {
+  saveAnnotation,
+  getSavedAnnotations,
+  deleteAnnotation,
+} from './annotation-utils';
