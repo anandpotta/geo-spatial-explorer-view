@@ -9,22 +9,46 @@ export default function Earth({ onLocationSelect }) {
   const [rotationSpeed] = useState(0.001);
   const [textureError, setTextureError] = useState(false);
   
-  // Use publicly available Earth textures from NASA's Visible Earth project
-  const textures = useTexture({
-    map: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
-    bumpMap: 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2074&auto=format&fit=crop',
-    specularMap: 'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop',
-  }, (loaded) => {
-    console.log('Earth textures loaded successfully:', loaded);
-    setTextureError(false);
-  }, (error) => {
-    console.error('Failed to load earth textures:', error);
-    setTextureError(true);
-  });
+  // Load earth textures with error handling
+  const [map, bumpMap, specularMap] = useTexture(
+    [
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2074&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop'
+    ],
+    (textures) => {
+      console.log('Earth textures loaded successfully');
+      setTextureError(false);
+    }
+  );
   
-  // Apply a small bump scale
-  if (textures.bumpMap) {
-    textures.bumpMap.wrapS = textures.bumpMap.wrapT = THREE.RepeatWrapping;
+  // Handle texture loading errors
+  useEffect(() => {
+    const handleError = () => {
+      console.error('Failed to load earth textures');
+      setTextureError(true);
+    };
+    
+    // Add error handlers to textures
+    [map, bumpMap, specularMap].forEach(texture => {
+      if (texture) {
+        texture.onError = handleError;
+      }
+    });
+    
+    return () => {
+      // Cleanup
+      [map, bumpMap, specularMap].forEach(texture => {
+        if (texture) {
+          texture.onError = null;
+        }
+      });
+    };
+  }, [map, bumpMap, specularMap]);
+  
+  // Apply a small bump scale if bumpMap is available
+  if (bumpMap) {
+    bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
   }
   
   // Rotate the earth on each frame
@@ -74,10 +98,10 @@ export default function Earth({ onLocationSelect }) {
         />
       ) : (
         <meshPhongMaterial
-          map={textures.map}
-          bumpMap={textures.bumpMap}
+          map={map}
+          bumpMap={bumpMap}
           bumpScale={0.15}
-          specularMap={textures.specularMap}
+          specularMap={specularMap}
           specular={new THREE.Color('grey')}
           shininess={10}
         />
