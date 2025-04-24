@@ -16,7 +16,7 @@ export const useDropdownLocations = () => {
       setMarkers(savedMarkers);
       
       // Filter pinned markers
-      const pinned = savedMarkers.filter(marker => marker.pinned);
+      const pinned = savedMarkers.filter(marker => marker.isPinned);
       setPinnedMarkers(pinned);
     };
     
