@@ -28,8 +28,9 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Dispatch a custom event to notify components that markers have been updated
+  // Dispatch events to notify components that markers have been updated
   window.dispatchEvent(new CustomEvent('markersUpdated'));
+  window.dispatchEvent(new Event('storage'));
   
   syncMarkersWithBackend(savedMarkers);
 }
