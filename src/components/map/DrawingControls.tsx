@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
@@ -27,7 +26,6 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
     
-    // Clear existing layers first
     featureGroupRef.current.clearLayers();
     const markers = getSavedMarkers();
     
@@ -42,7 +40,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
               if (l) {
                 l.drawingId = drawing.id;
                 
-                if (onRegionClick && associatedMarker) {
+                if (onRegionClick) {
                   l.on('click', () => {
                     onRegionClick(drawing);
                   });
@@ -51,10 +49,6 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
             });
             
             layer.addTo(featureGroupRef.current!);
-            
-            if (associatedMarker) {
-              layer.bindPopup(associatedMarker.name);
-            }
           }
         } catch (err) {
           console.error('Error adding drawing layer:', err);

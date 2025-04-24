@@ -1,4 +1,3 @@
-
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
@@ -7,6 +6,9 @@ import { LocationMarker } from '@/utils/marker-utils';
 import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
+import FloorPlanView from './FloorPlanView';
+import { useState } from 'react';
+import { DrawingData } from '@/utils/drawing-utils';
 
 interface MapViewProps {
   position: [number, number];
@@ -45,6 +47,23 @@ const MapView = ({
   activeTool,
   onRegionClick
 }: MapViewProps) => {
+  const [showFloorPlan, setShowFloorPlan] = useState(false);
+  const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+
+  const handleRegionClick = (drawing: DrawingData) => {
+    setSelectedDrawing(drawing);
+    setShowFloorPlan(true);
+  };
+
+  if (showFloorPlan) {
+    return (
+      <FloorPlanView 
+        onBack={() => setShowFloorPlan(false)} 
+        drawing={selectedDrawing}
+      />
+    );
+  }
+
   return (
     <div className="w-full h-full relative">
       <div className="absolute top-4 right-4 z-[1000]">
@@ -64,7 +83,7 @@ const MapView = ({
         <DrawingControlsContainer
           onShapeCreated={onShapeCreated}
           activeTool={activeTool}
-          onRegionClick={onRegionClick}
+          onRegionClick={handleRegionClick}
         />
         
         <MarkersContainer
