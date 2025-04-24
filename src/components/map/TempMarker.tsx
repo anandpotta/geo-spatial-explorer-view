@@ -1,11 +1,9 @@
 
-import React, { useCallback, useRef } from 'react';
-import { Marker, Popup, useMapEvents } from 'react-leaflet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React from 'react';
+import { Marker } from 'react-leaflet';
 import { useMarkerEvents } from '@/hooks/useMarkerEvents';
 import { usePopupStyles } from '@/hooks/usePopupStyles';
-import MarkerTypeButtons from './marker/MarkerTypeButtons';
+import NewMarkerForm from './marker/NewMarkerForm';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -24,31 +22,9 @@ const TempMarker = ({
   setMarkerType,
   onSave
 }: TempMarkerProps) => {
-  const formRef = useRef<HTMLFormElement>(null);
   const map = useMapEvents({});
-  
   useMarkerEvents(map);
   usePopupStyles();
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setMarkerName(e.target.value);
-    window.tempMarkerPlaced = true;
-    window.userHasInteracted = true;
-  }, [setMarkerName]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onSave();
-  };
-
-  const stopPropagation = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    window.tempMarkerPlaced = true;
-    window.userHasInteracted = true;
-  }, []);
 
   return (
     <Marker 
@@ -74,51 +50,16 @@ const TempMarker = ({
         }
       }}
     >
-      <Popup 
-        closeButton={false} 
-        autoClose={false} 
-        autoPan={false}
-        className="marker-form-popup"
-      >
-        <div onClick={stopPropagation} className="popup-container">
-          <form 
-            ref={formRef}
-            onSubmit={handleSubmit} 
-            className="p-2" 
-            onClick={stopPropagation}
-            id="marker-form"
-            name="marker-form"
-          >
-            <Input 
-              type="text"
-              placeholder="Location name"
-              value={markerName}
-              onChange={handleInputChange}
-              onClick={stopPropagation}
-              className="mb-2 z-50"
-              autoFocus
-              style={{ zIndex: 9999 }}
-              id="marker-name"
-              name="marker-name"
-            />
-            <MarkerTypeButtons 
-              markerType={markerType}
-              onTypeSelect={setMarkerType}
-            />
-            <Button 
-              type="submit"
-              disabled={!markerName.trim()}
-              className="w-full"
-              id="save-marker"
-              name="save-marker"
-            >
-              Save Location
-            </Button>
-          </form>
-        </div>
-      </Popup>
+      <NewMarkerForm
+        markerName={markerName}
+        setMarkerName={setMarkerName}
+        markerType={markerType}
+        setMarkerType={setMarkerType}
+        onSave={onSave}
+      />
     </Marker>
   );
 };
 
 export default TempMarker;
+
