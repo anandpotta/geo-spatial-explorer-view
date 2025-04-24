@@ -17,42 +17,34 @@ export default function Earth({ onLocationSelect }) {
     specularMap: '/earth-specular.jpg'
   };
   
-  // Load textures using drei's useTexture hook
-  const textures = useTexture(texturePaths, (loadedTextures) => {
-    // This callback runs when textures are loaded
-    setTexturesLoaded(true);
-  }, (error) => {
-    // This callback runs if there's an error loading textures
-    console.error('Failed to load Earth textures:', error);
-    setTextureError(true);
-  });
+  // Load textures using drei's useTexture hook with proper error handling
+  const textures = useTexture(texturePaths);
   
-  // Configure textures after loading
+  // Handle texture loading success or failure
   useEffect(() => {
-    if (texturesLoaded && textures) {
-      try {
-        // Type check each texture before accessing properties
-        const allValid = Object.entries(textures).every(([key, texture]) => {
-          // Make sure texture is a valid THREE.Texture with image property
-          return texture instanceof THREE.Texture && 
-                 texture.image !== undefined && 
-                 texture.image !== null;
-        });
+    try {
+      // Check if textures are valid
+      const allValid = Object.entries(textures).every(([key, texture]) => {
+        return texture instanceof THREE.Texture && texture.image !== undefined;
+      });
+      
+      if (allValid) {
+        setTexturesLoaded(true);
         
-        if (!allValid) {
-          console.error('One or more earth textures failed to load completely');
-          setTextureError(true);
-        } else if (textures.bumpMap && textures.bumpMap instanceof THREE.Texture) {
-          // Apply texture settings safely
+        // Apply texture settings safely
+        if (textures.bumpMap && textures.bumpMap instanceof THREE.Texture) {
           textures.bumpMap.wrapS = THREE.RepeatWrapping;
           textures.bumpMap.wrapT = THREE.RepeatWrapping;
         }
-      } catch (err) {
-        console.error('Error checking texture validity:', err);
+      } else {
+        console.error('One or more earth textures failed to load completely');
         setTextureError(true);
       }
+    } catch (err) {
+      console.error('Error checking texture validity:', err);
+      setTextureError(true);
     }
-  }, [texturesLoaded, textures]);
+  }, [textures]);
   
   // Rotate the earth on each frame
   useFrame(() => {
@@ -90,7 +82,7 @@ export default function Earth({ onLocationSelect }) {
       position={[0, 0, 0]}
       onClick={handleClick}
     >
-      {textureError || !textures ? (
+      {textureError || !texturesLoaded ? (
         // Fallback material if textures fail to load
         <meshStandardMaterial
           color="#1e3a8a"
