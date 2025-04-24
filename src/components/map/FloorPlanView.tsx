@@ -32,6 +32,21 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   return (
     <div className="relative w-full h-full">
       <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <label>
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*,.pdf"
+            onChange={handleFileUpload}
+          />
+          <Button
+            variant="outline"
+            className="bg-white/80 backdrop-blur-sm"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            New Floor Plan
+          </Button>
+        </label>
         <Button
           variant="outline"
           onClick={onBack}
@@ -61,7 +76,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
                 <input
                   type="file"
                   className="hidden"
-                  accept="image/*"
+                  accept="image/*,.pdf"
                   onChange={handleFileUpload}
                 />
                 <Button variant="outline">
@@ -77,3 +92,4 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
 };
 
 export default FloorPlanView;
+
