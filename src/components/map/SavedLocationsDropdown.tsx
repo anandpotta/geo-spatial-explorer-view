@@ -1,7 +1,8 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
-import { deleteDrawing } from '@/utils/drawing-utils';
+import { useDropdownLocations } from "@/hooks/useDropdownLocations";
+import { Button } from "@/components/ui/button";
+import { Navigation } from "lucide-react";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Navigation, MapPin, Trash2 } from "lucide-react";
-import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -24,120 +22,25 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import MarkerMenuItem from "./dropdown/MarkerMenuItem";
+import { deleteMarker } from "@/utils/marker-utils";
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
 }
 
 const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProps) => {
-  const [markers, setMarkers] = useState<LocationMarker[]>([]);
-  const [pinnedMarkers, setPinnedMarkers] = useState<LocationMarker[]>([]);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
-  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const {
+    markers,
+    pinnedMarkers,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    markerToDelete,
+    setMarkerToDelete,
+    returnFocusRef
+  } = useDropdownLocations();
 
-  const loadMarkers = () => {
-    console.log("Loading markers for dropdown");
-    const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
-    const pinned = savedMarkers.filter(marker => marker.isPinned === true);
-    setPinnedMarkers(pinned);
-  };
-
-  useEffect(() => {
-    // Initial load
-    loadMarkers();
-    
-    // Setup event listeners
-    const handleStorage = () => {
-      console.log("Storage event detected");
-      loadMarkers();
-    };
-    
-    const handleMarkersUpdated = () => {
-      console.log("Markers updated event detected");
-      loadMarkers();
-    };
-    
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
-    };
-  }, []);
-
-  const handleDelete = (id: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    
-    // Store reference to the button for focus return
-    if (event.currentTarget) {
-      returnFocusRef.current = event.currentTarget as HTMLElement;
-    }
-    
-    // Find the marker to delete and store it
-    const marker = markers.find(m => m.id === id);
-    if (marker) {
-      setMarkerToDelete(marker);
-      setIsDeleteDialogOpen(true);
-    }
-  };
-
-  const confirmDelete = () => {
-    if (markerToDelete) {
-      // Delete the marker
-      deleteMarker(markerToDelete.id);
-      
-      // If there's an associated drawing, delete it too
-      if (markerToDelete.associatedDrawing) {
-        deleteDrawing(markerToDelete.associatedDrawing);
-      }
-      
-      // Refresh markers list
-      loadMarkers();
-      
-      // Trigger storage events to update UI
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('markersUpdated'));
-      
-      toast.success("Location and associated data removed");
-      setIsDeleteDialogOpen(false);
-      setMarkerToDelete(null);
-      
-      // Return focus after state updates and dialog closes
-      setTimeout(() => {
-        if (returnFocusRef.current) {
-          try {
-            returnFocusRef.current.focus();
-          } catch (e) {
-            document.body.focus();
-          }
-        }
-      }, 0);
-    }
-  };
-  
-  const cancelDelete = () => {
-    setIsDeleteDialogOpen(false);
-    setMarkerToDelete(null);
-    
-    // Return focus
-    setTimeout(() => {
-      if (returnFocusRef.current) {
-        try {
-          returnFocusRef.current.focus();
-        } catch (e) {
-          document.body.focus();
-        }
-      }
-    }, 0);
-  };
-  
   const handleLocationSelect = (position: [number, number]) => {
-    // Close the dropdown menu when a location is selected
     const dropdown = document.querySelector('[data-state="open"]');
     if (dropdown) {
       const trigger = dropdown.previousElementSibling as HTMLButtonElement;
@@ -147,6 +50,56 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     console.log("Location selected from dropdown:", position);
     onLocationSelect(position);
     toast.success("Navigating to saved location");
+  };
+
+  const handleDelete = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    if (event.currentTarget) {
+      returnFocusRef.current = event.currentTarget as HTMLElement;
+    }
+    
+    const marker = markers.find(m => m.id === id);
+    if (marker) {
+      setMarkerToDelete(marker);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (markerToDelete) {
+      deleteMarker(markerToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setMarkerToDelete(null);
+      toast.success("Location removed");
+      
+      setTimeout(() => {
+        if (returnFocusRef.current) {
+          try {
+            returnFocusRef.current.focus();
+          } catch (e) {
+            document.body.focus();
+          }
+          returnFocusRef.current = null;
+        }
+      }, 0);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setMarkerToDelete(null);
+    
+    setTimeout(() => {
+      if (returnFocusRef.current) {
+        try {
+          returnFocusRef.current.focus();
+        } catch (e) {
+          document.body.focus();
+        }
+        returnFocusRef.current = null;
+      }
+    }, 0);
   };
 
   return (
@@ -164,26 +117,12 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
               <DropdownMenuLabel>Pinned Locations</DropdownMenuLabel>
               <DropdownMenuGroup>
                 {pinnedMarkers.map((marker) => (
-                  <DropdownMenuItem
+                  <MarkerMenuItem
                     key={`pinned-${marker.id}`}
-                    className="flex justify-between items-center"
-                  >
-                    <div
-                      className="flex items-center flex-1 cursor-pointer"
-                      onClick={() => handleLocationSelect(marker.position)}
-                    >
-                      <MapPin className="mr-2 h-4 w-4" />
-                      {marker.name}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => handleDelete(marker.id, e)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuItem>
+                    marker={marker}
+                    onSelect={handleLocationSelect}
+                    onDelete={handleDelete}
+                  />
                 ))}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
@@ -197,40 +136,20 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
               <DropdownMenuItem disabled>No saved locations</DropdownMenuItem>
             ) : (
               markers.map((marker) => (
-                <DropdownMenuItem
+                <MarkerMenuItem
                   key={marker.id}
-                  className="flex justify-between items-center"
-                >
-                  <div
-                    className="flex items-center flex-1 cursor-pointer"
-                    onClick={() => handleLocationSelect(marker.position)}
-                  >
-                    <MapPin className="mr-2 h-4 w-4" />
-                    {marker.name}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={(e) => handleDelete(marker.id, e)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuItem>
+                  marker={marker}
+                  onSelect={handleLocationSelect}
+                  onDelete={handleDelete}
+                />
               ))
             )}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog 
-        open={isDeleteDialogOpen} 
-        onOpenChange={(open) => {
-          setIsDeleteDialogOpen(open);
-          if (!open) cancelDelete();
-        }}
-      >
-        <AlertDialogContent onEscapeKeyDown={cancelDelete} onPointerDownOutside={cancelDelete}>
+      <AlertDialog open={isDeleteDialogOpen}>
+        <AlertDialogContent onEscapeKeyDown={cancelDelete}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Location</AlertDialogTitle>
             <AlertDialogDescription>
@@ -238,7 +157,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel ref={cancelButtonRef} onClick={cancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
