@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -22,20 +23,36 @@ const GeoSpatialExplorer = () => {
     console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
     
-    setCurrentView('cesium');
-    setFlyCompleted(false);
-    
-    toast({
-      title: 'Location selected',
-      description: `Navigating to ${location.label}`,
-      duration: 3000,
-    });
+    // Changed from setting to 'cesium' directly to using a transition effect
+    if (currentView === 'globe') {
+      toast({
+        title: 'Location selected on globe',
+        description: `Transitioning to 3D view for ${location.label || 'selected location'}`,
+        duration: 3000,
+      });
+      
+      // Transition from globe to Cesium with a slight delay
+      setTimeout(() => {
+        setCurrentView('cesium');
+        setFlyCompleted(false);
+      }, 500);
+    } else {
+      setCurrentView('cesium');
+      setFlyCompleted(false);
+      
+      toast({
+        title: 'Location selected',
+        description: `Navigating to ${location.label}`,
+        duration: 3000,
+      });
+    }
   };
   
   const handleFlyComplete = () => {
     console.log('Fly complete in Explorer, switching to leaflet view');
     setFlyCompleted(true);
     
+    // Add a smoother transition between Cesium and Leaflet views
     setTimeout(() => {
       setCurrentView('leaflet');
       toast({

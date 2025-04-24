@@ -92,6 +92,19 @@ const MapContent = ({
     }
   };
 
+  // Handle globe location selection
+  const handleGlobeLocationSelect = (coords) => {
+    if (coords) {
+      const location: Location = {
+        id: `globe-${Date.now()}`,
+        label: `Selected location on Globe`,
+        x: coords.longitude,
+        y: coords.latitude,
+      };
+      onLocationSelect(location);
+    }
+  };
+
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
@@ -134,6 +147,7 @@ const MapContent = ({
               onMapReady={handleLeafletMapRef}
               activeTool={activeTool}
               key={`leaflet-${mapKey}`}
+              onLocationSelect={onLocationSelect}
             />
           </div>
         )}
@@ -145,7 +159,10 @@ const MapContent = ({
             style={{ visibility: 'visible' }}
             data-map-type="globe"
           >
-            <GlobeView key={`globe-${mapKey}`} />
+            <GlobeView 
+              key={`globe-${mapKey}`}
+              onLocationSelect={handleGlobeLocationSelect}
+            />
           </div>
         )}
         
@@ -170,4 +187,3 @@ const MapContent = ({
 };
 
 export default MapContent;
-

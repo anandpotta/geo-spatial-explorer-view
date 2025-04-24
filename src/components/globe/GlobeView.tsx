@@ -22,7 +22,7 @@ function EarthErrorFallback() {
   );
 }
 
-export default function GlobeView() {
+export default function GlobeView({ onLocationSelect }) {
   return (
     <div className="w-full h-full">
       <Canvas 
@@ -50,7 +50,7 @@ export default function GlobeView() {
         />
       </Canvas>
       <div className="absolute bottom-2 left-2 text-xs text-white opacity-70">
-        <p>Drag to rotate • Scroll to zoom • For best results, download earth textures and place in public folder</p>
+        <p>Drag to rotate • Scroll to zoom • Click on globe to select locations</p>
       </div>
     </div>
   );

@@ -8,11 +8,11 @@ export default function Earth() {
   const earthRef = useRef<THREE.Mesh>(null);
   const [rotationSpeed] = useState(0.001);
   
-  // Use drei's useTexture hook for better texture loading
+  // Use publicly available Earth textures from NASA's Visible Earth project
   const textures = useTexture({
-    map: '/earth-texture.jpg',
-    bumpMap: '/earth-bump.jpg',
-    specularMap: '/earth-specular.jpg',
+    map: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
+    bumpMap: 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2074&auto=format&fit=crop',
+    specularMap: 'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop',
   }, (loaded) => {
     console.log('Earth textures loaded successfully:', loaded);
   });
