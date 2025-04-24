@@ -28,7 +28,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     const timeoutId = setTimeout(() => {
       try {
         // Make sure map is fully initialized and has a valid container
-        if (map && map.getContainer()) {
+        if (map && map.getContainer() && map._loaded) {
           // Ensure the map is properly sized
           map.invalidateSize(true);
           
@@ -45,6 +45,16 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           
           // Call the callback
           onMapReady(map);
+        } else {
+          // If map isn't ready, try again in a bit
+          console.log('Map not fully initialized, retrying...');
+          setTimeout(() => {
+            if (map && map.getContainer()) {
+              map.invalidateSize(true);
+              hasCalledOnReady.current = true;
+              onMapReady(map);
+            }
+          }, 300);
         }
       } catch (err) {
         console.error('Error in map initialization:', err);

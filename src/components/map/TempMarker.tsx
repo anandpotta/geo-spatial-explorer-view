@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
@@ -22,7 +22,25 @@ const TempMarker = ({
   onSave
 }: TempMarkerProps) => {
   // Generate a unique key for the marker based on its position
-  const markerKey = `temp-marker-${position[0]}-${position[1]}`;
+  const markerKey = `temp-marker-${position[0]}-${position[1]}-${Date.now()}`;
+  
+  // Update global reference for position updates
+  useEffect(() => {
+    // Make sure window.tempMarkerPositionUpdate exists
+    if (window.tempMarkerPositionUpdate) {
+      // Initial update to ensure correct position
+      const safePosition: [number, number] = [...position];
+      window.tempMarkerPositionUpdate(safePosition);
+    }
+    
+    return () => {
+      // If component unmounts, set the temp marker to null
+      if (window.tempMarkerPositionUpdate) {
+        // We use setTimeout to avoid state updates during render
+        setTimeout(() => window.tempMarkerPositionUpdate && window.tempMarkerPositionUpdate(null), 0);
+      }
+    };
+  }, [position]);
   
   return (
     <Marker 
