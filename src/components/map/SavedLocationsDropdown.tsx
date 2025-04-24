@@ -1,4 +1,3 @@
-
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Navigation } from "lucide-react";
@@ -42,14 +41,12 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   } = useDropdownLocations();
 
   const handleLocationSelect = (position: [number, number]) => {
-    // Close dropdown when a location is selected
     const dropdown = document.querySelector('[data-state="open"]');
     if (dropdown) {
       const trigger = dropdown.previousElementSibling as HTMLButtonElement;
       if (trigger) trigger.click();
     }
     
-    // Call the provided onLocationSelect function with the position
     onLocationSelect(position);
     toast.success("Navigating to saved location");
   };
