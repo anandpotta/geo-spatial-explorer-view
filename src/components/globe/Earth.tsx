@@ -17,17 +17,17 @@ export default function Earth({ onLocationSelect }) {
     specularMap: '/earth-specular.jpg'
   };
   
-  // Load textures individually to better handle errors
-  let textures = null;
-  try {
-    textures = useTexture(texturePaths);
-    if (!texturesLoaded && textures) setTexturesLoaded(true);
-  } catch (err) {
-    console.error('Failed to load Earth textures:', err);
+  // Load textures using drei's useTexture hook
+  const textures = useTexture(texturePaths, (loadedTextures) => {
+    // This callback runs when textures are loaded
+    setTexturesLoaded(true);
+  }, (error) => {
+    // This callback runs if there's an error loading textures
+    console.error('Failed to load Earth textures:', error);
     setTextureError(true);
-  }
+  });
   
-  // Check texture validity after loading
+  // Configure textures after loading
   useEffect(() => {
     if (texturesLoaded && textures) {
       try {

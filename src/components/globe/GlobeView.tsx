@@ -11,7 +11,7 @@ function EarthErrorFallback() {
     <>
       <mesh>
         <sphereGeometry args={[1, 32, 32]} />
-        <meshBasicMaterial color="#1e40af" wireframe={false} />
+        <meshBasicMaterial color="#1e3a8a" wireframe={false} />
       </mesh>
       {/* Add a wireframe overlay for visual interest */}
       <mesh>
@@ -38,17 +38,17 @@ export default function GlobeView({ onLocationSelect }) {
   
   // Safe wrapper for location selection with callback to prevent re-renders
   const handleLocationSelect = useCallback((coords) => {
-    try {
-      if (coords && onLocationSelect) {
+    if (coords && onLocationSelect) {
+      try {
         onLocationSelect({
-          id: `loc-${coords.latitude}-${coords.longitude}`,
+          id: `loc-${coords.latitude.toFixed(4)}-${coords.longitude.toFixed(4)}`,
           label: `Location at ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`,
           x: coords.longitude,
           y: coords.latitude
         });
+      } catch (err) {
+        console.error('Error selecting location on globe:', err);
       }
-    } catch (err) {
-      console.error('Error selecting location on globe:', err);
     }
   }, [onLocationSelect]);
 

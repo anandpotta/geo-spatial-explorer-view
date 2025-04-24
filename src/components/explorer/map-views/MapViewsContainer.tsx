@@ -54,12 +54,14 @@ const MapViewsContainer = ({
         data-map-type="cesium"
         key={getViewKey('cesium')}
       >
-        <CesiumMap 
-          selectedLocation={selectedLocation}
-          onMapReady={onMapReady}
-          onFlyComplete={onFlyComplete}
-          cinematicFlight={true}
-        />
+        {currentView === 'cesium' && (
+          <CesiumMap 
+            selectedLocation={selectedLocation}
+            onMapReady={onMapReady}
+            onFlyComplete={onFlyComplete}
+            cinematicFlight={true}
+          />
+        )}
       </div>
       
       <div 
@@ -68,11 +70,13 @@ const MapViewsContainer = ({
         data-map-type="leaflet"
         key={getViewKey('leaflet')}
       >
-        <LeafletMap 
-          selectedLocation={selectedLocation} 
-          onLocationSelect={onLocationSelect}
-          activeTool={activeTool}
-        />
+        {currentView === 'leaflet' && (
+          <LeafletMap 
+            selectedLocation={selectedLocation} 
+            onLocationSelect={onLocationSelect}
+            activeTool={activeTool}
+          />
+        )}
       </div>
 
       <div 
@@ -84,7 +88,6 @@ const MapViewsContainer = ({
         {currentView === 'globe' && (
           <GlobeView 
             onLocationSelect={onLocationSelect}
-            key={`globe-view-${Date.now()}`}
           />
         )}
       </div>
@@ -92,4 +95,4 @@ const MapViewsContainer = ({
   );
 };
 
-export default MapViewsContainer;
+export default memo(MapViewsContainer);
