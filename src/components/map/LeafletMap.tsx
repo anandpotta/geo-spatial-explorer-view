@@ -22,7 +22,7 @@ interface LeafletMapProps {
 }
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect }: LeafletMapProps) => {
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<L.Map | null>(null); // This is now implicitly a MutableRefObject
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const mapContainerIdRef = useRef<string>(`map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   

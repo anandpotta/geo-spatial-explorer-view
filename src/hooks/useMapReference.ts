@@ -3,7 +3,7 @@ import { Location } from '@/utils/geo-utils';
 import L from 'leaflet';
 
 export const useMapReference = (
-  mapRef: React.RefObject<L.Map>,
+  mapRef: React.MutableRefObject<L.Map | null>, // Changed from RefObject to MutableRefObject
   selectedLocation: Location | undefined,
   onMapReady?: (map: L.Map) => void
 ) => {

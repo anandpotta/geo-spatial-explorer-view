@@ -5,7 +5,7 @@ import L from 'leaflet';
 
 export const useLocationSelection = (
   selectedLocation: Location | undefined,
-  mapRef: React.RefObject<L.Map>,
+  mapRef: React.MutableRefObject<L.Map | null>, // Changed from RefObject to MutableRefObject
   onMapInstanceReset: () => void
 ) => {
   useEffect(() => {
@@ -25,5 +25,5 @@ export const useLocationSelection = (
         onMapInstanceReset();
       }
     }
-  }, [selectedLocation, onMapInstanceReset]);
+  }, [selectedLocation, mapRef, onMapInstanceReset]);
 };
