@@ -2,11 +2,11 @@
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
-import DrawingControls from './DrawingControls';
-import MarkersList from './MarkersList';
 import MapEvents from './MapEvents';
 import { LocationMarker } from '@/utils/marker-utils';
 import L from 'leaflet';
+import DrawingControlsContainer from './drawing/DrawingControlsContainer';
+import MarkersContainer from './marker/MarkersContainer';
 
 interface MapViewProps {
   position: [number, number];
@@ -61,13 +61,13 @@ const MapView = ({
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <AttributionControl position="bottomright" prefix={false} />
         
-        <DrawingControls 
-          onCreated={onShapeCreated}
+        <DrawingControlsContainer
+          onShapeCreated={onShapeCreated}
           activeTool={activeTool}
           onRegionClick={onRegionClick}
         />
         
-        <MarkersList
+        <MarkersContainer
           markers={markers}
           tempMarker={tempMarker}
           markerName={markerName}
