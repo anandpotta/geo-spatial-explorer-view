@@ -28,14 +28,16 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
   
   // Effect to update drawings whenever they change
   useEffect(() => {
-    if (!featureGroupRef.current || !savedDrawings.length) return;
+    if (!featureGroupRef.current) return;
     
     try {
-      // Give a short delay to ensure the feature group is initialized
-      setTimeout(() => {
-        if (!featureGroupRef.current) return;
-        
-        featureGroupRef.current.clearLayers();
+      console.log('Updating drawings in DrawingControls, count:', savedDrawings.length);
+      
+      // Clear existing layers
+      featureGroupRef.current.clearLayers();
+      
+      // Only add layers if we have drawings
+      if (savedDrawings.length > 0) {
         const markers = getSavedMarkers();
         
         savedDrawings.forEach(drawing => {
@@ -66,11 +68,34 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
             }
           }
         });
-      }, 300);
+      } else {
+        console.log('No drawings to display');
+      }
     } catch (err) {
       console.error('Error updating drawings:', err);
     }
   }, [savedDrawings, onRegionClick]);
+
+  // Listen for clearing events and handle them
+  useEffect(() => {
+    const handleClearEvent = () => {
+      console.log('Clear event received in DrawingControls');
+      if (featureGroupRef.current) {
+        console.log('Clearing all layers in feature group');
+        featureGroupRef.current.clearLayers();
+      }
+      
+      if (onClearAll) {
+        onClearAll();
+      }
+    };
+    
+    window.addEventListener('clearAllDrawings', handleClearEvent);
+    
+    return () => {
+      window.removeEventListener('clearAllDrawings', handleClearEvent);
+    };
+  }, [onClearAll]);
 
   // Listen for drawing tool activation events
   useEffect(() => {

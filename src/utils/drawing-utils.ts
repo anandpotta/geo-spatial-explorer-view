@@ -72,6 +72,17 @@ export function deleteDrawing(id: string): void {
   deleteDrawingFromBackend(id);
 }
 
+// New function to clear all drawings at once
+export function clearAllDrawings(): void {
+  localStorage.setItem('savedDrawings', JSON.stringify([]));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  
+  // Also tell backend to clear all drawings (optional, depending on your backend design)
+  clearAllDrawingsFromBackend();
+}
+
 async function syncDrawingsWithBackend(drawings: DrawingData[]): Promise<void> {
   try {
     const response = await fetch('/api/drawings/sync', {
@@ -121,5 +132,23 @@ async function deleteDrawingFromBackend(id: string): Promise<void> {
     console.log('Drawing successfully deleted from backend');
   } catch (error) {
     console.error('Error deleting drawing from backend:', error);
+  }
+}
+
+// New function to request clearing all drawings from the backend
+async function clearAllDrawingsFromBackend(): Promise<void> {
+  try {
+    const response = await fetch('/api/drawings/clear', {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to clear all drawings from backend');
+    }
+    
+    console.log('All drawings successfully cleared from backend');
+  } catch (error) {
+    console.error('Error clearing all drawings from backend:', error);
+    // Continue anyway since local storage is cleared
   }
 }

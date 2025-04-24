@@ -5,7 +5,7 @@ import DrawingToolButton from './drawing/DrawingToolButton';
 import MapControls from './drawing/MapControls';
 import ShapeTools from './drawing/ShapeTools';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
-import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
+import { deleteDrawing, getSavedDrawings, clearAllDrawings } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -57,21 +57,21 @@ const DrawingTools = ({
   const handleClearAll = () => {
     try {
       console.log("Clearing all layers...");
+      
+      // First, get all markers and drawings
       const markers = getSavedMarkers();
       const drawings = getSavedDrawings();
       
       console.log(`Found ${markers.length} markers and ${drawings.length} drawings to clear`);
 
-      // Clear all markers
+      // Clear all markers individually to trigger proper event handling
       markers.forEach(marker => {
         deleteMarker(marker.id);
       });
 
-      // Clear all drawings
-      drawings.forEach(drawing => {
-        deleteDrawing(drawing.id);
-      });
-
+      // Use the new clearAllDrawings utility function
+      clearAllDrawings();
+      
       // Clear local storage directly to ensure complete cleanup
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('savedDrawings');
