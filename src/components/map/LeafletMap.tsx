@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { setupLeafletIcons } from './LeafletMapIcons';
@@ -50,10 +50,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     }
   };
   
-  // Function to handle location selection
-  const handleLocationSelect = (position: [number, number]) => {
+  // Function to handle location selection from map clicks
+  const handleLocationSelect = (latlng: L.LatLng) => {
     if (onLocationSelect) {
-      onLocationSelect(position);
+      console.log('Map location selected:', latlng);
+      onLocationSelect([latlng.lat, latlng.lng]);
     }
   };
 
@@ -81,7 +82,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
           if (onMapReady) onMapReady(map);
         }}
         onLocationSelect={handleLocationSelect}
-        onMapClick={handleMapClick}
+        onMapClick={(latlng: L.LatLng) => {
+          handleMapClick(latlng);
+          handleLocationSelect(latlng);
+        }}
         onDeleteMarker={mapState.handleDeleteMarker}
         onSaveMarker={mapState.handleSaveMarker}
         setMarkerName={mapState.setMarkerName}

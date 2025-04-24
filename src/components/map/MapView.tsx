@@ -21,7 +21,7 @@ interface MapViewProps {
   markerName: string;
   markerType: 'pin' | 'area' | 'building';
   onMapReady: (map: L.Map) => void;
-  onLocationSelect: (position: [number, number]) => void;
+  onLocationSelect: (latlng: L.LatLng) => void;
   onMapClick: (latlng: L.LatLng) => void;
   onDeleteMarker: (id: string) => void;
   onSaveMarker: () => void;
@@ -73,7 +73,11 @@ const MapView = ({
   return (
     <div className="w-full h-full relative" style={{ background: '#f0f0f0' }}>
       <div className="absolute top-4 right-4 z-[1000]">
-        <SavedLocationsDropdown onLocationSelect={onLocationSelect} />
+        <SavedLocationsDropdown onLocationSelect={(position) => {
+          // Convert position to L.LatLng for consistency
+          const latlng = L.latLng(position[0], position[1]);
+          onLocationSelect(latlng);
+        }} />
       </div>
       
       <MapContainer 
