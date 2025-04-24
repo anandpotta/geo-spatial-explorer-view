@@ -60,9 +60,11 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Dispatch a custom event to notify components that markers have been updated
-  window.dispatchEvent(new CustomEvent('markersUpdated'));
+  // Ensure both events are dispatched
+  window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('markersUpdated'));
   
+  // Try to sync with backend
   deleteMarkerFromBackend(id);
 }
 
