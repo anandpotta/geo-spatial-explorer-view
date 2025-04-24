@@ -12,16 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+import DeleteLocationDialog from "@/components/saved-locations/DeleteLocationDialog";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
 import { deleteMarker } from "@/utils/marker-utils";
 
@@ -148,20 +139,13 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen}>
-        <AlertDialogContent onEscapeKeyDown={cancelDelete}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Location</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{markerToDelete?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteLocationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        markerToDelete={markerToDelete}
+        onConfirmDelete={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </>
   );
 };
