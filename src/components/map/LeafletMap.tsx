@@ -45,9 +45,16 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
         try {
-          // Remove the map instance more safely
-          if (mapRef.current && mapRef.current.remove && !mapRef.current._container._leaflet_id) {
-            mapRef.current.remove();
+          // Fix: Use proper type checking without accessing private properties
+          if (mapRef.current && mapRef.current.remove) {
+            // Check if the map is still valid before removing
+            try {
+              // Getting container will throw if map is already removed
+              mapRef.current.getContainer();
+              mapRef.current.remove();
+            } catch (e) {
+              console.log('Map already removed');
+            }
           }
         } catch (err) {
           console.error('Error cleaning up map:', err);
