@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
@@ -13,47 +13,33 @@ interface DrawToolsProps {
   onClearAll?: () => void;
 }
 
+// Use forwardRef to fix the ref warning
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
-  const editControlRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (!editControlRef.current || !activeTool) return;
+  // Instead of using refs, use event listeners to control tools
+  const handleDrawingActivation = useCallback(() => {
+    if (!activeTool) return;
     
-    const leafletElement = editControlRef.current.leafletElement;
-    if (!leafletElement || !leafletElement._modes) return;
-    
-    // Disable all active tools first
-    Object.keys(leafletElement._modes).forEach((mode) => {
-      if (leafletElement._modes[mode].handler && 
-          leafletElement._modes[mode].handler.enabled && 
-          leafletElement._modes[mode].handler.enabled()) {
-        try {
-          leafletElement._modes[mode].handler.disable();
-        } catch (err) {
-          console.warn('Error disabling drawing handler:', err);
-        }
-      }
+    // Dispatch custom event to activate drawing tools
+    const event = new CustomEvent('activateDrawingTool', { 
+      detail: { tool: activeTool } 
     });
-
+    window.dispatchEvent(event);
+    
+    // Show appropriate toast message
     const toolMessages = {
       polygon: "Click on map to start drawing polygon",
       marker: "Click on map to place marker",
       circle: "Click on map to draw circle",
       rectangle: "Click on map to draw rectangle"
     };
-
-    // Enable the requested tool if it exists
-    if (leafletElement._modes[activeTool] && leafletElement._modes[activeTool].handler) {
-      try {
-        leafletElement._modes[activeTool].handler.enable();
-        toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
-      } catch (err) {
-        console.warn('Error enabling drawing handler:', err);
-      }
-    }
+    
+    toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
   }, [activeTool]);
 
-  // Add an effect to handle the onClearAll prop
+  useEffect(() => {
+    handleDrawingActivation();
+  }, [activeTool, handleDrawingActivation]);
+
   useEffect(() => {
     const handleClearEvent = () => {
       if (onClearAll) {
@@ -61,7 +47,6 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }
     };
     
-    // Listen for a custom event that can be triggered by the clear all button
     window.addEventListener('clearAllDrawings', handleClearEvent);
     return () => {
       window.removeEventListener('clearAllDrawings', handleClearEvent);
@@ -109,7 +94,6 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
 
   return (
     <EditControl
-      ref={editControlRef}
       position="topright"
       onCreated={handleCreated}
       draw={{

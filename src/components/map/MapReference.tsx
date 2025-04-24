@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -10,39 +10,67 @@ interface MapReferenceProps {
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
   const hasCalledOnReady = useRef(false);
+  const [isMapReady, setIsMapReady] = useState(false);
   
   useEffect(() => {
-    // Only call onMapReady once per instance
-    if (map && onMapReady && !hasCalledOnReady.current) {
-      // Make sure the map is fully initialized before proceeding
-      if (!map.getContainer()) {
-        console.log('Map container not ready yet, waiting...');
-        return;
+    // Check if the map is initialized
+    const checkMapIsReady = () => {
+      try {
+        if (map && map.getContainer() && map._loaded) {
+          console.log('Map is confirmed ready with container and loaded status');
+          return true;
+        }
+      } catch (err) {
+        console.log('Map not yet ready:', err);
       }
-      
-      console.log('Map is ready, calling onMapReady');
-      hasCalledOnReady.current = true;
-      
-      // Add a longer delay to ensure the map is fully initialized
+      return false;
+    };
+    
+    // Only proceed if map exists and callback hasn't been called
+    if (map && onMapReady && !hasCalledOnReady.current) {
+      // First, invalidate size and let the map update with a delay
       setTimeout(() => {
         try {
-          // Double-check the map is still valid before proceeding
           if (map && map.getContainer()) {
-            onMapReady(map);
-          } else {
-            console.log('Map became invalid during initialization');
+            map.invalidateSize(true);
+            setIsMapReady(true);
           }
-        } catch (error) {
-          console.error('Error when calling onMapReady:', error);
+        } catch (err) {
+          console.error('Error during initial map invalidation:', err);
         }
-      }, 300); // Increased from 50ms to 300ms
+      }, 500);
     }
+  }, [map]);
+  
+  // Separate effect for calling onMapReady only after map is confirmed ready
+  useEffect(() => {
+    if (!isMapReady || hasCalledOnReady.current || !map) return;
     
-    // Clean up function
+    // Map is now ready, call onMapReady with a delay to ensure DOM is updated
+    const timer = setTimeout(() => {
+      try {
+        if (map && map.getContainer() && map._loaded) {
+          console.log('Map is ready, calling onMapReady');
+          hasCalledOnReady.current = true;
+          onMapReady(map);
+        } else {
+          console.log('Map not fully initialized yet, will retry');
+          setIsMapReady(false); // Reset to trigger another attempt
+        }
+      } catch (error) {
+        console.error('Error when calling onMapReady:', error);
+      }
+    }, 800);
+    
+    return () => clearTimeout(timer);
+  }, [map, onMapReady, isMapReady]);
+  
+  // Clean up function
+  useEffect(() => {
     return () => {
       hasCalledOnReady.current = false;
     };
-  }, [map, onMapReady]);
+  }, []);
   
   return null;
 };

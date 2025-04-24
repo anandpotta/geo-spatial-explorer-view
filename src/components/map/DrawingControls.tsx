@@ -26,45 +26,65 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const { savedDrawings } = useDrawings();
   
+  // Effect to update drawings whenever they change
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
     
     try {
-      featureGroupRef.current.clearLayers();
-      const markers = getSavedMarkers();
-      
-      savedDrawings.forEach(drawing => {
-        if (drawing.geoJSON) {
-          try {
-            const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
-            const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
-            
-            if (layer) {
-              layer.eachLayer((l: L.Layer) => {
-                if (l) {
-                  l.drawingId = drawing.id;
-                  
-                  if (onRegionClick) {
-                    l.on('click', () => {
-                      onRegionClick(drawing);
-                    });
-                  }
-                }
-              });
+      // Give a short delay to ensure the feature group is initialized
+      setTimeout(() => {
+        if (!featureGroupRef.current) return;
+        
+        featureGroupRef.current.clearLayers();
+        const markers = getSavedMarkers();
+        
+        savedDrawings.forEach(drawing => {
+          if (drawing.geoJSON) {
+            try {
+              const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
+              const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
               
-              if (featureGroupRef.current) {
-                layer.addTo(featureGroupRef.current);
+              if (layer) {
+                layer.eachLayer((l: L.Layer) => {
+                  if (l) {
+                    l.drawingId = drawing.id;
+                    
+                    if (onRegionClick) {
+                      l.on('click', () => {
+                        onRegionClick(drawing);
+                      });
+                    }
+                  }
+                });
+                
+                if (featureGroupRef.current) {
+                  layer.addTo(featureGroupRef.current);
+                }
               }
+            } catch (err) {
+              console.error('Error adding drawing layer:', err);
             }
-          } catch (err) {
-            console.error('Error adding drawing layer:', err);
           }
-        }
-      });
+        });
+      }, 300);
     } catch (err) {
       console.error('Error updating drawings:', err);
     }
   }, [savedDrawings, onRegionClick]);
+
+  // Listen for drawing tool activation events
+  useEffect(() => {
+    const handleDrawingToolActivation = (e: any) => {
+      // Implement tool activation logic if needed
+      console.log('Drawing tool activated:', e.detail?.tool);
+    };
+    
+    window.addEventListener('activateDrawingTool', handleDrawingToolActivation);
+    
+    return () => {
+      window.removeEventListener('activateDrawingTool', handleDrawingToolActivation);
+    };
+  }, []);
 
   // Add handler for clear all
   const handleClearAll = () => {
