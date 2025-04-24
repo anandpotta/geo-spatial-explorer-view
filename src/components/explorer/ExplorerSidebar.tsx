@@ -33,7 +33,7 @@ const ExplorerSidebar = () => {
     )}>
       <SidebarHeader />
       <div className={cn(
-        "transition-opacity duration-300",
+        "flex-1 overflow-auto transition-opacity duration-300",
         state === "expanded" ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
         <ExplorerTabs

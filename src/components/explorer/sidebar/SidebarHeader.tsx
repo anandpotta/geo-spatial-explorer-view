@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { Menu, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +25,7 @@ const SidebarHeader = () => {
           onClick={handleToggleClick}
           className="mr-2"
         >
-          <Menu size={24} />
+          {state === "expanded" ? <ChevronLeft size={24} /> : <ChevronRight size={24} />}
           <span className="sr-only">Toggle sidebar</span>
         </Button>
         <div className={cn(
