@@ -46,8 +46,8 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
         marker: true,
       }}
       edit={{
-        edit: true,  // Changed from {} back to boolean true to match expected type
-        remove: true, // Changed from {} back to boolean true to match expected type
+        edit: {}, // Changed to empty object to satisfy the type requirement
+        remove: {}, // Changed to empty object to satisfy the type requirement
         featureGroup: null, // Will be set internally by react-leaflet-draw
       }}
     />
