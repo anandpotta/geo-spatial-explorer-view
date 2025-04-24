@@ -17,32 +17,35 @@ export default function Earth({ onLocationSelect }) {
     specularMap: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05' // Good for specular highlights
   };
   
-  // Load textures using drei's useTexture hook with fallback handling
-  const textures = useTexture(texturePaths, 
-    () => {
-      console.log('Earth textures loaded successfully');
-      setTexturesLoaded(true);
-    },
-    (error) => {
-      console.error('Failed to load earth textures:', error);
-      setTextureError(true);
-    }
-  );
-  
-  // Apply texture settings after successful loading
+  // Load textures using drei's useTexture hook with proper options object
+  const textures = useTexture(texturePaths);
+
+  // Handle texture loading success or failure with useEffect
   useEffect(() => {
-    if (texturesLoaded && !textureError) {
-      try {
+    try {
+      // Check if textures are valid
+      const allValid = Object.values(textures).every(
+        (texture) => texture instanceof THREE.Texture && texture.image !== undefined
+      );
+      
+      if (allValid) {
+        console.log('Earth textures loaded successfully');
+        setTexturesLoaded(true);
+        
+        // Apply texture settings safely
         if (textures.bumpMap && textures.bumpMap instanceof THREE.Texture) {
           textures.bumpMap.wrapS = THREE.RepeatWrapping;
           textures.bumpMap.wrapT = THREE.RepeatWrapping;
         }
-      } catch (err) {
-        console.error('Error applying texture settings:', err);
+      } else {
+        console.error('One or more earth textures failed to load completely');
         setTextureError(true);
       }
+    } catch (err) {
+      console.error('Error applying texture settings:', err);
+      setTextureError(true);
     }
-  }, [texturesLoaded, textureError, textures]);
+  }, [textures]);
   
   // Rotate the earth on each frame
   useFrame(() => {
