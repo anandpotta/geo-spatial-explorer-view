@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,23 @@ interface FloorPlanViewProps {
 
 const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isPdf, setIsPdf] = useState<boolean>(false);
+  const [fileName, setFileName] = useState<string>("");
+  
+  // Check if there's a saved floor plan for this building in localStorage
+  useEffect(() => {
+    if (drawing?.id) {
+      const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+      if (savedFloorPlans[drawing.id]) {
+        const savedData = savedFloorPlans[drawing.id];
+        setSelectedImage(savedData.data);
+        setIsPdf(savedData.isPdf);
+        setFileName(savedData.fileName);
+        
+        console.log("Loaded saved floor plan:", savedData.fileName);
+      }
+    }
+  }, [drawing]);
   
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -22,11 +39,30 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       return;
     }
     
+    // Save file name and check if it's a PDF
+    setFileName(file.name);
+    setIsPdf(file.type.includes('pdf'));
+    
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result;
       if (result) {
-        setSelectedImage(result as string);
+        const dataUrl = result as string;
+        setSelectedImage(dataUrl);
+        
+        // Save to localStorage for this specific building
+        if (drawing?.id) {
+          const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+          savedFloorPlans[drawing.id] = {
+            data: dataUrl,
+            isPdf: file.type.includes('pdf'),
+            fileName: file.name,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
+          console.log("Saved floor plan to localStorage for building:", drawing.id);
+        }
+        
         toast.success('Floor plan uploaded successfully');
       }
     };
@@ -70,13 +106,25 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         {selectedImage ? (
           <div className="space-y-4 text-center max-w-[90%]">
             <h2 className="text-xl font-semibold">
-              {drawing?.properties?.name || 'Floor Plan View'}
+              {drawing?.properties?.name || 'Floor Plan View'} 
+              {fileName && <span className="text-sm font-normal ml-2 text-gray-500">({fileName})</span>}
             </h2>
-            <img
-              src={selectedImage}
-              alt="Floor Plan"
-              className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
-            />
+            
+            {isPdf ? (
+              <div className="w-full max-h-[75vh] overflow-hidden rounded-lg shadow-lg border border-gray-200">
+                <iframe 
+                  src={selectedImage} 
+                  className="w-full h-[70vh]" 
+                  title="PDF Floor Plan"
+                />
+              </div>
+            ) : (
+              <img
+                src={selectedImage}
+                alt="Floor Plan"
+                className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
+              />
+            )}
           </div>
         ) : (
           <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg bg-white/80">
