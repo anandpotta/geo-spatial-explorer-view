@@ -31,13 +31,15 @@ export default function GlobeView({ onLocationSelect }) {
         dpr={[1, 2]} // Responsive rendering for different device pixel ratios
       >
         <color attach="background" args={['#000']} />
-        <ambientLight intensity={0.2} />
-        <pointLight position={[10, 10, 5]} intensity={1} />
-        <pointLight position={[-10, -10, -5]} intensity={0.5} />
+        <ambientLight intensity={0.3} />
+        <pointLight position={[10, 10, 5]} intensity={1.5} />
+        <pointLight position={[-10, -10, -5]} intensity={0.8} />
+        {/* Add a subtle rim light for better depth */}
+        <pointLight position={[0, 0, -10]} intensity={0.5} color="#4080ff" />
         <Stars radius={300} depth={60} count={20000} factor={7} saturation={0} />
         <Suspense fallback={<EarthErrorFallback />}>
           <ErrorBoundary fallback={<EarthErrorFallback />}>
-            <Earth />
+            <Earth onLocationSelect={onLocationSelect} />
           </ErrorBoundary>
         </Suspense>
         <OrbitControls 
