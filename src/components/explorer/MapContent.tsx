@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
-import LeafletMap from '../map/LeafletMap'; 
+import LeafletMap from '../map/LeafletMap'; // Update the import path
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
@@ -91,20 +91,6 @@ const MapContent = ({
     }
   };
 
-  // Handler for map location selection
-  const handleMapLocationSelect = (position: [number, number]) => {
-    // Create a Location object from position coordinates
-    const location: Location = {
-      id: `loc-${position[0]}-${position[1]}`,
-      label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-      y: position[0],
-      x: position[1]
-    };
-    
-    // Pass it to the parent component
-    onLocationSelect(location);
-  };
-
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
@@ -145,7 +131,6 @@ const MapContent = ({
               selectedLocation={selectedLocation} 
               onMapReady={handleLeafletMapRef}
               activeTool={activeTool}
-              onLocationSelect={handleMapLocationSelect}
               key={`leaflet-${mapKey}`}
             />
           )}
