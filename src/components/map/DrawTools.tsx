@@ -1,11 +1,11 @@
 
 import { useEffect, useRef, forwardRef } from 'react';
-import { EditControl } from "react-leaflet-draw";
 import { useLeafletContext } from '@react-leaflet/core';
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
+import DrawToolsWrapper from './DrawToolsWrapper';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
@@ -14,7 +14,7 @@ interface DrawToolsProps {
   onClearAll?: () => void;
 }
 
-// The key fix: EditControl is a class component that expects a properly forwarded ref
+// The key fix: Using our wrapper component instead of directly using EditControl
 const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onClearAll }, ref) => {
   const context = useLeafletContext();
   const hasInitialized = useRef<boolean>(false);
@@ -132,10 +132,10 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
     return null;
   }
 
-  // The key fix: properly pass and handle the ref to EditControl
+  // The key fix: Using our DrawToolsWrapper component
   return (
     <div className="leaflet-draw-container">
-      <EditControl
+      <DrawToolsWrapper
         ref={(ecRef) => {
           editControlRef.current = ecRef;
           // Also pass the ref to the parent component if provided
