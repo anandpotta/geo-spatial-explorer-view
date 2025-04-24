@@ -1,6 +1,9 @@
 
-import { useState, useRef, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RefreshCcw } from 'lucide-react';
+import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
+import DrawingToolButton from './drawing/DrawingToolButton';
+import MapControls from './drawing/MapControls';
+import ShapeTools from './drawing/ShapeTools';
 
 interface Position {
   x: number;
@@ -8,63 +11,47 @@ interface Position {
 }
 
 interface DrawingToolsProps {
+  onToolSelect: (tool: string) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
 }
 
 const DrawingTools = ({ 
+  onToolSelect, 
   onZoomIn, 
   onZoomOut, 
   onReset 
 }: DrawingToolsProps) => {
+  const [activeTool, setActiveTool] = useState<string | null>(null);
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const dragStartRef = useRef<{x: number, y: number}>({ x: 0, y: 0 });
+  
+  const handleToolClick = (tool: string) => {
+    const newActiveTool = tool === activeTool ? null : tool;
+    setActiveTool(newActiveTool);
+    onToolSelect(tool);
+  };
 
   const handleMouseDown = (event: React.MouseEvent) => {
     setIsDragging(true);
-    dragStartRef.current = {
-      x: event.clientX - position.x,
-      y: event.clientY - position.y
-    };
   };
 
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (isDragging) {
-        const newX = event.clientX - dragStartRef.current.x;
-        const newY = event.clientY - dragStartRef.current.y;
-        
-        const toolbarWidth = toolbarRef.current?.offsetWidth || 100;
-        const toolbarHeight = toolbarRef.current?.offsetHeight || 100;
-        
-        setPosition({
-          x: Math.max(0, Math.min(window.innerWidth - toolbarWidth, newX)),
-          y: Math.max(0, Math.min(window.innerHeight - toolbarHeight, newY))
-        });
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
+  const handleMouseMove = (event: React.MouseEvent) => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      setPosition({
+        x: Math.max(0, Math.min(window.innerWidth - 100, position.x + event.movementX)),
+        y: Math.max(0, Math.min(window.innerHeight - 100, position.y + event.movementY))
+      });
     }
+  };
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, position]);
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
   
   return (
     <div 
-      ref={toolbarRef}
       className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move"
       style={{ 
         left: position.x,
@@ -72,35 +59,32 @@ const DrawingTools = ({
         zIndex: 20000,
         isolation: 'isolate',
         userSelect: 'none',
-        touchAction: 'none',
       }}
       onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
-      <div className="flex flex-col space-y-2">
-        <div className="grid grid-cols-1 gap-2">
-          <button
-            onClick={onZoomIn}
-            className="p-2 bg-white hover:bg-gray-100 rounded-md flex items-center justify-center"
-            title="Zoom In"
-          >
-            <ZoomIn size={18} />
-          </button>
-          <button
-            onClick={onZoomOut}
-            className="p-2 bg-white hover:bg-gray-100 rounded-md flex items-center justify-center"
-            title="Zoom Out"
-          >
-            <ZoomOut size={18} />
-          </button>
-          <button
-            onClick={onReset}
-            className="p-2 bg-white hover:bg-gray-100 rounded-md flex items-center justify-center"
-            title="Reset View"
-          >
-            <RefreshCcw size={18} />
-          </button>
-        </div>
-      </div>
+      <ShapeTools 
+        activeTool={activeTool} 
+        onToolSelect={handleToolClick} 
+      />
+      
+      <div className="h-4" />
+      
+      <MapControls 
+        onZoomIn={onZoomIn}
+        onZoomOut={onZoomOut}
+        onReset={onReset}
+      />
+      
+      <div className="h-4" />
+      
+      <DrawingToolButton
+        icon={Trash2}
+        label="Clear All"
+        onClick={() => handleToolClick('clear')}
+      />
     </div>
   );
 };

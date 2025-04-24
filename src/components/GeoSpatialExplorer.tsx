@@ -1,22 +1,19 @@
 
 import { useState, useEffect } from 'react';
-import { Location } from '@/utils/location/types';
+import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';
-import { Building } from '@/utils/building-utils';
-import { v4 as uuidv4 } from 'uuid';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
-  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
-  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium'); // Always start with cesium
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
   const { toast } = useToast();
   
+  // Effect to handle initial map load
   useEffect(() => {
     if (isMapReady) {
       console.log('Map is ready for interactions');
@@ -27,9 +24,7 @@ const GeoSpatialExplorer = () => {
     console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
     
-    setSelectedBuildingId(null);
-    setSelectedBuilding(null);
-    
+    // Always force cesium view when selecting a new location
     setCurrentView('cesium');
     setFlyCompleted(false);
     
@@ -44,6 +39,7 @@ const GeoSpatialExplorer = () => {
     console.log('Fly complete in Explorer, switching to leaflet view');
     setFlyCompleted(true);
     
+    // Short delay before switching to leaflet view for a smoother transition
     setTimeout(() => {
       setCurrentView('leaflet');
       toast({
@@ -55,75 +51,42 @@ const GeoSpatialExplorer = () => {
   };
   
   const handleSavedLocationSelect = (position: [number, number]) => {
+    // Create a simple location object from coordinates
     const location: Location = {
-      id: uuidv4(), // Generate unique ID for this location
+      id: `loc-${position[0]}-${position[1]}`,
       label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
       y: position[0],
       x: position[1]
     };
     
     setSelectedLocation(location);
-    setCurrentView('cesium');
+    setCurrentView('cesium'); // Start with Cesium view for the full experience
     setFlyCompleted(false);
-  };
-  
-  const handleBuildingSelect = (building: Building) => {
-    setSelectedBuildingId(building.id);
-    setSelectedBuilding(building);
-    
-    if (currentView !== 'leaflet') {
-      setCurrentView('cesium');
-      setFlyCompleted(false);
-      
-      // Make sure the building location has a valid id
-      if (building.location) {
-        // Create a complete location object with an id if it doesn't have one
-        const locationWithId: Location = {
-          id: building.location.id || uuidv4(),
-          label: building.location.label,
-          x: building.location.x,
-          y: building.location.y
-        };
-        
-        setSelectedLocation(locationWithId);
-      }
-      
-      toast({
-        title: 'Building selected',
-        description: `Navigating to ${building.name}`,
-        duration: 3000,
-      });
-    } else {
-      toast({
-        title: 'Building selected',
-        description: `${building.name} highlighted on map`,
-        duration: 3000,
-      });
-    }
   };
   
   return (
     <div className="w-full h-screen flex bg-black overflow-hidden">
+      {/* Left Panel */}
       <ExplorerSidebar 
         selectedLocation={selectedLocation}
-        selectedBuilding={selectedBuilding}
         currentView={currentView}
         flyCompleted={flyCompleted}
         setCurrentView={setCurrentView}
         onSavedLocationSelect={handleSavedLocationSelect}
-        onBuildingSelect={handleBuildingSelect}
       />
       
+      {/* Right Panel - Map View */}
       <div className="flex-1 relative bg-black">
+        {/* Map content */}
         <MapContent 
           currentView={currentView}
           selectedLocation={selectedLocation}
-          selectedBuildingId={selectedBuildingId}
           onMapReady={() => setIsMapReady(true)}
           onFlyComplete={handleFlyComplete}
           onLocationSelect={handleLocationSelect}
         />
         
+        {/* Sync status indicator */}
         <div className="absolute bottom-5 right-5 z-[10001]">
           <SyncStatusIndicator />
         </div>

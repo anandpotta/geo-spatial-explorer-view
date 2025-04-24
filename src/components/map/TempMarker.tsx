@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Marker } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
@@ -33,4 +34,3 @@ const TempMarker = ({
 };
 
 export default TempMarker;
-

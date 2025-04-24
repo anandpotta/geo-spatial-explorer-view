@@ -1,66 +1,86 @@
-
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
+import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import L from 'leaflet';
-import { useDrawingControls } from '@/hooks/useDrawingControls';
-import { useLayerStyles } from '@/hooks/useLayerStyles';
-import { getDrawingOptions, editOptions } from '@/config/drawingOptions';
-import { toast } from 'sonner';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
-  activeTool?: string | null;
-  selectedBuildingId?: string | null;
+  activeTool: string | null;
 }
 
-const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingControlsProps) => {
-  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
-  const { drawControl, drawnLayers, setDrawnLayers, editControlRef } = useDrawingControls(activeTool);
-  useLayerStyles(selectedBuildingId, drawnLayers);
+const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
+  const editControlRef = useRef<any>(null);
+  
+  useEffect(() => {
+    if (!editControlRef.current || !activeTool) return;
+    
+    const leafletElement = editControlRef.current.leafletElement;
+    if (!leafletElement) return;
+    
+    Object.keys(leafletElement._modes).forEach((mode) => {
+      if (leafletElement._modes[mode].handler.enabled()) {
+        leafletElement._modes[mode].handler.disable();
+      }
+    });
+
+    if (activeTool === 'polygon' && leafletElement._modes.polygon) {
+      leafletElement._modes.polygon.handler.enable();
+      toast.info("Click on map to start drawing polygon");
+    } else if (activeTool === 'marker' && leafletElement._modes.marker) {
+      leafletElement._modes.marker.handler.enable();
+      toast.info("Click on map to place marker");
+    } else if (activeTool === 'circle' && leafletElement._modes.circle) {
+      leafletElement._modes.circle.handler.enable();
+      toast.info("Click on map to draw circle");
+    } else if (activeTool === 'rectangle' && leafletElement._modes.rectangle) {
+      leafletElement._modes.rectangle.handler.enable();
+      toast.info("Click on map to draw rectangle");
+    }
+  }, [activeTool]);
 
   return (
-    <FeatureGroup ref={featureGroupRef}>
+    <FeatureGroup>
       <EditControl
         ref={editControlRef}
-        position="topleft"
+        position="topright"
         onCreated={e => {
-          try {
-            const { layerType, layer } = e;
-            const id = uuidv4();
+          const { layerType, layer } = e;
+          
+          const id = uuidv4();
+          
+          if (layerType === 'marker' && 'getLatLng' in layer) {
+            const markerLayer = layer as L.Marker;
+            const { lat, lng } = markerLayer.getLatLng();
+            onCreated({ type: 'marker', position: [lat, lng], id });
+          } else {
+            const layerWithOptions = layer as L.Path;
+            const options = layerWithOptions.options || {};
             
-            if ('setStyle' in layer) {
-              layer.setStyle({
-                color: '#1EAEDB',
-                weight: 3,
-                opacity: 1,
-                fillColor: '#D3E4FD',
-                fillOpacity: 0.5
-              });
-            }
-
-            const options = (layer as any).options || {};
-            options.id = id;
-            options.isDrawn = true;
-            options.buildingId = id;
-
-            setDrawnLayers(prev => ({
-              ...prev,
-              [id]: layer
-            }));
-
+            (options as any).id = id;
+            (options as any).isDrawn = true;
+            
             const geoJSON = layer.toGeoJSON();
-            console.log('Created shape:', layerType, geoJSON);
+            console.log('GeoJSON:', geoJSON);
+            
             toast.success(`${layerType} created successfully`);
-            onCreated({ type: layerType, layer, geoJSON, id });
-          } catch (error) {
-            console.error('Error creating shape:', error);
-            toast.error('Failed to create shape');
+            onCreated({ 
+              type: layerType, 
+              layer, 
+              geoJSON,
+              id
+            });
           }
         }}
-        draw={getDrawingOptions(activeTool)}
-        edit={editOptions}
+        draw={{
+          rectangle: true,
+          polygon: true,
+          circle: true,
+          circlemarker: false,
+          marker: true,
+          polyline: false
+        }}
       />
     </FeatureGroup>
   );

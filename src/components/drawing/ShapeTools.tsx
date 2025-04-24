@@ -1,5 +1,5 @@
 
-import { MapPin, Square, Circle, Pentagon } from 'lucide-react';
+import { MapPin, Square, Circle } from 'lucide-react';
 import DrawingToolButton from './DrawingToolButton';
 
 interface ShapeToolsProps {
@@ -9,7 +9,7 @@ interface ShapeToolsProps {
 
 const ShapeTools = ({ activeTool, onToolSelect }: ShapeToolsProps) => {
   return (
-    <div className="flex flex-col gap-2 bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md">
+    <div className="flex flex-col gap-2">
       <DrawingToolButton
         icon={MapPin}
         label="Add Marker"
@@ -17,16 +17,10 @@ const ShapeTools = ({ activeTool, onToolSelect }: ShapeToolsProps) => {
         onClick={() => onToolSelect('marker')}
       />
       <DrawingToolButton
-        icon={Pentagon}
+        icon={Square}
         label="Draw Polygon"
         isActive={activeTool === 'polygon'}
         onClick={() => onToolSelect('polygon')}
-      />
-      <DrawingToolButton
-        icon={Square}
-        label="Draw Rectangle"
-        isActive={activeTool === 'rectangle'}
-        onClick={() => onToolSelect('rectangle')}
       />
       <DrawingToolButton
         icon={Circle}

@@ -1,133 +1,129 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
-import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
+import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { Location } from '@/utils/location/types';
+import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
+import { v4 as uuidv4 } from 'uuid';
 import { setupLeafletIcons } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
-import MarkersList from './map/markers/MarkersList';
-import BuildingDialog from './map/buildings/BuildingDialog';
-import ShapeTools from './drawing/ShapeTools';
-import { useMapState } from '@/hooks/useMapState';
-import { MapLayers } from './map/layers/MapLayers';
-import { MapInitializer } from './map/MapInitializer';
-import { useMarkers } from '@/hooks/useMarkers';
-import { useDrawing } from '@/hooks/useDrawing';
+import MarkersList from './map/MarkersList';
 import { useMapEvents } from '@/hooks/useMapEvents';
-import { getAllSavedBuildings } from '@/utils/building-utils';
 import { toast } from 'sonner';
 
-// Initialize Leaflet icons
+// Initialize leaflet icons
 setupLeafletIcons();
 
 interface LeafletMapProps {
   selectedLocation?: Location;
   onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
-  selectedBuildingId?: string | null;
 }
 
-const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuildingId }: LeafletMapProps) => {
+const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
+  const [position, setPosition] = useState<[number, number]>(
+    selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
+  );
+  const [zoom, setZoom] = useState(18);
+  const [markers, setMarkers] = useState<LocationMarker[]>([]);
+  const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
+  const [markerName, setMarkerName] = useState('');
+  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
   const mapRef = useRef<L.Map | null>(null);
-  const { position, zoom } = useMapState(selectedLocation);
-  const [localActiveTool, setLocalActiveTool] = useState<string | null>(activeTool || null);
   
-  const {
-    markers,
-    tempMarker,
-    markerName,
-    markerType,
-    setMarkerName,
-    setMarkerType,
-    handleSaveMarker,
-    handleDeleteMarker,
-    handleMapClick
-  } = useMarkers();
+  // Load saved markers when the component mounts
+  useEffect(() => {
+    const loadedMarkers = getSavedMarkers();
+    if (loadedMarkers && loadedMarkers.length > 0) {
+      setMarkers(loadedMarkers);
+    }
+  }, []);
 
-  const {
-    showDrawingDialog,
-    setShowDrawingDialog,
-    currentDrawing,
-    drawingName,
-    setDrawingName,
-    handleCreatedShape,
-    handleSaveDrawing,
-    setCurrentDrawing
-  } = useDrawing();
+  // Connect to map events for location changes
+  useMapEvents(mapRef.current, selectedLocation);
+
+  const handleMapClick = (latlng: L.LatLng) => {
+    // Only handle map clicks for creating markers if the polygon tool isn't active
+    if (activeTool === 'marker' || (!activeTool && !tempMarker)) {
+      setTempMarker([latlng.lat, latlng.lng]);
+      setMarkerName(selectedLocation?.label || 'New Building');
+    }
+  };
+
+  const handleShapeCreated = (shape: any) => {
+    console.log("Shape created:", shape);
+    
+    if (shape.type === 'marker') {
+      setTempMarker(shape.position);
+      setMarkerName('New Marker');
+    } else {
+      // For shapes like polygons, circles, etc.
+      toast.success(`${shape.type} created - Click to tag this building`);
+      
+      // You could save the shape data here
+      // saveShape({
+      //   id: shape.id,
+      //   type: shape.type,
+      //   geoJSON: shape.geoJSON,
+      //   name: `New ${shape.type}`,
+      //   createdAt: new Date()
+      // });
+    }
+  };
+
+  const handleSaveMarker = () => {
+    if (!tempMarker || !markerName.trim()) return;
+    
+    const newMarker: LocationMarker = {
+      id: uuidv4(),
+      name: markerName,
+      position: tempMarker,
+      type: markerType,
+      createdAt: new Date()
+    };
+    
+    saveMarker(newMarker);
+    setMarkers([...markers, newMarker]);
+    setTempMarker(null);
+    setMarkerName('');
+    toast.success("Location saved successfully");
+  };
+
+  const handleDeleteMarker = (id: string) => {
+    deleteMarker(id);
+    setMarkers(markers.filter(marker => marker.id !== id));
+    toast.success("Location removed");
+  };
 
   const handleSetMapRef = (map: L.Map) => {
-    console.log('Map reference set:', map);
     mapRef.current = map;
     if (onMapReady) {
       onMapReady(map);
     }
-  };
-
-  // Use the map events hook
-  useMapEvents(mapRef.current, selectedLocation);
-
-  // Effect to fly to building location if selectedBuildingId changes
-  useEffect(() => {
-    if (selectedBuildingId && mapRef.current) {
-      const buildings = getAllSavedBuildings();
-      const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
-      
-      if (selectedBuilding && selectedBuilding.location) {
-        console.log('Flying to building:', selectedBuilding.name);
-        mapRef.current.flyTo(
-          [selectedBuilding.location.y, selectedBuilding.location.x], 
-          18, 
-          { animate: true, duration: 1 }
-        );
-        
-        toast.success(`Viewing: ${selectedBuilding.name}`);
-      }
+    if (selectedLocation) {
+      map.flyTo([selectedLocation.y, selectedLocation.x], 18);
     }
-  }, [selectedBuildingId]);
-
-  // Update local tool state when prop changes
-  React.useEffect(() => {
-    setLocalActiveTool(activeTool || null);
-  }, [activeTool]);
-
-  const handleToolSelect = (tool: string) => {
-    console.log('Tool selected:', tool);
-    setLocalActiveTool(prev => prev === tool ? null : tool);
   };
 
   return (
     <div className="w-full h-full relative">
       <MapContainer 
-        className="w-full h-full z-0"
+        className="w-full h-full"
         attributionControl={false}
         center={position}
         zoom={zoom}
-        zoomControl={false}
-        style={{ zIndex: 0 }}
       >
         <MapReference onMapReady={handleSetMapRef} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <AttributionControl position="bottomright" prefix={false} />
         
-        {mapRef.current && (
-          <>
-            <MapLayers map={mapRef.current} />
-            <MapInitializer 
-              map={mapRef.current}
-              selectedLocation={selectedLocation}
-              onMapReady={onMapReady}
-            />
-          </>
-        )}
-        
+        {/* Drawing controls with active tool passed down */}
         <DrawingControls 
-          onCreated={handleCreatedShape}
-          activeTool={localActiveTool || null}
-          selectedBuildingId={selectedBuildingId}
+          onCreated={handleShapeCreated} 
+          activeTool={activeTool || null}
         />
         
         <MarkersList
@@ -141,28 +137,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
           setMarkerType={setMarkerType}
         />
         
-        <MapEvents onMapClick={(latlng) => handleMapClick(latlng, localActiveTool)} />
+        <MapEvents onMapClick={handleMapClick} />
       </MapContainer>
 
-      <div className="absolute right-4 top-4 z-[10001]">
-        <ShapeTools 
-          activeTool={localActiveTool} 
-          onToolSelect={handleToolSelect}
-        />
-      </div>
-
-      {showDrawingDialog && (
-        <BuildingDialog
-          show={showDrawingDialog}
-          buildingName={drawingName}
-          onBuildingNameChange={setDrawingName}
-          onSave={handleSaveDrawing}
-          onCancel={() => {
-            setShowDrawingDialog(false);
-            setCurrentDrawing(null);
-          }}
-        />
-      )}
+      {/* Remove the duplicate instruction box, since we're using the main drawing tools */}
     </div>
   );
 };

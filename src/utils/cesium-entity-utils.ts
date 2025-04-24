@@ -1,6 +1,6 @@
 
 import * as Cesium from 'cesium';
-import { Location } from './location/types';
+import { Location } from './geo-utils';
 
 /**
  * Creates a marker entity at the specified location

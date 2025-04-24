@@ -1,18 +1,16 @@
+
 import React, { useRef, useState } from 'react';
-import { Location } from '@/utils/location/types';
+import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
 import LeafletMap from '../LeafletMap';
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
-import ShapeTools from '../drawing/ShapeTools';
-import LocationDropdown from '../map/LocationDropdown';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
   selectedLocation: Location | undefined;
-  selectedBuildingId?: string | null;
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
@@ -21,7 +19,6 @@ interface MapContentProps {
 const MapContent = ({ 
   currentView, 
   selectedLocation, 
-  selectedBuildingId,
   onMapReady, 
   onFlyComplete,
   onLocationSelect 
@@ -65,7 +62,27 @@ const MapContent = ({
   };
 
   const handleToolSelect = (tool: string) => {
-    setActiveTool(prev => prev === tool ? null : tool);
+    console.log(`Tool selected: ${tool}`);
+    setActiveTool(tool === activeTool ? null : tool);
+    
+    if (currentView === 'cesium') {
+      if (tool === 'clear') {
+        toast.info('Clearing all shapes');
+      }
+    } else if (currentView === 'leaflet') {
+      if (tool === 'clear' && leafletMapRef.current) {
+        const layers = leafletMapRef.current._layers;
+        if (layers) {
+          Object.keys(layers).forEach(layerId => {
+            const layer = layers[layerId];
+            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+              leafletMapRef.current.removeLayer(layer);
+            }
+          });
+          toast.info('All shapes cleared');
+        }
+      }
+    }
   };
 
   return (
@@ -106,41 +123,22 @@ const MapContent = ({
             selectedLocation={selectedLocation} 
             onMapReady={handleLeafletMapRef}
             activeTool={activeTool}
-            selectedBuildingId={selectedBuildingId}
           />
         </div>
         
         <DrawingTools 
+          onToolSelect={handleToolSelect}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
         />
-
-        {currentView === 'leaflet' && (
-          <div className="absolute right-4 top-20 z-[10000] flex flex-col gap-4">
-            <LocationDropdown 
-              onSelect={(building) => {
-                if (onLocationSelect) {
-                  onLocationSelect({
-                    id: building.location.id,
-                    label: building.name,
-                    x: building.location.x,
-                    y: building.location.y
-                  });
-                }
-              }}
-            />
-            <ShapeTools 
-              activeTool={activeTool} 
-              onToolSelect={handleToolSelect} 
-            />
-          </div>
-        )}
       </div>
       
       <div 
         className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
-        style={{ maxWidth: '400px' }}
+        style={{ 
+          maxWidth: '400px',
+        }}
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>

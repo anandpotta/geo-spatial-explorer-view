@@ -1,163 +1,121 @@
 
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, MapPin, Map, Layers, UserRoundSearch, X } from 'lucide-react';
-import { Location } from '@/utils/location/types';
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React from 'react';
+import { Location } from '@/utils/geo-utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Globe2, Map as MapIcon, Bookmark } from 'lucide-react';
 import SavedLocations from '../SavedLocations';
-import SavedBuildings from '../SavedBuildings';
-import { Building } from '@/utils/building-utils';
-import { formatDistanceToNow } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
 
 interface ExplorerSidebarProps {
-  selectedLocation?: Location;
-  selectedBuilding?: Building | null;
+  selectedLocation: Location | undefined;
   currentView: 'cesium' | 'leaflet';
   flyCompleted: boolean;
   setCurrentView: (view: 'cesium' | 'leaflet') => void;
   onSavedLocationSelect: (position: [number, number]) => void;
-  onBuildingSelect: (building: Building) => void;
 }
 
-const ExplorerSidebar = ({ 
-  selectedLocation, 
-  selectedBuilding,
-  currentView, 
-  flyCompleted, 
+const ExplorerSidebar = ({
+  selectedLocation,
+  currentView,
+  flyCompleted,
   setCurrentView,
-  onSavedLocationSelect,
-  onBuildingSelect
+  onSavedLocationSelect
 }: ExplorerSidebarProps) => {
-  const [tab, setTab] = useState<string>("locations");
-  
-  const handleMapViewToggle = (view: 'cesium' | 'leaflet') => {
-    setCurrentView(view);
-  };
-  
-  const handleBuildingSelect = (location: { id?: string, x: number, y: number, label: string, name: string }) => {
-    const locationId = location.id || uuidv4();
-    
-    const buildingObj: Building = {
-      id: uuidv4(),
-      name: location.name,
-      locationKey: `${location.y}-${location.x}`,
-      location: {
-        id: locationId,
-        label: location.label,
-        x: location.x,
-        y: location.y
-      },
-      createdAt: new Date(),
-      type: 'polygon',
-      geoJSON: {}
-    };
-    
-    onBuildingSelect(buildingObj);
-  };
-  
   return (
-    <div className="w-80 bg-background border-r border-border flex flex-col shrink-0 h-screen">
+    <div className="w-96 h-full bg-card border-r overflow-hidden flex flex-col">
       <div className="p-4 border-b">
-        <h1 className="text-xl font-bold">GeoSpatial Explorer</h1>
-        <p className="text-muted-foreground text-sm">3D mapping and annotation</p>
+        <h1 className="text-2xl font-bold">GeoSpatial Explorer</h1>
+        <p className="text-muted-foreground">Search, navigate and mark locations</p>
       </div>
       
-      {/* MapView Toggle */}
-      <div className="p-4 border-b">
-        <div className="flex space-x-2">
-          <Button
-            variant={currentView === 'cesium' ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => handleMapViewToggle('cesium')}
-          >
-            <Map className="mr-1 h-4 w-4" />
-            3D View
-          </Button>
-          <Button
-            variant={currentView === 'leaflet' ? "default" : "outline"}
-            size="sm"
-            className="flex-1"
-            onClick={() => handleMapViewToggle('leaflet')}
-          >
-            <Layers className="mr-1 h-4 w-4" />
-            Drawing
-          </Button>
+      <Tabs defaultValue="search" className="flex-1 flex flex-col">
+        <div className="border-b px-4">
+          <TabsList className="w-full">
+            <TabsTrigger value="search" className="flex-1">
+              <MapIcon size={16} className="mr-2" /> Search
+            </TabsTrigger>
+            <TabsTrigger value="saved" className="flex-1">
+              <Bookmark size={16} className="mr-2" /> Saved
+            </TabsTrigger>
+          </TabsList>
         </div>
-      </div>
-      
-      {/* Selected Building Info */}
-      {selectedBuilding && (
-        <div className="p-4 border-b bg-accent/20">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-medium flex items-center">
-              <Building2 className="mr-1 h-4 w-4" /> Selected Building
-            </h2>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6"
-              onClick={() => onBuildingSelect({ ...selectedBuilding, id: '' })} // Clear selection
-            >
-              <X size={14} />
-            </Button>
-          </div>
-          <p className="text-sm font-semibold">{selectedBuilding.name}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {selectedBuilding.location.label}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Created {formatDistanceToNow(selectedBuilding.createdAt, { addSuffix: true })}
-          </p>
-        </div>
-      )}
-      
-      {/* Location Info */}
-      {selectedLocation && !selectedBuilding && (
-        <div className="p-4 border-b">
-          <h2 className="text-sm font-medium mb-1">Selected Location</h2>
-          <p className="text-sm font-semibold">{selectedLocation.label}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {selectedLocation.y.toFixed(6)}, {selectedLocation.x.toFixed(6)}
-          </p>
-        </div>
-      )}
-      
-      {/* Tabs for different saved items */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Tabs defaultValue={tab} value={tab} onValueChange={setTab} className="flex-1 flex flex-col">
-          <div className="px-4 pt-4">
-            <TabsList className="w-full">
-              <TabsTrigger value="locations" className="flex-1">
-                <MapPin className="mr-1 h-4 w-4" />
-                Locations
-              </TabsTrigger>
-              <TabsTrigger value="buildings" className="flex-1">
-                <Building2 className="mr-1 h-4 w-4" />
-                Buildings
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          
-          <TabsContent value="locations" className="flex-1 pt-4 px-2 overflow-hidden">
-            <SavedLocations onLocationSelect={onSavedLocationSelect} />
-          </TabsContent>
-          
-          <TabsContent value="buildings" className="flex-1 pt-4 px-2 overflow-hidden">
-            <SavedBuildings onBuildingSelect={handleBuildingSelect} />
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      {/* Search Prompt */}
-      <div className="p-4 bg-muted/50 border-t">
-        <div className="flex items-center text-sm text-muted-foreground">
-          <UserRoundSearch className="h-5 w-5 mr-2" />
-          <p>Search for a location to start exploring</p>
-        </div>
-      </div>
+        
+        <TabsContent value="search" className="flex-1 p-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Location Search</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Enter a location to search. The map will navigate from space to your destination.
+                </p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Enter a location..."
+                    className="w-full p-2 border rounded"
+                    onChange={(e) => {
+                      // This is just a placeholder UI element
+                      // The actual search is handled by the LocationSearch component
+                    }}
+                  />
+                  <Button 
+                    size="sm"
+                    className="absolute right-1 top-1"
+                  >
+                    Search
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="font-medium">Current View</h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant={currentView === 'cesium' ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setCurrentView('cesium')}
+                  >
+                    <Globe2 size={16} className="mr-2" /> 3D Globe
+                  </Button>
+                  <Button
+                    variant={currentView === 'leaflet' ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setCurrentView('leaflet')}
+                    disabled={!flyCompleted && !selectedLocation}
+                  >
+                    <MapIcon size={16} className="mr-2" /> Map View
+                  </Button>
+                </div>
+              </div>
+              
+              {selectedLocation && (
+                <div className="mt-4 p-3 bg-accent rounded-md">
+                  <h3 className="font-medium">{selectedLocation.label}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Lat: {selectedLocation.y.toFixed(6)}, Lng: {selectedLocation.x.toFixed(6)}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="saved" className="flex-1 p-4">
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Saved Locations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SavedLocations onLocationSelect={onSavedLocationSelect} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

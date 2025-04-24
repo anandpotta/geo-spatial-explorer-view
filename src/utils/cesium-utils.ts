@@ -1,6 +1,6 @@
 
 import * as Cesium from 'cesium';
-import { Location } from './location/types';
+import { Location } from './geo-utils';
 import { createLocationEntity, removeEntity } from './cesium-entity-utils';
 import { flyToLocation as flyCameraToLocation, CameraFlightOptions } from './cesium-camera';
 

@@ -2,9 +2,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { syncLocalDataWithBackend, checkBackendAvailability } from '@/utils/api-client';
 
-// Force offline mode
-const OFFLINE_MODE = true;
-
 interface ApiSyncContextType {
   isOnline: boolean;
   isSyncing: boolean;
@@ -15,15 +12,13 @@ interface ApiSyncContextType {
 const ApiSyncContext = createContext<ApiSyncContextType | undefined>(undefined);
 
 export const ApiSyncProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isOnline, setIsOnline] = useState<boolean>(!OFFLINE_MODE && navigator.onLine);
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [backendAvailable, setBackendAvailable] = useState<boolean>(false);
 
-  // Monitor online status (only when not in forced offline mode)
+  // Monitor online status
   useEffect(() => {
-    if (OFFLINE_MODE) return;
-    
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -36,10 +31,8 @@ export const ApiSyncProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   }, []);
 
-  // Check backend availability (only when not in forced offline mode)
+  // Check backend availability
   useEffect(() => {
-    if (OFFLINE_MODE) return;
-    
     if (isOnline) {
       const checkBackend = async () => {
         const available = await checkBackendAvailability();
@@ -55,19 +48,21 @@ export const ApiSyncProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [isOnline]);
 
-  // Don't perform periodic sync in offline mode
+  // Periodic sync when online and backend is available
   useEffect(() => {
-    if (OFFLINE_MODE || !isOnline || !backendAvailable || isSyncing) return;
+    if (!isOnline || !backendAvailable) return;
 
     const syncInterval = setInterval(() => {
-      syncNow();
+      if (!isSyncing) {
+        syncNow();
+      }
     }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(syncInterval);
   }, [isOnline, backendAvailable, isSyncing]);
 
   const syncNow = async () => {
-    if (OFFLINE_MODE || !isOnline || !backendAvailable || isSyncing) return;
+    if (!isOnline || !backendAvailable || isSyncing) return;
     
     setIsSyncing(true);
     try {
@@ -81,12 +76,7 @@ export const ApiSyncProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   return (
-    <ApiSyncContext.Provider value={{ 
-      isOnline: !OFFLINE_MODE && isOnline, 
-      isSyncing, 
-      lastSynced, 
-      syncNow 
-    }}>
+    <ApiSyncContext.Provider value={{ isOnline, isSyncing, lastSynced, syncNow }}>
       {children}
     </ApiSyncContext.Provider>
   );
