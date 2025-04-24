@@ -17,6 +17,3 @@ export {
   syncLocalDataWithBackend,
   checkBackendAvailability
 } from '@/services/sync-service';
-
-// Export the forwardRef wrapper utility
-export { forwardRefWrapper } from '@/utils/forward-ref-wrapper';

@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -47,10 +46,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        // Ensure the button is always reachable by assistive technology
-        tabIndex={props.disabled ? -1 : props.tabIndex || 0}
-        // Explicitly remove any aria-hidden attribute to prevent accessibility issues
-        aria-hidden={undefined}
         {...props}
       />
     )
