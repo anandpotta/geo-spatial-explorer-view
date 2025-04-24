@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react';
-import { LocationMarker, getSavedMarkers, deleteMarker, deleteDrawing } from '@/utils/marker-utils';
+import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
+import { deleteDrawing } from '@/utils/drawing-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
