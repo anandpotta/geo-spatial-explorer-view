@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { Location, searchLocations } from '@/utils/geo-utils';
+import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, X, Navigation } from 'lucide-react';
+import { Loader2, Search, X, Navigation, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 interface LocationSearchProps {
@@ -16,16 +16,61 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if we're online or offline
+    setIsOfflineMode(!navigator.onLine);
+    
+    const handleOnlineStatusChange = () => {
+      setIsOfflineMode(!navigator.onLine);
+    };
+    
+    window.addEventListener('online', handleOnlineStatusChange);
+    window.addEventListener('offline', handleOnlineStatusChange);
+    
+    return () => {
+      window.removeEventListener('online', handleOnlineStatusChange);
+      window.removeEventListener('offline', handleOnlineStatusChange);
+    };
+  }, []);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (query.length >= 3) {
         setIsLoading(true);
-        const locations = await searchLocations(query);
-        setResults(locations);
-        setIsLoading(false);
-        setShowResults(true);
+        try {
+          const locations = await searchLocations(query);
+          setResults(locations);
+          setShowResults(true);
+          
+          if (locations.length === 0) {
+            toast({
+              title: "No results found",
+              description: "Try a different search term",
+              duration: 3000,
+            });
+          }
+          
+          if (isOfflineMode && locations.length > 0) {
+            toast({
+              title: "Using offline data",
+              description: "Limited locations are available in offline mode",
+              duration: 3000,
+            });
+          }
+        } catch (error) {
+          console.error("Error during search:", error);
+          toast({
+            title: "Search error",
+            description: "Could not complete the search request",
+            variant: "destructive",
+            duration: 3000,
+          });
+        } finally {
+          setIsLoading(false);
+        }
       } else {
         setResults([]);
         setShowResults(false);
@@ -33,7 +78,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query]);
+  }, [query, isOfflineMode, toast]);
 
   const handleSelect = (location: Location) => {
     console.log('Location selected in search component:', location);
@@ -60,7 +105,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedLocation) {
-      console.log('Submitting selected location:', selectedLocation);
       onLocationSelect(selectedLocation);
       
       toast({
@@ -69,7 +113,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         duration: 3000,
       });
     } else if (results.length > 0) {
-      console.log('Submitting first result:', results[0]);
       handleSelect(results[0]);
     } else if (query.length >= 3) {
       setIsLoading(true);
@@ -84,12 +127,27 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
             variant: "destructive"
           });
         }
+      }).catch(error => {
+        setIsLoading(false);
+        toast({
+          title: "Search error",
+          description: "Could not complete the search request",
+          variant: "destructive",
+          duration: 3000,
+        });
       });
     }
   };
 
   return (
     <div className="w-full p-2 z-[10000] bg-background rounded-md shadow-lg">
+      {isOfflineMode && (
+        <div className="mb-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-sm flex items-center rounded">
+          <AlertCircle className="mr-2 h-4 w-4" />
+          <span>Working in offline mode. Limited search results available.</span>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className="relative">
         <div className="flex gap-2">
           <div className="relative flex-1">

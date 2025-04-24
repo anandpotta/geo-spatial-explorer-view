@@ -12,10 +12,50 @@ export interface Location {
 // Initialize the provider
 const provider = new OpenStreetMapProvider();
 
-// Search for locations
+// Sample offline locations data for fallback
+const offlineLocations = [
+  {
+    id: "offline-1",
+    label: "New York City, NY, USA",
+    x: -74.0060,
+    y: 40.7128,
+    raw: { place_id: "offline-1", display_name: "New York City, NY, USA" }
+  },
+  {
+    id: "offline-2",
+    label: "Los Angeles, CA, USA",
+    x: -118.2437,
+    y: 34.0522,
+    raw: { place_id: "offline-2", display_name: "Los Angeles, CA, USA" }
+  },
+  {
+    id: "offline-3",
+    label: "London, United Kingdom",
+    x: -0.1278,
+    y: 51.5074,
+    raw: { place_id: "offline-3", display_name: "London, United Kingdom" }
+  },
+  {
+    id: "offline-4",
+    label: "Tokyo, Japan",
+    x: 139.6503,
+    y: 35.6762,
+    raw: { place_id: "offline-4", display_name: "Tokyo, Japan" }
+  },
+  {
+    id: "offline-5",
+    label: "Sydney, Australia",
+    x: 151.2093,
+    y: -33.8688,
+    raw: { place_id: "offline-5", display_name: "Sydney, Australia" }
+  },
+];
+
+// Search for locations with offline fallback
 export async function searchLocations(query: string): Promise<Location[]> {
   if (!query || query.length < 3) return [];
   
+  // First try online search
   try {
     const results = await provider.search({ query });
     
@@ -28,7 +68,16 @@ export async function searchLocations(query: string): Promise<Location[]> {
     }));
   } catch (error) {
     console.error('Error searching for locations:', error);
-    return [];
+    
+    // Fallback to offline search when network request fails
+    console.log('Using offline location data as fallback');
+    
+    // Simple filter for offline data
+    const filteredLocations = offlineLocations.filter(location => 
+      location.label.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    return filteredLocations;
   }
 }
 
