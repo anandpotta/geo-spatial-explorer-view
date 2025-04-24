@@ -156,3 +156,19 @@ async function deleteMarkerFromBackend(id: string): Promise<void> {
     console.error('Error deleting marker from backend:', error);
   }
 }
+
+export function createMarker(markerData: Partial<LocationMarker>): LocationMarker {
+  const marker: LocationMarker = {
+    id: markerData.id || crypto.randomUUID(),
+    name: markerData.name || 'Unnamed Location',
+    position: markerData.position || [0, 0],
+    type: markerData.type || 'pin',
+    description: markerData.description,
+    createdAt: markerData.createdAt || new Date(),
+    isPinned: markerData.isPinned || false,
+    associatedDrawing: markerData.associatedDrawing,
+  };
+  
+  saveMarker(marker);
+  return marker;
+}

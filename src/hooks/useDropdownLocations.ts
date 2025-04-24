@@ -1,7 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
-import { toast } from 'sonner';
 
 export const useDropdownLocations = () => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useDropdownLocations } from '@/hooks/useDropdownLocations';
 import { useToast } from "@/components/ui/use-toast";
@@ -6,23 +7,13 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
 import { deleteMarker } from "@/utils/marker-utils";
 import { Button } from "@/components/ui/button";
-import { DotsHorizontalIcon, PlusIcon } from "@radix-ui/react-icons";
+import { MoreHorizontal, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createMarker } from "@/utils/marker-utils";
+import DeleteLocationDialog from '@/components/saved-locations/DeleteLocationDialog';
 import { LocationMarker } from '@/utils/geo-utils';
 
 interface SavedLocationsDropdownProps {
@@ -34,7 +25,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
 }) => {
   const { toast } = useToast();
   const {
-    savedLocations,
+    markers,
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
     markerToDelete,
@@ -45,22 +36,8 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
 
   const [isAddingLocation, setIsAddingLocation] = useState(false);
   const [newLocationName, setNewLocationName] = useState("");
-	const [newLocationLat, setNewLocationLat] = useState<number | undefined>(undefined);
-	const [newLocationLng, setNewLocationLng] = useState<number | undefined>(undefined);
-
-  // Add effect for escape key handling
-  useEffect(() => {
-    const handleEscapeKey = (event: KeyboardEvent) => {
-      if (isDeleteDialogOpen && event.key === 'Escape') {
-        cancelDelete();
-      }
-    };
-    
-    document.addEventListener('keydown', handleEscapeKey);
-    return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [isDeleteDialogOpen]);
+  const [newLocationLat, setNewLocationLat] = useState<number | undefined>(undefined);
+  const [newLocationLng, setNewLocationLng] = useState<number | undefined>(undefined);
 
   const handleLocationSelect = (position: [number, number]) => {
     onLocationSelect(position);
@@ -76,7 +53,10 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       deleteMarker(markerToDelete.id);
       setIsDeleteDialogOpen(false);
       setMarkerToDelete(null);
-      toast.success("Location removed");
+      toast({
+        title: "Success",
+        description: "Location removed",
+      });
       
       // Clean up any stale elements first
       cleanupMarkerReferences();
@@ -101,56 +81,66 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     setIsAddingLocation(!isAddingLocation);
   };
 
-	const handleAddLocation = async () => {
-		if (!newLocationName || newLocationName.trim() === "") {
-			toast({
-				title: "Error",
-				description: "Location name cannot be empty.",
-				variant: "destructive",
-			});
-			return;
-		}
+  const handleAddLocation = async () => {
+    if (!newLocationName || newLocationName.trim() === "") {
+      toast({
+        title: "Error",
+        description: "Location name cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-		if (newLocationLat === undefined || newLocationLng === undefined) {
-			toast({
-				title: "Error",
-				description: "Latitude and Longitude must be valid numbers.",
-				variant: "destructive",
-			});
-			return;
-		}
+    if (newLocationLat === undefined || newLocationLng === undefined) {
+      toast({
+        title: "Error",
+        description: "Latitude and Longitude must be valid numbers.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-		const newMarker = {
-			name: newLocationName,
-			position: [newLocationLat, newLocationLng] as [number, number],
-		};
+    const newMarker = {
+      name: newLocationName,
+      position: [newLocationLat, newLocationLng] as [number, number],
+      id: crypto.randomUUID(),
+      type: 'pin' as const,
+      createdAt: new Date(),
+    };
 
-		try {
-			await createMarker(newMarker);
-			toast.success("Location saved");
-			setNewLocationName("");
-			setNewLocationLat(undefined);
-			setNewLocationLng(undefined);
-			setIsAddingLocation(false);
-		} catch (error) {
-			toast({
-				title: "Error",
-				description: "Failed to save location.",
-				variant: "destructive",
-			});
-		}
-	};
+    try {
+      // Save the marker using the utility function
+      deleteMarker(newMarker.id); // First remove any existing marker with same ID if it exists
+      saveMarker(newMarker); // Then save the new marker
+      
+      toast({
+        title: "Success",
+        description: "Location saved",
+      });
+      
+      setNewLocationName("");
+      setNewLocationLat(undefined);
+      setNewLocationLng(undefined);
+      setIsAddingLocation(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save location.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" >
-            Saved Locations <DotsHorizontalIcon className="ml-2 h-4 w-4" />
+            Saved Locations <MoreHorizontal className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56">
-          {savedLocations.map((marker) => (
+          {markers.map((marker) => (
             <MarkerMenuItem
               key={marker.id}
               marker={marker}
@@ -161,7 +151,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
           {!isAddingLocation ? (
             <DropdownMenuContent className="p-2">
               <Button variant="ghost" onClick={toggleAddLocation}>
-                <PlusIcon className="mr-2 h-4 w-4" /> Add Location
+                <Plus className="mr-2 h-4 w-4" /> Add Location
               </Button>
             </DropdownMenuContent>
           ) : (
@@ -206,39 +196,13 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog 
-        open={isDeleteDialogOpen} 
-        onOpenChange={(open) => {
-          if (!open) cancelDelete();
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Location</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{markerToDelete?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                cancelDelete();
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleConfirmDelete();
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteLocationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        markerToDelete={markerToDelete}
+        onConfirmDelete={handleConfirmDelete}
+        onCancel={cancelDelete}
+      />
     </>
   );
 };
