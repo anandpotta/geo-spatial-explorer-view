@@ -3,9 +3,6 @@ import React from 'react';
 import { EditControl } from 'react-leaflet-draw';
 import { forwardRefWrapper } from '@/utils/forward-ref-wrapper';
 
-// Create a wrapped version of the EditControl component that can accept refs
-const ForwardedEditControl = forwardRefWrapper(EditControl);
-
 interface DrawToolsWrapperProps {
   position: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
   onCreated?: (e: any) => void;
@@ -15,29 +12,30 @@ interface DrawToolsWrapperProps {
   edit?: any;
 }
 
+// Create a wrapped version of the EditControl component that can accept refs
+const ForwardedEditControl = forwardRefWrapper(EditControl);
+
 /**
  * Wrapper component for the EditControl to resolve ref warnings
  */
-const DrawToolsWrapper: React.FC<DrawToolsWrapperProps> = ({
-  position,
-  onCreated,
-  onEdited,
-  onDeleted,
-  draw,
-  edit,
-}) => {
-  return (
-    <div className="leaflet-draw-container">
-      <ForwardedEditControl
-        position={position}
-        onCreated={onCreated}
-        onEdited={onEdited}
-        onDeleted={onDeleted}
-        draw={draw}
-        edit={edit}
-      />
-    </div>
-  );
-};
+const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(
+  (props, ref) => {
+    return (
+      <div className="leaflet-draw-container">
+        <ForwardedEditControl
+          ref={ref}
+          position={props.position}
+          onCreated={props.onCreated}
+          onEdited={props.onEdited}
+          onDeleted={props.onDeleted}
+          draw={props.draw}
+          edit={props.edit}
+        />
+      </div>
+    );
+  }
+);
+
+DrawToolsWrapper.displayName = 'DrawToolsWrapper';
 
 export default DrawToolsWrapper;

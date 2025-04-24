@@ -132,7 +132,7 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
     return null;
   }
 
-  // The key fix: Using our DrawToolsWrapper component
+  // The key fix: Using our DrawToolsWrapper component with forwardRef
   return (
     <div className="leaflet-draw-container">
       <DrawToolsWrapper
