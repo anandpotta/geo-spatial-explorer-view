@@ -10,6 +10,7 @@ export const useMapEvents = (
   const flyTimerRef = useRef<number | null>(null);
   const initCheckTimerRef = useRef<number | null>(null);
   const initializedRef = useRef<boolean>(false);
+  const userInteractionRef = useRef<boolean>(false);
   
   // Cleanup timers on unmount
   useEffect(() => {
@@ -22,6 +23,26 @@ export const useMapEvents = (
       }
     };
   }, []);
+
+  // Track user interactions with the map
+  useEffect(() => {
+    if (!map) return;
+    
+    const handleUserInteraction = () => {
+      userInteractionRef.current = true;
+      console.log('User has manually interacted with map, disabling auto-centering');
+    };
+    
+    map.on('dragstart', handleUserInteraction);
+    map.on('zoomstart', handleUserInteraction);
+    map.on('click', handleUserInteraction);
+    
+    return () => {
+      map.off('dragstart', handleUserInteraction);
+      map.off('zoomstart', handleUserInteraction);
+      map.off('click', handleUserInteraction);
+    };
+  }, [map]);
 
   useEffect(() => {
     // Skip if dependencies aren't available
@@ -36,6 +57,12 @@ export const useMapEvents = (
     // Check if initial navigation is already done
     if (initialNavigationDone?.current) {
       console.log('Initial navigation already done, skipping automatic map recentering');
+      return;
+    }
+    
+    // Skip if user has manually interacted with the map
+    if (userInteractionRef.current) {
+      console.log('User has manually positioned the map, skipping automatic centering');
       return;
     }
     

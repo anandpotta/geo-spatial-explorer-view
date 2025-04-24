@@ -38,7 +38,7 @@ const LeafletMap = ({
     resetMap
   } = useLeafletMapInitialization();
 
-  const { safeMapFlyTo, handleLocationSelect, initialNavigationDone } = useLeafletMapNavigation();
+  const { safeMapFlyTo, handleLocationSelect, initialNavigationDone, resetNavigationState } = useLeafletMapNavigation();
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   
@@ -56,10 +56,20 @@ const LeafletMap = ({
     onMapReady
   );
 
+  // Reset marker tracking when component mounts
+  useEffect(() => {
+    window.tempMarkerPlaced = false;
+    return () => {
+      delete window.tempMarkerPlaced;
+    };
+  }, []);
+
   // Handle location changes with improved timing, but only for initial navigation
   useEffect(() => {
     // Skip if location or map isn't ready
-    if (!selectedLocation || !mapRef.current || !needsInitialNavigation.current) return;
+    if (!selectedLocation || !mapRef.current || !needsInitialNavigation.current || window.tempMarkerPlaced) {
+      return;
+    }
     
     // Add a longer initial delay to ensure map is properly initialized
     const initialDelay = 1000; 
@@ -68,6 +78,12 @@ const LeafletMap = ({
     const navigationTimer = setTimeout(() => {
       if (!isMapInitialized || !mapRef.current || cleanupInProgress.current) {
         console.log('Map not ready for navigation yet');
+        return;
+      }
+      
+      // Don't navigate if user has placed a marker manually
+      if (window.tempMarkerPlaced) {
+        console.log('User has placed a marker, skipping automatic navigation');
         return;
       }
       
@@ -85,6 +101,12 @@ const LeafletMap = ({
         
         // Add a small delay before actual navigation
         const flyTimer = setTimeout(() => {
+          // Don't navigate if user has placed a marker manually (double-check)
+          if (window.tempMarkerPlaced) {
+            console.log('User has placed a marker, skipping automatic navigation');
+            return;
+          }
+          
           const flySuccess = safeMapFlyTo(
             mapRef.current, 
             isMapInitialized, 
@@ -96,7 +118,7 @@ const LeafletMap = ({
           );
           
           // Only reset map if flyTo completely failed and we're not already cleaning up
-          if (!flySuccess && !cleanupInProgress.current && needsInitialNavigation.current) {
+          if (!flySuccess && !cleanupInProgress.current) {
             console.warn('Safe flyTo failed, recreating map');
             resetMap();
           } else {
@@ -126,6 +148,11 @@ const LeafletMap = ({
   const handleSavedLocationSelect = (position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
     handleLocationSelect(position, onLocationSelect);
+    
+    // Mark that we should perform navigation again
+    needsInitialNavigation.current = true;
+    // Reset the marker placed flag
+    window.tempMarkerPlaced = false;
     
     const [lat, lng] = position;
     if (mapRef.current && isMapInitialized && !cleanupInProgress.current) {
