@@ -23,19 +23,43 @@ const TempMarker = ({
   setMarkerType,
   onSave
 }: TempMarkerProps) => {
-  const map = useMap(); // Using useMap from react-leaflet instead of useMapEvents
+  const map = useMap();
   const markerKey = useRef(`temp-marker-${position[0]}-${position[1]}-${Date.now()}`);
   
+  // Apply the marker events and popup styles
   useMarkerEvents(map);
   usePopupStyles();
   
-  // Set global flags for marker presence
+  // Add marker-specific class to the map container for CSS targeting
   useEffect(() => {
+    const mapContainer = map.getContainer();
+    if (mapContainer) {
+      mapContainer.classList.add('marker-form-active');
+    }
+    
+    // Set global flags for marker presence
     window.userHasInteracted = true;
     window.tempMarkerPlaced = true;
     
     return () => {
-      // Don't reset flags on unmount as they might be needed elsewhere
+      // Remove the class when the marker is unmounted
+      if (mapContainer) {
+        mapContainer.classList.remove('marker-form-active');
+      }
+    };
+  }, [map]);
+
+  // Create a custom handler for updating marker position
+  useEffect(() => {
+    // Expose a global function to update the marker position from drag events
+    window.tempMarkerPositionUpdate = (newPosition: [number, number]) => {
+      console.log('Marker dragged to:', newPosition);
+      // This will be used by the dragend event handler to update position state
+    };
+    
+    return () => {
+      // Clean up the global function when component unmounts
+      delete window.tempMarkerPositionUpdate;
     };
   }, []);
 
@@ -46,6 +70,7 @@ const TempMarker = ({
       draggable={true}
       eventHandlers={{
         dragstart: (e) => {
+          // Prevent map movement when dragging the marker
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
@@ -53,9 +78,11 @@ const TempMarker = ({
           window.tempMarkerPlaced = true;
         },
         dragend: (e) => {
+          // Ensure map panning is stopped
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
+          // Update position using the global handler if available
           if (window.tempMarkerPositionUpdate) {
             const newPosition = e.target.getLatLng();
             window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);

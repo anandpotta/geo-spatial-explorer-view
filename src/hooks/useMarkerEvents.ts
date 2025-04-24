@@ -10,8 +10,21 @@ export function useMarkerEvents(map: L.Map | null) {
   }, [map]);
   
   useEffect(() => {
-    // Disable ALL map keyboard events while marker is active
+    // Disable map keyboard events while marker form is active
     const preventMapKeyboardEvents = (e: KeyboardEvent) => {
+      // Check if the event target is an input or form element from our popup
+      const target = e.target as HTMLElement;
+      
+      // If the target is within our marker form, let it handle keyboard events
+      if (target && 
+         (target.closest('.marker-form-popup') || 
+          target.closest('#marker-form') || 
+          target.id === 'marker-name')) {
+        // Allow the event to continue normally for form inputs
+        return;
+      }
+      
+      // Otherwise prevent map keyboard interactions
       e.stopPropagation();
       e.preventDefault();
     };

@@ -1,5 +1,5 @@
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,19 @@ const NewMarkerForm = ({
   onSave
 }: NewMarkerFormProps) => {
   const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus the input field when the component mounts
+  useEffect(() => {
+    // Short timeout to ensure the DOM is fully rendered
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +49,23 @@ const NewMarkerForm = ({
     window.userHasInteracted = true;
   }, [setMarkerName]);
 
+  // Enhanced keyboard event handler for the input field
+  const handleInputKeyEvents = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Stop propagation for ALL keyboard events to prevent map interactions
+    e.stopPropagation();
+    
+    // Set flags to indicate user interaction
+    window.tempMarkerPlaced = true;
+    window.userHasInteracted = true;
+    
+    // Handle Enter key to submit the form
+    if (e.key === 'Enter' && markerName.trim()) {
+      e.preventDefault();
+      onSave();
+    }
+  }, [markerName, onSave]);
+
+  // Stop click propagation to prevent map interactions
   const stopPropagation = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     window.tempMarkerPlaced = true;
@@ -59,11 +89,15 @@ const NewMarkerForm = ({
           name="marker-form"
         >
           <Input 
+            ref={inputRef}
             type="text"
             placeholder="Location name"
             value={markerName}
             onChange={handleInputChange}
             onClick={stopPropagation}
+            onKeyDown={handleInputKeyEvents}
+            onKeyPress={handleInputKeyEvents}
+            onKeyUp={handleInputKeyEvents}
             className="mb-2 z-50"
             autoFocus
             style={{ zIndex: 9999 }}
@@ -90,4 +124,3 @@ const NewMarkerForm = ({
 };
 
 export default NewMarkerForm;
-
