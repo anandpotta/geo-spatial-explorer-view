@@ -12,6 +12,7 @@ export interface DrawingData {
     description?: string;
     color?: string;
     createdAt: Date;
+    associatedMarkerId?: string;
   };
 }
 
