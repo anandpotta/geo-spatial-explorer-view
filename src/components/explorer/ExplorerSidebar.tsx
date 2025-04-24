@@ -11,7 +11,6 @@ const ExplorerSidebar = () => {
     flyCompleted,
     setCurrentView,
     handleLocationSelect,
-    setFlyCompleted,
   } = useLocationSearch();
 
   const handleSavedLocationSelect = (position: [number, number]) => {

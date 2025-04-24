@@ -69,13 +69,7 @@ const GeoSpatialExplorer = () => {
     <SidebarProvider>
       <div className="w-full h-screen flex bg-black overflow-hidden">
         {/* Left Panel */}
-        <ExplorerSidebar 
-          selectedLocation={selectedLocation}
-          currentView={currentView}
-          flyCompleted={flyCompleted}
-          setCurrentView={setCurrentView}
-          onSavedLocationSelect={handleSavedLocationSelect}
-        />
+        <ExplorerSidebar />
         
         {/* Right Panel - Map View */}
         <div className="flex-1 relative bg-black">
