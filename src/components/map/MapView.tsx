@@ -8,7 +8,7 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -78,14 +78,6 @@ const MapView = ({
       />
     );
   }
-
-  // Create a handler function to pass to whenReady that accepts a map parameter
-  const handleMapReady = (map: L.Map) => {
-    // Short timeout to ensure all DOM elements are properly set up
-    setTimeout(() => {
-      if (onMapReady) onMapReady(map);
-    }, 100);
-  };
 
   return (
     <div className="w-full h-full relative">

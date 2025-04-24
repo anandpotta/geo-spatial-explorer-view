@@ -16,28 +16,29 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     if (map && onMapReady && !hasCalledOnReady.current) {
       console.log('Map is ready in MapReference');
       
-      // Make sure map is fully initialized and has a valid container
-      if (map.getContainer() && map.getContainer().parentElement) {
+      // Small timeout to ensure DOM is fully rendered
+      setTimeout(() => {
         try {
-          // Ensure the map is properly sized
-          map.invalidateSize(true);
-          
-          // Ensure proper event handlers are set up
-          map.on('click', (e) => {
-            console.log('Map was clicked at:', e.latlng);
-          });
-          
-          // Mark as called to prevent duplicate calls
-          hasCalledOnReady.current = true;
-          
-          // Call the callback
-          onMapReady(map);
+          // Make sure map is fully initialized and has a valid container
+          if (map && map.getContainer()) {
+            // Ensure the map is properly sized
+            map.invalidateSize(true);
+            
+            // Ensure proper event handlers are set up
+            map.on('click', (e) => {
+              console.log('Map was clicked at:', e.latlng);
+            });
+            
+            // Mark as called to prevent duplicate calls
+            hasCalledOnReady.current = true;
+            
+            // Call the callback
+            onMapReady(map);
+          }
         } catch (err) {
           console.error('Error in map initialization:', err);
         }
-      } else {
-        console.warn('Map container not ready yet, will try again');
-      }
+      }, 100);
     }
     
     // Clean up function
@@ -46,7 +47,6 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         // Remove click event listener to prevent memory leaks
         map.off('click');
       }
-      hasCalledOnReady.current = false;
     };
   }, [map, onMapReady]);
   
