@@ -8,6 +8,7 @@ import { useMapEvents } from '@/hooks/useMapEvents';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
+import { getSavedMarkers } from '@/utils/marker-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -38,6 +39,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       document.head.appendChild(link);
     }
     
+    // Load saved markers from storage
+    const savedMarkers = getSavedMarkers();
+    mapState.setMarkers(savedMarkers);
+    
     return () => {
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
@@ -57,6 +62,22 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       }
     };
   }, [mapInstanceKey]);
+
+  // Listen for marker updates
+  useEffect(() => {
+    const handleMarkersUpdated = () => {
+      const savedMarkers = getSavedMarkers();
+      mapState.setMarkers(savedMarkers);
+    };
+    
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedLocation && mapRef.current) {
