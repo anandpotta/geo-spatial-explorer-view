@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
@@ -65,33 +66,35 @@ const GeoSpatialExplorer = () => {
   };
   
   return (
-    <div className="w-full h-screen flex bg-black overflow-hidden">
-      {/* Left Panel */}
-      <ExplorerSidebar 
-        selectedLocation={selectedLocation}
-        currentView={currentView}
-        flyCompleted={flyCompleted}
-        setCurrentView={setCurrentView}
-        onSavedLocationSelect={handleSavedLocationSelect}
-      />
-      
-      {/* Right Panel - Map View */}
-      <div className="flex-1 relative bg-black">
-        {/* Map content */}
-        <MapContent 
-          currentView={currentView}
+    <SidebarProvider>
+      <div className="w-full h-screen flex bg-black overflow-hidden">
+        {/* Left Panel */}
+        <ExplorerSidebar 
           selectedLocation={selectedLocation}
-          onMapReady={() => setIsMapReady(true)}
-          onFlyComplete={handleFlyComplete}
-          onLocationSelect={handleLocationSelect}
+          currentView={currentView}
+          flyCompleted={flyCompleted}
+          setCurrentView={setCurrentView}
+          onSavedLocationSelect={handleSavedLocationSelect}
         />
         
-        {/* Sync status indicator */}
-        <div className="absolute bottom-5 right-5 z-[10001]">
-          <SyncStatusIndicator />
+        {/* Right Panel - Map View */}
+        <div className="flex-1 relative bg-black">
+          {/* Map content */}
+          <MapContent 
+            currentView={currentView}
+            selectedLocation={selectedLocation}
+            onMapReady={() => setIsMapReady(true)}
+            onFlyComplete={handleFlyComplete}
+            onLocationSelect={handleLocationSelect}
+          />
+          
+          {/* Sync status indicator */}
+          <div className="absolute bottom-5 right-5 z-[10001]">
+            <SyncStatusIndicator />
+          </div>
         </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 

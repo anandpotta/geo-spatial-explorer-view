@@ -1,10 +1,12 @@
+
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Globe2, Map as MapIcon, Bookmark } from 'lucide-react';
+import { Globe2, Map as MapIcon, Bookmark, Maximize, Minimize } from 'lucide-react';
 import SavedLocations from '../saved-locations/SavedLocations';
+import { useSidebar } from '@/components/ui/sidebar';
 
 interface ExplorerSidebarProps {
   selectedLocation: Location | undefined;
@@ -21,11 +23,23 @@ const ExplorerSidebar = ({
   setCurrentView,
   onSavedLocationSelect
 }: ExplorerSidebarProps) => {
+  const { state, toggleSidebar } = useSidebar();
+
   return (
     <div className="w-96 h-full bg-card border-r overflow-hidden flex flex-col">
-      <div className="p-4 border-b">
-        <h1 className="text-2xl font-bold">GeoSpatial Explorer</h1>
-        <p className="text-muted-foreground">Search, navigate and mark locations</p>
+      <div className="p-4 border-b flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">GeoSpatial Explorer</h1>
+          <p className="text-muted-foreground">Search, navigate and mark locations</p>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={toggleSidebar}
+          className="ml-2"
+        >
+          {state === 'collapsed' ? <Maximize size={18} /> : <Minimize size={18} />}
+        </Button>
       </div>
       
       <Tabs defaultValue="search" className="flex-1 flex flex-col">
