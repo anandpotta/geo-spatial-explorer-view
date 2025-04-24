@@ -29,7 +29,7 @@ export function useDrawings() {
       if (e.key === 'savedDrawings' && e.newValue === '[]') {
         console.log('Drawings were cleared in storage');
         setSavedDrawings([]);
-      } else {
+      } else if (!clearStateRef.current) {
         loadDrawings();
       }
     };
@@ -42,7 +42,7 @@ export function useDrawings() {
       // Reset clear state after a delay to allow future drawings
       setTimeout(() => {
         clearStateRef.current = false;
-      }, 500);
+      }, 1000); // Increased delay for more reliability
     };
     
     window.addEventListener('storage', handleStorageChange);

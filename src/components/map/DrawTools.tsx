@@ -16,16 +16,55 @@ interface DrawToolsProps {
 // Track if we're in a cleared state to prevent old drawings from reappearing
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   const wasRecentlyCleared = useRef(false);
+  const editControlRef = useRef<any>(null);
   
-  // Instead of using refs, use event listeners to control tools
-  const handleDrawingActivation = useCallback(() => {
+  // Handle drawing tool activation based on active tool
+  useEffect(() => {
     if (!activeTool) return;
     
-    // Dispatch custom event to activate drawing tools
-    const event = new CustomEvent('activateDrawingTool', { 
-      detail: { tool: activeTool } 
-    });
-    window.dispatchEvent(event);
+    // Activate the appropriate drawing tool
+    const handleDrawingActivation = () => {
+      if (editControlRef.current && editControlRef.current._toolbars && editControlRef.current._toolbars.draw) {
+        console.log('Activating drawing tool:', activeTool);
+        
+        // First, disable all drawing handlers
+        Object.keys(editControlRef.current._toolbars.draw._modes).forEach(mode => {
+          try {
+            const handler = editControlRef.current._toolbars.draw._modes[mode].handler;
+            if (handler && handler.disable) {
+              handler.disable();
+            }
+          } catch (err) {
+            console.error('Error disabling drawing handler:', err);
+          }
+        });
+        
+        // Then enable only the selected tool
+        try {
+          // Map the tool name to the corresponding Leaflet Draw tool name
+          const toolMap: Record<string, string> = {
+            'polygon': 'polygon',
+            'marker': 'marker',
+            'circle': 'circle',
+            'rectangle': 'rectangle'
+          };
+          
+          const leafletTool = toolMap[activeTool];
+          
+          if (leafletTool && editControlRef.current._toolbars.draw._modes[leafletTool]) {
+            const handler = editControlRef.current._toolbars.draw._modes[leafletTool].handler;
+            if (handler && handler.enable) {
+              handler.enable();
+            }
+          }
+        } catch (err) {
+          console.error('Error enabling drawing tool:', err);
+        }
+      }
+    };
+    
+    // Add a small delay to ensure the EditControl is fully initialized
+    const timer = setTimeout(handleDrawingActivation, 100);
     
     // Show appropriate toast message
     const toolMessages = {
@@ -36,21 +75,19 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     };
     
     toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
+    
+    return () => clearTimeout(timer);
   }, [activeTool]);
-
-  useEffect(() => {
-    handleDrawingActivation();
-  }, [activeTool, handleDrawingActivation]);
 
   useEffect(() => {
     const handleClearEvent = () => {
       console.log('DrawTools detected clear event');
       wasRecentlyCleared.current = true;
       
-      // Reset the flag after a short delay to allow new drawings
+      // Reset the flag after a longer delay to allow new drawings
       setTimeout(() => {
         wasRecentlyCleared.current = false;
-      }, 500);
+      }, 1000);
       
       if (onClearAll) {
         onClearAll();
@@ -108,16 +145,22 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     onCreated({ type: layerType, layer, geoJSON: layer.toGeoJSON(), id });
   };
 
+  // Reference to get access to the EditControl instance
+  const handleEditControlMount = (editControlInstance: any) => {
+    editControlRef.current = editControlInstance;
+  };
+
   return (
     <EditControl
       position="topright"
       onCreated={handleCreated}
+      onMounted={handleEditControlMount}
       draw={{
-        rectangle: true,
-        polygon: true,
-        circle: true,
+        rectangle: activeTool === 'rectangle',
+        polygon: activeTool === 'polygon',
+        circle: activeTool === 'circle',
         circlemarker: false,
-        marker: true,
+        marker: activeTool === 'marker',
         polyline: false
       }}
     />

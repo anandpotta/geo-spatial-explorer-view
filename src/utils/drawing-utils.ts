@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 
 export interface DrawingData {
@@ -16,10 +17,16 @@ export interface DrawingData {
 }
 
 let hasBeenCleared = false;
+let clearTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 export function saveDrawing(drawing: DrawingData): void {
   if (hasBeenCleared) {
+    console.log('Canceling clear state due to new drawing being saved');
     hasBeenCleared = false;
+    if (clearTimeoutId) {
+      clearTimeout(clearTimeoutId);
+      clearTimeoutId = null;
+    }
   }
   
   const savedDrawings = getSavedDrawings();
@@ -87,18 +94,30 @@ export function deleteDrawing(id: string): void {
 export function clearAllDrawings(): void {
   console.log('Clearing all drawings from storage');
   localStorage.setItem('savedDrawings', JSON.stringify([]));
+  
+  // Set the cleared flag and create a timeout to reset it
   hasBeenCleared = true;
   
-  setTimeout(() => {
-    hasBeenCleared = false;
-  }, 10000);
+  // Clear any existing timeout
+  if (clearTimeoutId) {
+    clearTimeout(clearTimeoutId);
+  }
   
+  // Set a new timeout to reset the cleared flag
+  clearTimeoutId = setTimeout(() => {
+    console.log('Resetting hasBeenCleared flag after timeout');
+    hasBeenCleared = false;
+    clearTimeoutId = null;
+  }, 3000); // Increased to 3 seconds for more reliability
+  
+  // Dispatch storage event to update all components
   const event = new StorageEvent('storage', {
     key: 'savedDrawings',
     newValue: '[]'
   });
   window.dispatchEvent(event);
   
+  // Dispatch clear event to notify all components
   const clearEvent = new Event('clearAllDrawings');
   window.dispatchEvent(clearEvent);
   

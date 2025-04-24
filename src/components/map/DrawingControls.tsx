@@ -41,15 +41,16 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
       }
       
       // If we have drawings, clear the wasCleared flag
-      if (savedDrawings.length > 0) {
-        setWasCleared(false);
+      if (savedDrawings.length > 0 && !wasCleared) {
+        // We don't want to reset wasCleared flag too soon, only when we have actual new drawings
+        console.log('New drawings detected, resetting wasCleared flag');
       }
       
       // Clear existing layers
       featureGroupRef.current.clearLayers();
       
-      // Only add layers if we have drawings
-      if (savedDrawings.length > 0) {
+      // Only add layers if we have drawings and we're not in a cleared state
+      if (savedDrawings.length > 0 && !wasCleared) {
         const markers = getSavedMarkers();
         
         savedDrawings.forEach(drawing => {
@@ -81,7 +82,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
           }
         });
       } else {
-        console.log('No drawings to display');
+        console.log('No drawings to display or in cleared state');
       }
     } catch (err) {
       console.error('Error updating drawings:', err);
@@ -96,6 +97,12 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
         console.log('Clearing all layers in feature group');
         featureGroupRef.current.clearLayers();
         setWasCleared(true);
+        
+        // Reset the wasCleared flag after a longer delay
+        setTimeout(() => {
+          console.log('Resetting wasCleared flag');
+          setWasCleared(false);
+        }, 2000); // Increased delay for more reliability
       }
       
       if (onClearAll) {
@@ -109,20 +116,6 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
       window.removeEventListener('clearAllDrawings', handleClearEvent);
     };
   }, [onClearAll]);
-
-  // Listen for drawing tool activation events
-  useEffect(() => {
-    const handleDrawingToolActivation = (e: any) => {
-      // Implement tool activation logic if needed
-      console.log('Drawing tool activated:', e.detail?.tool);
-    };
-    
-    window.addEventListener('activateDrawingTool', handleDrawingToolActivation);
-    
-    return () => {
-      window.removeEventListener('activateDrawingTool', handleDrawingToolActivation);
-    };
-  }, []);
 
   // Add handler for clear all
   const handleClearAll = () => {
