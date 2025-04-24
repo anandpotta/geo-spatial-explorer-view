@@ -2,8 +2,8 @@
 import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
-import Earth from './Earth';
 import { ErrorBoundary } from 'react-error-boundary';
+import Earth from './Earth';
 
 // Fallback component when errors occur in the Earth component
 function EarthErrorFallback() {
