@@ -14,13 +14,21 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   useEffect(() => {
     // Only call onMapReady once per instance
     if (map && onMapReady && !hasCalledOnReady.current) {
-      hasCalledOnReady.current = true;
-      console.log('Map is ready, calling onMapReady');
+      console.log('Map is ready, will call onMapReady after initialization');
       
-      // Add a small delay to ensure the map is fully initialized
+      // Wait until the map is fully initialized before calling onMapReady
       setTimeout(() => {
-        onMapReady(map);
-      }, 50);
+        try {
+          if (map && map.getContainer()) {
+            hasCalledOnReady.current = true;
+            map.invalidateSize();
+            console.log('Map container verified, calling onMapReady');
+            onMapReady(map);
+          }
+        } catch (err) {
+          console.error('Error in map initialization:', err);
+        }
+      }, 100);
     }
     
     // Clean up function

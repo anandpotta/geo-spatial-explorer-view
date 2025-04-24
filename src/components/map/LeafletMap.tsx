@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -57,44 +58,67 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   }, [mapInstanceKey]);
 
   useEffect(() => {
-    if (selectedLocation) {
-      if (mapRef.current) {
-        mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
-      } else {
+    if (selectedLocation && mapRef.current) {
+      try {
+        // Only try to fly if the map is properly initialized
+        if (mapRef.current.getContainer()) {
+          console.log('Flying to selected location:', selectedLocation);
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
+        }
+      } catch (err) {
+        console.error('Error flying to location:', err);
+        // If there's an error, recreate the map
         setMapInstanceKey(Date.now());
       }
     }
   }, [selectedLocation]);
 
   const handleSetMapRef = (map: L.Map) => {
+    console.log('Map reference provided');
+    
     if (mapRef.current) {
       console.log('Map reference already exists, skipping assignment');
       return;
     }
     
-    mapRef.current = map;
-    
-    if (onMapReady) {
-      onMapReady(map);
-    }
-    
-    if (selectedLocation) {
-      map.flyTo([selectedLocation.y, selectedLocation.x], 18);
-    }
-    
-    setTimeout(() => {
-      if (mapRef.current && mapRef.current.getContainer()) {
-        mapRef.current.invalidateSize(true);
+    try {
+      // Verify map is properly initialized
+      if (map && map.getContainer()) {
+        console.log('Map container verified, storing reference');
+        mapRef.current = map;
+        
+        // Force invalidate size to ensure proper rendering
+        map.invalidateSize(true);
+        
+        // Only fly to location if we have one and the map is ready
+        if (selectedLocation) {
+          console.log('Flying to initial location');
+          setTimeout(() => {
+            if (map.getContainer()) {
+              map.flyTo([selectedLocation.y, selectedLocation.x], 18);
+            }
+          }, 200);
+        }
+        
+        if (onMapReady) {
+          onMapReady(map);
+        }
       }
-    }, 100);
+    } catch (err) {
+      console.error('Error setting map reference:', err);
+    }
   };
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
     if (mapRef.current) {
-      mapRef.current.flyTo(position, 18, {
-        duration: 2
-      });
+      try {
+        mapRef.current.flyTo(position, 18, {
+          duration: 2
+        });
+      } catch (err) {
+        console.error('Error flying to location:', err);
+      }
     }
   };
 
@@ -107,7 +131,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     mapState.setSelectedDrawing(null);
     
     if (mapRef.current) {
-      mapRef.current.invalidateSize();
+      try {
+        mapRef.current.invalidateSize();
+      } catch (err) {
+        console.error('Error invalidating map size:', err);
+      }
     }
   };
 
@@ -137,7 +165,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       setMarkerName={mapState.setMarkerName}
       setMarkerType={mapState.setMarkerType}
       onShapeCreated={handleShapeCreated}
-      activeTool={activeTool || null}
+      activeTool={activeTool || mapState.activeTool}
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAll}
     />
