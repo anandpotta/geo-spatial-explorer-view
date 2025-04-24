@@ -16,13 +16,19 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     if (map && onMapReady && !hasCalledOnReady.current) {
       console.log('Map is ready, will call onMapReady after initialization');
       
-      // Wait until the map is fully initialized before calling onMapReady
+      // Make sure map is properly initialized
       setTimeout(() => {
         try {
           if (map && map.getContainer()) {
             hasCalledOnReady.current = true;
             map.invalidateSize();
             console.log('Map container verified, calling onMapReady');
+            
+            // Ensure proper event handlers are set up
+            map.on('click', (e) => {
+              console.log('Map was clicked at:', e.latlng);
+            });
+            
             onMapReady(map);
           }
         } catch (err) {

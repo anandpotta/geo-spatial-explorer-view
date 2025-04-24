@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
-import { saveMarker, deleteMarker } from '@/utils/marker-utils';
+import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
@@ -21,6 +21,24 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
+  // Load saved markers on component mount
+  useEffect(() => {
+    const savedMarkers = getSavedMarkers();
+    setMarkers(savedMarkers);
+
+    // Listen for marker updates
+    const handleMarkersUpdated = () => {
+      const updatedMarkers = getSavedMarkers();
+      setMarkers(updatedMarkers);
+    };
+
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+    };
+  }, []);
+
   // Set up global position update handler for draggable markers
   useEffect(() => {
     window.tempMarkerPositionUpdate = setTempMarker;
@@ -31,7 +49,10 @@ export function useMapState(selectedLocation?: Location) {
   }, []);
 
   const handleSaveMarker = () => {
-    if (!tempMarker || !markerName.trim()) return;
+    if (!tempMarker || !markerName.trim()) {
+      toast.error('Please provide a name for the marker');
+      return;
+    }
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
