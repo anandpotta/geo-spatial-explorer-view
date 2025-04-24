@@ -1,5 +1,5 @@
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { setupLeafletIcons } from './LeafletMapIcons';
@@ -15,9 +15,10 @@ interface LeafletMapProps {
   selectedLocation?: Location;
   onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
+  onLocationSelect?: (position: [number, number]) => void;
 }
 
-const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
+const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const { mapInstanceKey, setMapInstanceKey, cleanupMap } = useLeafletSetup();
   const mapState = useMapState(selectedLocation);
@@ -46,6 +47,13 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       } catch (err) {
         console.error('Error invalidating map size:', err);
       }
+    }
+  };
+  
+  // Function to handle location selection
+  const handleLocationSelect = (position: [number, number]) => {
+    if (onLocationSelect) {
+      onLocationSelect(position);
     }
   };
 
