@@ -6,14 +6,20 @@ import L from 'leaflet';
 export function useMarkerHandlers(mapState: any) {
   const handleMapClick = (latlng: L.LatLng) => {
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
-      mapState.setTempMarker([latlng.lat, latlng.lng]);
+      const exactPosition: [number, number] = [latlng.lat, latlng.lng];
+      mapState.setTempMarker(exactPosition);
       mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
     }
   };
 
   const handleShapeCreated = (shape: any) => {
     if (shape.type === 'marker') {
-      mapState.setTempMarker(shape.position);
+      // Ensure we get the precise coordinates
+      const exactPosition: [number, number] = [
+        shape.position[0],
+        shape.position[1]
+      ];
+      mapState.setTempMarker(exactPosition);
       mapState.setMarkerName('New Marker');
     } else {
       mapState.setCurrentDrawing(shape);

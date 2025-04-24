@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
+import L from 'leaflet';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -21,7 +22,20 @@ const TempMarker = ({
   onSave
 }: TempMarkerProps) => {
   return (
-    <Marker position={position}>
+    <Marker 
+      position={position} 
+      draggable={true}
+      eventHandlers={{
+        dragend: (e) => {
+          const marker = e.target;
+          const newPosition = marker.getLatLng();
+          // Update the marker position in parent component state
+          if (window.tempMarkerPositionUpdate) {
+            window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
+          }
+        }
+      }}
+    >
       <NewMarkerForm
         markerName={markerName}
         setMarkerName={setMarkerName}

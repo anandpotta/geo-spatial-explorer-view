@@ -1,8 +1,8 @@
 
-import { useState } from 'react';
-import { Location, LocationMarker, deleteMarker } from '@/utils/geo-utils';
-import { DrawingData, saveDrawing } from '@/utils/drawing-utils'; // Import saveDrawing
-import { saveMarker } from '@/utils/marker-utils'; // Import saveMarker
+import { useState, useEffect } from 'react';
+import { Location, LocationMarker } from '@/utils/geo-utils';
+import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
+import { saveMarker } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
@@ -19,6 +19,15 @@ export function useMapState(selectedLocation?: Location) {
   const [currentDrawing, setCurrentDrawing] = useState<DrawingData | null>(null);
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+
+  // Set up global position update handler for draggable markers
+  useEffect(() => {
+    window.tempMarkerPositionUpdate = setTempMarker;
+    
+    return () => {
+      delete window.tempMarkerPositionUpdate;
+    };
+  }, []);
 
   const handleSaveMarker = () => {
     if (!tempMarker || !markerName.trim()) return;
@@ -86,4 +95,11 @@ export function useMapState(selectedLocation?: Location) {
     handleDeleteMarker,
     handleRegionClick
   };
+}
+
+// Extend the Window interface to include our custom property
+declare global {
+  interface Window {
+    tempMarkerPositionUpdate?: (pos: [number, number]) => void;
+  }
 }

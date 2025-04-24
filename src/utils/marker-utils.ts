@@ -14,7 +14,18 @@ export interface LocationMarker {
 
 export function saveMarker(marker: LocationMarker): void {
   const savedMarkers = getSavedMarkers();
-  savedMarkers.push(marker);
+  
+  // Check if marker already exists (for updates)
+  const existingIndex = savedMarkers.findIndex(m => m.id === marker.id);
+  
+  if (existingIndex >= 0) {
+    // Update existing marker
+    savedMarkers[existingIndex] = marker;
+  } else {
+    // Add new marker
+    savedMarkers.push(marker);
+  }
+  
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
   // Dispatch a custom event to notify components that markers have been updated
