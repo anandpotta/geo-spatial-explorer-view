@@ -121,11 +121,16 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         if (selectedLocation) {
           console.log('Flying to initial location');
           setTimeout(() => {
-            if (map && !map._isDestroyed && map.getContainer()) {
-              map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-                animate: true,
-                duration: 1.5
-              });
+            // Check map exists and has a container before flying
+            if (map && map.getContainer && typeof map.getContainer === 'function') {
+              try {
+                map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+                  animate: true,
+                  duration: 1.5
+                });
+              } catch (err) {
+                console.error('Error during initial flyTo:', err);
+              }
             }
           }, 200);
         }
