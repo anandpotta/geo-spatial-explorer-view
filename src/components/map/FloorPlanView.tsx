@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -14,6 +15,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPdf, setIsPdf] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("");
+  const [showUploadDialog, setShowUploadDialog] = useState<boolean>(false);
   
   // Check if there's a saved floor plan for this building in localStorage
   useEffect(() => {
@@ -24,8 +26,9 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         setSelectedImage(savedData.data);
         setIsPdf(savedData.isPdf);
         setFileName(savedData.fileName);
-        
-        console.log("Loaded saved floor plan:", savedData.fileName);
+      } else {
+        // If no floor plan exists, show upload dialog
+        setShowUploadDialog(true);
       }
     }
   }, [drawing]);
@@ -49,6 +52,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       if (result) {
         const dataUrl = result as string;
         setSelectedImage(dataUrl);
+        setShowUploadDialog(false);
         
         // Save to localStorage for this specific building
         if (drawing?.id) {
@@ -60,10 +64,8 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             timestamp: new Date().toISOString()
           };
           localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
-          console.log("Saved floor plan to localStorage for building:", drawing.id);
+          toast.success('Floor plan uploaded successfully');
         }
-        
-        toast.success('Floor plan uploaded successfully');
       }
     };
     reader.readAsDataURL(file);
@@ -136,7 +138,6 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
               </p>
               <Button 
                 onClick={() => {
-                  // This will trigger the file input click
                   const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
                   if (fileInput) fileInput.click();
                 }}
@@ -148,8 +149,34 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           </div>
         )}
       </div>
+
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Floor Plan</DialogTitle>
+            <DialogDescription>
+              No floor plan has been uploaded for this building yet. Would you like to upload one now?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                if (fileInput) fileInput.click();
+              }}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Floor Plan
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default FloorPlanView;
+
