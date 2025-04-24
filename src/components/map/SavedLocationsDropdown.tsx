@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDropdownLocations } from '@/hooks/useDropdownLocations';
 import { useToast } from "@/components/ui/use-toast";
@@ -12,7 +11,7 @@ import { MoreHorizontal, Plus } from "lucide-react";
 import DeleteLocationDialog from '@/components/saved-locations/DeleteLocationDialog';
 import LocationsList from './dropdown/LocationsList';
 import AddLocationForm from './dropdown/AddLocationForm';
-import { createMarker } from '@/utils/marker-utils';
+import { createMarker, deleteMarker } from '@/utils/marker-utils';
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
