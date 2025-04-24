@@ -22,7 +22,8 @@ export const useMapReference = (
     
     try {
       // Verify map is properly initialized before proceeding
-      if (map._leaflet_id && map.getContainer()) {
+      // Use proper methods to check map initialization rather than internal properties
+      if (map && map.getContainer()) {
         console.log('Map container verified, storing reference');
         mapRef.current = map;
         
@@ -53,7 +54,7 @@ export const useMapReference = (
       } else {
         console.warn('Map not fully initialized, delaying reference assignment');
         setTimeout(() => {
-          if (map && map._leaflet_id) {
+          if (map && map.getContainer()) {
             mapRef.current = map;
             map.invalidateSize(true);
             

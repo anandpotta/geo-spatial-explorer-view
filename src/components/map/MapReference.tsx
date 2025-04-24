@@ -30,7 +30,8 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             } else {
               console.warn('Map container not properly attached to DOM, delaying onMapReady');
               setTimeout(() => {
-                if (map && !map._leaflet_id) {
+                // Check if map is valid without accessing internal properties
+                if (map && !map.getContainer()) {
                   console.warn('Map initialization incomplete, skipping onMapReady');
                   return;
                 }
