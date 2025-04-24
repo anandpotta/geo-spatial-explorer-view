@@ -103,7 +103,10 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenReady={(mapEvent) => handleMapReady(mapEvent.target)}
+        whenReady={() => {
+          // Use the MapReference component instead to handle the map ready event
+          // This is a workaround for the type mismatch in the whenReady prop
+        }}
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
