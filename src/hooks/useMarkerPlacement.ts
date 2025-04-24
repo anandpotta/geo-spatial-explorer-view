@@ -9,9 +9,17 @@ export function useMarkerPlacement(mapState: any) {
       
       console.log('Setting temporary marker at position:', exactPosition);
       
-      // Explicitly set these flags BEFORE setting the marker to prevent map navigation
+      // Immediately and aggressively set these flags to prevent ANY map navigation
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
+      
+      // Store position in localStorage as backup
+      try {
+        localStorage.setItem('tempMarkerPosition', JSON.stringify(exactPosition));
+        localStorage.setItem('tempMarkerName', mapState.selectedLocation?.label || 'New Building');
+      } catch (error) {
+        console.error('Failed to store marker in localStorage:', error);
+      }
       
       // Clear any existing temporary marker first
       mapState.setTempMarker(null);
@@ -19,11 +27,16 @@ export function useMarkerPlacement(mapState: any) {
       // Use a short timeout to ensure the state update completes
       setTimeout(() => {
         if (!mapState.tempMarker) {
+          // Set marker with force flag
           mapState.setTempMarker(exactPosition);
           mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
           
+          // Re-apply flags after state updates
+          window.tempMarkerPlaced = true;
+          window.userHasInteracted = true;
+          
           toast.info('Click "Save Location" to confirm marker placement', {
-            duration: 3000,
+            duration: 5000, // Longer duration for better visibility
           });
         }
       }, 50);

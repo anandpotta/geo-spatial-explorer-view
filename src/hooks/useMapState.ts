@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
@@ -19,12 +20,48 @@ export function useMapState(selectedLocation?: Location) {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  
+  // Reference to track if component is mounted
+  const isMountedRef = useRef(true);
+
+  // Check for stored marker on mount
+  useEffect(() => {
+    try {
+      const storedMarkerPos = localStorage.getItem('tempMarkerPosition');
+      const storedMarkerName = localStorage.getItem('tempMarkerName');
+      
+      if (storedMarkerPos) {
+        const position = JSON.parse(storedMarkerPos) as [number, number];
+        setTempMarker(position);
+        
+        // Set global flags
+        window.tempMarkerPlaced = true;
+        window.userHasInteracted = true;
+        
+        if (storedMarkerName) {
+          setMarkerName(storedMarkerName);
+        } else {
+          setMarkerName('New Building');
+        }
+        
+        console.log('Restored marker from localStorage:', position);
+      }
+    } catch (error) {
+      console.error('Error restoring marker from localStorage:', error);
+    }
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Load saved markers on component mount
   useEffect(() => {
     const loadMarkers = () => {
       const savedMarkers = getSavedMarkers();
-      setMarkers(savedMarkers);
+      if (isMountedRef.current) {
+        setMarkers(savedMarkers);
+      }
     };
     
     loadMarkers();
@@ -49,15 +86,29 @@ export function useMapState(selectedLocation?: Location) {
       // If position is null, don't clear state immediately
       // This prevents marker from disappearing during map navigation
       if (pos === null) {
-        // Use timeout to be sure it's intentional
-        setTimeout(() => {
-          setTempMarker(null);
-        }, 100);
+        // Double-check if we should actually clear the marker
+        if (!window.tempMarkerPlaced) {
+          setTimeout(() => {
+            if (isMountedRef.current) {
+              setTempMarker(null);
+            }
+          }, 100);
+        }
       } else {
-        setTempMarker(pos);
-        // Reinforce flags to prevent map navigation
-        window.tempMarkerPlaced = true;
-        window.userHasInteracted = true;
+        if (isMountedRef.current) {
+          setTempMarker(pos);
+          
+          // Save to localStorage
+          try {
+            localStorage.setItem('tempMarkerPosition', JSON.stringify(pos));
+          } catch (error) {
+            console.error('Failed to save marker position to localStorage:', error);
+          }
+          
+          // Reinforce flags to prevent map navigation
+          window.tempMarkerPlaced = true;
+          window.userHasInteracted = true;
+        }
       }
     };
     
@@ -103,6 +154,10 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
+    // Clear localStorage
+    localStorage.removeItem('tempMarkerPosition');
+    localStorage.removeItem('tempMarkerName');
+    
     // Clear the temporary marker immediately to prevent duplicate markers
     // But keep the flags set to prevent map reloading
     setTempMarker(null);
@@ -127,6 +182,10 @@ export function useMapState(selectedLocation?: Location) {
 
   // Add the handleClearAll function to clear map state
   const handleClearAll = useCallback(() => {
+    // Clear localStorage
+    localStorage.removeItem('tempMarkerPosition');
+    localStorage.removeItem('tempMarkerName');
+    
     setTempMarker(null);
     setMarkerName('');
     setMarkerType('building');

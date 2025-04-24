@@ -11,15 +11,39 @@ export const useMapEvents = (
   const initCheckTimerRef = useRef<number | null>(null);
   const initializedRef = useRef<boolean>(false);
   const userInteractionRef = useRef<boolean>(false);
+  const markerPresenceCheckerRef = useRef<number | null>(null);
   
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (flyTimerRef.current !== null) {
-        clearTimeout(flyTimerRef.current);
+      if (flyTimerRef.current !== null) clearTimeout(flyTimerRef.current);
+      if (initCheckTimerRef.current !== null) clearTimeout(initCheckTimerRef.current);
+      if (markerPresenceCheckerRef.current !== null) clearInterval(markerPresenceCheckerRef.current);
+    };
+  }, []);
+
+  // Set up marker presence checker to continuously reinforce flags when markers exist
+  useEffect(() => {
+    // Check for marker presence and reinforce flags if needed
+    const checkForMarkers = () => {
+      const tempMarkerPosition = localStorage.getItem('tempMarkerPosition');
+      
+      if (tempMarkerPosition || window.tempMarkerPlaced) {
+        console.log('Marker detected, reinforcing interaction flags');
+        window.userHasInteracted = true;
+        window.tempMarkerPlaced = true;
       }
-      if (initCheckTimerRef.current !== null) {
-        clearTimeout(initCheckTimerRef.current);
+    };
+    
+    // Initial check
+    checkForMarkers();
+    
+    // Set up interval for continuous checking
+    markerPresenceCheckerRef.current = window.setInterval(checkForMarkers, 1000);
+    
+    return () => {
+      if (markerPresenceCheckerRef.current !== null) {
+        clearInterval(markerPresenceCheckerRef.current);
       }
     };
   }, []);
@@ -49,9 +73,17 @@ export const useMapEvents = (
     // Skip if dependencies aren't available
     if (!selectedLocation || !map) return;
     
-    // Aggressively check for marker presence and user interaction
-    // Skip navigation if ANY of these conditions are true
-    if (window.tempMarkerPlaced || window.userHasInteracted) {
+    // Check for marker presence before proceeding
+    const tempMarkerPosition = localStorage.getItem('tempMarkerPosition');
+    
+    // Super aggressive check - if ANY of these conditions are true, skip navigation completely
+    if (
+      window.tempMarkerPlaced || 
+      window.userHasInteracted || 
+      userInteractionRef.current || 
+      tempMarkerPosition ||
+      document.querySelectorAll('.leaflet-marker-icon').length > 0
+    ) {
       console.log('Marker detected or user interaction recorded, skipping ALL automatic navigation');
       return;
     }
@@ -68,21 +100,20 @@ export const useMapEvents = (
       return;
     }
     
-    // Skip if user has manually interacted with the map or placed a marker
-    if (userInteractionRef.current) {
-      console.log('User has manually positioned the map, skipping automatic centering');
-      return;
-    }
-    
     console.log('Selected location in Leaflet map:', selectedLocation);
     const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
     
     // Wait for map to be fully initialized before flying
-    // Use a much longer delay to ensure map is really ready
     initCheckTimerRef.current = window.setTimeout(() => {
       try {
         // One more check for user interaction or marker presence
-        if (window.userHasInteracted || window.tempMarkerPlaced) {
+        if (
+          window.userHasInteracted || 
+          window.tempMarkerPlaced ||
+          userInteractionRef.current ||
+          document.querySelectorAll('.leaflet-marker-icon').length > 0 ||
+          localStorage.getItem('tempMarkerPosition')
+        ) {
           console.log('Late detection: User interaction or marker detected, skipping automatic navigation');
           return;
         }
@@ -117,12 +148,8 @@ export const useMapEvents = (
     
     return () => {
       // Clean up timers
-      if (flyTimerRef.current !== null) {
-        clearTimeout(flyTimerRef.current);
-      }
-      if (initCheckTimerRef.current !== null) {
-        clearTimeout(initCheckTimerRef.current);
-      }
+      if (flyTimerRef.current !== null) clearTimeout(flyTimerRef.current);
+      if (initCheckTimerRef.current !== null) clearTimeout(initCheckTimerRef.current);
     };
   }, [selectedLocation, map, initialNavigationDone]);
 };

@@ -20,29 +20,41 @@ const TempMarker = ({
   setMarkerType,
   onSave
 }: TempMarkerProps) => {
-  // Generate a unique key for the marker based on its position
+  // Generate a unique key for the marker based on its position to prevent remounting issues
   const markerKey = `temp-marker-${position[0]}-${position[1]}-${Date.now()}`;
   
-  // Update global reference for position updates and set flags
   useEffect(() => {
-    // Immediately and aggressively set these flags to prevent map from moving
+    // Immediately and aggressively set these flags to prevent ANY map navigation
     window.tempMarkerPlaced = true;
     window.userHasInteracted = true;
+    
     console.log('TempMarker mounted - enforcing tempMarkerPlaced=true and userHasInteracted=true');
     
     // Make sure window.tempMarkerPositionUpdate exists
     if (window.tempMarkerPositionUpdate) {
       // Initial update to ensure correct position
-      const safePosition: [number, number] = [...position];
-      window.tempMarkerPositionUpdate(safePosition);
+      window.tempMarkerPositionUpdate([...position]);
     }
     
+    // Save position to localStorage as backup
+    try {
+      localStorage.setItem('tempMarkerPosition', JSON.stringify(position));
+    } catch (error) {
+      console.error('Failed to store marker in localStorage:', error);
+    }
+    
+    // Set interval to continuously reinforce flags
+    const flagInterval = setInterval(() => {
+      window.tempMarkerPlaced = true;
+      window.userHasInteracted = true;
+    }, 500);
+    
     return () => {
-      // If component unmounts, set the temp marker to null, but KEEP the flags
-      if (window.tempMarkerPositionUpdate) {
-        // We use setTimeout to avoid state updates during render
-        setTimeout(() => window.tempMarkerPositionUpdate && window.tempMarkerPositionUpdate(null), 0);
-      }
+      clearInterval(flagInterval);
+      
+      // Keep flags set even after unmount
+      window.tempMarkerPlaced = true;
+      window.userHasInteracted = true;
     };
   }, [position]);
   
@@ -52,6 +64,11 @@ const TempMarker = ({
       position={position} 
       draggable={true}
       eventHandlers={{
+        dragstart: () => {
+          // Reinforce interaction flags
+          window.userHasInteracted = true;
+          window.tempMarkerPlaced = true;
+        },
         dragend: (e) => {
           const marker = e.target;
           const newPosition = marker.getLatLng();
@@ -63,6 +80,13 @@ const TempMarker = ({
           // Update the marker position in parent component state
           if (window.tempMarkerPositionUpdate) {
             window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
+            
+            // Backup position to localStorage
+            try {
+              localStorage.setItem('tempMarkerPosition', JSON.stringify([newPosition.lat, newPosition.lng]));
+            } catch (error) {
+              console.error('Failed to store marker position in localStorage:', error);
+            }
           }
         }
       }}
