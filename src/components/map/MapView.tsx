@@ -71,7 +71,7 @@ const MapView = ({
   }
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" style={{ background: '#f0f0f0' }}>
       <div className="absolute top-4 right-4 z-[1000]">
         <SavedLocationsDropdown onLocationSelect={onLocationSelect} />
       </div>
@@ -87,6 +87,7 @@ const MapView = ({
         markerZoomAnimation={true}
         preferCanvas={true}
         id="leaflet-map-container"
+        style={{ height: '100%', width: '100%' }}
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 

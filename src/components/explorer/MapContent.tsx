@@ -94,19 +94,15 @@ const MapContent = ({
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
+        {/* Cesium Map */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+          className={`absolute inset-0 transition-opacity duration-300 ${currentView === 'cesium' ? 'opacity-100' : 'opacity-0'}`} 
           style={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
+            display: currentView === 'cesium' ? 'block' : 'none',
             width: '100%', 
             height: '100%',
-            visibility: currentView === 'cesium' ? 'visible' : 'hidden'
+            zIndex: currentView === 'cesium' ? 10 : 0 
           }}
-          data-map-type="cesium"
         >
           {currentView === 'cesium' && (
             <CesiumMap 
@@ -120,12 +116,15 @@ const MapContent = ({
           )}
         </div>
         
+        {/* Leaflet Map */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
+          className={`absolute inset-0 transition-opacity duration-300 ${currentView === 'leaflet' ? 'opacity-100' : 'opacity-0'}`}
           style={{ 
-            visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
+            display: currentView === 'leaflet' ? 'block' : 'none',
+            width: '100%', 
+            height: '100%',
+            zIndex: currentView === 'leaflet' ? 10 : 0 
           }}
-          data-map-type="leaflet"
         >
           {currentView === 'leaflet' && (
             <LeafletMap 

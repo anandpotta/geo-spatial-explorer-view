@@ -50,16 +50,27 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   
   // Setup and cleanup of Leaflet
   useEffect(() => {
+    console.log('Setting up Leaflet icons and CSS');
     setupLeafletIcons();
     
-    // Ensure leaflet CSS is loaded
+    // Force Leaflet CSS to be loaded
     if (!document.querySelector('link[href*="leaflet.css"]')) {
+      console.log('Adding Leaflet CSS');
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
       link.crossOrigin = '';
       document.head.appendChild(link);
+    }
+
+    // Also ensure Leaflet Draw CSS is loaded
+    if (!document.querySelector('link[href*="leaflet.draw.css"]')) {
+      console.log('Adding Leaflet Draw CSS');
+      const drawLink = document.createElement('link');
+      drawLink.rel = 'stylesheet';
+      drawLink.href = 'https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css';
+      document.head.appendChild(drawLink);
     }
     
     // Cleanup on unmount
@@ -102,6 +113,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       if (map && map.getContainer()) {
         console.log('Map container verified, storing reference');
         mapRef.current = map;
+        
+        // Force resize to ensure proper dimensions
+        map.invalidateSize(true);
         
         // Fly to location after a short delay to ensure the map is ready
         if (selectedLocation) {
@@ -176,26 +190,28 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   }
 
   return (
-    <MapView
-      key={`map-view-${mapInstanceKey}`}
-      position={mapState.position}
-      zoom={mapState.zoom}
-      markers={mapState.markers}
-      tempMarker={mapState.tempMarker}
-      markerName={mapState.markerName}
-      markerType={mapState.markerType}
-      onMapReady={handleSetMapRef}
-      onLocationSelect={handleLocationSelect}
-      onMapClick={handleMapClick}
-      onDeleteMarker={mapState.handleDeleteMarker}
-      onSaveMarker={mapState.handleSaveMarker}
-      setMarkerName={mapState.setMarkerName}
-      setMarkerType={mapState.setMarkerType}
-      onShapeCreated={handleShapeCreated}
-      activeTool={activeTool || mapState.activeTool}
-      onRegionClick={mapState.handleRegionClick}
-      onClearAll={handleClearAll}
-    />
+    <div className="h-full w-full">
+      <MapView
+        key={`map-view-${mapInstanceKey}`}
+        position={mapState.position}
+        zoom={mapState.zoom}
+        markers={mapState.markers}
+        tempMarker={mapState.tempMarker}
+        markerName={mapState.markerName}
+        markerType={mapState.markerType}
+        onMapReady={handleSetMapRef}
+        onLocationSelect={handleLocationSelect}
+        onMapClick={handleMapClick}
+        onDeleteMarker={mapState.handleDeleteMarker}
+        onSaveMarker={mapState.handleSaveMarker}
+        setMarkerName={mapState.setMarkerName}
+        setMarkerType={mapState.setMarkerType}
+        onShapeCreated={handleShapeCreated}
+        activeTool={activeTool || mapState.activeTool}
+        onRegionClick={mapState.handleRegionClick}
+        onClearAll={handleClearAll}
+      />
+    </div>
   );
 };
 
