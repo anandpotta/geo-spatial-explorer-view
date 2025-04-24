@@ -24,8 +24,11 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     
     const reader = new FileReader();
     reader.onload = (e) => {
-      setSelectedImage(e.target?.result as string);
-      toast.success('Floor plan uploaded successfully');
+      const result = e.target?.result;
+      if (result) {
+        setSelectedImage(result as string);
+        toast.success('Floor plan uploaded successfully');
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -33,6 +36,14 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   return (
     <div className="relative w-full h-full">
       <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="bg-white/80 backdrop-blur-sm"
+        >
+          <FlipHorizontal className="mr-2 h-4 w-4" />
+          Back to Map
+        </Button>
         <label className="cursor-pointer">
           <input
             type="file"
@@ -43,19 +54,17 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           <Button
             variant="outline"
             className="bg-white/80 backdrop-blur-sm"
+            type="button"
+            onClick={() => {
+              // This will trigger the file input click
+              const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+              if (fileInput) fileInput.click();
+            }}
           >
             <Upload className="mr-2 h-4 w-4" />
             {selectedImage ? 'Change Floor Plan' : 'Upload Floor Plan'}
           </Button>
         </label>
-        <Button
-          variant="outline"
-          onClick={onBack}
-          className="bg-white/80 backdrop-blur-sm"
-        >
-          <FlipHorizontal className="mr-2 h-4 w-4" />
-          Back to Map
-        </Button>
       </div>
       <div className="w-full h-full flex items-center justify-center bg-black/5">
         {selectedImage ? (
@@ -77,18 +86,16 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
               <p className="text-gray-600 text-center max-w-md">
                 Click the Upload Floor Plan button above to add a floor plan image or PDF
               </p>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*,.pdf"
-                  onChange={handleFileUpload}
-                />
-                <Button>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Select File
-                </Button>
-              </label>
+              <Button 
+                onClick={() => {
+                  // This will trigger the file input click
+                  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                  if (fileInput) fileInput.click();
+                }}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Select File
+              </Button>
             </div>
           </div>
         )}
