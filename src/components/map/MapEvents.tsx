@@ -8,8 +8,9 @@ interface MapEventsProps {
 }
 
 const MapEvents = ({ onMapClick }: MapEventsProps) => {
-  useMapEvents({
+  const map = useMapEvents({
     click: (e) => {
+      console.log('Map clicked at:', e.latlng);
       onMapClick(e.latlng);
     },
   });
