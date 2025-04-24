@@ -10,72 +10,45 @@ export default function Earth({ onLocationSelect }) {
   const [textureError, setTextureError] = useState(false);
   const [texturesLoaded, setTexturesLoaded] = useState(false);
   
-  // Load earth textures with fallbacks
-  const textureUrls = [
-    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2074&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop'
-  ];
+  // Define texture paths
+  const texturePaths = {
+    map: '/earth-texture.jpg',
+    bumpMap: '/earth-bump.jpg',
+    specularMap: '/earth-specular.jpg'
+  };
   
-  // Use proper error handling for texture loading
-  let textures;
+  // Load textures individually to better handle errors
+  let textures = null;
   try {
-    textures = useTexture(textureUrls);
-    
-    // Only set textures loaded if we actually have textures
-    if (textures && Array.isArray(textures) && textures.length > 0) {
-      if (!texturesLoaded) setTexturesLoaded(true);
-    }
+    textures = useTexture(texturePaths);
+    if (!texturesLoaded && textures) setTexturesLoaded(true);
   } catch (err) {
     console.error('Failed to load Earth textures:', err);
     setTextureError(true);
   }
   
-  // Destructure textures with fallback for loading errors
-  const [map, bumpMap, specularMap] = textures || [null, null, null];
-  
-  // Handle texture loading errors by checking texture properties
+  // Check texture validity after loading
   useEffect(() => {
-    // Avoid accessing textures before they're loaded to prevent errors
-    if (!textures) {
-      setTextureError(true);
-      return;
-    }
-    
-    // Function to check if textures loaded successfully
-    const checkTextureValidity = () => {
+    if (texturesLoaded && textures) {
       try {
-        const allValid = [map, bumpMap, specularMap].every(texture => 
-          texture && texture.image && texture.image.complete && texture.image.width > 0
+        const allValid = Object.values(textures).every(texture => 
+          texture && texture.image && texture.image.complete
         );
         
         if (!allValid) {
           console.error('One or more earth textures failed to load completely');
           setTextureError(true);
+        } else if (textures.bumpMap) {
+          // Apply texture settings safely
+          textures.bumpMap.wrapS = THREE.RepeatWrapping;
+          textures.bumpMap.wrapT = THREE.RepeatWrapping;
         }
       } catch (err) {
         console.error('Error checking texture validity:', err);
         setTextureError(true);
       }
-    };
-    
-    // Check textures after a short delay to allow loading to complete
-    if (texturesLoaded) {
-      const timerId = setTimeout(checkTextureValidity, 500);
-      return () => clearTimeout(timerId);
     }
-  }, [texturesLoaded, map, bumpMap, specularMap, textures]);
-  
-  // Apply a small bump scale if bumpMap is available
-  useEffect(() => {
-    if (bumpMap && !textureError) {
-      try {
-        bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
-      } catch (err) {
-        console.warn('Error setting bump map properties:', err);
-      }
-    }
-  }, [bumpMap, textureError]);
+  }, [texturesLoaded, textures]);
   
   // Rotate the earth on each frame
   useFrame(() => {
@@ -113,7 +86,7 @@ export default function Earth({ onLocationSelect }) {
       position={[0, 0, 0]}
       onClick={handleClick}
     >
-      {textureError ? (
+      {textureError || !textures ? (
         // Fallback material if textures fail to load
         <meshStandardMaterial
           color="#1e3a8a"
@@ -123,12 +96,12 @@ export default function Earth({ onLocationSelect }) {
           emissiveIntensity={0.2}
         />
       ) : (
-        // Only add material with textures if they're available
-        map && <meshPhongMaterial
-          map={map}
-          bumpMap={bumpMap}
+        // Only use textures if they're available
+        <meshPhongMaterial
+          map={textures.map}
+          bumpMap={textures.bumpMap}
           bumpScale={0.15}
-          specularMap={specularMap}
+          specularMap={textures.specularMap}
           specular={new THREE.Color('grey')}
           shininess={10}
         />

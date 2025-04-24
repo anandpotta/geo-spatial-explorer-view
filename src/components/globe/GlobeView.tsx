@@ -58,10 +58,6 @@ export default function GlobeView({ onLocationSelect }) {
         camera={{ position: [0, 0, 4] }}
         gl={{ alpha: false, antialias: true }}
         dpr={[1, 2]} // Responsive rendering for different device pixel ratios
-        onCreated={({ gl }) => {
-          // Configure WebGL context for better performance
-          gl.setClearColor('#000');
-        }}
       >
         <color attach="background" args={['#000']} />
         <ambientLight intensity={0.3} />

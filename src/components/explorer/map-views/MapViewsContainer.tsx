@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '@/components/CesiumMap';
 import LeafletMap from '@/components/map/LeafletMap';
