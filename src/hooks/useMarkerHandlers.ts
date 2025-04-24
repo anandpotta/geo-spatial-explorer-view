@@ -16,13 +16,16 @@ export function useMarkerHandlers(mapState: any) {
       
       // Short delay to ensure the previous marker is cleared first
       setTimeout(() => {
-        mapState.setTempMarker(exactPosition);
-        mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
-        
-        // Show a toast to indicate marker can be saved
-        toast.info('Click "Save Location" to confirm marker placement', {
-          duration: 3000,
-        });
+        // Double-check we don't already have a marker in progress
+        if (!mapState.tempMarker) {
+          mapState.setTempMarker(exactPosition);
+          mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
+          
+          // Show a toast to indicate marker can be saved
+          toast.info('Click "Save Location" to confirm marker placement', {
+            duration: 3000,
+          });
+        }
       }, 10);
     }
   };

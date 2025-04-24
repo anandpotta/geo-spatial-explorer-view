@@ -32,7 +32,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           // Ensure the map is properly sized
           map.invalidateSize(true);
           
-          // Ensure proper event handlers are set up
+          // Ensure we don't add duplicate click handlers
           if (!map.hasMapClickHandler) {
             map.on('click', (e) => {
               console.log('Map was clicked at:', e.latlng);
@@ -54,10 +54,15 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     // Clean up function
     return () => {
       clearTimeout(timeoutId);
-      if (map) {
-        // Remove click event listener to prevent memory leaks
-        map.off('click');
-        delete map.hasMapClickHandler;
+      // Only remove event listeners if map exists and is valid
+      if (map && !map._isDestroyed) {
+        try {
+          // Remove click event listener to prevent memory leaks
+          map.off('click');
+          delete map.hasMapClickHandler;
+        } catch (error) {
+          console.error('Error cleaning up map reference:', error);
+        }
       }
     };
   }, [map, onMapReady]);

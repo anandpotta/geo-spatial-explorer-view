@@ -21,8 +21,12 @@ const TempMarker = ({
   setMarkerType,
   onSave
 }: TempMarkerProps) => {
+  // Generate a unique key for the marker based on its position
+  const markerKey = `temp-marker-${position[0]}-${position[1]}`;
+  
   return (
     <Marker 
+      key={markerKey}
       position={position} 
       draggable={true}
       eventHandlers={{
