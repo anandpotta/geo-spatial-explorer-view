@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useCallback } from 'react';
 import { Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -36,16 +35,15 @@ const TempMarker = ({
     window.userHasInteracted = true;
     window.tempMarkerPlaced = true;
     
-    // TypeScript-safe way to check and stop propagation
+    // Safely handle event propagation
     if (e) {
-      // Stop the Leaflet event propagation
-      e.stopPropagation?.();
+      // Cast the Leaflet event to an event with potential browser event
+      const event = e as L.LeafletEvent & { originalEvent?: Event };
       
-      // Try to access originalEvent if it exists (as a DOM event)
-      const domEvent = e as unknown as { originalEvent?: MouseEvent | TouchEvent };
-      if (domEvent.originalEvent) {
-        domEvent.originalEvent.stopPropagation();
-        domEvent.originalEvent.preventDefault();
+      // Use native browser event methods if available
+      if (event.originalEvent) {
+        event.originalEvent.stopPropagation();
+        event.originalEvent.preventDefault();
       }
     }
   }, []);
@@ -114,7 +112,6 @@ const TempMarker = ({
         click: (e) => {
           // Prevent the click from propagating to the map
           preventMapInteractions(e);
-          L.DomEvent.stopPropagation(e);
         }
       }}
     >
