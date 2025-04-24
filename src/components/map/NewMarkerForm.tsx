@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,9 @@ const NewMarkerForm = ({
   setMarkerType,
   onSave
 }: NewMarkerFormProps) => {
+  // Reference to the form element
+  const formRef = useRef<HTMLFormElement>(null);
+  
   // Handle form submission to prevent default refresh behavior
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,19 +63,30 @@ const NewMarkerForm = ({
   // Add an effect to handle keyboard events globally when the form is active
   useEffect(() => {
     const preventMapKeyboardEvents = (e: KeyboardEvent) => {
-      // Prevent keyboard events from propagating to the map
-      e.stopPropagation();
+      // Only prevent propagation if the event originated from our form
+      if (formRef.current && formRef.current.contains(e.target as Node)) {
+        e.stopPropagation();
+      }
     };
     
-    // Add event listeners to capture keyboard events
+    // Add event listeners with capture phase to catch events before they bubble
     document.addEventListener('keydown', preventMapKeyboardEvents, true);
     document.addEventListener('keypress', preventMapKeyboardEvents, true);
+    document.addEventListener('keyup', preventMapKeyboardEvents, true);
     
     // Clean up
     return () => {
       document.removeEventListener('keydown', preventMapKeyboardEvents, true);
       document.removeEventListener('keypress', preventMapKeyboardEvents, true);
+      document.removeEventListener('keyup', preventMapKeyboardEvents, true);
     };
+  }, []);
+
+  // Prevent click propagation throughout the component
+  const stopPropagation = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.tempMarkerPlaced = true;
+    window.userHasInteracted = true;
   }, []);
 
   return (
@@ -81,33 +95,24 @@ const NewMarkerForm = ({
       autoClose={false} 
       autoPan={false}
       className="marker-form-popup"
+      onClick={stopPropagation}
     >
       <form 
+        ref={formRef}
         onSubmit={handleSubmit} 
         className="p-2" 
-        onClick={(e) => {
-          e.stopPropagation();
-          window.tempMarkerPlaced = true;
-          window.userHasInteracted = true;
-        }}
+        onClick={stopPropagation}
       >
         <Input 
           type="text"
           placeholder="Location name"
           value={markerName}
           onChange={handleInputChange}
-          onClick={(e) => {
-            e.stopPropagation();
-            window.tempMarkerPlaced = true;
-            window.userHasInteracted = true;
-          }}
+          onClick={stopPropagation}
           // Add specific event handlers for keyboard events
-          onKeyDown={(e) => {
-            e.stopPropagation();
-          }}
-          onKeyPress={(e) => {
-            e.stopPropagation();
-          }}
+          onKeyDown={(e) => e.stopPropagation()}
+          onKeyPress={(e) => e.stopPropagation()}
+          onKeyUp={(e) => e.stopPropagation()}
           className="mb-2 z-50"
           autoFocus
           style={{ zIndex: 9999 }}

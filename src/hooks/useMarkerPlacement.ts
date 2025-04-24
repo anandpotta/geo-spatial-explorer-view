@@ -41,6 +41,9 @@ export function useMarkerPlacement(mapState: any) {
           id: 'marker-placement', // Use ID to prevent duplicate toasts
         });
       }, 50);
+      
+      // Return false to prevent any further processing of the click event
+      return false;
     }
   };
 

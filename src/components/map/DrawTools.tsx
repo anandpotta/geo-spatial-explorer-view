@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, forwardRef } from 'react';
 import { useLeafletContext } from '@react-leaflet/core';
 import { v4 as uuidv4 } from 'uuid';
@@ -41,6 +42,7 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
 
     hasInitialized.current = true;
     
+    // Disable any active drawing modes first
     Object.keys(leafletElement._modes).forEach((mode) => {
       if (leafletElement._modes[mode].handler && 
           leafletElement._modes[mode].handler.enabled && 
@@ -60,8 +62,18 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
       rectangle: "Click on map to draw rectangle"
     };
 
+    // Only try to enable the tool if it exists
     if (leafletElement._modes[activeTool] && leafletElement._modes[activeTool].handler) {
       try {
+        // Before enabling, check if a marker form is active
+        const markerFormActive = document.querySelector('.marker-form-active');
+        if (markerFormActive) {
+          toast.info("Please save or cancel the current marker first", {
+            duration: 3000,
+          });
+          return;
+        }
+        
         leafletElement._modes[activeTool].handler.enable();
         toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
       } catch (err) {
@@ -83,6 +95,17 @@ const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onCl
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
     const id = uuidv4();
+    
+    // First, check if we have an active marker form that would conflict
+    if (document.querySelector('.marker-form-popup')) {
+      toast.warning("Please save or cancel the current marker first", {
+        duration: 3000,
+      });
+      if (context && context.map) {
+        context.map.removeLayer(layer);
+      }
+      return;
+    }
     
     if (layerType === 'marker' && 'getLatLng' in layer) {
       const markerLayer = layer as L.Marker;

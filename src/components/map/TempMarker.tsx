@@ -27,13 +27,20 @@ const TempMarker = ({
   const flagIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   
-  // Disable map keyboard events while marker is active
+  // Disable ALL map keyboard events while marker is active
   useMapEvents({
+    // Use event handlers with higher priority to intercept events
     keypress: (e) => {
       e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
     },
     keydown: (e) => {
       e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
+    },
+    keyup: (e) => {
+      e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
     }
   });
   
@@ -69,14 +76,27 @@ const TempMarker = ({
     // Apply global CSS to prevent map keyboard events from interfering
     const style = document.createElement('style');
     style.innerHTML = `
-      .marker-form-popup .leaflet-popup-content-wrapper {
+      .marker-form-popup .leaflet-popup-content-wrapper,
+      .marker-form-popup .leaflet-popup-content {
         pointer-events: auto !important;
+      }
+      .marker-form-popup .leaflet-popup-content-wrapper {
+        cursor: default !important;
       }
       .marker-form-popup input:focus {
         z-index: 1000;
       }
+      /* Disable map interactions when popup is open */
+      .marker-form-active .leaflet-control-container {
+        pointer-events: none;
+      }
     `;
     document.head.appendChild(style);
+    
+    // Add a class to the map container to help with styling
+    if (markerRef.current && markerRef.current._map && markerRef.current._map._container) {
+      markerRef.current._map._container.classList.add('marker-form-active');
+    }
     
     return () => {
       // Clean up
@@ -84,7 +104,15 @@ const TempMarker = ({
         clearInterval(flagIntervalRef.current);
         flagIntervalRef.current = null;
       }
+      
+      // Remove the style element
       document.head.removeChild(style);
+      
+      // Remove the class from the map container
+      if (markerRef.current && markerRef.current._map && markerRef.current._map._container) {
+        markerRef.current._map._container.classList.remove('marker-form-active');
+      }
+      
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
     };
