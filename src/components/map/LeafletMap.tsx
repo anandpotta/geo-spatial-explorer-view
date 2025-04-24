@@ -74,7 +74,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     
     // Force map to recalculate size after initialization
     setTimeout(() => {
-      if (mapRef.current && !mapRef.current._container._leaflet_id) {
+      if (mapRef.current && mapRef.current.getContainer()) {
         mapRef.current.invalidateSize(true);
       }
     }, 100);
