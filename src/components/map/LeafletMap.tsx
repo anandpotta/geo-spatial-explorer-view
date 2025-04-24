@@ -43,21 +43,31 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     const savedMarkers = getSavedMarkers();
     mapState.setMarkers(savedMarkers);
     
+    // Clean up function to properly destroy the map instance
     return () => {
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
+        
+        // Properly remove the map to prevent container reuse errors
         try {
+          // Only try to remove if the map container still exists
           if (mapRef.current && mapRef.current.remove) {
             try {
-              mapRef.current.getContainer();
-              mapRef.current.remove();
+              // First check if container exists and is attached to DOM
+              const container = mapRef.current.getContainer();
+              if (container && document.body.contains(container)) {
+                console.log('Map container exists and is attached - removing map instance');
+                mapRef.current.remove();
+              }
             } catch (e) {
-              console.log('Map already removed');
+              console.log('Map container already detached or removed');
             }
           }
         } catch (err) {
           console.error('Error cleaning up map:', err);
         }
+        
+        // Ensure the reference is cleared
         mapRef.current = null;
       }
     };
@@ -83,7 +93,8 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     if (selectedLocation && mapRef.current) {
       try {
         // Only try to fly if the map is properly initialized
-        if (mapRef.current.getContainer()) {
+        const container = mapRef.current.getContainer();
+        if (container && document.body.contains(container)) {
           console.log('Flying to selected location:', selectedLocation);
           // Use flyTo with animation for smooth transition
           mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
@@ -93,7 +104,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         }
       } catch (err) {
         console.error('Error flying to location:', err);
-        // If there's an error, recreate the map
+        // If there's an error, recreate the map with a new key
         setMapInstanceKey(Date.now());
       }
     }
@@ -102,36 +113,56 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   const handleSetMapRef = (map: L.Map) => {
     console.log('Map reference provided');
     
+    // Check if we already have a valid reference
     if (mapRef.current) {
       console.log('Map reference already exists, skipping assignment');
       return;
     }
     
     try {
-      // Verify map is properly initialized
-      if (map && map.getContainer()) {
+      // Store reference only if container exists and is attached
+      const container = map.getContainer();
+      if (container && document.body.contains(container)) {
         console.log('Map container verified, storing reference');
         mapRef.current = map;
         
         // Force invalidate size to ensure proper rendering
-        map.invalidateSize(true);
+        setTimeout(() => {
+          if (mapRef.current) {
+            try {
+              mapRef.current.invalidateSize(true);
+            } catch (err) {
+              console.warn('Error invalidating map size:', err);
+            }
+          }
+        }, 100);
         
         // Only fly to location if we have one and the map is ready
         if (selectedLocation) {
           console.log('Flying to initial location');
           setTimeout(() => {
-            if (map.getContainer()) {
-              map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-                animate: true,
-                duration: 1.5
-              });
+            if (mapRef.current) {
+              try {
+                const container = mapRef.current.getContainer();
+                if (container && document.body.contains(container)) {
+                  mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+                    animate: true,
+                    duration: 1.5
+                  });
+                }
+              } catch (err) {
+                console.warn('Error flying to initial location:', err);
+              }
             }
           }, 200);
         }
         
+        // Call onMapReady callback
         if (onMapReady) {
           onMapReady(map);
         }
+      } else {
+        console.warn('Map container not verified, skipping reference assignment');
       }
     } catch (err) {
       console.error('Error setting map reference:', err);

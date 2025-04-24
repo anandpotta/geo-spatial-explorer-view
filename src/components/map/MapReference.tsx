@@ -28,6 +28,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       // Wait until the map is fully initialized before calling onMapReady
       setTimeout(() => {
         try {
+          // Check if map container still exists and is attached to DOM
           if (map && map.getContainer() && document.body.contains(map.getContainer())) {
             hasCalledOnReady.current = true;
             
@@ -35,7 +36,12 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             try {
               // Cast to internal map type to access private properties
               const internalMap = map as LeafletMapInternal;
-              if (internalMap._panes && internalMap._panes.mapPane && internalMap._panes.mapPane._leaflet_pos) {
+              
+              // Only invalidate size if map is properly initialized
+              if (internalMap && 
+                  internalMap._panes && 
+                  internalMap._panes.mapPane) {
+                console.log('Map panes initialized, calling invalidateSize');
                 map.invalidateSize();
               } else {
                 console.log('Map panes not fully initialized yet, skipping invalidateSize');
