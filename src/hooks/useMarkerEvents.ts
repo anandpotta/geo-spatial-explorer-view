@@ -1,8 +1,14 @@
-
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 
 export function useMarkerEvents(map: L.Map | null) {
+  const mapRef = useRef<L.Map | null>(map);
+  
+  // Keep the ref updated when the map changes
+  useEffect(() => {
+    mapRef.current = map;
+  }, [map]);
+  
   useEffect(() => {
     // Disable ALL map keyboard events while marker is active
     const preventMapKeyboardEvents = (e: KeyboardEvent) => {
@@ -19,5 +25,5 @@ export function useMarkerEvents(map: L.Map | null) {
       document.removeEventListener('keydown', preventMapKeyboardEvents, true);
       document.removeEventListener('keyup', preventMapKeyboardEvents, true);
     };
-  }, [map]);
+  }, []);
 }

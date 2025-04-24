@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Marker } from 'react-leaflet';
 import { useMap } from 'react-leaflet';
 import { useMarkerEvents } from '@/hooks/useMarkerEvents';
@@ -24,12 +24,24 @@ const TempMarker = ({
   onSave
 }: TempMarkerProps) => {
   const map = useMap(); // Using useMap from react-leaflet instead of useMapEvents
+  const markerKey = useRef(`temp-marker-${position[0]}-${position[1]}-${Date.now()}`);
+  
   useMarkerEvents(map);
   usePopupStyles();
+  
+  // Set global flags for marker presence
+  useEffect(() => {
+    window.userHasInteracted = true;
+    window.tempMarkerPlaced = true;
+    
+    return () => {
+      // Don't reset flags on unmount as they might be needed elsewhere
+    };
+  }, []);
 
   return (
     <Marker 
-      key={`temp-marker-${position[0]}-${position[1]}-${Date.now()}`}
+      key={markerKey.current}
       position={position} 
       draggable={true}
       eventHandlers={{
