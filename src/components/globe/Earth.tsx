@@ -8,22 +8,39 @@ export default function Earth({ onLocationSelect }) {
   const earthRef = useRef<THREE.Mesh>(null);
   const [rotationSpeed] = useState(0.001);
   const [textureError, setTextureError] = useState(false);
+  const [texturesLoaded, setTexturesLoaded] = useState(false);
   
-  // Load earth textures with a try-catch approach
+  // Load earth textures with fallbacks
   const textureUrls = [
     'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?q=80&w=2074&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop'
   ];
   
-  // Use useTexture with proper arguments
-  const [map, bumpMap, specularMap] = useTexture(textureUrls, (loadedTextures) => {
-    console.log('Earth textures loaded successfully');
-    setTextureError(false);
-  });
+  // Use try-catch to handle texture loading errors
+  let textures;
+  try {
+    textures = useTexture(textureUrls, () => {
+      console.log('Earth textures loaded successfully');
+      setTexturesLoaded(true);
+      setTextureError(false);
+    });
+  } catch (err) {
+    console.error('Failed to load Earth textures:', err);
+    setTextureError(true);
+  }
+  
+  // Destructure textures with fallback for loading errors
+  const [map, bumpMap, specularMap] = textures || [null, null, null];
   
   // Handle texture loading errors by checking texture properties
   useEffect(() => {
+    // Avoid accessing textures before they're loaded to prevent errors
+    if (!textures) {
+      setTextureError(true);
+      return;
+    }
+    
     // Function to check if textures loaded successfully
     const checkTextureValidity = () => {
       try {
@@ -42,16 +59,19 @@ export default function Earth({ onLocationSelect }) {
     };
     
     // Check textures after a short delay to allow loading to complete
-    const timerId = setTimeout(checkTextureValidity, 3000);
-    
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [map, bumpMap, specularMap]);
+    if (texturesLoaded) {
+      const timerId = setTimeout(checkTextureValidity, 500);
+      return () => clearTimeout(timerId);
+    }
+  }, [texturesLoaded, map, bumpMap, specularMap]);
   
   // Apply a small bump scale if bumpMap is available
-  if (bumpMap) {
-    bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+  if (bumpMap && !textureError) {
+    try {
+      bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+    } catch (err) {
+      console.warn('Error setting bump map properties:', err);
+    }
   }
   
   // Rotate the earth on each frame

@@ -1,5 +1,5 @@
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -23,12 +23,35 @@ function EarthErrorFallback() {
 }
 
 export default function GlobeView({ onLocationSelect }) {
+  const [hasError, setHasError] = useState(false);
+  
+  // Enhanced error handler
+  const handleError = (error) => {
+    console.error('Globe rendering error:', error);
+    setHasError(true);
+  };
+  
+  // Safe wrapper for location selection
+  const handleLocationSelect = (coords) => {
+    try {
+      if (coords && onLocationSelect) {
+        onLocationSelect(coords);
+      }
+    } catch (err) {
+      console.error('Error selecting location on globe:', err);
+    }
+  };
+
   return (
     <div className="w-full h-full">
       <Canvas 
         camera={{ position: [0, 0, 4] }}
         gl={{ alpha: false, antialias: true }}
         dpr={[1, 2]} // Responsive rendering for different device pixel ratios
+        onCreated={({ gl }) => {
+          // Configure WebGL context for better performance
+          gl.setClearColor('#000');
+        }}
       >
         <color attach="background" args={['#000']} />
         <ambientLight intensity={0.3} />
@@ -38,8 +61,8 @@ export default function GlobeView({ onLocationSelect }) {
         <pointLight position={[0, 0, -10]} intensity={0.5} color="#4080ff" />
         <Stars radius={300} depth={60} count={20000} factor={7} saturation={0} />
         <Suspense fallback={<EarthErrorFallback />}>
-          <ErrorBoundary fallback={<EarthErrorFallback />}>
-            <Earth onLocationSelect={onLocationSelect} />
+          <ErrorBoundary fallback={<EarthErrorFallback />} onError={handleError}>
+            <Earth onLocationSelect={handleLocationSelect} />
           </ErrorBoundary>
         </Suspense>
         <OrbitControls 
