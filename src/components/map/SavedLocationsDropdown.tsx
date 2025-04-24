@@ -41,6 +41,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   } = useDropdownLocations();
 
   const handleLocationSelect = (position: [number, number]) => {
+    // Close dropdown when a location is selected
     const dropdown = document.querySelector('[data-state="open"]');
     if (dropdown) {
       const trigger = dropdown.previousElementSibling as HTMLButtonElement;
@@ -48,8 +49,12 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     }
     
     console.log("Location selected from dropdown:", position);
-    onLocationSelect(position);
-    toast.success("Navigating to saved location");
+    
+    // Call the provided onLocationSelect function with the position
+    if (onLocationSelect) {
+      onLocationSelect(position);
+      toast.success("Navigating to saved location");
+    }
   };
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
@@ -111,7 +116,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             Saved Locations {markers.length > 0 && `(${markers.length})`}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[200px] z-50">
+        <DropdownMenuContent className="w-[200px] z-50 bg-popover">
           {pinnedMarkers.length > 0 && (
             <>
               <DropdownMenuLabel>Pinned Locations</DropdownMenuLabel>

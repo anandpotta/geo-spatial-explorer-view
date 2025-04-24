@@ -62,6 +62,13 @@ const GeoSpatialExplorer = () => {
     setSelectedLocation(location);
     setCurrentView('cesium'); // Start with Cesium view for the full experience
     setFlyCompleted(false);
+    
+    // Show toast notification for navigation feedback
+    toast({
+      title: 'Location selected',
+      description: `Navigating to ${location.label}`,
+      duration: 3000,
+    });
   };
   
   return (

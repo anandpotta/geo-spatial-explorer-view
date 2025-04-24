@@ -15,9 +15,10 @@ interface LeafletMapProps {
   selectedLocation?: Location;
   onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
+  onLocationSelect?: (location: Location) => void;
 }
 
-const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
+const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const loadedMarkersRef = useRef(false);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
@@ -63,7 +64,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         // Only try to fly if the map is properly initialized
         if (mapRef.current.getContainer()) {
           console.log('Flying to selected location:', selectedLocation);
-          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
+          // Use flyTo with animation for smooth transition
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+            animate: true,
+            duration: 1.5 // seconds
+          });
         }
       } catch (err) {
         console.error('Error flying to location:', err);
@@ -95,7 +100,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
           console.log('Flying to initial location');
           setTimeout(() => {
             if (map.getContainer()) {
-              map.flyTo([selectedLocation.y, selectedLocation.x], 18);
+              map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+                animate: true,
+                duration: 1.5
+              });
             }
           }, 200);
         }
@@ -113,9 +121,22 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     console.log("Location selected in LeafletMap:", position);
     if (mapRef.current) {
       try {
+        // Use flyTo with animation for smooth transition
         mapRef.current.flyTo(position, 18, {
-          duration: 2
+          animate: true,
+          duration: 1.5 // seconds
         });
+        
+        // If we have an onLocationSelect callback, create a Location object and pass it up
+        if (onLocationSelect) {
+          const location: Location = {
+            id: `loc-${position[0]}-${position[1]}`,
+            label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+            x: position[1],
+            y: position[0]
+          };
+          onLocationSelect(location);
+        }
       } catch (err) {
         console.error('Error flying to location:', err);
       }

@@ -30,7 +30,7 @@ interface MapViewProps {
   onShapeCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
-  onClearAll?: () => void; // Add new prop for clearing all state
+  onClearAll?: () => void;
 }
 
 const MapView = ({
@@ -62,6 +62,14 @@ const MapView = ({
     setShowFloorPlan(true);
   };
 
+  // Handle location selection from the dropdown
+  const handleLocationSelect = (position: [number, number]) => {
+    console.log("Location selected in MapView:", position);
+    if (onLocationSelect) {
+      onLocationSelect(position);
+    }
+  };
+
   if (showFloorPlan) {
     return (
       <FloorPlanView 
@@ -74,7 +82,7 @@ const MapView = ({
   return (
     <div className="w-full h-full relative">
       <div className="absolute top-4 right-4 z-[1000]">
-        <SavedLocationsDropdown onLocationSelect={onLocationSelect} />
+        <SavedLocationsDropdown onLocationSelect={handleLocationSelect} />
       </div>
       
       <MapContainer 
