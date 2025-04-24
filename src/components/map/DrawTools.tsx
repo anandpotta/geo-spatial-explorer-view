@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef } from 'react';
 import { EditControl } from "react-leaflet-draw";
 import { useLeafletContext } from '@react-leaflet/core';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,7 +14,7 @@ interface DrawToolsProps {
   onClearAll?: () => void;
 }
 
-const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
+const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onClearAll }, ref) => {
   const context = useLeafletContext();
   const hasInitialized = useRef<boolean>(false);
   const editControlRef = useRef<any>(null);
@@ -135,7 +135,15 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   return (
     <div className="leaflet-draw-container">
       <EditControl
-        ref={editControlRef}
+        ref={(ecRef) => {
+          editControlRef.current = ecRef;
+          // Also pass the ref to the parent component if provided
+          if (typeof ref === 'function') {
+            ref(ecRef);
+          } else if (ref) {
+            ref.current = ecRef;
+          }
+        }}
         position="topright"
         onCreated={handleCreated}
         draw={{
@@ -149,6 +157,9 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       />
     </div>
   );
-};
+});
+
+// Add display name for debugging
+DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;

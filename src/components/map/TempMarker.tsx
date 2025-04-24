@@ -24,7 +24,7 @@ const TempMarker = ({
   // Generate a unique key for the marker based on its position
   const markerKey = `temp-marker-${position[0]}-${position[1]}-${Date.now()}`;
   
-  // Update global reference for position updates
+  // Update global reference for position updates and set flags
   useEffect(() => {
     // Make sure window.tempMarkerPositionUpdate exists
     if (window.tempMarkerPositionUpdate) {
@@ -33,14 +33,11 @@ const TempMarker = ({
       window.tempMarkerPositionUpdate(safePosition);
     }
     
-    // Set flag to prevent map from automatically resetting
-    if (window.tempMarkerPlaced === undefined) {
-      window.tempMarkerPlaced = true;
-    }
+    // Explicitly set these flags to prevent map from automatically moving
+    window.tempMarkerPlaced = true;
+    window.userHasInteracted = true;
     
-    if (window.userHasInteracted === undefined) {
-      window.userHasInteracted = true;
-    }
+    console.log('TempMarker mounted - setting tempMarkerPlaced=true and userHasInteracted=true');
     
     return () => {
       // If component unmounts, set the temp marker to null
@@ -63,6 +60,7 @@ const TempMarker = ({
           
           // Set user interaction flag when marker is dragged
           window.userHasInteracted = true;
+          window.tempMarkerPlaced = true;
           
           // Update the marker position in parent component state
           if (window.tempMarkerPositionUpdate) {

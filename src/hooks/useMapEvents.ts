@@ -49,6 +49,12 @@ export const useMapEvents = (
     // Skip if dependencies aren't available
     if (!selectedLocation || !map) return;
     
+    // Skip if we detect a temporary marker is placed
+    if (window.tempMarkerPlaced) {
+      console.log('Temporary marker detected, skipping automatic navigation');
+      return;
+    }
+    
     // Only proceed if map isn't already initialized
     if (initializedRef.current) {
       console.log('Map already initialized, skipping redundant navigation');
@@ -103,8 +109,6 @@ export const useMapEvents = (
         } catch (setViewErr) {
           console.warn('Error setting initial view:', setViewErr);
         }
-        
-        // Skip animated flyTo to reduce map reset issues
       } catch (error) {
         console.error('Error in map navigation:', error);
       }
