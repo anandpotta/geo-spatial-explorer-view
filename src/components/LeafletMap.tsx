@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
@@ -35,6 +36,8 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   const mapRef = useRef<L.Map | null>(null);
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+  // Flag to prevent duplicate loading
+  const loadedMarkersRef = useRef(false);
 
   const handleRegionClick = (drawing: DrawingData) => {
     console.log("Region clicked:", drawing);
@@ -44,11 +47,18 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   
   useEffect(() => {
     const loadSavedData = () => {
-      const loadedMarkers = getSavedMarkers();
-      setMarkers(loadedMarkers);
-      
-      const loadedDrawings = getSavedDrawings();
-      setDrawings(loadedDrawings);
+      // Only load markers from localStorage if they haven't been loaded already
+      // or if this is triggered by a storage event (which means data changed)
+      if (!loadedMarkersRef.current || event?.type === 'storage' || event?.type === 'markersUpdated') {
+        const loadedMarkers = getSavedMarkers();
+        setMarkers(loadedMarkers);
+        
+        const loadedDrawings = getSavedDrawings();
+        setDrawings(loadedDrawings);
+        
+        // Set the flag to true after initial load
+        loadedMarkersRef.current = true;
+      }
     };
     
     loadSavedData();
@@ -92,8 +102,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       createdAt: new Date()
     };
     
+    // Just save to storage, don't update the state directly
+    // The state will be updated via the storage event listener
     saveMarker(newMarker);
-    setMarkers([...markers, newMarker]);
+    
     setTempMarker(null);
     setMarkerName('');
     toast.success("Location saved successfully");
@@ -101,7 +113,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
 
   const handleDeleteMarker = (id: string) => {
     deleteMarker(id);
-    setMarkers(markers.filter(marker => marker.id !== id));
+    // No need to update state directly, the event listener will handle it
     toast.success("Location removed");
   };
 

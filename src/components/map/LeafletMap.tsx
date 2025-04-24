@@ -20,6 +20,8 @@ interface LeafletMapProps {
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
+  const loadedMarkersRef = useRef(false);
+  
   const {
     position,
     zoom,
@@ -43,15 +45,26 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   
   useEffect(() => {
     const loadSavedData = () => {
-      const loadedMarkers = getSavedMarkers();
-      if (loadedMarkers && loadedMarkers.length > 0) {
-        setMarkers(loadedMarkers);
+      // Only load markers from localStorage if they haven't been loaded already
+      // or if this is triggered by a storage event (which means data changed)
+      if (!loadedMarkersRef.current || event?.type === 'storage' || event?.type === 'markersUpdated') {
+        const loadedMarkers = getSavedMarkers();
+        if (loadedMarkers && loadedMarkers.length > 0) {
+          setMarkers(loadedMarkers);
+        }
+        
+        // Set the flag to true after initial load
+        loadedMarkersRef.current = true;
       }
     };
     
     loadSavedData();
     window.addEventListener('storage', loadSavedData);
-    return () => window.removeEventListener('storage', loadSavedData);
+    window.addEventListener('markersUpdated', loadSavedData);
+    return () => {
+      window.removeEventListener('storage', loadSavedData);
+      window.removeEventListener('markersUpdated', loadSavedData);
+    };
   }, [setMarkers]);
 
   const handleMapClick = (latlng: L.LatLng) => {
@@ -83,6 +96,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined
     };
     
+    // Save to storage but don't update state directly
     saveMarker(newMarker);
     
     if (currentDrawing) {
@@ -96,7 +110,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
       });
     }
     
-    setMarkers([...markers, newMarker]);
     setTempMarker(null);
     setMarkerName('');
     setCurrentDrawing(null);
@@ -105,7 +118,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
 
   const handleDeleteMarker = (id: string) => {
     deleteMarker(id);
-    setMarkers(markers.filter(marker => marker.id !== id));
+    // No need to update state directly, the event listener will handle it
     toast.success("Location removed");
   };
 
@@ -135,7 +148,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   };
 
   if (showFloorPlan) {
-    return <FloorPlanView onBack={() => setShowFloorPlan(false)} />;
+    return <FloorPlanView onBack={() => setShowFloorPlan(false)} drawing={selectedDrawing} />;
   }
 
   return (
