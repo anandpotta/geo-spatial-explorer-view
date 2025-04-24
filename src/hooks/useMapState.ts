@@ -1,7 +1,8 @@
 
 import { useState } from 'react';
-import { Location, LocationMarker, DrawingData } from '@/utils/geo-utils';
-import L from 'leaflet';
+import { Location, LocationMarker, DrawingData, saveMarker, deleteMarker } from '@/utils/geo-utils';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 
 export function useMapState(selectedLocation?: Location) {
   const [position, setPosition] = useState<[number, number]>(
@@ -16,6 +17,47 @@ export function useMapState(selectedLocation?: Location) {
   const [currentDrawing, setCurrentDrawing] = useState<DrawingData | null>(null);
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+
+  const handleSaveMarker = () => {
+    if (!tempMarker || !markerName.trim()) return;
+    
+    const newMarker: LocationMarker = {
+      id: uuidv4(),
+      name: markerName,
+      position: tempMarker,
+      type: markerType,
+      createdAt: new Date(),
+      associatedDrawing: currentDrawing ? currentDrawing.id : undefined
+    };
+    
+    saveMarker(newMarker);
+    
+    if (currentDrawing) {
+      saveDrawing({
+        ...currentDrawing,
+        properties: {
+          ...currentDrawing.properties,
+          name: markerName,
+          associatedMarkerId: newMarker.id
+        }
+      });
+    }
+    
+    setTempMarker(null);
+    setMarkerName('');
+    setCurrentDrawing(null);
+    toast.success("Location saved successfully");
+  };
+
+  const handleDeleteMarker = (id: string) => {
+    deleteMarker(id);
+    toast.success("Location removed");
+  };
+
+  const handleRegionClick = (drawing: DrawingData) => {
+    setSelectedDrawing(drawing);
+    setShowFloorPlan(true);
+  };
 
   return {
     position,
@@ -37,6 +79,9 @@ export function useMapState(selectedLocation?: Location) {
     showFloorPlan,
     setShowFloorPlan,
     selectedDrawing,
-    setSelectedDrawing
+    setSelectedDrawing,
+    handleSaveMarker,
+    handleDeleteMarker,
+    handleRegionClick
   };
 }
