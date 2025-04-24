@@ -53,6 +53,14 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     }
   }, [activeTool]);
 
+  // Effect to handle the clear all command
+  useEffect(() => {
+    if (activeTool === 'clear' && onClearAll) {
+      onClearAll();
+      toast.info("All drawings cleared");
+    }
+  }, [activeTool, onClearAll]);
+
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
     const id = uuidv4();
