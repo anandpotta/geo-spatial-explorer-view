@@ -7,6 +7,7 @@ import { useLeafletMapInitialization } from '@/hooks/useLeafletMapInitialization
 import { useLeafletMapNavigation } from '@/hooks/useLeafletMapNavigation';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import { useMapReferenceHandler } from '@/hooks/useMapReferenceHandler';
+import { toast } from 'sonner';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import MapCleanup from './MapCleanup';
@@ -142,4 +143,3 @@ const LeafletMap = ({
 };
 
 export default LeafletMap;
-

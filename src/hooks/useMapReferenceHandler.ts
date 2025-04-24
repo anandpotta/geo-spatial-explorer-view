@@ -59,7 +59,7 @@ export const useMapReferenceHandler = (
                   console.warn('Map pane not found, map may not be ready');
                   
                   if (mapReadyAttempts < 5) {
-                    setMapReadyAttempts(prev => prev + 1);
+                    setMapReadyAttempts(mapReadyAttempts + 1); // Fixed: direct value instead of function
                     return;
                   }
                 }
@@ -82,7 +82,7 @@ export const useMapReferenceHandler = (
                 console.error('Error during final map initialization:', err);
                 
                 if (mapReadyAttempts < 5) {
-                  setMapReadyAttempts(prev => prev + 1);
+                  setMapReadyAttempts(mapReadyAttempts + 1); // Fixed: direct value instead of function
                 }
               }
             }, 300);
@@ -90,7 +90,7 @@ export const useMapReferenceHandler = (
             console.error('Error in second initialization step:', err);
             
             if (mapReadyAttempts < 5) {
-              setMapReadyAttempts(prev => prev + 1);
+              setMapReadyAttempts(mapReadyAttempts + 1); // Fixed: direct value instead of function
             }
           }
         }, 300);
@@ -110,4 +110,3 @@ export const useMapReferenceHandler = (
 
   return handleSetMapRef;
 };
-
