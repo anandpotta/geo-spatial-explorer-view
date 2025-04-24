@@ -16,8 +16,8 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     // Check if the map is initialized
     const checkMapIsReady = () => {
       try {
-        if (map && map.getContainer() && map._loaded) {
-          console.log('Map is confirmed ready with container and loaded status');
+        if (map && map.getContainer() && map.getZoom() !== undefined) {
+          console.log('Map is confirmed ready with container and zoom level');
           return true;
         }
       } catch (err) {
@@ -49,7 +49,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     // Map is now ready, call onMapReady with a delay to ensure DOM is updated
     const timer = setTimeout(() => {
       try {
-        if (map && map.getContainer() && map._loaded) {
+        if (map && map.getContainer() && map.getZoom() !== undefined) {
           console.log('Map is ready, calling onMapReady');
           hasCalledOnReady.current = true;
           onMapReady(map);
