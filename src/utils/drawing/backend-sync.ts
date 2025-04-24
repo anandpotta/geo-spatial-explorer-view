@@ -1,5 +1,6 @@
 
 import { DrawingData } from '@/types/drawing';
+import { isClearedState } from './storage-utils';
 
 export async function syncDrawingsWithBackend(drawings: DrawingData[]): Promise<void> {
   try {
