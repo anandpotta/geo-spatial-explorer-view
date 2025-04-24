@@ -79,14 +79,17 @@ const MapView = ({
     );
   }
 
+  // Generate a unique ID for this map instance to avoid reuse issues
+  const uniqueMapId = `${mapContainerId}-${Math.random().toString(36).substring(2, 9)}`;
+
   return (
     <div className="w-full h-full relative">
-      <div className="absolute top-4 right-4 z-[1000]">
+      <div className="absolute top-4 right-4 z-[1000]" role="region" aria-label="Map controls">
         <SavedLocationsDropdown onLocationSelect={handleLocationSelect} />
       </div>
       
       <MapContainer 
-        id={mapContainerId}
+        id={uniqueMapId}
         className="w-full h-full"
         attributionControl={false}
         center={position}
@@ -95,7 +98,7 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        key={mapContainerId} // Key helps React recreate the component when ID changes
+        key={uniqueMapId} // Key helps React recreate the component when ID changes
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 

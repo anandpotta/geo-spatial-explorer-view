@@ -17,6 +17,7 @@ interface DrawToolsProps {
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   const editControlRef = useRef<any>(null);
   const context = useLeafletContext();
+  const hasInitialized = useRef<boolean>(false);
 
   // Check if map is ready before rendering EditControl
   useEffect(() => {
@@ -25,6 +26,14 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     const map = context.map;
     const leafletElement = editControlRef.current.leafletElement;
     if (!leafletElement || !leafletElement._modes || !map) return;
+    
+    // Ensure map is fully initialized before proceeding
+    if (!map.getContainer()) {
+      console.warn('Map container not ready for drawing tools');
+      return;
+    }
+
+    hasInitialized.current = true;
     
     // Disable all active tools first
     Object.keys(leafletElement._modes).forEach((mode) => {
@@ -55,6 +64,17 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
         console.warn('Error enabling drawing handler:', err);
       }
     }
+
+    return () => {
+      // Cleanup when tool changes or component unmounts
+      if (leafletElement && leafletElement._modes && leafletElement._modes[activeTool]?.handler?.enabled?.()) {
+        try {
+          leafletElement._modes[activeTool].handler.disable();
+        } catch (err) {
+          console.warn('Error cleaning up drawing handler:', err);
+        }
+      }
+    };
   }, [activeTool, context.map]);
 
   const handleCreated = (e: any) => {

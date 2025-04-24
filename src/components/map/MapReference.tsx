@@ -20,39 +20,40 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   
   useEffect(() => {
     // Only call onMapReady once per instance
-    if (map && onMapReady && !hasCalledOnReady.current) {
-      console.log('Map is ready in MapReference');
-      
-      // Small timeout to ensure DOM is fully rendered
-      setTimeout(() => {
-        try {
-          // Make sure map is fully initialized and has a valid container
-          if (map && map.getContainer()) {
-            // Ensure the map is properly sized
-            map.invalidateSize(true);
-            
-            // Ensure proper event handlers are set up
-            if (!map.hasMapClickHandler) {
-              map.on('click', (e) => {
-                console.log('Map was clicked at:', e.latlng);
-              });
-              map.hasMapClickHandler = true;
-            }
-            
-            // Mark as called to prevent duplicate calls
-            hasCalledOnReady.current = true;
-            
-            // Call the callback
-            onMapReady(map);
+    if (!map || hasCalledOnReady.current) return;
+    
+    console.log('Map is ready in MapReference');
+    
+    // Small timeout to ensure DOM is fully rendered
+    const timeoutId = setTimeout(() => {
+      try {
+        // Make sure map is fully initialized and has a valid container
+        if (map && map.getContainer()) {
+          // Ensure the map is properly sized
+          map.invalidateSize(true);
+          
+          // Ensure proper event handlers are set up
+          if (!map.hasMapClickHandler) {
+            map.on('click', (e) => {
+              console.log('Map was clicked at:', e.latlng);
+            });
+            map.hasMapClickHandler = true;
           }
-        } catch (err) {
-          console.error('Error in map initialization:', err);
+          
+          // Mark as called to prevent duplicate calls
+          hasCalledOnReady.current = true;
+          
+          // Call the callback
+          onMapReady(map);
         }
-      }, 100);
-    }
+      } catch (err) {
+        console.error('Error in map initialization:', err);
+      }
+    }, 100);
     
     // Clean up function
     return () => {
+      clearTimeout(timeoutId);
       if (map) {
         // Remove click event listener to prevent memory leaks
         map.off('click');
