@@ -23,16 +23,13 @@ export const handleDrawingCreated = (e: any, wasRecentlyCleared: React.MutableRe
   const layerWithOptions = layer as L.Path;
   const options = layerWithOptions.options || {};
   
-  // Store only the necessary properties without circular references
-  const coordinates = getCoordinatesFromLayer(layer, layerType);
-  const geoJSON = layer.toGeoJSON();
+  layer.drawingId = id;
   
-  // Create a safe drawing object without circular references
   const drawingData = {
     id,
     type: layerType,
-    coordinates,
-    geoJSON,
+    coordinates: getCoordinatesFromLayer(layer, layerType),
+    geoJSON: layer.toGeoJSON(),
     options: {
       color: options.color,
       weight: options.weight,
@@ -48,12 +45,5 @@ export const handleDrawingCreated = (e: any, wasRecentlyCleared: React.MutableRe
   
   saveDrawing(drawingData);
   toast.success(`${layerType} created successfully`);
-  
-  // Pass only necessary data to the onCreated callback
-  onCreated({ 
-    type: layerType, 
-    id,
-    coordinates,
-    geoJSON
-  });
+  onCreated({ type: layerType, layer, geoJSON: layer.toGeoJSON(), id });
 };

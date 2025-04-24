@@ -20,14 +20,14 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     handleDrawingCreated(e, wasRecentlyCleared, onCreated);
   };
 
-  // Define all drawing options with proper typing
+  // Define all drawing options
   const drawOptions = {
-    polyline: false,
-    polygon: true,
-    rectangle: true,
-    circle: true,
-    marker: true,
-    circlemarker: false
+    polyline: activeTool === 'polyline',
+    polygon: activeTool === 'polygon',
+    rectangle: activeTool === 'rectangle',
+    circle: activeTool === 'circle',
+    marker: activeTool === 'marker',
+    circlemarker: activeTool === 'circlemarker'
   };
 
   return (
@@ -37,17 +37,18 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }}
       position="topright"
       onCreated={handleCreated}
-      draw={drawOptions}
+      draw={{
+        ...drawOptions,
+        // Always show these tools in the toolbar
+        polygon: true,
+        rectangle: true, 
+        circle: true,
+        marker: true,
+      }}
       edit={{
-        edit: { 
-          selectedPathOptions: {
-            color: '#fe57a1',
-            opacity: 0.6,
-            dashArray: '10, 10',
-            fillOpacity: 0.1
-          }
-        },
-        remove: true 
+        edit: {},  // Changed from true to empty object to match expected type
+        remove: {}, // Changed from true to empty object to match expected type
+        featureGroup: null, // Will be set internally by react-leaflet-draw
       }}
     />
   );

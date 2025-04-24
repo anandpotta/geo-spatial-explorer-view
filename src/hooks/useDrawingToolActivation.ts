@@ -10,8 +10,6 @@ export function useDrawingToolActivation(activeTool: string | null) {
     
     const handleToolActivation = () => {
       try {
-        console.log(`Activating tool: ${activeTool}`);
-        
         // Map Leaflet tool names to our custom tool names
         const toolMap: Record<string, string> = {
           'marker': 'marker',
@@ -28,20 +26,11 @@ export function useDrawingToolActivation(activeTool: string | null) {
         }
         
         const drawControl = editControlRef.current;
-        if (!drawControl || !drawControl._toolbars || !drawControl._toolbars.draw) {
-          console.error('Draw control or toolbar not initialized properly');
-          return;
-        }
-        
         const handlers = drawControl._toolbars.draw._modes;
-        if (!handlers) {
-          console.error('Draw handlers not found');
-          return;
-        }
         
         // Disable all drawing modes first
         Object.keys(handlers).forEach(mode => {
-          const handler = handlers[mode]?.handler;
+          const handler = handlers[mode].handler;
           if (handler && handler.disable) {
             handler.disable();
           }
@@ -51,11 +40,9 @@ export function useDrawingToolActivation(activeTool: string | null) {
         const selectedHandler = handlers[leafletTool]?.handler;
         if (selectedHandler && selectedHandler.enable) {
           selectedHandler.enable();
-          console.log(`${activeTool} drawing mode activated successfully`);
-          toast.info(`${activeTool} drawing mode activated`);
-        } else {
-          console.error(`Failed to find or activate handler for ${leafletTool}`);
         }
+        
+        toast.info(`${activeTool} drawing mode activated`);
       } catch (error) {
         console.error('Error activating drawing tool:', error);
         toast.error('Failed to activate drawing tool');

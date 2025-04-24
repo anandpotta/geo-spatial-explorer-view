@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
@@ -44,17 +43,14 @@ export function useMapState(selectedLocation?: Location) {
     saveMarker(newMarker);
     
     if (currentDrawing) {
-      // Make sure we only save necessary data without circular references
-      const safeDrawing: DrawingData = {
+      saveDrawing({
         ...currentDrawing,
         properties: {
           ...currentDrawing.properties,
           name: markerName,
           associatedMarkerId: newMarker.id
         }
-      };
-      
-      saveDrawing(safeDrawing);
+      });
     }
     
     setTempMarker(null);
