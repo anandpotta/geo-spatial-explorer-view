@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
@@ -12,6 +13,13 @@ interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick?: (drawing: DrawingData) => void;
+}
+
+// Extend the GeoJSON type to include our custom properties
+declare module 'leaflet' {
+  interface Layer {
+    drawingId?: string;
+  }
 }
 
 const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingControlsProps) => {
@@ -51,6 +59,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick }: DrawingContro
           });
           
           if (layer) {
+            // Set the drawingId as a property on the Layer directly
             layer.drawingId = drawing.id;
             
             if (onRegionClick) {
