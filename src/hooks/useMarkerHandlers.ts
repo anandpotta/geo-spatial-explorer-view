@@ -5,9 +5,7 @@ import L from 'leaflet';
 
 export function useMarkerHandlers(mapState: any) {
   const handleMapClick = (latlng: L.LatLng) => {
-    // Allow adding a new marker regardless of whether there's already a temp marker
-    // This change enables adding multiple markers
-    if (mapState.activeTool === 'marker' || !mapState.activeTool) {
+    if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       mapState.setTempMarker(exactPosition);
       mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');

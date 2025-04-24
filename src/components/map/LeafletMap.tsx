@@ -1,13 +1,12 @@
-
-import { useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
+import { setupLeafletIcons } from './LeafletMapIcons';
 import { useMapState } from '@/hooks/useMapState';
-import { useMapInitialization } from '@/hooks/useMapInitialization';
-import { useLocationSelection } from '@/hooks/useLocationSelection';
-import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
+import { useMapEvents } from '@/hooks/useMapEvents';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
+import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -18,18 +17,88 @@ interface LeafletMapProps {
 }
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
+  const mapRef = useRef<L.Map | null>(null);
+  const loadedMarkersRef = useRef(false);
+  const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
+  
   const mapState = useMapState(selectedLocation);
-  const { mapRef, mapInstanceKey, setMapInstanceKey, mapInitialized, handleSetMapRef } = 
-    useMapInitialization(selectedLocation, onMapReady);
-  const { handleLocationSelect: baseHandleLocationSelect } = useLocationSelection();
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
+  
+  useEffect(() => {
+    setupLeafletIcons();
+    
+    if (!document.querySelector('link[href*="leaflet.css"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      link.crossOrigin = '';
+      document.head.appendChild(link);
+    }
+    
+    return () => {
+      if (mapRef.current) {
+        console.log('Cleaning up Leaflet map instance');
+        try {
+          if (mapRef.current && mapRef.current.remove) {
+            try {
+              mapRef.current.getContainer();
+              mapRef.current.remove();
+            } catch (e) {
+              console.log('Map already removed');
+            }
+          }
+        } catch (err) {
+          console.error('Error cleaning up map:', err);
+        }
+        mapRef.current = null;
+      }
+    };
+  }, [mapInstanceKey]);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      if (mapRef.current) {
+        mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
+      } else {
+        setMapInstanceKey(Date.now());
+      }
+    }
+  }, [selectedLocation]);
+
+  const handleSetMapRef = (map: L.Map) => {
+    if (mapRef.current) {
+      console.log('Map reference already exists, skipping assignment');
+      return;
+    }
+    
+    mapRef.current = map;
+    
+    if (onMapReady) {
+      onMapReady(map);
+    }
+    
+    if (selectedLocation) {
+      map.flyTo([selectedLocation.y, selectedLocation.x], 18);
+    }
+    
+    setTimeout(() => {
+      if (mapRef.current && mapRef.current.getContainer()) {
+        mapRef.current.invalidateSize(true);
+      }
+    }, 100);
+  };
 
   const handleLocationSelect = (position: [number, number]) => {
-    baseHandleLocationSelect(position, mapRef);
+    console.log("Location selected in LeafletMap:", position);
+    if (mapRef.current) {
+      mapRef.current.flyTo(position, 18, {
+        duration: 2
+      });
+    }
   };
 
   const handleClearAll = () => {
-    console.log("Handling clear all in LeafletMap");
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
     mapState.setMarkerType('building');
@@ -37,19 +106,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     mapState.setShowFloorPlan(false);
     mapState.setSelectedDrawing(null);
     
-    try {
-      if (mapRef.current && mapRef.current.getContainer() && 
-          document.body.contains(mapRef.current.getContainer())) {
-        console.log('Invalidating map size safely');
-        mapRef.current.invalidateSize({ animate: false, pan: false });
-      }
-    } catch (err) {
-      console.error('Error invalidating map size:', err);
+    if (mapRef.current) {
+      mapRef.current.invalidateSize();
     }
-    
-    setTimeout(() => {
-      setMapInstanceKey(Date.now());
-    }, 300);
   };
 
   if (mapState.showFloorPlan) {

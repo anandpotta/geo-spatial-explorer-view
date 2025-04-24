@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
 import MapControls from './drawing/MapControls';
 import ShapeTools from './drawing/ShapeTools';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
-import { deleteDrawing, getSavedDrawings, clearAllDrawings } from '@/utils/drawing-utils';
+import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -55,43 +54,34 @@ const DrawingTools = ({
   };
 
   const handleClearAll = () => {
-    try {
-      console.log("Clearing all layers...");
-      
-      // First, get all markers and drawings
-      const markers = getSavedMarkers();
-      const drawings = getSavedDrawings();
-      
-      console.log(`Found ${markers.length} markers and ${drawings.length} drawings to clear`);
+    const markers = getSavedMarkers();
+    const drawings = getSavedDrawings();
 
-      // Clear all markers individually to trigger proper event handling
-      markers.forEach(marker => {
-        deleteMarker(marker.id);
-      });
+    // Clear all markers
+    markers.forEach(marker => {
+      deleteMarker(marker.id);
+    });
 
-      // Use the new clearAllDrawings utility function
-      clearAllDrawings();
-      
-      // Clear local storage directly to ensure complete cleanup
-      localStorage.removeItem('savedMarkers');
-      localStorage.removeItem('savedDrawings');
+    // Clear all drawings
+    drawings.forEach(drawing => {
+      deleteDrawing(drawing.id);
+    });
 
-      // Notify components about storage changes
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('markersUpdated'));
-      window.dispatchEvent(new CustomEvent('clearAllDrawings'));
-      
-      // Reset map state through parent component
-      if (onClearAll) {
-        onClearAll();
-      }
-      
-      setIsClearDialogOpen(false);
-      toast.success('All layers cleared successfully');
-    } catch (error) {
-      console.error("Error clearing layers:", error);
-      toast.error('Failed to clear layers. Please try again.');
+    // Clear local storage
+    localStorage.removeItem('savedMarkers');
+    localStorage.removeItem('savedDrawings');
+
+    // Notify components about storage changes
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('markersUpdated'));
+    
+    // Reset map state through parent component
+    if (onClearAll) {
+      onClearAll();
     }
+    
+    setIsClearDialogOpen(false);
+    toast.success('All layers cleared');
   };
 
   const handleMouseDown = (event: React.MouseEvent) => {
