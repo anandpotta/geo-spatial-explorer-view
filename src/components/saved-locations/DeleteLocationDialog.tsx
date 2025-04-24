@@ -29,19 +29,10 @@ const DeleteLocationDialog = ({
 }: DeleteLocationDialogProps) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
   
-  // Handle dialog closing
-  const handleOpenChange = (open: boolean) => {
-    onOpenChange(open);
-    if (!open) {
-      onCancel();
-    }
-  };
-  
-  // Ensure dialog doesn't trap focus after it's closed
+  // Handle dialog closing and focus management
   useEffect(() => {
     if (!isOpen) {
       // Return focus to the body element if dialog closes
-      // This helps reset focus state when the dialog is dismissed
       setTimeout(() => {
         document.body.focus();
       }, 0);
@@ -63,7 +54,7 @@ const DeleteLocationDialog = ({
   return (
     <AlertDialog 
       open={isOpen} 
-      onOpenChange={handleOpenChange}
+      onOpenChange={onOpenChange}
     >
       <AlertDialogContent>
         <AlertDialogHeader>

@@ -1,15 +1,9 @@
-
-import { useDropdownLocations } from "@/hooks/useDropdownLocations";
-import { Button } from "@/components/ui/button";
-import { Navigation } from "lucide-react";
-import { toast } from "sonner";
+import React, { useState, useEffect, useRef } from 'react';
+import { useDropdownLocations } from '@/hooks/useDropdownLocations';
+import { useToast } from "@/components/ui/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -24,16 +18,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
 import { deleteMarker } from "@/utils/marker-utils";
-import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { DotsHorizontalIcon, PlusIcon } from "@radix-ui/react-icons";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createMarker } from "@/utils/marker-utils";
+import { LocationMarker } from '@/utils/geo-utils';
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
 }
 
-const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProps) => {
+const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({ 
+  onLocationSelect 
+}) => {
+  const { toast } = useToast();
   const {
-    markers,
-    pinnedMarkers,
+    savedLocations,
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
     markerToDelete,
@@ -41,6 +42,11 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     returnFocusRef,
     cleanupMarkerReferences
   } = useDropdownLocations();
+
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+  const [newLocationName, setNewLocationName] = useState("");
+	const [newLocationLat, setNewLocationLat] = useState<number | undefined>(undefined);
+	const [newLocationLng, setNewLocationLng] = useState<number | undefined>(undefined);
 
   // Add effect for escape key handling
   useEffect(() => {
@@ -57,39 +63,15 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   }, [isDeleteDialogOpen]);
 
   const handleLocationSelect = (position: [number, number]) => {
-    // Close dropdown when a location is selected
-    const dropdown = document.querySelector('[data-state="open"]');
-    if (dropdown) {
-      const trigger = dropdown.previousElementSibling as HTMLButtonElement;
-      if (trigger) trigger.click();
-    }
-    
-    console.log("Location selected from dropdown:", position);
-    
-    // Call the provided onLocationSelect function with the position
-    if (onLocationSelect) {
-      onLocationSelect(position);
-      toast.success("Navigating to saved location");
-    }
+    onLocationSelect(position);
   };
 
-  const handleDelete = (id: string, event: React.MouseEvent) => {
-    // Prevent event propagation to avoid triggering parent elements
-    event.stopPropagation();
-    event.preventDefault();
-    
-    if (event.currentTarget) {
-      returnFocusRef.current = event.currentTarget as HTMLElement;
-    }
-    
-    const marker = markers.find(m => m.id === id);
-    if (marker) {
-      setMarkerToDelete(marker);
-      setIsDeleteDialogOpen(true);
-    }
+  const handleDeleteClick = (marker: LocationMarker) => {
+    setMarkerToDelete(marker);
+    setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const handleConfirmDelete = () => {
     if (markerToDelete) {
       deleteMarker(markerToDelete.id);
       setIsDeleteDialogOpen(false);
@@ -101,25 +83,6 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       
       // Reset focus to document.body as a fallback
       document.body.focus();
-      
-      // Wait for next frame before trying to return focus
-      requestAnimationFrame(() => {
-        try {
-          if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
-            returnFocusRef.current.focus();
-          } else {
-            // Focus the dropdown trigger as a fallback
-            const trigger = document.querySelector('.dropdown-trigger') as HTMLElement;
-            if (trigger) trigger.focus();
-            else document.body.focus();
-          }
-        } catch (e) {
-          console.error("Error restoring focus:", e);
-          document.body.focus();
-        } finally {
-          returnFocusRef.current = null;
-        }
-      });
     }
   };
 
@@ -132,76 +95,123 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     
     // Reset focus to document.body as a fallback
     document.body.focus();
-    
-    // Wait for next frame before trying to return focus
-    requestAnimationFrame(() => {
-      try {
-        if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
-          returnFocusRef.current.focus();
-        } else {
-          // Focus the dropdown trigger as a fallback
-          const trigger = document.querySelector('.dropdown-trigger') as HTMLElement;
-          if (trigger) trigger.focus();
-          else document.body.focus();
-        }
-      } catch (e) {
-        console.error("Error restoring focus:", e);
-        document.body.focus();
-      } finally {
-        returnFocusRef.current = null;
-      }
-    });
   };
+
+  const toggleAddLocation = () => {
+    setIsAddingLocation(!isAddingLocation);
+  };
+
+	const handleAddLocation = async () => {
+		if (!newLocationName || newLocationName.trim() === "") {
+			toast({
+				title: "Error",
+				description: "Location name cannot be empty.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		if (newLocationLat === undefined || newLocationLng === undefined) {
+			toast({
+				title: "Error",
+				description: "Latitude and Longitude must be valid numbers.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		const newMarker = {
+			name: newLocationName,
+			position: [newLocationLat, newLocationLng] as [number, number],
+		};
+
+		try {
+			await createMarker(newMarker);
+			toast.success("Location saved");
+			setNewLocationName("");
+			setNewLocationLat(undefined);
+			setNewLocationLng(undefined);
+			setIsAddingLocation(false);
+		} catch (error) {
+			toast({
+				title: "Error",
+				description: "Failed to save location.",
+				variant: "destructive",
+			});
+		}
+	};
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="w-[200px] dropdown-trigger">
-            <Navigation className="mr-2 h-4 w-4" />
-            Saved Locations {markers.length > 0 && `(${markers.length})`}
+          <Button variant="outline" >
+            Saved Locations <DotsHorizontalIcon className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[200px] z-50 bg-popover">
-          {pinnedMarkers.length > 0 && (
-            <>
-              <DropdownMenuLabel>Pinned Locations</DropdownMenuLabel>
-              <DropdownMenuGroup>
-                {pinnedMarkers.map((marker) => (
-                  <MarkerMenuItem
-                    key={`pinned-${marker.id}`}
-                    marker={marker}
-                    onSelect={handleLocationSelect}
-                    onDelete={handleDelete}
+        <DropdownMenuContent className="w-56">
+          {savedLocations.map((marker) => (
+            <MarkerMenuItem
+              key={marker.id}
+              marker={marker}
+              onSelect={handleLocationSelect}
+              onDelete={handleDeleteClick}
+            />
+          ))}
+          {!isAddingLocation ? (
+            <DropdownMenuContent className="p-2">
+              <Button variant="ghost" onClick={toggleAddLocation}>
+                <PlusIcon className="mr-2 h-4 w-4" /> Add Location
+              </Button>
+            </DropdownMenuContent>
+          ) : (
+            <DropdownMenuContent className="p-2">
+              <div className="grid gap-2">
+                <div className="grid gap-1">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={newLocationName}
+                    onChange={(e) => setNewLocationName(e.target.value)}
                   />
-                ))}
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-            </>
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="lat">Latitude</Label>
+                  <Input
+                    id="lat"
+                    type="number"
+                    value={newLocationLat !== undefined ? newLocationLat.toString() : ""}
+                    onChange={(e) =>
+                      setNewLocationLat(parseFloat(e.target.value))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="lng">Longitude</Label>
+                  <Input
+                    id="lng"
+                    type="number"
+                    value={newLocationLng !== undefined ? newLocationLng.toString() : ""}
+                    onChange={(e) =>
+                      setNewLocationLng(parseFloat(e.target.value))
+                    }
+                  />
+                </div>
+                <Button variant="ghost" onClick={handleAddLocation}>
+                  Save Location
+                </Button>
+              </div>
+            </DropdownMenuContent>
           )}
-
-          <DropdownMenuLabel>All Locations</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            {markers.length === 0 ? (
-              <DropdownMenuItem disabled>No saved locations</DropdownMenuItem>
-            ) : (
-              markers.map((marker) => (
-                <MarkerMenuItem
-                  key={marker.id}
-                  marker={marker}
-                  onSelect={handleLocationSelect}
-                  onDelete={handleDelete}
-                />
-              ))
-            )}
-          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        if (!open) cancelDelete();
-      }}>
+      <AlertDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={(open) => {
+          if (!open) cancelDelete();
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Location</AlertDialogTitle>
@@ -210,8 +220,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
-              onClick={(e) => {
+            <AlertDialogCancel onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 cancelDelete();
@@ -219,11 +228,10 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={(e) => {
+            <AlertDialogAction onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                confirmDelete();
+                handleConfirmDelete();
               }}
             >
               Delete
