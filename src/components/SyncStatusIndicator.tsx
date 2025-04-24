@@ -86,26 +86,26 @@ const SyncStatusIndicator: React.FC = () => {
     : { label: 'Offline', color: 'text-yellow-500' };
   
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-sm rounded-md shadow-md">
-      <TooltipProvider>
+    <div className="flex items-center gap-2 px-3 py-2 bg-background/90 backdrop-blur-sm rounded-md shadow-md" tabIndex={-1}>
+      <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" tabIndex={0} role="status">
               {contextIsOnline ? (
                 isBackendReachable ? (
-                  <Server size={16} className={connectionStatus.color} />
+                  <Server size={16} className={connectionStatus.color} aria-hidden="true" />
                 ) : (
-                  <WifiOff size={16} className={connectionStatus.color} />
+                  <WifiOff size={16} className={connectionStatus.color} aria-hidden="true" />
                 )
               ) : (
-                <WifiOff size={16} className={connectionStatus.color} />
+                <WifiOff size={16} className={connectionStatus.color} aria-hidden="true" />
               )}
               <span className="text-xs font-medium">
                 {connectionStatus.label}
               </span>
             </div>
           </TooltipTrigger>
-          <TooltipContent>
+          <TooltipContent side="top">
             <p>
               {contextIsOnline 
                 ? isBackendReachable 
@@ -119,9 +119,9 @@ const SyncStatusIndicator: React.FC = () => {
       
       {contextIsOnline && isBackendReachable && (
         <>
-          <div className="h-4 border-l border-border mx-1" />
+          <div className="h-4 border-l border-border mx-1" aria-hidden="true" />
           
-          <TooltipProvider>
+          <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
@@ -130,14 +130,16 @@ const SyncStatusIndicator: React.FC = () => {
                   className="h-6 w-6" 
                   onClick={syncNow}
                   disabled={contextIsSyncing}
+                  aria-label={contextIsSyncing ? "Syncing data" : "Sync now"}
                 >
                   <RefreshCw 
                     size={14} 
                     className={contextIsSyncing ? "animate-spin text-blue-500" : "text-muted-foreground"}
+                    aria-hidden="true"
                   />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent side="top">
                 <p>
                   {contextIsSyncing 
                     ? 'Syncing data with server...' 
