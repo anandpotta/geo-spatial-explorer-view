@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -13,7 +13,7 @@ interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick?: (drawing: DrawingData) => void;
-  onClearAll?: () => void; // Add new prop for clearing all state
+  onClearAll?: () => void;
 }
 
 declare module 'leaflet' {
@@ -22,7 +22,12 @@ declare module 'leaflet' {
   }
 }
 
-const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps) => {
+const DrawingControls = forwardRef<L.FeatureGroup, DrawingControlsProps>(({ 
+  onCreated, 
+  activeTool, 
+  onRegionClick, 
+  onClearAll 
+}, ref) => {
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const { savedDrawings } = useDrawings();
   
@@ -60,6 +65,27 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
     });
   }, [savedDrawings, onRegionClick]);
 
+  // Sync the forwarded ref with our internal ref
+  useEffect(() => {
+    if (featureGroupRef.current) {
+      // Handle ref as either a function or an object
+      if (typeof ref === 'function') {
+        ref(featureGroupRef.current);
+      } else if (ref) {
+        ref.current = featureGroupRef.current;
+      }
+    }
+    
+    return () => {
+      // Clear the ref when component unmounts
+      if (typeof ref === 'function') {
+        ref(null);
+      } else if (ref) {
+        ref.current = null;
+      }
+    };
+  }, [ref]);
+
   return (
     <FeatureGroup ref={featureGroupRef}>
       <DrawTools 
@@ -69,6 +95,9 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
       />
     </FeatureGroup>
   );
-};
+});
+
+// Add display name for debugging
+DrawingControls.displayName = 'DrawingControls';
 
 export default DrawingControls;

@@ -1,15 +1,14 @@
 
-import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
-import SavedLocationsDropdown from './SavedLocationsDropdown';
+import { useState, useCallback } from 'react';
+import { LocationMarker } from '@/utils/marker-utils';
+import { DrawingData } from '@/utils/drawing-utils';
+import FloorPlanView from './FloorPlanView';
+import MapCore from './core/MapContainer';
+import MapControlsOverlay from './controls/MapControlsOverlay';
 import MapReference from './MapReference';
 import MapEvents from './MapEvents';
-import { LocationMarker } from '@/utils/marker-utils';
-import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
-import FloorPlanView from './FloorPlanView';
-import { useState, useEffect } from 'react';
-import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -31,6 +30,7 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
+  mapContainerId?: string;
 }
 
 const MapView = ({
@@ -50,26 +50,25 @@ const MapView = ({
   onShapeCreated,
   activeTool,
   onRegionClick,
-  onClearAll
+  onClearAll,
+  mapContainerId = 'leaflet-map'
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
-  // Use a random key to force a new map instance when needed
-  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
 
-  const handleRegionClick = (drawing: DrawingData) => {
+  const handleRegionClick = useCallback((drawing: DrawingData) => {
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
-  };
+  }, []);
 
-  // Handle location selection from the dropdown
-  const handleLocationSelect = (position: [number, number]) => {
+  const handleLocationSelect = useCallback((position: [number, number]) => {
     console.log("Location selected in MapView:", position);
     if (onLocationSelect) {
       onLocationSelect(position);
     }
-  };
+  }, [onLocationSelect]);
 
+  // Early return for floor plan view to prevent unnecessary map rendering
   if (showFloorPlan) {
     return (
       <FloorPlanView 
@@ -79,38 +78,25 @@ const MapView = ({
     );
   }
 
+  // Use a stable ID to avoid unnecessary remounting of the map
+  const uniqueMapId = `${mapContainerId}-${Math.floor(Math.random() * 1000)}`;
+
   return (
     <div className="w-full h-full relative">
-      <div className="absolute top-4 right-4 z-[1000]">
-        <SavedLocationsDropdown onLocationSelect={handleLocationSelect} />
-      </div>
+      <MapControlsOverlay onLocationSelect={handleLocationSelect} />
       
-      <MapContainer 
-        key={mapKey}
-        className="w-full h-full"
-        attributionControl={false}
-        center={position}
+      <MapCore 
+        position={position}
         zoom={zoom}
-        zoomControl={false}
-        fadeAnimation={true}
-        markerZoomAnimation={true}
-        preferCanvas={true}
+        uniqueMapId={uniqueMapId}
+        onMapReady={onMapReady}
       >
-        <TileLayer 
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-          maxZoom={19}
-          subdomains={['a', 'b', 'c']}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          className="leaflet-tile-pane"
-        />
-        <AttributionControl position="bottomright" prefix={false} />
-        
         <MapReference onMapReady={onMapReady} />
         
         <DrawingControlsContainer
           onShapeCreated={onShapeCreated}
           activeTool={activeTool}
-          onRegionClick={handleRegionClick}
+          onRegionClick={onRegionClick}
           onClearAll={onClearAll}
         />
         
@@ -126,7 +112,7 @@ const MapView = ({
         />
         
         <MapEvents onMapClick={onMapClick} />
-      </MapContainer>
+      </MapCore>
     </div>
   );
 };

@@ -1,28 +1,48 @@
 
-import { useEffect, useRef } from 'react';
-import { EditControl } from "react-leaflet-draw";
+import { useEffect, useRef, forwardRef } from 'react';
+import { useLeafletContext } from '@react-leaflet/core';
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
+import DrawToolsWrapper from './DrawToolsWrapper';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
-  onClearAll?: () => void; // Add onClearAll prop
+  onClearAll?: () => void;
 }
 
-const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
+const DrawTools = forwardRef<any, DrawToolsProps>(({ onCreated, activeTool, onClearAll }, ref) => {
+  const context = useLeafletContext();
+  const hasInitialized = useRef<boolean>(false);
   const editControlRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!editControlRef.current || !activeTool) return;
+    if (!context || !context.map || !activeTool) return;
     
+    const map = context.map;
+    
+    if (!map.getContainer() || !document.contains(map.getContainer())) {
+      console.warn('Map container not ready for drawing tools');
+      return;
+    }
+    
+    if (!editControlRef.current || !editControlRef.current.leafletElement) {
+      console.warn('EditControl not initialized yet');
+      return;
+    }
+
     const leafletElement = editControlRef.current.leafletElement;
-    if (!leafletElement || !leafletElement._modes) return;
+    if (!leafletElement || !leafletElement._modes) {
+      console.warn('Drawing tools not initialized');
+      return;
+    }
+
+    hasInitialized.current = true;
     
-    // Disable all active tools first
+    // Disable any active drawing modes first
     Object.keys(leafletElement._modes).forEach((mode) => {
       if (leafletElement._modes[mode].handler && 
           leafletElement._modes[mode].handler.enabled && 
@@ -42,20 +62,50 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       rectangle: "Click on map to draw rectangle"
     };
 
-    // Enable the requested tool if it exists
+    // Only try to enable the tool if it exists
     if (leafletElement._modes[activeTool] && leafletElement._modes[activeTool].handler) {
       try {
+        // Before enabling, check if a marker form is active
+        const markerFormActive = document.querySelector('.marker-form-active');
+        if (markerFormActive) {
+          toast.info("Please save or cancel the current marker first", {
+            duration: 3000,
+          });
+          return;
+        }
+        
         leafletElement._modes[activeTool].handler.enable();
         toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
       } catch (err) {
         console.warn('Error enabling drawing handler:', err);
       }
     }
-  }, [activeTool]);
+
+    return () => {
+      if (leafletElement && leafletElement._modes && leafletElement._modes[activeTool]?.handler?.enabled?.()) {
+        try {
+          leafletElement._modes[activeTool].handler.disable();
+        } catch (err) {
+          console.warn('Error cleaning up drawing handler:', err);
+        }
+      }
+    };
+  }, [activeTool, context]);
 
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
     const id = uuidv4();
+    
+    // First, check if we have an active marker form that would conflict
+    if (document.querySelector('.marker-form-popup')) {
+      toast.warning("Please save or cancel the current marker first", {
+        duration: 3000,
+      });
+      if (context && context.map) {
+        context.map.removeLayer(layer);
+      }
+      return;
+    }
     
     if (layerType === 'marker' && 'getLatLng' in layer) {
       const markerLayer = layer as L.Marker;
@@ -92,21 +142,36 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     onCreated({ type: layerType, layer, geoJSON: layer.toGeoJSON(), id });
   };
 
+  if (!context || !context.map) {
+    return null;
+  }
+
   return (
-    <EditControl
-      ref={editControlRef}
-      position="topright"
-      onCreated={handleCreated}
-      draw={{
-        rectangle: true,
-        polygon: true,
-        circle: true,
-        circlemarker: false,
-        marker: true,
-        polyline: false
-      }}
-    />
+    <div className="leaflet-draw-container">
+      <DrawToolsWrapper
+        ref={(ecRef) => {
+          editControlRef.current = ecRef;
+          if (typeof ref === 'function') {
+            ref(ecRef);
+          } else if (ref) {
+            ref.current = ecRef;
+          }
+        }}
+        position="topright"
+        onCreated={handleCreated}
+        draw={{
+          rectangle: true,
+          polygon: true,
+          circle: true,
+          circlemarker: false,
+          marker: true,
+          polyline: false
+        }}
+      />
+    </div>
   );
-};
+});
+
+DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;
