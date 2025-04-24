@@ -7,10 +7,10 @@ import { Globe2, Map as MapIcon, Bookmark } from 'lucide-react';
 import SavedLocations from '../saved-locations/SavedLocations';
 
 interface ExplorerSidebarProps {
-  selectedLocation: Location | undefined;
-  currentView: 'cesium' | 'leaflet';
+  selectedLocation?: Location;
+  currentView: 'cesium' | 'leaflet' | 'globe';
   flyCompleted: boolean;
-  setCurrentView: (view: 'cesium' | 'leaflet') => void;
+  setCurrentView: (view: 'cesium' | 'leaflet' | 'globe') => void;
   onSavedLocationSelect: (position: [number, number]) => void;
 }
 

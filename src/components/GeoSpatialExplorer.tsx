@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -8,12 +7,11 @@ import SyncStatusIndicator from './SyncStatusIndicator';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
-  const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium'); // Always start with cesium
+  const [currentView, setCurrentView] = useState<'cesium' | 'leaflet' | 'globe'>('globe');
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
   const { toast } = useToast();
   
-  // Effect to handle initial map load
   useEffect(() => {
     if (isMapReady) {
       console.log('Map is ready for interactions');
@@ -24,7 +22,6 @@ const GeoSpatialExplorer = () => {
     console.log('Location selected in Explorer:', location);
     setSelectedLocation(location);
     
-    // Always force cesium view when selecting a new location
     setCurrentView('cesium');
     setFlyCompleted(false);
     
@@ -39,7 +36,6 @@ const GeoSpatialExplorer = () => {
     console.log('Fly complete in Explorer, switching to leaflet view');
     setFlyCompleted(true);
     
-    // Short delay before switching to leaflet view for a smoother transition
     setTimeout(() => {
       setCurrentView('leaflet');
       toast({
@@ -51,7 +47,6 @@ const GeoSpatialExplorer = () => {
   };
   
   const handleSavedLocationSelect = (position: [number, number]) => {
-    // Create a simple location object from coordinates
     const location: Location = {
       id: `loc-${position[0]}-${position[1]}`,
       label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
@@ -60,10 +55,9 @@ const GeoSpatialExplorer = () => {
     };
     
     setSelectedLocation(location);
-    setCurrentView('cesium'); // Start with Cesium view for the full experience
+    setCurrentView('cesium');
     setFlyCompleted(false);
     
-    // Show toast notification for navigation feedback
     toast({
       title: 'Location selected',
       description: `Navigating to ${location.label}`,
@@ -73,7 +67,6 @@ const GeoSpatialExplorer = () => {
   
   return (
     <div className="w-full h-screen flex bg-black overflow-hidden">
-      {/* Left Panel */}
       <ExplorerSidebar 
         selectedLocation={selectedLocation}
         currentView={currentView}
@@ -82,9 +75,7 @@ const GeoSpatialExplorer = () => {
         onSavedLocationSelect={handleSavedLocationSelect}
       />
       
-      {/* Right Panel - Map View */}
       <div className="flex-1 relative bg-black">
-        {/* Map content */}
         <MapContent 
           currentView={currentView}
           selectedLocation={selectedLocation}
@@ -93,7 +84,6 @@ const GeoSpatialExplorer = () => {
           onLocationSelect={handleLocationSelect}
         />
         
-        {/* Sync status indicator */}
         <div className="absolute bottom-5 right-5 z-[10001]">
           <SyncStatusIndicator />
         </div>

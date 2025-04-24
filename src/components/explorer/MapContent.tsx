@@ -2,14 +2,15 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
-import LeafletMap from '../map/LeafletMap'; // Update the import path
+import LeafletMap from '../map/LeafletMap';
+import GlobeView from '../globe/GlobeView';
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
 
 interface MapContentProps {
-  currentView: 'cesium' | 'leaflet';
+  currentView: 'cesium' | 'leaflet' | 'globe';
   selectedLocation: Location | undefined;
   onMapReady: () => void;
   onFlyComplete: () => void;
@@ -134,6 +135,18 @@ const MapContent = ({
               activeTool={activeTool}
               key={`leaflet-${mapKey}`}
             />
+          )}
+        </div>
+
+        <div 
+          className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'globe' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
+          style={{ 
+            visibility: currentView === 'globe' ? 'visible' : 'hidden' 
+          }}
+          data-map-type="globe"
+        >
+          {currentView === 'globe' && (
+            <GlobeView />
           )}
         </div>
         
