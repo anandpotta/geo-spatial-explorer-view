@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
@@ -17,11 +18,18 @@ const DrawTools = ({ onCreated, activeTool }: DrawToolsProps) => {
     if (!editControlRef.current || !activeTool) return;
     
     const leafletElement = editControlRef.current.leafletElement;
-    if (!leafletElement) return;
+    if (!leafletElement || !leafletElement._modes) return;
     
+    // Disable all active tools first
     Object.keys(leafletElement._modes).forEach((mode) => {
-      if (leafletElement._modes[mode].handler.enabled()) {
-        leafletElement._modes[mode].handler.disable();
+      if (leafletElement._modes[mode].handler && 
+          leafletElement._modes[mode].handler.enabled && 
+          leafletElement._modes[mode].handler.enabled()) {
+        try {
+          leafletElement._modes[mode].handler.disable();
+        } catch (err) {
+          console.warn('Error disabling drawing handler:', err);
+        }
       }
     });
 
@@ -32,9 +40,14 @@ const DrawTools = ({ onCreated, activeTool }: DrawToolsProps) => {
       rectangle: "Click on map to draw rectangle"
     };
 
-    if (leafletElement._modes[activeTool]) {
-      leafletElement._modes[activeTool].handler.enable();
-      toast.info(toolMessages[activeTool as keyof typeof toolMessages]);
+    // Enable the requested tool if it exists
+    if (leafletElement._modes[activeTool] && leafletElement._modes[activeTool].handler) {
+      try {
+        leafletElement._modes[activeTool].handler.enable();
+        toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
+      } catch (err) {
+        console.warn('Error enabling drawing handler:', err);
+      }
     }
   }, [activeTool]);
 

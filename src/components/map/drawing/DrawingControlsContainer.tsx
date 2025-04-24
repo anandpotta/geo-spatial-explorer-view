@@ -1,7 +1,6 @@
 
 import { FeatureGroup } from 'react-leaflet';
 import DrawingControls from '../DrawingControls';
-import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 
 interface DrawingControlsContainerProps {
@@ -16,13 +15,11 @@ const DrawingControlsContainer = ({
   onRegionClick
 }: DrawingControlsContainerProps) => {
   return (
-    <FeatureGroup>
-      <DrawingControls 
-        onCreated={onShapeCreated}
-        activeTool={activeTool}
-        onRegionClick={onRegionClick}
-      />
-    </FeatureGroup>
+    <DrawingControls 
+      onCreated={onShapeCreated}
+      activeTool={activeTool}
+      onRegionClick={onRegionClick}
+    />
   );
 };
 
