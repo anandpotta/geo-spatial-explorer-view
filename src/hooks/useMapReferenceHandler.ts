@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
-import '../types/leaflet-extended'; // Import our extended types
+import '../types/leaflet-extended.d.ts'; // Import our extended types with correct extension
 
 export const useMapReferenceHandler = (
   mapRef: React.MutableRefObject<L.Map | null>,
