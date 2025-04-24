@@ -56,7 +56,7 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
             fillOpacity: 0.1
           }
         },
-        remove: {} // This should be an empty object to enable remove functionality
+        remove: true // Changed from empty object to boolean true to match expected type
       }}
     />
   );
