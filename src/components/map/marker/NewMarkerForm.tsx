@@ -107,11 +107,7 @@ const NewMarkerForm = ({
       autoClose={false} 
       autoPan={false}
       className="marker-form-popup"
-      onOpen={() => {
-        setTimeout(() => {
-          inputRef.current?.focus();
-        }, 100);
-      }}
+      // Remove the onOpen prop as it's not supported
     >
       <div 
         onClick={stopPropagation} 

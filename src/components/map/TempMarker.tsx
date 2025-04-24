@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { Marker, useMap } from 'react-leaflet';
+import L from 'leaflet'; // Add proper import for Leaflet
 import { useMarkerEvents } from '@/hooks/useMarkerEvents';
 import { usePopupStyles } from '@/hooks/usePopupStyles';
 import NewMarkerForm from './marker/NewMarkerForm';
