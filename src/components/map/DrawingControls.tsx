@@ -13,7 +13,7 @@ interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick?: (drawing: DrawingData) => void;
-  onClearAll?: () => void; // Add new prop for clearing all state
+  onClearAll?: () => void;
 }
 
 declare module 'leaflet' {
@@ -22,7 +22,6 @@ declare module 'leaflet' {
   }
 }
 
-// Convert to forwardRef to properly handle refs from parent components
 const DrawingControls = forwardRef<L.FeatureGroup, DrawingControlsProps>(({ 
   onCreated, 
   activeTool, 
@@ -76,6 +75,15 @@ const DrawingControls = forwardRef<L.FeatureGroup, DrawingControlsProps>(({
         ref.current = featureGroupRef.current;
       }
     }
+    
+    return () => {
+      // Clear the ref when component unmounts
+      if (typeof ref === 'function') {
+        ref(null);
+      } else if (ref) {
+        ref.current = null;
+      }
+    };
   }, [ref]);
 
   return (

@@ -7,6 +7,7 @@ import L from 'leaflet';
 declare module 'leaflet' {
   interface Map {
     hasMapClickHandler?: boolean;
+    isMapFullyInitialized?: boolean;
   }
 }
 
@@ -34,47 +35,66 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     
     console.log('Map is ready in MapReference');
     
-    // Small timeout to ensure DOM is fully rendered
-    initTimeoutRef.current = window.setTimeout(() => {
-      initTimeoutRef.current = null;
-      
+    // Make sure the DOM is fully loaded before attempting to initialize map
+    const safeInit = () => {
       try {
-        // Make sure map is fully initialized and has a valid container
+        // Ensure map is properly sized and has valid container
         if (map && map.getContainer()) {
-          // Ensure the map is properly sized
+          // Force multiple invalidateSize calls to ensure the map is properly rendered
           map.invalidateSize(true);
           
-          // Ensure we don't add duplicate click handlers
-          if (!map.hasMapClickHandler) {
-            map.on('click', (e) => {
-              console.log('Map was clicked at:', e.latlng);
-            });
-            map.hasMapClickHandler = true;
-          }
-          
-          // Mark as called to prevent duplicate calls
-          hasCalledOnReady.current = true;
-          
-          // Call the callback
-          onMapReady(map);
-        } else {
-          // If map isn't ready, try again in a bit
-          console.log('Map not fully initialized, retrying...');
-          
-          initTimeoutRef.current = window.setTimeout(() => {
-            initTimeoutRef.current = null;
-            
-            if (map && map.getContainer()) {
-              map.invalidateSize(true);
-              hasCalledOnReady.current = true;
-              onMapReady(map);
+          setTimeout(() => {
+            try {
+              if (map && map.getContainer()) {
+                map.invalidateSize(true);
+                
+                // Wait a bit longer to ensure all map internals are initialized
+                setTimeout(() => {
+                  try {
+                    if (map && map.getContainer()) {
+                      // One final invalidation to be safe
+                      map.invalidateSize(true);
+                      
+                      // Set flag on map instance to indicate it's fully initialized
+                      map.isMapFullyInitialized = true;
+                      
+                      // Mark as called to prevent duplicate calls
+                      hasCalledOnReady.current = true;
+                      
+                      // Add the click handler if it doesn't exist
+                      if (!map.hasMapClickHandler) {
+                        map.on('click', (e) => {
+                          console.log('Map was clicked at:', e.latlng);
+                        });
+                        map.hasMapClickHandler = true;
+                      }
+                      
+                      // Call the callback
+                      onMapReady(map);
+                    }
+                  } catch (finalErr) {
+                    console.error('Error in final map initialization:', finalErr);
+                  }
+                }, 300);
+              }
+            } catch (secondErr) {
+              console.error('Error in second map initialization step:', secondErr);
             }
-          }, 300);
+          }, 200);
+        } else {
+          console.warn('Map container not ready, retrying...');
+          // If the map isn't ready yet, try again in a moment
+          initTimeoutRef.current = window.setTimeout(safeInit, 200);
         }
       } catch (err) {
         console.error('Error in map initialization:', err);
+        // Try once more after an error
+        initTimeoutRef.current = window.setTimeout(safeInit, 300);
       }
-    }, 200);
+    };
+    
+    // Start the initialization process after a short delay
+    initTimeoutRef.current = window.setTimeout(safeInit, 100);
     
     // Clean up function
     return () => {
@@ -90,6 +110,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             // Remove click event listener to prevent memory leaks
             map.off('click');
             delete map.hasMapClickHandler;
+            delete map.isMapFullyInitialized;
           }
         } catch (error) {
           console.error('Error cleaning up map reference:', error);

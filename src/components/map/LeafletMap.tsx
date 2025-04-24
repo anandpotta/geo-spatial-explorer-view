@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -119,7 +118,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     // Store the map reference
     mapRef.current = map;
     
-    // Force invalidate size to ensure proper rendering
+    // Force invalidate size to ensure proper rendering with a slight delay
     setTimeout(() => {
       if (!mapRef.current || cleanupInProgress.current) return;
       
@@ -134,25 +133,59 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
             
             try {
               mapRef.current.invalidateSize(true);
-              setIsMapInitialized(true);
               
-              // Only fly to location if we have one and the map is ready
-              if (selectedLocation) {
-                const lat = selectedLocation.y;
-                const lng = selectedLocation.x;
+              // Mark as initialized when we're sure the map is ready
+              setTimeout(() => {
+                if (!mapRef.current || cleanupInProgress.current) return;
                 
-                // Validate coordinates before flying
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  console.log('Flying to initial location');
-                  safeMapFlyTo(lat, lng, 18);
+                try {
+                  // One final invalidation
+                  mapRef.current.invalidateSize(true);
+                  
+                  // Now we can consider the map initialized
+                  setIsMapInitialized(true);
+                  
+                  // Only fly to location if we have one and the map is ready
+                  if (selectedLocation) {
+                    const lat = selectedLocation.y;
+                    const lng = selectedLocation.x;
+                    
+                    // Validate coordinates before flying
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                      console.log('Flying to initial location');
+                      // Use setView first which is more reliable
+                      try {
+                        mapRef.current.setView([lat, lng], 18);
+                        
+                        // Then try flyTo for smooth animation after a brief delay
+                        setTimeout(() => {
+                          if (mapRef.current && !cleanupInProgress.current) {
+                            try {
+                              mapRef.current.flyTo([lat, lng], 18, {
+                                animate: true,
+                                duration: 1.5
+                              });
+                            } catch (flyErr) {
+                              console.warn('Error during flyTo, but position should be set');
+                            }
+                          }
+                        }, 300);
+                      } catch (setViewErr) {
+                        console.warn('Error in initial setView:', setViewErr);
+                      }
+                    }
+                  }
+                  
+                  // Call the onMapReady callback if provided
+                  if (onMapReady && mapRef.current) {
+                    onMapReady(mapRef.current);
+                  }
+                } catch (err) {
+                  console.error('Error during final map initialization:', err);
                 }
-              }
-              
-              if (onMapReady && mapRef.current) {
-                onMapReady(mapRef.current);
-              }
+              }, 300);
             } catch (err) {
-              console.error('Error initializing map:', err);
+              console.error('Error in second initialization step:', err);
               
               if (mapReadyAttempts < 3) {
                 setMapReadyAttempts(prev => prev + 1);
@@ -182,68 +215,40 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     
     try {
       // Check if the map is in a valid state for flying
-      if (mapRef.current.getContainer()) {
-        // First invalidate size to ensure proper rendering
-        mapRef.current.invalidateSize(true);
-        
-        // Check if map has _leaflet_pos through a safe method
-        let hasValidCenter = false;
-        try {
-          const center = mapRef.current.getCenter();
-          hasValidCenter = true;
-        } catch (e) {
-          console.warn('Map center not available, deferring navigation');
-          hasValidCenter = false;
-        }
-        
-        if (hasValidCenter) {
-          // Use a timeout to ensure the DOM is ready
-          setTimeout(() => {
-            if (!mapRef.current || cleanupInProgress.current) return;
-            
-            try {
-              // Double check the map is still valid
-              if (mapRef.current.getContainer()) {
-                // Try flyTo for smooth animation
-                mapRef.current.flyTo([lat, lng], zoom, {
-                  animate: true,
-                  duration: 1.5
-                });
-              }
-            } catch (innerError) {
-              console.error('Inner flyTo error:', innerError);
-              // As a fallback, try setView which is more reliable
-              try {
-                if (mapRef.current && !cleanupInProgress.current) {
-                  mapRef.current.setView([lat, lng], zoom);
-                }
-              } catch (setViewError) {
-                console.error('setView fallback error:', setViewError);
-              }
-            }
-          }, 200);
-          
-          return true;
-        } else {
-          // If we can't get the center, use setView directly
-          setTimeout(() => {
-            if (!mapRef.current || cleanupInProgress.current) return;
-            
-            try {
-              if (mapRef.current.getContainer()) {
-                mapRef.current.setView([lat, lng], zoom);
-              }
-            } catch (err) {
-              console.error('Error in setView fallback:', err);
-            }
-          }, 200);
-          
-          return true;
-        }
+      if (!mapRef.current.getContainer()) {
+        console.warn('Map container not available for flyTo');
+        return false;
       }
-      return false;
+      
+      // First invalidate size to ensure proper rendering
+      mapRef.current.invalidateSize(true);
+      
+      // Use try/catch for each operation
+      try {
+        // First try setView which is more reliable
+        mapRef.current.setView([lat, lng], zoom);
+        
+        // Then try flyTo for smooth animation after a brief delay
+        setTimeout(() => {
+          if (!mapRef.current || cleanupInProgress.current) return;
+          
+          try {
+            mapRef.current.flyTo([lat, lng], zoom, {
+              animate: true,
+              duration: 1.5
+            });
+          } catch (flyErr) {
+            console.warn('Error during flyTo, but position should be set');
+          }
+        }, 200);
+        
+        return true;
+      } catch (err) {
+        console.error('Error in safeMapFlyTo:', err);
+        return false;
+      }
     } catch (err) {
-      console.error('Error in safeMapFlyTo:', err);
+      console.error('Error in safeMapFlyTo outer block:', err);
       return false;
     }
   }, [isMapInitialized]);

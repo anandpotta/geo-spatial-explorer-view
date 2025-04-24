@@ -4,6 +4,7 @@ import L from 'leaflet';
 
 export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; y: number }) => {
   const flyTimerRef = useRef<number | null>(null);
+  const initCheckTimerRef = useRef<number | null>(null);
   
   useEffect(() => {
     // Clean up any pending timers
@@ -11,76 +12,70 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
       if (flyTimerRef.current !== null) {
         clearTimeout(flyTimerRef.current);
       }
+      if (initCheckTimerRef.current !== null) {
+        clearTimeout(initCheckTimerRef.current);
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (selectedLocation && map) {
-      console.log('Selected location in Leaflet map:', selectedLocation);
-      const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
-      
-      // Only proceed if map is properly initialized
-      if (map && typeof map.flyTo === 'function' && map.getContainer()) {
-        try {
-          // First invalidate size to ensure proper rendering
-          map.invalidateSize(true);
-          
-          // Wait for DOM to be fully ready before attempting navigation
-          if (flyTimerRef.current !== null) {
-            clearTimeout(flyTimerRef.current);
-          }
-          
-          flyTimerRef.current = window.setTimeout(() => {
-            flyTimerRef.current = null;
+    if (!selectedLocation || !map) return;
+    
+    console.log('Selected location in Leaflet map:', selectedLocation);
+    const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
+    
+    // Wait for map to be fully initialized before flying
+    const checkAndFly = () => {
+      try {
+        // If the map is not initialized or doesn't have a container, try again later
+        if (!map || !(map as any).isMapFullyInitialized || !map.getContainer()) {
+          console.log('Map not fully initialized for navigation, waiting...');
+          initCheckTimerRef.current = window.setTimeout(checkAndFly, 200);
+          return;
+        }
+        
+        // First invalidate size to ensure proper rendering
+        map.invalidateSize(true);
+        
+        // Small delay to ensure DOM is ready after invalidation
+        flyTimerRef.current = window.setTimeout(() => {
+          try {
+            // Try setView first which is more reliable than flyTo
+            map.setView(newPosition, 18);
             
-            try {
-              // Verify map is still valid before flying
-              if (map && map.getContainer()) {
-                // Check if we can safely get center (which uses _leaflet_pos internally)
-                try {
-                  // This will fail if _leaflet_pos is undefined
-                  const center = map.getCenter();
-                  
-                  // If we got here, we can safely use flyTo
+            // After a short delay, try flyTo for a smoother animation
+            setTimeout(() => {
+              try {
+                if (map && map.getContainer()) {
                   map.flyTo(newPosition, 18, {
                     animate: true,
                     duration: 1.5
                   });
-                } catch (centerError) {
-                  console.warn('Unable to get map center, falling back to setView:', centerError);
-                  map.setView(newPosition, 18);
                 }
+              } catch (flyToErr) {
+                console.warn('Error during flyTo, but location should be set:', flyToErr);
+                // setView already happened, so we're good
               }
-            } catch (innerError) {
-              console.error('Error in delayed flyTo:', innerError);
-              
-              // Fallback to setView which is more reliable
-              try {
-                map.setView(newPosition, 18);
-              } catch (setViewError) {
-                console.error('Error in setView fallback:', setViewError);
-              }
-            }
-          }, 300); // Increased timeout for better stability
-        } catch (error) {
-          console.error('Error flying to position:', error);
-          
-          // Fallback to setView which is more reliable
-          try {
-            map.setView(newPosition, 18);
-          } catch (setViewError) {
-            console.error('Error in setView fallback:', setViewError);
+            }, 300);
+          } catch (setViewErr) {
+            console.error('Error in map navigation:', setViewErr);
           }
-        }
-      } else {
-        console.warn('Map not ready for navigation');
+        }, 300);
+      } catch (error) {
+        console.error('Error checking map initialization:', error);
       }
-    }
+    };
+    
+    // Start the process
+    checkAndFly();
     
     return () => {
+      // Clean up timers
       if (flyTimerRef.current !== null) {
         clearTimeout(flyTimerRef.current);
-        flyTimerRef.current = null;
+      }
+      if (initCheckTimerRef.current !== null) {
+        clearTimeout(initCheckTimerRef.current);
       }
     };
   }, [selectedLocation, map]);
