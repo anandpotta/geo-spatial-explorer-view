@@ -16,7 +16,7 @@ export function useMarkerPlacement(mapState: MarkerPlacementState) {
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       
-      // Set interaction flags without triggering a refresh
+      // Set flags first
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
       
@@ -28,35 +28,28 @@ export function useMarkerPlacement(mapState: MarkerPlacementState) {
         console.error('Failed to store marker in localStorage:', error);
       }
       
-      // Update marker state with the position first, then name
-      // Using a small delay to prevent state update issues
-      const markerName = mapState.selectedLocation?.label || 'New Building';
-      
-      // Clear existing marker first if exists
+      // Clear existing marker first to prevent state conflicts
       if (mapState.tempMarker) {
         mapState.setTempMarker(null);
-        // Small delay before setting new marker
-        setTimeout(() => {
-          mapState.setTempMarker(exactPosition);
-          setTimeout(() => {
-            mapState.setMarkerName(markerName);
-          }, 10);
-        }, 10);
-      } else {
-        // Set temp marker directly if no marker exists
-        mapState.setTempMarker(exactPosition);
-        setTimeout(() => {
-          mapState.setMarkerName(markerName);
-        }, 10);
       }
       
-      // Show toast after a slight delay to ensure marker is visible
+      // Use a single state update to reduce re-renders
       setTimeout(() => {
+        mapState.setTempMarker(exactPosition);
+        mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
+        
+        // Re-apply flags after state updates
+        window.tempMarkerPlaced = true;
+        window.userHasInteracted = true;
+        
         toast.info('Click "Save Location" to confirm marker placement', {
           duration: 5000,
-          id: 'marker-placement',
+          id: 'marker-placement', // Use ID to prevent duplicate toasts
         });
-      }, 100);
+      }, 50);
+      
+      // Prevent any default map behaviors
+      return false;
     }
   };
 

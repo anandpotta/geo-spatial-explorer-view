@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef } from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, useMapEvents } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
 
@@ -21,18 +21,28 @@ const TempMarker = ({
   setMarkerType,
   onSave
 }: TempMarkerProps) => {
-  // Generate a unique key for the marker based on its position to prevent remounting issues
+  // Generate a unique key for the marker based on its position
   const markerKey = `temp-marker-${position[0]}-${position[1]}-${Date.now()}`;
-  // Use refs to track state and prevent unnecessary renders
   const isInitializedRef = useRef(false);
   const flagIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  
+  // Disable map keyboard events while marker is active
+  useMapEvents({
+    keypress: (e) => {
+      e.originalEvent.stopPropagation();
+    },
+    keydown: (e) => {
+      e.originalEvent.stopPropagation();
+    }
+  });
   
   useEffect(() => {
     // Only run this once per marker instance
     if (isInitializedRef.current) return;
     isInitializedRef.current = true;
     
-    // Set these flags immediately to prevent ANY map navigation
+    // Set flags immediately to prevent map navigation
     window.tempMarkerPlaced = true;
     window.userHasInteracted = true;
     
@@ -50,27 +60,37 @@ const TempMarker = ({
       console.error('Failed to store marker in localStorage:', error);
     }
     
-    // Set interval to periodically reinforce flags but not too frequently
+    // Less frequent flag updates to reduce interference
     flagIntervalRef.current = setInterval(() => {
-      console.info('Marker detected, reinforcing interaction flags');
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
-    }, 2000); // Less frequent updates
+    }, 3000);
+    
+    // Apply global CSS to prevent map keyboard events from interfering
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .marker-form-popup .leaflet-popup-content-wrapper {
+        pointer-events: auto !important;
+      }
+      .marker-form-popup input:focus {
+        z-index: 1000;
+      }
+    `;
+    document.head.appendChild(style);
     
     return () => {
-      // Clean up interval
+      // Clean up
       if (flagIntervalRef.current !== null) {
         clearInterval(flagIntervalRef.current);
         flagIntervalRef.current = null;
       }
-      
-      // Keep flags set even after unmount
+      document.head.removeChild(style);
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
     };
   }, [position]);
   
-  // Handler for saving the marker that prevents propagation
+  // Save handler with propagation control
   const handleSave = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -84,19 +104,18 @@ const TempMarker = ({
       key={markerKey}
       position={position} 
       draggable={true}
+      ref={markerRef}
       eventHandlers={{
         dragstart: (e) => {
-          // Prevent event propagation
+          // Stop propagation
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
-          
-          // Reinforce interaction flags
           window.userHasInteracted = true;
           window.tempMarkerPlaced = true;
         },
         dragend: (e) => {
-          // Prevent event propagation
+          // Stop propagation
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
@@ -104,33 +123,38 @@ const TempMarker = ({
           const marker = e.target;
           const newPosition = marker.getLatLng();
           
-          // Reinforce user interaction flags when marker is dragged
           window.userHasInteracted = true;
           window.tempMarkerPlaced = true;
           
-          // Update the marker position in parent component state
+          // Update marker position
           if (window.tempMarkerPositionUpdate) {
             window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
             
-            // Backup position to localStorage
             try {
               localStorage.setItem('tempMarkerPosition', JSON.stringify([newPosition.lat, newPosition.lng]));
             } catch (error) {
-              console.error('Failed to store marker position in localStorage:', error);
+              console.error('Failed to store marker position:', error);
             }
           }
         },
         click: (e) => {
-          // Prevent event propagation
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
         },
         popupopen: (e) => {
-          // Prevent event propagation
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
+          
+          // Focus the input field when popup opens
+          setTimeout(() => {
+            const input = document.querySelector('.marker-form-popup input') as HTMLInputElement;
+            if (input) {
+              input.focus();
+              input.select();
+            }
+          }, 100);
         }
       }}
     >

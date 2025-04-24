@@ -26,23 +26,17 @@ const NewMarkerForm = ({
     onSave();
   };
   
-  // Create a memoized input change handler
+  // Create a memoized input change handler with improved event isolation
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // First ensure user interaction flags are set
-    window.tempMarkerPlaced = true;
-    window.userHasInteracted = true;
-    
     // Update the name with the new value
     setMarkerName(e.target.value);
     
-    // Reinforce flags after state update
-    setTimeout(() => {
-      window.tempMarkerPlaced = true;
-      window.userHasInteracted = true;
-    }, 0);
+    // Set flags to prevent map interactions
+    window.tempMarkerPlaced = true;
+    window.userHasInteracted = true;
   }, [setMarkerName]);
   
   // Handle button clicks without propagation
@@ -50,18 +44,10 @@ const NewMarkerForm = ({
     e.preventDefault();
     e.stopPropagation();
     
-    // Set flags first
+    // Set flags and update type
     window.tempMarkerPlaced = true;
     window.userHasInteracted = true;
-    
-    // Update type
     setMarkerType(type);
-    
-    // Reinforce flags
-    setTimeout(() => {
-      window.tempMarkerPlaced = true;
-      window.userHasInteracted = true;
-    }, 0);
   }, [setMarkerType]);
   
   // Handle save click
@@ -72,13 +58,17 @@ const NewMarkerForm = ({
   }, [onSave]);
 
   return (
-    <Popup closeButton={false} autoClose={false} autoPan={false}>
+    <Popup 
+      closeButton={false} 
+      autoClose={false} 
+      autoPan={false}
+      className="marker-form-popup"
+    >
       <form 
         onSubmit={handleSubmit} 
         className="p-2" 
         onClick={(e) => {
           e.stopPropagation();
-          // Set flags to prevent map interactions
           window.tempMarkerPlaced = true;
           window.userHasInteracted = true;
         }}
@@ -90,9 +80,15 @@ const NewMarkerForm = ({
           onChange={handleInputChange}
           onClick={(e) => {
             e.stopPropagation();
-            // Set flags when clicking input
             window.tempMarkerPlaced = true;
             window.userHasInteracted = true;
+          }}
+          // Add specific event handlers for keyboard events
+          onKeyDown={(e) => {
+            e.stopPropagation();
+          }}
+          onKeyPress={(e) => {
+            e.stopPropagation();
           }}
           className="mb-2"
           autoFocus
