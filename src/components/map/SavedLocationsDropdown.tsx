@@ -1,5 +1,5 @@
 
-import { useDropdownLocations } from "@/hooks/useDropdownLocations";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Navigation } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
 import { deleteMarker } from "@/utils/marker-utils";
+import { useDropdownLocations } from "@/hooks/useDropdownLocations";
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
@@ -48,13 +49,9 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       if (trigger) trigger.click();
     }
     
-    console.log("Location selected from dropdown:", position);
-    
     // Call the provided onLocationSelect function with the position
-    if (onLocationSelect) {
-      onLocationSelect(position);
-      toast.success("Navigating to saved location");
-    }
+    onLocationSelect(position);
+    toast.success("Navigating to saved location");
   };
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
