@@ -1,5 +1,5 @@
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { setupLeafletIcons } from './LeafletMapIcons';
@@ -8,8 +8,8 @@ import { useMapEvents } from '@/hooks/useMapEvents';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
-import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
+import { useLeafletSetup } from '@/hooks/useLeafletSetup';
+import { useLocationEffect } from '@/hooks/useLocationEffect';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -19,149 +19,18 @@ interface LeafletMapProps {
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
-  const loadedMarkersRef = useRef(false);
-  const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
-  
+  const { mapInstanceKey, setMapInstanceKey, cleanupMap } = useLeafletSetup();
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
-
-  // Cleanup function to properly remove the map instance
-  const cleanupMap = useCallback(() => {
-    if (mapRef.current) {
-      console.log('Cleaning up Leaflet map instance');
-      try {
-        // Check if the map still has a valid container before removing
-        try {
-          const container = mapRef.current.getContainer();
-          if (container && container.parentNode) {
-            mapRef.current.remove();
-            // Also remove any leaflet-related classes from the container
-            container.classList.remove('leaflet-container-reused');
-          }
-        } catch (e) {
-          console.log('Map container already removed');
-        }
-      } catch (err) {
-        console.error('Error cleaning up map:', err);
-      }
-      mapRef.current = null;
-    }
-  }, []);
   
-  // Setup and cleanup of Leaflet
+  useLocationEffect(selectedLocation, mapRef, cleanupMap, setMapInstanceKey);
+
+  // Setup and cleanup of Leaflet icons
   useEffect(() => {
-    console.log('Setting up Leaflet icons and CSS');
+    console.log('Setting up Leaflet icons');
     setupLeafletIcons();
-    
-    // Force Leaflet CSS to be loaded
-    if (!document.querySelector('link[href*="leaflet.css"]')) {
-      console.log('Adding Leaflet CSS');
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-      link.crossOrigin = '';
-      document.head.appendChild(link);
-    }
-
-    // Also ensure Leaflet Draw CSS is loaded
-    if (!document.querySelector('link[href*="leaflet.draw.css"]')) {
-      console.log('Adding Leaflet Draw CSS');
-      const drawLink = document.createElement('link');
-      drawLink.rel = 'stylesheet';
-      drawLink.href = 'https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css';
-      document.head.appendChild(drawLink);
-    }
-    
-    // Cleanup on unmount
-    return cleanupMap;
+    return () => cleanupMap(mapRef);
   }, [cleanupMap, mapInstanceKey]);
-
-  // Handle location changes
-  useEffect(() => {
-    if (selectedLocation && mapRef.current) {
-      try {
-        // Only try to fly if the map is properly initialized
-        if (mapRef.current.getContainer()) {
-          console.log('Flying to selected location:', selectedLocation);
-          setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
-            }
-          }, 100);
-        }
-      } catch (err) {
-        console.error('Error flying to location:', err);
-        // If there's an error, recreate the map
-        cleanupMap();
-        setMapInstanceKey(Date.now());
-      }
-    }
-  }, [selectedLocation, cleanupMap]);
-
-  // Handler for when the map is ready
-  const handleSetMapRef = useCallback((map: L.Map) => {
-    console.log('Map reference provided');
-    
-    if (mapRef.current) {
-      console.log('Map reference already exists, skipping assignment');
-      return;
-    }
-    
-    try {
-      // Verify map is properly initialized
-      if (map && map.getContainer()) {
-        console.log('Map container verified, storing reference');
-        mapRef.current = map;
-        
-        // Force resize to ensure proper dimensions
-        map.invalidateSize(true);
-        
-        // Fly to location after a short delay to ensure the map is ready
-        if (selectedLocation) {
-          console.log('Flying to initial location');
-          setTimeout(() => {
-            try {
-              if (mapRef.current && mapRef.current.getContainer()) {
-                mapRef.current.invalidateSize(true);
-                mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18);
-              }
-            } catch (err) {
-              console.error('Error flying to location after delay:', err);
-            }
-          }, 500);
-        }
-        
-        // Call onMapReady callback if provided
-        if (onMapReady) {
-          setTimeout(() => {
-            try {
-              if (mapRef.current) {
-                onMapReady(mapRef.current);
-              }
-            } catch (err) {
-              console.error('Error in onMapReady callback:', err);
-            }
-          }, 300);
-        }
-      }
-    } catch (err) {
-      console.error('Error setting map reference:', err);
-    }
-  }, [selectedLocation, onMapReady]);
-
-  const handleLocationSelect = (position: [number, number]) => {
-    console.log("Location selected in LeafletMap:", position);
-    if (mapRef.current) {
-      try {
-        mapRef.current.flyTo(position, 18, {
-          duration: 2
-        });
-      } catch (err) {
-        console.error('Error flying to location:', err);
-      }
-    }
-  };
 
   const handleClearAll = () => {
     mapState.setTempMarker(null);
@@ -199,7 +68,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         tempMarker={mapState.tempMarker}
         markerName={mapState.markerName}
         markerType={mapState.markerType}
-        onMapReady={handleSetMapRef}
+        onMapReady={(map: L.Map) => {
+          mapRef.current = map;
+          if (onMapReady) onMapReady(map);
+        }}
         onLocationSelect={handleLocationSelect}
         onMapClick={handleMapClick}
         onDeleteMarker={mapState.handleDeleteMarker}
