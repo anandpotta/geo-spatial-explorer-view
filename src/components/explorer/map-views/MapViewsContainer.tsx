@@ -12,6 +12,7 @@ interface MapViewsContainerProps {
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
   isTransitioning: boolean;
+  activeTool?: string | null;
 }
 
 const MapViewsContainer = ({
@@ -20,7 +21,8 @@ const MapViewsContainer = ({
   onMapReady,
   onFlyComplete,
   onLocationSelect,
-  isTransitioning
+  isTransitioning,
+  activeTool
 }: MapViewsContainerProps) => {
   const getViewClasses = (viewType: string) => {
     const baseClasses = "absolute inset-0 transition-opacity duration-500";
@@ -61,6 +63,7 @@ const MapViewsContainer = ({
         <LeafletMap 
           selectedLocation={selectedLocation} 
           onLocationSelect={onLocationSelect}
+          activeTool={activeTool}
         />
       </div>
 
