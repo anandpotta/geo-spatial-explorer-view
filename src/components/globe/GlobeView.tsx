@@ -23,6 +23,7 @@ function EarthErrorFallback() {
 }
 
 export default function GlobeView({ onLocationSelect }) {
+  // Only track error handling state once to prevent re-renders
   const [hasError, setHasError] = useState(false);
   const errorHandled = useRef(false);
   
@@ -39,7 +40,12 @@ export default function GlobeView({ onLocationSelect }) {
   const handleLocationSelect = useCallback((coords) => {
     try {
       if (coords && onLocationSelect) {
-        onLocationSelect(coords);
+        onLocationSelect({
+          id: `loc-${coords.latitude}-${coords.longitude}`,
+          label: `Location at ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`,
+          x: coords.longitude,
+          y: coords.latitude
+        });
       }
     } catch (err) {
       console.error('Error selecting location on globe:', err);
@@ -63,12 +69,19 @@ export default function GlobeView({ onLocationSelect }) {
         <pointLight position={[-10, -10, -5]} intensity={0.8} />
         {/* Add a subtle rim light for better depth */}
         <pointLight position={[0, 0, -10]} intensity={0.5} color="#4080ff" />
+        
         <Stars radius={300} depth={60} count={20000} factor={7} saturation={0} />
+        
         <Suspense fallback={<EarthErrorFallback />}>
-          <ErrorBoundary fallback={<EarthErrorFallback />} onError={handleError}>
-            <Earth onLocationSelect={handleLocationSelect} />
+          <ErrorBoundary
+            fallback={<EarthErrorFallback />}
+            onError={handleError}
+            resetKeys={[hasError]}
+          >
+            {!hasError && <Earth onLocationSelect={handleLocationSelect} />}
           </ErrorBoundary>
         </Suspense>
+        
         <OrbitControls 
           enableZoom={true}
           minDistance={2}
@@ -78,6 +91,7 @@ export default function GlobeView({ onLocationSelect }) {
           dampingFactor={0.05}
         />
       </Canvas>
+      
       <div className="absolute bottom-2 left-2 text-xs text-white opacity-70">
         <p>Drag to rotate • Scroll to zoom • Click on globe to select locations</p>
       </div>

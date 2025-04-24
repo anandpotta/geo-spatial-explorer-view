@@ -26,9 +26,15 @@ const MapViewsContainer = ({
 }: MapViewsContainerProps) => {
   const getViewClasses = (viewType: string) => {
     const baseClasses = "absolute inset-0 transition-opacity duration-500";
-    return currentView === viewType 
+    const isActive = currentView === viewType;
+    return isActive 
       ? `${baseClasses} opacity-100 z-10`
       : `${baseClasses} opacity-0 z-0 pointer-events-none`;
+  };
+
+  // Generate consistent keys for each view to control rendering/mounting
+  const getViewKey = (viewName: string) => {
+    return `${viewName}-view-${currentView === viewName ? 'active' : 'inactive'}`;
   };
 
   return (
@@ -46,6 +52,7 @@ const MapViewsContainer = ({
           visibility: currentView === 'cesium' ? 'visible' : 'hidden'
         }}
         data-map-type="cesium"
+        key={getViewKey('cesium')}
       >
         <CesiumMap 
           selectedLocation={selectedLocation}
@@ -59,6 +66,7 @@ const MapViewsContainer = ({
         className={getViewClasses('leaflet')}
         style={{ visibility: currentView === 'leaflet' ? 'visible' : 'hidden' }}
         data-map-type="leaflet"
+        key={getViewKey('leaflet')}
       >
         <LeafletMap 
           selectedLocation={selectedLocation} 
@@ -71,11 +79,14 @@ const MapViewsContainer = ({
         className={getViewClasses('globe')}
         style={{ visibility: currentView === 'globe' ? 'visible' : 'hidden' }}
         data-map-type="globe"
+        key={getViewKey('globe')}
       >
-        <GlobeView 
-          onLocationSelect={onLocationSelect}
-          key={`globe-view-${currentView === 'globe' ? 'active' : 'inactive'}`}
-        />
+        {currentView === 'globe' && (
+          <GlobeView 
+            onLocationSelect={onLocationSelect}
+            key={`globe-view-${Date.now()}`}
+          />
+        )}
       </div>
     </>
   );

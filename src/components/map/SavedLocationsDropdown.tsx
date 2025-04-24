@@ -1,3 +1,4 @@
+
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Navigation } from "lucide-react";
@@ -41,18 +42,23 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   } = useDropdownLocations();
 
   const handleLocationSelect = (position: [number, number]) => {
+    // First close dropdown before handling selection to prevent state update loops
     const dropdown = document.querySelector('[data-state="open"]');
     if (dropdown) {
       const trigger = dropdown.previousElementSibling as HTMLButtonElement;
       if (trigger) trigger.click();
     }
     
-    onLocationSelect(position);
-    toast.success("Navigating to saved location");
+    // Wait a small tick before triggering location select to prevent state update loop
+    setTimeout(() => {
+      onLocationSelect(position);
+      toast.success("Navigating to saved location");
+    }, 0);
   };
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
+    event.preventDefault();
     
     if (event.currentTarget) {
       returnFocusRef.current = event.currentTarget as HTMLElement;
@@ -110,7 +116,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             Saved Locations {markers.length > 0 && `(${markers.length})`}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[200px] z-50 bg-popover">
+        <DropdownMenuContent className="w-[200px] z-[9999] bg-popover shadow-md">
           {pinnedMarkers.length > 0 && (
             <>
               <DropdownMenuLabel>Pinned Locations</DropdownMenuLabel>
@@ -147,7 +153,9 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        if (!open) cancelDelete();
+      }}>
         <AlertDialogContent onEscapeKeyDown={cancelDelete}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Location</AlertDialogTitle>

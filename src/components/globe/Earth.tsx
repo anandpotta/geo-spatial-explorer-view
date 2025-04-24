@@ -17,14 +17,15 @@ export default function Earth({ onLocationSelect }) {
     'https://images.unsplash.com/photo-1531306728370-e2ebd9d7bb99?q=80&w=2187&auto=format&fit=crop'
   ];
   
-  // Use try-catch to handle texture loading errors
+  // Use proper error handling for texture loading
   let textures;
   try {
-    textures = useTexture(textureUrls, () => {
-      console.log('Earth textures loaded successfully');
-      setTexturesLoaded(true);
-      setTextureError(false);
-    });
+    textures = useTexture(textureUrls);
+    
+    // Only set textures loaded if we actually have textures
+    if (textures && Array.isArray(textures) && textures.length > 0) {
+      if (!texturesLoaded) setTexturesLoaded(true);
+    }
   } catch (err) {
     console.error('Failed to load Earth textures:', err);
     setTextureError(true);
@@ -63,16 +64,18 @@ export default function Earth({ onLocationSelect }) {
       const timerId = setTimeout(checkTextureValidity, 500);
       return () => clearTimeout(timerId);
     }
-  }, [texturesLoaded, map, bumpMap, specularMap]);
+  }, [texturesLoaded, map, bumpMap, specularMap, textures]);
   
   // Apply a small bump scale if bumpMap is available
-  if (bumpMap && !textureError) {
-    try {
-      bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
-    } catch (err) {
-      console.warn('Error setting bump map properties:', err);
+  useEffect(() => {
+    if (bumpMap && !textureError) {
+      try {
+        bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+      } catch (err) {
+        console.warn('Error setting bump map properties:', err);
+      }
     }
-  }
+  }, [bumpMap, textureError]);
   
   // Rotate the earth on each frame
   useFrame(() => {
@@ -120,7 +123,8 @@ export default function Earth({ onLocationSelect }) {
           emissiveIntensity={0.2}
         />
       ) : (
-        <meshPhongMaterial
+        // Only add material with textures if they're available
+        map && <meshPhongMaterial
           map={map}
           bumpMap={bumpMap}
           bumpScale={0.15}
