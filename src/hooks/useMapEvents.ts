@@ -34,17 +34,18 @@ export const useMapEvents = (
       }
       lastCheckRef.current = now;
       
+      // Check localStorage first, as it's more persistent
       const tempMarkerPosition = localStorage.getItem('tempMarkerPosition');
       
-      if (tempMarkerPosition || window.tempMarkerPlaced) {
-        console.log('Marker detected, reinforcing interaction flags');
+      // Only set flags if we explicitly find a marker
+      if (tempMarkerPosition) {
         window.userHasInteracted = true;
         window.tempMarkerPlaced = true;
       }
     };
     
-    // Initial check
-    checkForMarkers();
+    // Initial check - delayed to ensure map is ready
+    setTimeout(checkForMarkers, 500);
     
     // Set up interval for continuous checking - longer interval to reduce rendering pressure
     markerPresenceCheckerRef.current = window.setInterval(checkForMarkers, 2000);
@@ -60,10 +61,15 @@ export const useMapEvents = (
   useEffect(() => {
     if (!map) return;
     
+    // Reset interaction state on component mount
+    if (!userInteractionRef.current && !window.userHasInteracted) {
+      userInteractionRef.current = false;
+      window.userHasInteracted = false;
+    }
+    
     const handleUserInteraction = () => {
       userInteractionRef.current = true;
       window.userHasInteracted = true; // Set global flag
-      console.log('User has manually interacted with map, disabling auto-centering');
     };
     
     map.on('dragstart', handleUserInteraction);
@@ -82,8 +88,16 @@ export const useMapEvents = (
     // Skip if dependencies aren't available
     if (!selectedLocation || !map) return;
     
-    // If a marker is already placed, skip navigation entirely
-    if (window.tempMarkerPlaced || window.userHasInteracted || localStorage.getItem('tempMarkerPosition')) {
+    // If initial navigation is already done, skip
+    if (initialNavigationDone?.current) {
+      return;
+    }
+    
+    // Check for active markers or previous user interaction
+    const hasExistingMarker = window.tempMarkerPlaced || localStorage.getItem('tempMarkerPosition');
+    
+    // Only skip navigation if we have definite evidence of user interaction or markers
+    if (hasExistingMarker) {
       console.log('Marker detected or user interaction recorded, skipping ALL automatic navigation');
       if (initialNavigationDone) {
         initialNavigationDone.current = true;
@@ -93,13 +107,6 @@ export const useMapEvents = (
     
     // Only proceed if map isn't already initialized
     if (initializedRef.current) {
-      console.log('Map already initialized, skipping redundant navigation');
-      return;
-    }
-    
-    // Check if initial navigation is already done
-    if (initialNavigationDone?.current) {
-      console.log('Initial navigation already done, skipping automatic map recentering');
       return;
     }
     
@@ -112,15 +119,8 @@ export const useMapEvents = (
     // Wait for map to be fully initialized before flying
     initCheckTimerRef.current = window.setTimeout(() => {
       try {
-        // Final safety check for user interaction or marker presence
-        if (window.userHasInteracted || window.tempMarkerPlaced || localStorage.getItem('tempMarkerPosition')) {
-          console.log('Late detection: User interaction or marker detected, skipping automatic navigation');
-          return;
-        }
-        
         // Skip if the map is no longer available
         if (!map || !map.getContainer() || !document.body.contains(map.getContainer())) {
-          console.log('Map not fully initialized for navigation, skipping');
           return;
         }
         
@@ -141,7 +141,7 @@ export const useMapEvents = (
       } catch (error) {
         console.error('Error in map navigation:', error);
       }
-    }, 1500);
+    }, 1000); // Shorter delay for better UX
     
     return () => {
       if (initCheckTimerRef.current !== null) clearTimeout(initCheckTimerRef.current);

@@ -20,14 +20,15 @@ export function useMarkerEvents(map: L.Map | null) {
         target.closest('.marker-form-popup') || 
         target.closest('#marker-form') || 
         target.id === 'marker-name' ||
-        target.classList.contains('marker-form-popup')
+        target.classList.contains('marker-form-popup') ||
+        target.classList.contains('popup-container')
       );
     };
     
     // Track focus changes to identify active inputs
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' && isMarkerFormElement(target)) {
+      if ((target.tagName === 'INPUT' || target.tagName === 'BUTTON') && isMarkerFormElement(target)) {
         activeInput = target;
         window.tempMarkerPlaced = true;
         window.userHasInteracted = true;
@@ -66,12 +67,25 @@ export function useMarkerEvents(map: L.Map | null) {
       }
     };
     
+    // Capture click events on popup to make sure they aren't propagated to map
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      if (isMarkerFormElement(target)) {
+        e.stopPropagation();
+        window.tempMarkerPlaced = true;
+        window.userHasInteracted = true;
+      }
+    };
+    
     // Add keyboard event listeners with capture phase
     document.addEventListener('keypress', preventMapKeyboardEvents, true);
     document.addEventListener('keydown', preventMapKeyboardEvents, true);
     document.addEventListener('keyup', preventMapKeyboardEvents, true);
     document.addEventListener('focusin', handleFocusIn, true);
     document.addEventListener('focusout', handleFocusOut, true);
+    document.addEventListener('click', handleDocumentClick, true);
+    document.addEventListener('touchstart', handleDocumentClick, true);
     
     // Cleanup event listeners
     return () => {
@@ -80,6 +94,8 @@ export function useMarkerEvents(map: L.Map | null) {
       document.removeEventListener('keyup', preventMapKeyboardEvents, true);
       document.removeEventListener('focusin', handleFocusIn, true);
       document.removeEventListener('focusout', handleFocusOut, true);
+      document.removeEventListener('click', handleDocumentClick, true);
+      document.removeEventListener('touchstart', handleDocumentClick, true);
     };
   }, []);
 }

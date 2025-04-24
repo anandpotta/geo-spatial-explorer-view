@@ -32,6 +32,7 @@ export function usePopupStyles() {
       /* Prevent click-through on the popup */
       .marker-form-popup .leaflet-popup-content-wrapper {
         cursor: default !important;
+        pointer-events: all !important;
       }
       
       /* Ensure input field is top-most */
@@ -45,6 +46,7 @@ export function usePopupStyles() {
       .marker-form-popup input:focus {
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
         outline: none !important;
+        pointer-events: all !important;
       }
       
       /* When marker form is active, disable map interactions */
@@ -56,6 +58,12 @@ export function usePopupStyles() {
       .marker-form-popup form {
         isolation: isolate;
         z-index: 1100;
+        pointer-events: all !important;
+      }
+      
+      /* Ensure popup stays visible and doesn't close */
+      .marker-form-popup.leaflet-popup {
+        pointer-events: auto !important;
       }
       
       /* Ensure buttons are properly visible and interactive */
@@ -63,6 +71,11 @@ export function usePopupStyles() {
         pointer-events: auto !important;
         position: relative;
         z-index: 1200;
+      }
+      
+      /* Make sure popup tip doesn't interfere with clicks */
+      .marker-form-popup .leaflet-popup-tip-container {
+        pointer-events: none !important;
       }
     `;
     document.head.appendChild(style);

@@ -3,14 +3,13 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import MarkerTypeButtons from './MarkerTypeButtons';
 
 interface NewMarkerFormProps {
   markerName: string;
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
+  onSave: (e?: React.MouseEvent) => void;
 }
 
 const NewMarkerForm = ({
@@ -20,6 +19,7 @@ const NewMarkerForm = ({
   setMarkerType,
   onSave
 }: NewMarkerFormProps) => {
+  // Reference to the form element
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const popupRef = useRef<any>(null);
@@ -66,7 +66,14 @@ const NewMarkerForm = ({
     
     // Ensure popup stays open
     if (popupRef.current) {
-      popupRef.current._source._popup.setContent(popupRef.current._content);
+      try {
+        const popup = popupRef.current._source._popup;
+        if (popup && popup.isOpen && !popup.isOpen()) {
+          popup.openOn(popupRef.current._source._map);
+        }
+      } catch (err) {
+        console.warn('Error maintaining popup state:', err);
+      }
     }
   }, [setMarkerName]);
 
@@ -107,7 +114,6 @@ const NewMarkerForm = ({
       autoClose={false} 
       autoPan={false}
       className="marker-form-popup"
-      // Remove the onOpen prop as it's not supported
     >
       <div 
         onClick={stopPropagation} 
@@ -115,6 +121,9 @@ const NewMarkerForm = ({
         onMouseDown={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
         onMouseMove={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         <form 
           ref={formRef}
@@ -144,14 +153,60 @@ const NewMarkerForm = ({
             id="marker-name"
             name="marker-name"
           />
-          <MarkerTypeButtons 
-            markerType={markerType}
-            onTypeSelect={setMarkerType}
-          />
+          <div className="flex mb-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'pin' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMarkerType('pin');
+              }}
+              id="type-pin"
+              name="type-pin"
+            >
+              Pin
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'area' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMarkerType('area');
+              }}
+              id="type-area"
+              name="type-area"
+            >
+              Area
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'building' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMarkerType('building');
+              }}
+              id="type-building"
+              name="type-building"
+            >
+              Building
+            </Button>
+          </div>
           <Button 
             type="submit"
             disabled={!markerName.trim()}
             className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (markerName.trim()) {
+                onSave(e);
+              }
+            }}
             id="save-marker"
             name="save-marker"
           >

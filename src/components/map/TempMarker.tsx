@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { Marker, useMap } from 'react-leaflet';
-import L from 'leaflet'; // Add proper import for Leaflet
+import L from 'leaflet';
 import { useMarkerEvents } from '@/hooks/useMarkerEvents';
 import { usePopupStyles } from '@/hooks/usePopupStyles';
 import NewMarkerForm from './marker/NewMarkerForm';
@@ -32,9 +32,13 @@ const TempMarker = ({
   usePopupStyles();
   
   // Prevent map interactions when marker form is active
-  const preventMapInteractions = useCallback(() => {
+  const preventMapInteractions = useCallback((e?: L.LeafletEvent) => {
     window.userHasInteracted = true;
     window.tempMarkerPlaced = true;
+    if (e && e.originalEvent) {
+      e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
+    }
   }, []);
   
   // Add marker-specific class to the map container for CSS targeting
@@ -44,9 +48,12 @@ const TempMarker = ({
       mapContainer.classList.add('marker-form-active');
     }
     
-    // Set global flags for marker presence
-    window.userHasInteracted = true;
-    window.tempMarkerPlaced = true;
+    // Set global flags for marker presence - but only for this specific marker
+    // This will indicate a user-initiated marker, not an auto-detected one
+    if (position && position.length === 2) {
+      window.tempMarkerPlaced = true;
+      console.log('Setting temporary marker at position:', position);
+    }
     
     return () => {
       // Remove the class when the marker is unmounted
@@ -54,7 +61,7 @@ const TempMarker = ({
         mapContainer.classList.remove('marker-form-active');
       }
     };
-  }, [map]);
+  }, [map, position]);
 
   // Create a custom handler for updating marker position
   useEffect(() => {
@@ -78,7 +85,7 @@ const TempMarker = ({
       eventHandlers={{
         dragstart: (e) => {
           // Prevent map movement when dragging the marker
-          preventMapInteractions();
+          preventMapInteractions(e);
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
@@ -88,7 +95,7 @@ const TempMarker = ({
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
-          preventMapInteractions();
+          preventMapInteractions(e);
           // Update position using the global handler if available
           if (window.tempMarkerPositionUpdate) {
             const newPosition = e.target.getLatLng();
@@ -97,7 +104,7 @@ const TempMarker = ({
         },
         click: (e) => {
           // Prevent the click from propagating to the map
-          preventMapInteractions();
+          preventMapInteractions(e);
           L.DomEvent.stopPropagation(e);
         }
       }}
