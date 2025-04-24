@@ -1,5 +1,5 @@
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Sphere, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
@@ -7,8 +7,13 @@ import * as THREE from 'three';
 export default function Earth() {
   const earthRef = useRef<THREE.Mesh>(null);
   const [textureError, setTextureError] = useState(false);
+  const [textures, setTextures] = useState<{
+    map?: THREE.Texture;
+    bumpMap?: THREE.Texture;
+    specularMap?: THREE.Texture;
+  } | null>(null);
   
-  // Use a base color for fallback
+  // Create fallback material outside of render
   const fallbackMaterial = new THREE.MeshPhongMaterial({
     color: new THREE.Color(0x2233ff),
     emissive: new THREE.Color(0x112244),
@@ -16,18 +21,33 @@ export default function Earth() {
     shininess: 10
   });
   
-  // Load textures with error handling
-  let textures;
-  try {
-    textures = useTexture({
-      map: '/earth-texture.jpg',
-      bumpMap: '/earth-bump.jpg',
-      specularMap: '/earth-specular.jpg'
-    });
-  } catch (error) {
-    console.error('Error loading textures:', error);
-    setTextureError(true);
-  }
+  // Move texture loading to useEffect to prevent render loop
+  useEffect(() => {
+    try {
+      // Load textures using Three.js TextureLoader instead of useTexture hook
+      const textureLoader = new THREE.TextureLoader();
+      const loadedTextures = {
+        map: textureLoader.load('/earth-texture.jpg', undefined, undefined, () => setTextureError(true)),
+        bumpMap: textureLoader.load('/earth-bump.jpg', undefined, undefined, () => setTextureError(true)),
+        specularMap: textureLoader.load('/earth-specular.jpg', undefined, undefined, () => setTextureError(true))
+      };
+      
+      setTextures(loadedTextures);
+    } catch (error) {
+      console.error('Error loading textures:', error);
+      setTextureError(true);
+    }
+    
+    // Cleanup function
+    return () => {
+      // Dispose textures when component unmounts
+      if (textures) {
+        if (textures.map) textures.map.dispose();
+        if (textures.bumpMap) textures.bumpMap.dispose();
+        if (textures.specularMap) textures.specularMap.dispose();
+      }
+    };
+  }, []);
   
   useFrame(() => {
     if (earthRef.current) {
