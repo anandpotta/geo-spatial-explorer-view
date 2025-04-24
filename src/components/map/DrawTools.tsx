@@ -47,8 +47,16 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }}
       edit={{
         featureGroup: null, // Will be set internally by react-leaflet-draw
-        edit: true,
-        remove: true
+        edit: { 
+          // Add required edit options here
+          selectedPathOptions: {
+            color: '#fe57a1',
+            opacity: 0.6,
+            dashArray: '10, 10',
+            fillOpacity: 0.1
+          }
+        },
+        remove: {} // This should be an empty object to enable remove functionality
       }}
     />
   );
