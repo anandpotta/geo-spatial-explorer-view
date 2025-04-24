@@ -7,6 +7,12 @@ interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
 }
 
+interface LeafletMapWithInternals extends L.Map {
+  _mapPane?: {
+    _leaflet_pos?: { x: number; y: number };
+  };
+}
+
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
   const hasCalledOnReady = useRef(false);
@@ -21,8 +27,11 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         try {
           // Make sure the map and its container still exist
           if (map && map.getContainer && map.getContainer()) {
+            // Use the internal map to check initialization status
+            const internalMap = map as LeafletMapWithInternals;
+            
             // Check if the map is properly initialized with all required properties
-            if (map._mapPane && map._mapPane._leaflet_pos) {
+            if (internalMap._mapPane && internalMap._mapPane._leaflet_pos) {
               hasCalledOnReady.current = true;
               console.log('Map container verified, calling onMapReady');
               
