@@ -42,15 +42,23 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
     savedDrawings.forEach(drawing => {
       if (drawing.geoJSON) {
         try {
+          // Store the ID in a way that doesn't conflict with TypeScript
+          const options = {
+            color: drawing.properties.color || '#3388ff',
+            weight: 3,
+            opacity: 0.7,
+            fillOpacity: 0.3
+          };
+          
           const layer = L.geoJSON(drawing.geoJSON, {
-            style: {
-              color: drawing.properties.color || '#3388ff',
-              weight: 3,
-              opacity: 0.7,
-              fillOpacity: 0.3,
-              id: drawing.id
-            }
+            style: options
           });
+          
+          // Store the ID as a property on the layer object instead
+          if (layer) {
+            // @ts-ignore - Adding custom property
+            layer.drawingId = drawing.id;
+          }
           
           layer.addTo(featureGroupRef.current);
           
@@ -105,8 +113,9 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
       const layerWithOptions = layer as L.Path;
       const options = layerWithOptions.options || {};
       
-      (options as any).id = id;
-      (options as any).isDrawn = true;
+      // Store ID separately rather than on the options object
+      // @ts-ignore - Adding custom property
+      layer.drawingId = id;
       
       const geoJSON = layer.toGeoJSON();
       
@@ -116,7 +125,12 @@ const DrawingControls = ({ onCreated, activeTool }: DrawingControlsProps) => {
         type: layerType as any,
         coordinates: getCoordinatesFromLayer(layer, layerType),
         geoJSON,
-        options,
+        options: {
+          color: options.color,
+          weight: options.weight,
+          opacity: options.opacity,
+          fillOpacity: options.fillOpacity
+        },
         properties: {
           name: `New ${layerType}`,
           color: options.color || '#3388ff',
