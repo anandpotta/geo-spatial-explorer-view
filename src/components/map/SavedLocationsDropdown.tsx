@@ -12,7 +12,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import DeleteLocationDialog from "@/components/saved-locations/DeleteLocationDialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
 import { deleteMarker } from "@/utils/marker-utils";
 
@@ -32,7 +41,6 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   } = useDropdownLocations();
 
   const handleLocationSelect = (position: [number, number]) => {
-    // Close dropdown if it's open
     const dropdown = document.querySelector('[data-state="open"]');
     if (dropdown) {
       const trigger = dropdown.previousElementSibling as HTMLButtonElement;
@@ -65,7 +73,6 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
       setMarkerToDelete(null);
       toast.success("Location removed");
       
-      // Delay focus return slightly to ensure the DOM has updated
       setTimeout(() => {
         if (returnFocusRef.current) {
           try {
@@ -75,7 +82,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
           }
           returnFocusRef.current = null;
         }
-      }, 100);
+      }, 0);
     }
   };
 
@@ -83,7 +90,6 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
     setIsDeleteDialogOpen(false);
     setMarkerToDelete(null);
     
-    // Delay focus return slightly to ensure the DOM has updated
     setTimeout(() => {
       if (returnFocusRef.current) {
         try {
@@ -93,7 +99,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         }
         returnFocusRef.current = null;
       }
-    }, 100);
+    }, 0);
   };
 
   return (
@@ -142,13 +148,20 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DeleteLocationDialog
-        isOpen={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        markerToDelete={markerToDelete}
-        onConfirmDelete={confirmDelete}
-        onCancel={cancelDelete}
-      />
+      <AlertDialog open={isDeleteDialogOpen}>
+        <AlertDialogContent onEscapeKeyDown={cancelDelete}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Location</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{markerToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

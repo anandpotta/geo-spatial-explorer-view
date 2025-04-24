@@ -1,5 +1,5 @@
 
-import { LocationMarker } from '@/utils/marker-utils';
+import { LocationMarker } from '@/utils/geo-utils';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,6 +10,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { useRef } from 'react';
 
 interface DeleteLocationDialogProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ const DeleteLocationDialog = ({
   onConfirmDelete,
   onCancel,
 }: DeleteLocationDialogProps) => {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
   return (
     <AlertDialog 
       open={isOpen} 
@@ -34,7 +37,7 @@ const DeleteLocationDialog = ({
         if (!open) onCancel();
       }}
     >
-      <AlertDialogContent onEscapeKeyDown={onCancel}>
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Location</AlertDialogTitle>
           <AlertDialogDescription>
@@ -42,7 +45,7 @@ const DeleteLocationDialog = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel ref={cancelRef} onClick={onCancel}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={(e) => {
               e.preventDefault();

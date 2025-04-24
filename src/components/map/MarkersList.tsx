@@ -26,7 +26,6 @@ const MarkersList = ({
 }: MarkersListProps) => {
   return (
     <>
-      {/* Show all saved markers */}
       {Array.isArray(markers) && markers.map((marker) => (
         <UserMarker 
           key={marker.id} 
@@ -35,7 +34,6 @@ const MarkersList = ({
         />
       ))}
       
-      {/* Show temporary marker if one is being placed */}
       {tempMarker && Array.isArray(tempMarker) && (
         <TempMarker 
           position={tempMarker}

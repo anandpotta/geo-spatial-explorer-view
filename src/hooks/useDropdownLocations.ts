@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { toast } from 'sonner';
@@ -38,16 +39,6 @@ export const useDropdownLocations = () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
     };
   }, []);
-
-  useEffect(() => {
-    if (!isDeleteDialogOpen) {
-      const timer = setTimeout(() => {
-        setMarkerToDelete(null);
-      }, 150);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isDeleteDialogOpen]);
 
   return {
     markers,

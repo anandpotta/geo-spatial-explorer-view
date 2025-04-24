@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
@@ -63,7 +64,6 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Clear the temp marker and name but don't clear markers array
     setTempMarker(null);
     setMarkerName('');
     setCurrentDrawing(null);

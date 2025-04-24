@@ -19,21 +19,15 @@ const NewMarkerForm = ({
   setMarkerType,
   onSave
 }: NewMarkerFormProps) => {
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave();
-  };
-
   return (
     <Popup>
-      <form onSubmit={handleSave} className="p-2">
+      <div className="p-2">
         <Input 
           type="text"
           placeholder="Location name"
           value={markerName}
           onChange={(e) => setMarkerName(e.target.value)}
           className="mb-2"
-          autoFocus
         />
         <div className="flex mb-2">
           <Button
@@ -65,13 +59,13 @@ const NewMarkerForm = ({
           </Button>
         </div>
         <Button 
-          type="submit"
+          onClick={onSave}
           disabled={!markerName.trim()}
           className="w-full"
         >
           Save Location
         </Button>
-      </form>
+      </div>
     </Popup>
   );
 };

@@ -10,7 +10,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
-  onClearAll?: () => void;
+  onClearAll?: () => void; // Add onClearAll prop
 }
 
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
