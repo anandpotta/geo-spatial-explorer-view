@@ -1,7 +1,6 @@
 
-import React, { useEffect, useRef } from 'react';
-import { Marker } from 'react-leaflet';
-import { useMap } from 'react-leaflet';
+import React, { useEffect, useRef, useCallback } from 'react';
+import { Marker, useMap } from 'react-leaflet';
 import { useMarkerEvents } from '@/hooks/useMarkerEvents';
 import { usePopupStyles } from '@/hooks/usePopupStyles';
 import NewMarkerForm from './marker/NewMarkerForm';
@@ -24,11 +23,18 @@ const TempMarker = ({
   onSave
 }: TempMarkerProps) => {
   const map = useMap();
-  const markerKey = useRef(`temp-marker-${position[0]}-${position[1]}-${Date.now()}`);
+  // Use stable key to prevent remounting
+  const markerKey = useRef(`temp-marker-${Date.now()}`);
   
   // Apply the marker events and popup styles
   useMarkerEvents(map);
   usePopupStyles();
+  
+  // Prevent map interactions when marker form is active
+  const preventMapInteractions = useCallback(() => {
+    window.userHasInteracted = true;
+    window.tempMarkerPlaced = true;
+  }, []);
   
   // Add marker-specific class to the map container for CSS targeting
   useEffect(() => {
@@ -71,22 +77,27 @@ const TempMarker = ({
       eventHandlers={{
         dragstart: (e) => {
           // Prevent map movement when dragging the marker
+          preventMapInteractions();
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
-          window.userHasInteracted = true;
-          window.tempMarkerPlaced = true;
         },
         dragend: (e) => {
           // Ensure map panning is stopped
           if (e.sourceTarget && e.sourceTarget._map) {
             e.sourceTarget._map._stop();
           }
+          preventMapInteractions();
           // Update position using the global handler if available
           if (window.tempMarkerPositionUpdate) {
             const newPosition = e.target.getLatLng();
             window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
           }
+        },
+        click: (e) => {
+          // Prevent the click from propagating to the map
+          preventMapInteractions();
+          L.DomEvent.stopPropagation(e);
         }
       }}
     >

@@ -22,17 +22,30 @@ const NewMarkerForm = ({
 }: NewMarkerFormProps) => {
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popupRef = useRef<any>(null);
 
-  // Focus the input field when the component mounts
+  // Focus the input field when the component mounts with multiple fallbacks
   useEffect(() => {
-    // Short timeout to ensure the DOM is fully rendered
-    const timer = setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, 100);
+    // Series of timers to ensure we try focusing multiple times
+    const attempts = [100, 300, 600, 1000]; 
     
-    return () => clearTimeout(timer);
+    attempts.forEach(delay => {
+      const timer = setTimeout(() => {
+        if (inputRef.current) {
+          try {
+            inputRef.current.focus();
+            // Set cursor at the end of the text
+            const length = inputRef.current.value.length;
+            inputRef.current.setSelectionRange(length, length);
+            console.log('Input focused after', delay, 'ms');
+          } catch (e) {
+            console.warn('Failed to focus input:', e);
+          }
+        }
+      }, delay);
+      
+      return () => attempts.forEach((_, i) => clearTimeout(i));
+    });
   }, []);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -41,12 +54,20 @@ const NewMarkerForm = ({
     onSave();
   }, [onSave]);
 
+  // Handle input change with full propagation prevention
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setMarkerName(e.target.value);
+    
+    // Set global flags
     window.tempMarkerPlaced = true;
     window.userHasInteracted = true;
+    
+    // Ensure popup stays open
+    if (popupRef.current) {
+      popupRef.current._source._popup.setContent(popupRef.current._content);
+    }
   }, [setMarkerName]);
 
   // Enhanced keyboard event handler for the input field
@@ -70,16 +91,35 @@ const NewMarkerForm = ({
     e.stopPropagation();
     window.tempMarkerPlaced = true;
     window.userHasInteracted = true;
+    
+    // Re-focus input if we click the form
+    if (inputRef.current && e.target !== inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+    }
   }, []);
 
   return (
     <Popup 
+      ref={popupRef}
       closeButton={false} 
       autoClose={false} 
       autoPan={false}
       className="marker-form-popup"
+      onOpen={() => {
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 100);
+      }}
     >
-      <div onClick={stopPropagation} className="popup-container">
+      <div 
+        onClick={stopPropagation} 
+        className="popup-container"
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
+      >
         <form 
           ref={formRef}
           onSubmit={handleSubmit} 
@@ -94,7 +134,11 @@ const NewMarkerForm = ({
             placeholder="Location name"
             value={markerName}
             onChange={handleInputChange}
-            onClick={stopPropagation}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.tempMarkerPlaced = true;
+              window.userHasInteracted = true;
+            }}
             onKeyDown={handleInputKeyEvents}
             onKeyPress={handleInputKeyEvents}
             onKeyUp={handleInputKeyEvents}
