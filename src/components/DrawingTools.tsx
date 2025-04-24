@@ -54,34 +54,42 @@ const DrawingTools = ({
   };
 
   const handleClearAll = () => {
-    const markers = getSavedMarkers();
-    const drawings = getSavedDrawings();
+    try {
+      console.log("Clearing all layers...");
+      const markers = getSavedMarkers();
+      const drawings = getSavedDrawings();
+      
+      console.log(`Found ${markers.length} markers and ${drawings.length} drawings to clear`);
 
-    // Clear all markers
-    markers.forEach(marker => {
-      deleteMarker(marker.id);
-    });
+      // Clear all markers
+      markers.forEach(marker => {
+        deleteMarker(marker.id);
+      });
 
-    // Clear all drawings
-    drawings.forEach(drawing => {
-      deleteDrawing(drawing.id);
-    });
+      // Clear all drawings
+      drawings.forEach(drawing => {
+        deleteDrawing(drawing.id);
+      });
 
-    // Clear local storage
-    localStorage.removeItem('savedMarkers');
-    localStorage.removeItem('savedDrawings');
+      // Clear local storage directly to ensure complete cleanup
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('savedDrawings');
 
-    // Notify components about storage changes
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('markersUpdated'));
-    
-    // Reset map state through parent component
-    if (onClearAll) {
-      onClearAll();
+      // Notify components about storage changes
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      
+      // Reset map state through parent component
+      if (onClearAll) {
+        onClearAll();
+      }
+      
+      setIsClearDialogOpen(false);
+      toast.success('All layers cleared successfully');
+    } catch (error) {
+      console.error("Error clearing layers:", error);
+      toast.error('Failed to clear layers. Please try again.');
     }
-    
-    setIsClearDialogOpen(false);
-    toast.success('All layers cleared');
   };
 
   const handleMouseDown = (event: React.MouseEvent) => {

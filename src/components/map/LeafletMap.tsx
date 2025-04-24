@@ -99,6 +99,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   };
 
   const handleClearAll = () => {
+    console.log("Handling clear all in LeafletMap");
+    
+    // Reset all map state
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
     mapState.setMarkerType('building');
@@ -106,8 +109,13 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     mapState.setShowFloorPlan(false);
     mapState.setSelectedDrawing(null);
     
+    // Force map to refresh
     if (mapRef.current) {
       mapRef.current.invalidateSize();
+      setTimeout(() => {
+        // Force reload the map instance to clear all layers
+        setMapInstanceKey(Date.now());
+      }, 100);
     }
   };
 
