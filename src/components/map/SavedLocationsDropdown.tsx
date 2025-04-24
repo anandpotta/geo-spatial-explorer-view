@@ -19,11 +19,16 @@ interface SavedLocationsDropdownProps {
 
 const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProps) => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
+  const [pinnedMarkers, setPinnedMarkers] = useState<LocationMarker[]>([]);
 
   useEffect(() => {
     const loadMarkers = () => {
       const savedMarkers = getSavedMarkers();
       setMarkers(savedMarkers);
+      
+      // Filter pinned markers
+      const pinned = savedMarkers.filter(marker => marker.isPinned === true);
+      setPinnedMarkers(pinned);
     };
 
     loadMarkers();
@@ -41,7 +46,25 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[200px]">
-        <DropdownMenuLabel>Navigate to Location</DropdownMenuLabel>
+        {pinnedMarkers.length > 0 && (
+          <>
+            <DropdownMenuLabel>Pinned Locations</DropdownMenuLabel>
+            <DropdownMenuGroup>
+              {pinnedMarkers.map((marker) => (
+                <DropdownMenuItem
+                  key={`pinned-${marker.id}`}
+                  onClick={() => onLocationSelect(marker.position)}
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  {marker.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        <DropdownMenuLabel>All Locations</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           {markers.length === 0 ? (

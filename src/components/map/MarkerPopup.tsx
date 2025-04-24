@@ -23,6 +23,9 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
       m.id === marker.id ? { ...m, isPinned: updatedPinnedState } : m
     );
     localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
+    
+    // Dispatch storage event to notify other components
+    window.dispatchEvent(new Event('storage'));
   };
 
   return (
