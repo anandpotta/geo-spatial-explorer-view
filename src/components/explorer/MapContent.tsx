@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Location } from '@/utils/location/types';
 import CesiumMap from '../CesiumMap';
@@ -7,6 +6,7 @@ import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
+import ShapeTools from '../drawing/ShapeTools';
 import LocationDropdown from '../map/LocationDropdown';
 
 interface MapContentProps {
@@ -65,7 +65,6 @@ const MapContent = ({
   };
 
   const handleToolSelect = (tool: string) => {
-    console.log("MapContent: Selected tool:", tool);
     setActiveTool(prev => prev === tool ? null : tool);
   };
 
@@ -130,6 +129,10 @@ const MapContent = ({
                   });
                 }
               }}
+            />
+            <ShapeTools 
+              activeTool={activeTool} 
+              onToolSelect={handleToolSelect} 
             />
           </div>
         )}

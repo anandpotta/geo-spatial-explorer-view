@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
@@ -16,98 +16,51 @@ interface DrawingControlsProps {
 }
 
 const DrawingControls = ({ onCreated, activeTool, selectedBuildingId }: DrawingControlsProps) => {
-  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
-  const { drawnLayers, setDrawnLayers, onDrawControlMounted } = useDrawingControls(activeTool);
+  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
+  const { drawControl, drawnLayers, setDrawnLayers, editControlRef } = useDrawingControls(activeTool);
   useLayerStyles(selectedBuildingId, drawnLayers);
-
-  // Patch Leaflet.draw's readableArea function only once on mount
-  useEffect(() => {
-    if (L.Draw && L.GeometryUtil) {
-      try {
-        // Fix for the "type is not defined" error in leaflet-draw
-        L.GeometryUtil.readableArea = function(area: number, isMetric: boolean) {
-          const areaStr = isMetric
-              ? area >= 10000
-                  ? (area / 1000000).toFixed(2) + ' km²'
-                  : area.toFixed(2) + ' m²'
-              : area < 2589988.11
-                  ? (area / 0.836127).toFixed(2) + ' sq ft'
-                  : (area / 2589988.11).toFixed(2) + ' sq mi';
-          
-          return areaStr;
-        };
-        
-        console.log("Patched Leaflet.draw area calculation");
-      } catch (err) {
-        console.error("Failed to patch Leaflet.draw:", err);
-      }
-    }
-  }, []); // Empty dependency array ensures this runs only once
-
-  const handleShapeCreated = (e: any) => {
-    try {
-      const { layerType, layer } = e;
-      const id = uuidv4();
-      
-      console.log(`Shape created: ${layerType}`, layer);
-      
-      if ('setStyle' in layer && typeof layer.setStyle === 'function') {
-        layer.setStyle({
-          color: '#1EAEDB',
-          weight: 4,
-          opacity: 1,
-          fillColor: '#D3E4FD',
-          fillOpacity: 0.5
-        });
-      }
-
-      // Set options and properties
-      if (layer.options) {
-        layer.options.id = id;
-        layer.options.isDrawn = true;
-        layer.options.buildingId = id;
-      } else {
-        layer.options = {
-          id,
-          isDrawn: true,
-          buildingId: id
-        };
-      }
-
-      // Store in drawn layers
-      setDrawnLayers(prev => ({
-        ...prev,
-        [id]: layer
-      }));
-
-      // Convert to GeoJSON
-      let geoJSON;
-      try {
-        geoJSON = layer.toGeoJSON();
-      } catch (err) {
-        console.error('Error converting to GeoJSON:', err);
-        toast.error('Error saving shape');
-        return;
-      }
-
-      // Call the onCreated callback
-      console.log('Created shape:', layerType, geoJSON);
-      toast.success(`${layerType} created successfully`);
-      onCreated({ type: layerType, layer, geoJSON, id });
-    } catch (error) {
-      console.error('Error creating shape:', error);
-      toast.error('Failed to create shape');
-    }
-  };
 
   return (
     <FeatureGroup ref={featureGroupRef}>
       <EditControl
+        ref={editControlRef}
         position="topleft"
-        onCreated={handleShapeCreated}
+        onCreated={e => {
+          try {
+            const { layerType, layer } = e;
+            const id = uuidv4();
+            
+            if ('setStyle' in layer) {
+              layer.setStyle({
+                color: '#1EAEDB',
+                weight: 3,
+                opacity: 1,
+                fillColor: '#D3E4FD',
+                fillOpacity: 0.5
+              });
+            }
+
+            const options = (layer as any).options || {};
+            options.id = id;
+            options.isDrawn = true;
+            options.buildingId = id;
+
+            setDrawnLayers(prev => ({
+              ...prev,
+              [id]: layer
+            }));
+
+            const geoJSON = layer.toGeoJSON();
+            console.log('Created shape:', layerType, geoJSON);
+            toast.success(`${layerType} created successfully`);
+            onCreated({ type: layerType, layer, geoJSON, id });
+          } catch (error) {
+            console.error('Error creating shape:', error);
+            toast.error('Failed to create shape');
+          }
+        }}
         draw={getDrawingOptions(activeTool)}
         edit={editOptions}
-        onMounted={onDrawControlMounted}
       />
     </FeatureGroup>
   );

@@ -20,36 +20,19 @@ export const useDrawing = () => {
     console.log('New shape created:', shape);
     const id = shape.id || uuidv4();
     
-    // Get coordinates for location - handle different shape types
-    let coords;
-    
-    try {
-      if (shape.type === 'polyline') {
-        coords = shape.geoJSON.geometry.coordinates[0];
-      } else if (shape.type === 'circle') {
-        // For circle, use the center point
-        coords = shape.geoJSON.geometry.coordinates || [0, 0];
-      } else {
-        // For polygons, rectangles, etc.
-        coords = shape.geoJSON.geometry.coordinates[0][0] || [0, 0];
-      }
-    } catch (err) {
-      console.error("Error extracting coordinates:", err);
-      coords = [0, 0]; // Fallback
-    }
-    
+    // Get coordinates from the geoJSON for location
+    const coords = shape.geoJSON.geometry.coordinates[0][0];
     const locationId = uuidv4();
-    const shapeTypeName = shape.type.charAt(0).toUpperCase() + shape.type.slice(1);
     
     const newDrawing = {
       id,
       type: shape.type,
       geoJSON: shape.geoJSON,
       layer: shape.layer,
-      name: drawingName || `New ${shapeTypeName}`,
+      name: drawingName || `New ${shape.type.charAt(0).toUpperCase() + shape.type.slice(1)}`,
       location: {
         id: locationId,
-        label: drawingName || `New ${shapeTypeName}`,
+        label: drawingName,
         x: coords[0],
         y: coords[1]
       }
@@ -64,22 +47,8 @@ export const useDrawing = () => {
     if (!currentDrawing || !drawingName.trim()) return;
 
     try {
-      // Get coordinates - handle different shape types
-      let coords;
-      
-      try {
-        if (currentDrawing.type === 'polyline') {
-          coords = currentDrawing.geoJSON.geometry.coordinates[0];
-        } else if (currentDrawing.type === 'circle') {
-          coords = currentDrawing.geoJSON.geometry.coordinates;
-        } else {
-          coords = currentDrawing.geoJSON.geometry.coordinates[0][0];
-        }
-      } catch (err) {
-        console.error("Error extracting coordinates:", err);
-        coords = [0, 0]; // Fallback
-      }
-      
+      // Get coordinates from the geoJSON for location
+      const coords = currentDrawing.geoJSON.geometry.coordinates[0][0];
       const locationId = uuidv4();
       
       // Create building object with required fields

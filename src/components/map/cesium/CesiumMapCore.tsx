@@ -39,64 +39,32 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
     }
 
     // Force multiple renders to ensure the globe is visible
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 40; i++) {
       viewer.scene.requestRender();
     }
     
     // Force immediate globe visibility
     forceGlobeVisibility(viewer);
-    
-    console.log("CesiumMapCore: Viewer is ready, forcing globe visibility");
-    
-    // Add a global style to ensure visibility
-    const style = document.createElement('style');
-    style.textContent = `
-      .cesium-viewer-cesiumWidgetContainer, .cesium-widget, .cesium-widget canvas {
-        visibility: visible !important;
-        display: block !important;
-        opacity: 1 !important;
-      }
-    `;
-    document.head.appendChild(style);
   };
 
   // Use the globe visibility hook
   useCesiumGlobeVisibility(viewerRef, viewerReady);
 
-  // Additional attempts to ensure globe visibility
+  // Manual intervention to ensure globe visibility
   useEffect(() => {
     if (viewerRef.current && viewerReady) {
-      // Add more aggressive visibility checks at various intervals
-      const intervals = [50, 100, 200, 500, 1000, 2000];
-      
+      const intervals = [100, 300, 500, 1000, 2000, 3000];
       intervals.forEach(interval => {
         setTimeout(() => {
           if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-            console.log(`Forcing globe visibility at ${interval}ms`);
             forceGlobeVisibility(viewerRef.current);
-            
-            // Set camera to better position to see the globe if not flying
-            if (!isFlying) {
-              viewerRef.current.camera.setView({
-                destination: Cesium.Cartesian3.fromDegrees(0.0, 20.0, 15000000.0),
-                orientation: {
-                  heading: Cesium.Math.toRadians(0.0),
-                  pitch: Cesium.Math.toRadians(-25.0),
-                  roll: 0.0
-                }
-              });
-            }
-            
-            // Force resize and render
             viewerRef.current.resize();
-            for (let i = 0; i < 5; i++) {
-              viewerRef.current.scene.requestRender();
-            }
+            console.log(`Forcing globe visibility at ${interval}ms`);
           }
         }, interval);
       });
     }
-  }, [viewerReady, isFlying]);
+  }, [viewerReady]);
 
   // Handle fly operations start/end
   const handleFlyComplete = () => {

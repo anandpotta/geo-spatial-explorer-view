@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
@@ -9,33 +8,53 @@ interface MapLayersProps {
 
 export const MapLayers = ({ map }: MapLayersProps) => {
   useEffect(() => {
-    // Skip external OSM Buildings layer attempt and use fallback directly
-    addFallbackLayer(map);
+    addOsmBuildingsLayer(map);
   }, [map]);
 
   return null;
 };
 
-// Removed the external OSM Buildings layer function since it's causing errors
+const addOsmBuildingsLayer = (map: L.Map) => {
+  const probeUrl = 'https://tile.osmbuildings.org/0.2/dixw8kmb/tile/1/1/1.json';
+  
+  fetch(probeUrl, { 
+    method: 'HEAD',
+    mode: 'no-cors'
+  })
+  .then(() => {
+    try {
+      L.tileLayer('https://tile.osmbuildings.org/0.2/dixw8kmb/tile/{z}/{x}/{y}.png', {
+        attribution: '© OSM Buildings',
+        maxZoom: 19
+      }).addTo(map);
+      
+      console.log("OSM Buildings layer added");
+    } catch (error) {
+      console.warn("Error adding OSM Buildings layer:", error);
+      addFallbackLayer(map);
+    }
+  })
+  .catch(error => {
+    console.warn("OSM Buildings service unavailable:", error);
+    addFallbackLayer(map);
+  });
+};
 
 const addFallbackLayer = (map: L.Map) => {
   console.log("Using fallback map layer");
   
-  // Create a buildings pane to ensure proper z-index
   map.createPane('buildings');
   if (map.getPane('buildings')) {
     map.getPane('buildings').style.zIndex = '450';
   }
   
-  // Add a standard OpenStreetMap layer
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     pane: 'buildings',
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19
   }).addTo(map);
   
-  // Let the user know we're in simplified mode
-  toast.info("Using standard map view", {
+  toast.info("Using standard map. 3D buildings unavailable.", {
     duration: 3000
   });
 };

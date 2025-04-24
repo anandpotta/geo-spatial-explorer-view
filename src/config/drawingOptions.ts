@@ -1,75 +1,65 @@
 
 export const getDrawingOptions = (activeTool: string | null) => ({
-  polyline: {
-    shapeOptions: {
-      color: '#3388ff',
-      weight: 5,
-      opacity: 1.0,
-      lineCap: 'round' as const,
-      lineJoin: 'round' as const,
-      dashArray: null
-    },
-    metric: true,
-    feet: false,
-    showLength: true,
-    zIndexOffset: 2000
-  },
   rectangle: {
     shapeOptions: {
-      color: '#3388ff',
-      weight: 4,
-      opacity: 1.0,
-      fill: true,
-      fillColor: '#3388ff',
-      fillOpacity: 0.3,
-      clickable: true,
-      dashArray: null
+      color: '#1EAEDB',
+      weight: 3,
+      opacity: 1,
+      fillColor: '#D3E4FD',
+      fillOpacity: 0.5
     },
-    // Removed showArea property to prevent the "type is not defined" error
-    metric: true
+    showArea: true,
+    metric: true,
+    feet: false
   },
   polygon: {
     shapeOptions: {
-      color: '#3388ff',
-      weight: 4,
-      opacity: 1.0,
-      fill: true,
-      fillColor: '#3388ff',
-      fillOpacity: 0.3,
-      clickable: true,
-      dashArray: null
+      color: '#1EAEDB',
+      weight: 3,
+      opacity: 1,
+      fillColor: '#D3E4FD',
+      fillOpacity: 0.5
     },
     allowIntersection: false,
-    // Removed showArea and showLength properties to prevent errors
+    showArea: true,
     metric: true,
+    feet: false,
     drawError: {
-      color: '#FF0000',
-      timeout: 1000,
-      message: '<strong>Error:</strong> Shapes cannot intersect!'
-    },
-    zIndexOffset: 2000
+      color: '#e1e100',
+      message: '<strong>Drawing error:</strong> Shapes cannot intersect!'
+    }
   },
   circle: {
     shapeOptions: {
-      color: '#3388ff',
-      weight: 4,
-      opacity: 1.0,
-      fillColor: '#3388ff',
-      fillOpacity: 0.3,
-      clickable: true
+      color: '#1EAEDB',
+      weight: 3,
+      opacity: 1,
+      fillColor: '#D3E4FD',
+      fillOpacity: 0.5
     },
     showRadius: true,
-    metric: true
+    metric: true,
+    feet: false
   },
+  polyline: {
+    shapeOptions: {
+      color: '#1EAEDB',
+      weight: 3,
+      opacity: 1
+    },
+    metric: true,
+    feet: false,
+    showLength: true
+  },
+  circlemarker: false,
   marker: activeTool === 'marker'
 });
 
 export const editOptions = {
   edit: {
-    featureGroup: null, // This will be set dynamically
     selectedPathOptions: {
       color: '#fe57a1',
-      opacity: 0.8,
+      opacity: 0.6,
       dashArray: '10, 10',
       fill: true,
       fillColor: '#fe57a1',

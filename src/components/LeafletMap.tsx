@@ -5,12 +5,13 @@ import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { Location } from '@/utils/location/types';
-import { setupLeafletIcons, setupDrawingStyles } from './map/LeafletMapIcons';
+import { setupLeafletIcons } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
 import MapReference from './map/MapReference';
 import DrawingControls from './map/DrawingControls';
 import MarkersList from './map/markers/MarkersList';
 import BuildingDialog from './map/buildings/BuildingDialog';
+import ShapeTools from './drawing/ShapeTools';
 import { useMapState } from '@/hooks/useMapState';
 import { MapLayers } from './map/layers/MapLayers';
 import { MapInitializer } from './map/MapInitializer';
@@ -20,9 +21,8 @@ import { useMapEvents } from '@/hooks/useMapEvents';
 import { getAllSavedBuildings } from '@/utils/building-utils';
 import { toast } from 'sonner';
 
-// Initialize Leaflet icons and drawing styles
+// Initialize Leaflet icons
 setupLeafletIcons();
-setupDrawingStyles();
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -35,7 +35,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
   const mapRef = useRef<L.Map | null>(null);
   const { position, zoom } = useMapState(selectedLocation);
   const [localActiveTool, setLocalActiveTool] = useState<string | null>(activeTool || null);
-  const activeToolRef = useRef<string | null>(null);
   
   const {
     markers,
@@ -68,16 +67,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
     }
   };
 
+  // Use the map events hook
   useMapEvents(mapRef.current, selectedLocation);
 
-  // Update the localActiveTool only when the active tool actually changes
-  useEffect(() => {
-    if (activeToolRef.current !== activeTool) {
-      activeToolRef.current = activeTool;
-      setLocalActiveTool(activeTool || null);
-    }
-  }, [activeTool]);
-
+  // Effect to fly to building location if selectedBuildingId changes
   useEffect(() => {
     if (selectedBuildingId && mapRef.current) {
       const buildings = getAllSavedBuildings();
@@ -95,18 +88,16 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
       }
     }
   }, [selectedBuildingId]);
-  
-  // This is important to ensure the map is properly sized
-  useEffect(() => {
-    if (mapRef.current) {
-      // Force a resize to ensure the map is properly sized
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.invalidateSize();
-        }
-      }, 100);
-    }
-  }, [mapRef.current]);
+
+  // Update local tool state when prop changes
+  React.useEffect(() => {
+    setLocalActiveTool(activeTool || null);
+  }, [activeTool]);
+
+  const handleToolSelect = (tool: string) => {
+    console.log('Tool selected:', tool);
+    setLocalActiveTool(prev => prev === tool ? null : tool);
+  };
 
   return (
     <div className="w-full h-full relative">
@@ -135,7 +126,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
         
         <DrawingControls 
           onCreated={handleCreatedShape}
-          activeTool={localActiveTool}
+          activeTool={localActiveTool || null}
           selectedBuildingId={selectedBuildingId}
         />
         
@@ -152,6 +143,13 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, selectedBuilding
         
         <MapEvents onMapClick={(latlng) => handleMapClick(latlng, localActiveTool)} />
       </MapContainer>
+
+      <div className="absolute right-4 top-4 z-[10001]">
+        <ShapeTools 
+          activeTool={localActiveTool} 
+          onToolSelect={handleToolSelect}
+        />
+      </div>
 
       {showDrawingDialog && (
         <BuildingDialog
