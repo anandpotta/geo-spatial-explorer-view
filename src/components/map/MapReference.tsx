@@ -6,8 +6,8 @@ import { useMapContainer } from '@/hooks/map/useMapContainer';
 import { useMapInitialization } from '@/hooks/map/useMapInitialization';
 import { useMapCleanup } from '@/hooks/map/useMapCleanup';
 
-// Import our extended types
-import '../types/leaflet-extended.d.ts';
+// Import our extended types with correct path
+import '@/types/leaflet-extended.d.ts';
 
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;

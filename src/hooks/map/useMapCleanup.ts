@@ -1,7 +1,7 @@
 
 import { Map } from 'leaflet';
 import { useEffect } from 'react';
-import '../types/leaflet-extended.d.ts';
+import '@/types/leaflet-extended.d.ts';
 
 export function useMapCleanup(map: Map | null, initTimeoutRef: React.MutableRefObject<number | null>) {
   useEffect(() => {

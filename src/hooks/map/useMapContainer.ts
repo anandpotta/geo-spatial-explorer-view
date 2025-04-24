@@ -1,6 +1,6 @@
 
 import { Map } from 'leaflet';
-import '../types/leaflet-extended.d.ts';
+import '@/types/leaflet-extended.d.ts';
 
 export function useMapContainer() {
   const isContainerValid = (map: Map | null) => {
