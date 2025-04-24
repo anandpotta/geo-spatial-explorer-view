@@ -1,5 +1,5 @@
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { setupLeafletIcons } from './LeafletMapIcons';
@@ -21,9 +21,11 @@ interface LeafletMapProps {
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
-  const mapContainerRef = useRef<string>(`map-container-${Date.now()}`);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const [isMapInitialized, setIsMapInitialized] = useState<boolean>(false);
+  
+  // Generate a truly unique container ID that won't be reused
+  const mapContainerId = useRef<string>(`map-container-${mapInstanceKey}`);
   
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
@@ -40,7 +42,24 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       link.crossOrigin = '';
       document.head.appendChild(link);
     }
-  }, []);
+    
+    // Force recreation of container on key change
+    return () => {
+      // Clean up the old container to prevent reuse
+      const oldContainer = document.getElementById(mapContainerId.current);
+      if (oldContainer) {
+        // We'll replace it with a fresh one
+        const parent = oldContainer.parentElement;
+        if (parent) {
+          const newContainer = document.createElement('div');
+          newContainer.id = mapContainerId.current;
+          newContainer.style.width = '100%';
+          newContainer.style.height = '100%';
+          parent.replaceChild(newContainer, oldContainer);
+        }
+      }
+    };
+  }, [mapInstanceKey]);
   
   // Clean up map on unmount or key change
   useEffect(() => {
@@ -48,6 +67,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
         try {
+          // First remove all layers and handlers to ensure proper cleanup
+          mapRef.current.eachLayer(layer => {
+            mapRef.current?.removeLayer(layer);
+          });
           mapRef.current.remove();
           mapRef.current = null;
         } catch (err) {
@@ -82,11 +105,12 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         console.error('Error flying to location:', err);
         // If there's an error, recreate the map
         setMapInstanceKey(Date.now());
+        mapContainerId.current = `map-container-${Date.now()}`;
       }
     }
   }, [selectedLocation, isMapInitialized]);
 
-  const handleSetMapRef = (map: L.Map) => {
+  const handleSetMapRef = useCallback((map: L.Map) => {
     console.log('Map reference provided');
     
     // Store the map reference
@@ -122,7 +146,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         }
       }
     }, 200);
-  };
+  }, [selectedLocation, onMapReady]);
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
@@ -211,7 +235,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       activeTool={activeTool || mapState.activeTool}
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAll}
-      mapContainerId={mapContainerRef.current}
+      mapContainerId={mapContainerId.current}
     />
   );
 };

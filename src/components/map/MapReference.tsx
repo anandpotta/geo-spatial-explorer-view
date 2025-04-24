@@ -3,6 +3,13 @@ import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
+// Extend the Map type to include our custom property
+declare module 'leaflet' {
+  interface Map {
+    hasMapClickHandler?: boolean;
+  }
+}
+
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
 }
@@ -25,11 +32,11 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             map.invalidateSize(true);
             
             // Ensure proper event handlers are set up
-            if (!map._hasMapClickHandler) {
+            if (!map.hasMapClickHandler) {
               map.on('click', (e) => {
                 console.log('Map was clicked at:', e.latlng);
               });
-              map._hasMapClickHandler = true;
+              map.hasMapClickHandler = true;
             }
             
             // Mark as called to prevent duplicate calls
@@ -49,7 +56,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       if (map) {
         // Remove click event listener to prevent memory leaks
         map.off('click');
-        delete map._hasMapClickHandler;
+        delete map.hasMapClickHandler;
       }
     };
   }, [map, onMapReady]);

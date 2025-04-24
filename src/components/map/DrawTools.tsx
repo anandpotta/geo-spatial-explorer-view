@@ -1,6 +1,7 @@
 
 import { useEffect, useRef } from 'react';
 import { EditControl } from "react-leaflet-draw";
+import { useLeafletContext } from '@react-leaflet/core';
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
@@ -10,17 +11,20 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
-  onClearAll?: () => void; // Add onClearAll prop
+  onClearAll?: () => void;
 }
 
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   const editControlRef = useRef<any>(null);
+  const context = useLeafletContext();
 
+  // Check if map is ready before rendering EditControl
   useEffect(() => {
     if (!editControlRef.current || !activeTool) return;
     
+    const map = context.map;
     const leafletElement = editControlRef.current.leafletElement;
-    if (!leafletElement || !leafletElement._modes) return;
+    if (!leafletElement || !leafletElement._modes || !map) return;
     
     // Disable all active tools first
     Object.keys(leafletElement._modes).forEach((mode) => {
@@ -51,7 +55,7 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
         console.warn('Error enabling drawing handler:', err);
       }
     }
-  }, [activeTool]);
+  }, [activeTool, context.map]);
 
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
@@ -91,6 +95,11 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     toast.success(`${layerType} created successfully`);
     onCreated({ type: layerType, layer, geoJSON: layer.toGeoJSON(), id });
   };
+
+  // Only render if context is ready
+  if (!context || !context.map) {
+    return null;
+  }
 
   return (
     <EditControl

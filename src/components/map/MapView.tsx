@@ -95,6 +95,7 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
+        key={mapContainerId} // Key helps React recreate the component when ID changes
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
@@ -110,7 +111,7 @@ const MapView = ({
         <DrawingControlsContainer
           onShapeCreated={onShapeCreated}
           activeTool={activeTool}
-          onRegionClick={handleRegionClick}
+          onRegionClick={onRegionClick}
           onClearAll={onClearAll}
         />
         
