@@ -1,5 +1,5 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +56,24 @@ const NewMarkerForm = ({
     e.stopPropagation();
     onSave(e);
   }, [onSave]);
+  
+  // Add an effect to handle keyboard events globally when the form is active
+  useEffect(() => {
+    const preventMapKeyboardEvents = (e: KeyboardEvent) => {
+      // Prevent keyboard events from propagating to the map
+      e.stopPropagation();
+    };
+    
+    // Add event listeners to capture keyboard events
+    document.addEventListener('keydown', preventMapKeyboardEvents, true);
+    document.addEventListener('keypress', preventMapKeyboardEvents, true);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('keydown', preventMapKeyboardEvents, true);
+      document.removeEventListener('keypress', preventMapKeyboardEvents, true);
+    };
+  }, []);
 
   return (
     <Popup 
@@ -90,8 +108,9 @@ const NewMarkerForm = ({
           onKeyPress={(e) => {
             e.stopPropagation();
           }}
-          className="mb-2"
+          className="mb-2 z-50"
           autoFocus
+          style={{ zIndex: 9999 }}
         />
         <div className="flex mb-2">
           <Button

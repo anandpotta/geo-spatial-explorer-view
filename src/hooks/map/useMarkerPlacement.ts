@@ -48,7 +48,7 @@ export function useMarkerPlacement(mapState: MarkerPlacementState) {
         });
       }, 50);
       
-      // Prevent any default map behaviors
+      // Stop propagation and prevent default to improve interaction stability
       return false;
     }
   };
