@@ -1,19 +1,36 @@
 
+import { v4 as uuidv4 } from 'uuid';
+
 export interface DrawingData {
   id: string;
-  type: 'polygon' | 'circle' | 'freehand';
+  type: 'polygon' | 'circle' | 'rectangle' | 'marker';
   coordinates: Array<[number, number]>;
+  geoJSON?: any;
+  options?: any;
   properties: {
     name?: string;
     description?: string;
+    color?: string;
     createdAt: Date;
   };
 }
 
 export function saveDrawing(drawing: DrawingData): void {
   const savedDrawings = getSavedDrawings();
-  savedDrawings.push(drawing);
+  
+  // Check if drawing with same ID exists and update it
+  const existingIndex = savedDrawings.findIndex(d => d.id === drawing.id);
+  
+  if (existingIndex >= 0) {
+    savedDrawings[existingIndex] = drawing;
+  } else {
+    savedDrawings.push(drawing);
+  }
+  
   localStorage.setItem('savedDrawings', JSON.stringify(savedDrawings));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
   
   // Sync with backend
   syncDrawingsWithBackend(savedDrawings);
@@ -46,6 +63,9 @@ export function deleteDrawing(id: string): void {
   const savedDrawings = getSavedDrawings();
   const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);
   localStorage.setItem('savedDrawings', JSON.stringify(filteredDrawings));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
   
   // Sync deletion with backend
   deleteDrawingFromBackend(id);

@@ -1,9 +1,10 @@
+
 import { useState, useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
+import { Location, LocationMarker, saveMarker, getSavedMarkers, deleteMarker, DrawingData, getSavedDrawings } from '@/utils/geo-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { setupLeafletIcons } from './map/LeafletMapIcons';
 import MapEvents from './map/MapEvents';
@@ -26,17 +27,31 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
   );
   const [zoom, setZoom] = useState(18);
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
+  const [drawings, setDrawings] = useState<DrawingData[]>([]);
   const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
   const [markerName, setMarkerName] = useState('');
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
   const mapRef = useRef<L.Map | null>(null);
   
-  // Load saved markers when the component mounts
+  // Load saved markers and drawings when the component mounts
   useEffect(() => {
-    const loadedMarkers = getSavedMarkers();
-    if (loadedMarkers && loadedMarkers.length > 0) {
-      setMarkers(loadedMarkers);
-    }
+    const loadSavedData = () => {
+      const loadedMarkers = getSavedMarkers();
+      if (loadedMarkers && loadedMarkers.length > 0) {
+        setMarkers(loadedMarkers);
+      }
+      
+      const loadedDrawings = getSavedDrawings();
+      if (loadedDrawings && loadedDrawings.length > 0) {
+        setDrawings(loadedDrawings);
+      }
+    };
+    
+    loadSavedData();
+    
+    // Listen for storage changes
+    window.addEventListener('storage', loadSavedData);
+    return () => window.removeEventListener('storage', loadSavedData);
   }, []);
 
   // Connect to map events for location changes
@@ -59,15 +74,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     } else {
       // For shapes like polygons, circles, etc.
       toast.success(`${shape.type} created - Click to tag this building`);
-      
-      // You could save the shape data here
-      // saveShape({
-      //   id: shape.id,
-      //   type: shape.type,
-      //   geoJSON: shape.geoJSON,
-      //   name: `New ${shape.type}`,
-      //   createdAt: new Date()
-      // });
     }
   };
 
@@ -103,6 +109,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
     if (selectedLocation) {
       map.flyTo([selectedLocation.y, selectedLocation.x], 18);
     }
+    
+    // Setup Leaflet icons after map is ready
+    setupLeafletIcons();
   };
 
   const handleLocationSelect = (position: [number, number]) => {
@@ -148,8 +157,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool }: LeafletMapProp
         
         <MapEvents onMapClick={handleMapClick} />
       </MapContainer>
-
-      {/* Remove the duplicate instruction box, since we're using the main drawing tools */}
     </div>
   );
 };
