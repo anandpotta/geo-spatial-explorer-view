@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
 import MapControls from './drawing/MapControls';
@@ -40,7 +40,9 @@ const DrawingTools = ({
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   
   const handleToolClick = (tool: string) => {
     if (tool === 'clear') {
@@ -85,37 +87,78 @@ const DrawingTools = ({
   };
 
   const handleMouseDown = (event: React.MouseEvent) => {
+    if (!toolbarRef.current) return;
+    
+    const rect = toolbarRef.current.getBoundingClientRect();
+    setDragOffset({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    });
     setIsDragging(true);
   };
 
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: Math.max(0, Math.min(window.innerWidth - 100, position.x + event.movementX)),
-        y: Math.max(0, Math.min(window.innerHeight - 100, position.y + event.movementY))
-      });
-    }
+    if (!isDragging) return;
+    
+    const newX = event.clientX - dragOffset.x;
+    const newY = event.clientY - dragOffset.y;
+    
+    // Calculate boundaries to keep toolbar within window
+    const maxX = window.innerWidth - (toolbarRef.current?.offsetWidth || 0);
+    const maxY = window.innerHeight - (toolbarRef.current?.offsetHeight || 0);
+    
+    setPosition({
+      x: Math.max(0, Math.min(maxX, newX)),
+      y: Math.max(0, Math.min(maxY, newY))
+    });
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-  
+  useEffect(() => {
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      if (!isDragging) return;
+      
+      const newX = event.clientX - dragOffset.x;
+      const newY = event.clientY - dragOffset.y;
+      
+      const maxX = window.innerWidth - (toolbarRef.current?.offsetWidth || 0);
+      const maxY = window.innerHeight - (toolbarRef.current?.offsetHeight || 0);
+      
+      setPosition({
+        x: Math.max(0, Math.min(maxX, newX)),
+        y: Math.max(0, Math.min(maxY, newY))
+      });
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
+
   return (
     <>
       <div 
-        className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move"
+        ref={toolbarRef}
+        className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move select-none"
         style={{ 
-          left: position.x,
-          top: position.y,
+          left: `${position.x}px`,
+          top: `${position.y}px`,
           zIndex: 20000,
-          isolation: 'isolate',
-          userSelect: 'none',
+          transition: isDragging ? 'none' : 'all 0.2s ease',
+          transform: 'translate3d(0,0,0)',
+          willChange: isDragging ? 'transform' : 'auto',
+          touchAction: 'none'
         }}
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
       >
         <ShapeTools 
           activeTool={activeTool} 
