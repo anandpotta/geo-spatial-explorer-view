@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { LocationMarker } from '@/utils/marker-utils';
@@ -27,6 +28,12 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
     window.dispatchEvent(new Event('storage'));
   };
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete(marker.id);
+  };
+
   return (
     <Popup>
       <div className="p-2">
@@ -53,7 +60,7 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onDelete(marker.id)}
+            onClick={handleDeleteClick}
             className="flex items-center gap-1"
           >
             <Trash2 size={16} />
