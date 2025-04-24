@@ -35,9 +35,18 @@ const TempMarker = ({
   const preventMapInteractions = useCallback((e?: L.LeafletEvent) => {
     window.userHasInteracted = true;
     window.tempMarkerPlaced = true;
-    if (e && e.originalEvent) {
-      e.originalEvent.stopPropagation();
-      e.originalEvent.preventDefault();
+    
+    // TypeScript-safe way to check and stop propagation
+    if (e) {
+      // Stop the Leaflet event propagation
+      e.stopPropagation?.();
+      
+      // Try to access originalEvent if it exists (as a DOM event)
+      const domEvent = e as unknown as { originalEvent?: MouseEvent | TouchEvent };
+      if (domEvent.originalEvent) {
+        domEvent.originalEvent.stopPropagation();
+        domEvent.originalEvent.preventDefault();
+      }
     }
   }, []);
   
@@ -86,14 +95,14 @@ const TempMarker = ({
         dragstart: (e) => {
           // Prevent map movement when dragging the marker
           preventMapInteractions(e);
-          if (e.sourceTarget && e.sourceTarget._map) {
-            e.sourceTarget._map._stop();
+          if (e.target && e.target._map) {
+            e.target._map._stop();
           }
         },
         dragend: (e) => {
           // Ensure map panning is stopped
-          if (e.sourceTarget && e.sourceTarget._map) {
-            e.sourceTarget._map._stop();
+          if (e.target && e.target._map) {
+            e.target._map._stop();
           }
           preventMapInteractions(e);
           // Update position using the global handler if available
