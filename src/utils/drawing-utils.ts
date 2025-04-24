@@ -31,23 +31,43 @@ export function saveDrawing(drawing: DrawingData): void {
   
   const savedDrawings = getSavedDrawings();
   
+  // Make sure we're not storing any circular references
+  const safeDrawing = {
+    ...drawing,
+    // Make sure dates are correctly serialized
+    properties: {
+      ...drawing.properties,
+      createdAt: drawing.properties.createdAt instanceof Date 
+        ? drawing.properties.createdAt 
+        : new Date(drawing.properties.createdAt)
+    }
+  };
+  
   const existingIndex = savedDrawings.findIndex(d => d.id === drawing.id);
   
   if (existingIndex >= 0) {
-    savedDrawings[existingIndex] = drawing;
+    savedDrawings[existingIndex] = safeDrawing;
   } else {
-    savedDrawings.push(drawing);
+    savedDrawings.push(safeDrawing);
   }
   
-  localStorage.setItem('savedDrawings', JSON.stringify(savedDrawings));
-  
-  const event = new StorageEvent('storage', {
-    key: 'savedDrawings',
-    newValue: JSON.stringify(savedDrawings)
-  });
-  window.dispatchEvent(event);
-  
-  syncDrawingsWithBackend(savedDrawings);
+  try {
+    localStorage.setItem('savedDrawings', JSON.stringify(savedDrawings));
+    
+    const event = new StorageEvent('storage', {
+      key: 'savedDrawings',
+      newValue: JSON.stringify(savedDrawings)
+    });
+    window.dispatchEvent(event);
+    
+    syncDrawingsWithBackend(savedDrawings);
+  } catch (error) {
+    console.error('Failed to save drawing:', error);
+    // If error is due to circular reference, log helpful message
+    if (error instanceof TypeError && error.message.includes('circular')) {
+      console.error('Circular reference detected. Make sure to serialize properly before saving.');
+    }
+  }
 }
 
 export function getSavedDrawings(): DrawingData[] {
