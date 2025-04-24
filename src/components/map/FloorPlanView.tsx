@@ -3,10 +3,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { DrawingData } from "@/utils/geo-utils";
 
 interface FloorPlanViewProps {
   onBack: () => void;
-  drawing?: any;
+  drawing?: DrawingData | null;
 }
 
 const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
@@ -16,8 +17,8 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+    if (!file.type.startsWith('image/') && !file.type.includes('pdf')) {
+      toast.error('Please upload an image or PDF file');
       return;
     }
     
@@ -32,7 +33,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   return (
     <div className="relative w-full h-full">
       <div className="absolute top-4 right-4 z-50 flex gap-2">
-        <label>
+        <label className="cursor-pointer">
           <input
             type="file"
             className="hidden"
@@ -44,7 +45,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             className="bg-white/80 backdrop-blur-sm"
           >
             <Upload className="mr-2 h-4 w-4" />
-            New Floor Plan
+            {selectedImage ? 'Change Floor Plan' : 'Upload Floor Plan'}
           </Button>
         </label>
         <Button
@@ -57,39 +58,43 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         </Button>
       </div>
       <div className="w-full h-full flex items-center justify-center bg-black/5">
-        <div className="space-y-4 text-center">
-          <h2 className="text-xl font-semibold">
-            {drawing?.properties?.name || 'Floor Plan View'}
-          </h2>
-          
-          {selectedImage ? (
+        {selectedImage ? (
+          <div className="space-y-4 text-center max-w-[90%]">
+            <h2 className="text-xl font-semibold">
+              {drawing?.properties?.name || 'Floor Plan View'}
+            </h2>
             <img
               src={selectedImage}
               alt="Floor Plan"
-              className="max-h-[70vh] max-w-[90%] object-contain rounded-lg shadow-lg"
+              className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
             />
-          ) : (
-            <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg">
-              <label className="cursor-pointer flex flex-col items-center gap-4">
-                <Upload className="h-12 w-12 text-gray-400" />
-                <span className="text-gray-600">Click to upload floor plan</span>
+          </div>
+        ) : (
+          <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg bg-white/80">
+            <div className="flex flex-col items-center gap-4">
+              <Upload className="h-12 w-12 text-gray-400" />
+              <h3 className="text-lg font-medium">Upload Floor Plan</h3>
+              <p className="text-gray-600 text-center max-w-md">
+                Click the Upload Floor Plan button above to add a floor plan image or PDF
+              </p>
+              <label className="cursor-pointer">
                 <input
                   type="file"
                   className="hidden"
                   accept="image/*,.pdf"
                   onChange={handleFileUpload}
                 />
-                <Button variant="outline">
-                  Upload Floor Plan
+                <Button>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Select File
                 </Button>
               </label>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default FloorPlanView;
-
