@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { LocationMarker, getSavedMarkers } from '@/utils/geo-utils';
+import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
+import { toast } from 'sonner';
 
 export const useDropdownLocations = () => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
@@ -8,26 +9,25 @@ export const useDropdownLocations = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  
+  const loadMarkers = () => {
+    console.log("Loading markers for dropdown");
+    const savedMarkers = getSavedMarkers();
+    setMarkers(savedMarkers);
+    const pinned = savedMarkers.filter(marker => marker.isPinned === true);
+    setPinnedMarkers(pinned);
+  };
 
-  // Load markers on initial mount only
   useEffect(() => {
-    const loadMarkers = () => {
-      const savedMarkers = getSavedMarkers();
-      setMarkers(savedMarkers);
-      
-      // Filter pinned markers
-      const pinned = savedMarkers.filter(marker => marker.isPinned);
-      setPinnedMarkers(pinned);
-    };
-    
     loadMarkers();
     
-    // Set up event listeners for marker changes
     const handleStorage = () => {
+      console.log("Storage event detected");
       loadMarkers();
     };
     
     const handleMarkersUpdated = () => {
+      console.log("Markers updated event detected");
       loadMarkers();
     };
     
@@ -38,7 +38,7 @@ export const useDropdownLocations = () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
     };
-  }, []); // Empty dependency array ensures this only runs once on mount
+  }, []);
 
   return {
     markers,

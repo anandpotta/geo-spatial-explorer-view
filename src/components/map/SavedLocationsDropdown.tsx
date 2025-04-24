@@ -1,5 +1,5 @@
 
-import { useRef } from "react";
+import { useDropdownLocations } from "@/hooks/useDropdownLocations";
 import { Button } from "@/components/ui/button";
 import { Navigation } from "lucide-react";
 import { toast } from "sonner";
@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import MarkerMenuItem from "./dropdown/MarkerMenuItem";
 import { deleteMarker } from "@/utils/marker-utils";
-import { useDropdownLocations } from "@/hooks/useDropdownLocations";
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
@@ -42,23 +41,24 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
   } = useDropdownLocations();
 
   const handleLocationSelect = (position: [number, number]) => {
-    // First close dropdown before handling selection to prevent state update loops
+    // Close dropdown when a location is selected
     const dropdown = document.querySelector('[data-state="open"]');
     if (dropdown) {
       const trigger = dropdown.previousElementSibling as HTMLButtonElement;
       if (trigger) trigger.click();
     }
     
-    // Wait a small tick before triggering location select to prevent state update loop
-    setTimeout(() => {
+    console.log("Location selected from dropdown:", position);
+    
+    // Call the provided onLocationSelect function with the position
+    if (onLocationSelect) {
       onLocationSelect(position);
       toast.success("Navigating to saved location");
-    }, 0);
+    }
   };
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    event.preventDefault();
     
     if (event.currentTarget) {
       returnFocusRef.current = event.currentTarget as HTMLElement;
@@ -116,7 +116,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
             Saved Locations {markers.length > 0 && `(${markers.length})`}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[200px] z-[9999] bg-popover shadow-md">
+        <DropdownMenuContent className="w-[200px] z-50 bg-popover">
           {pinnedMarkers.length > 0 && (
             <>
               <DropdownMenuLabel>Pinned Locations</DropdownMenuLabel>
@@ -153,9 +153,7 @@ const SavedLocationsDropdown = ({ onLocationSelect }: SavedLocationsDropdownProp
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        if (!open) cancelDelete();
-      }}>
+      <AlertDialog open={isDeleteDialogOpen}>
         <AlertDialogContent onEscapeKeyDown={cancelDelete}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Location</AlertDialogTitle>

@@ -8,10 +8,7 @@ export function useMarkerHandlers(mapState: any) {
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       mapState.setTempMarker(exactPosition);
-      
-      // Always set a default name to make it easier to save
-      const defaultName = mapState.selectedLocation?.label || 'New Building';
-      mapState.setMarkerName(defaultName);
+      mapState.setMarkerName(mapState.selectedLocation?.label || 'New Building');
     }
   };
 

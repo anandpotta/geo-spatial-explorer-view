@@ -10,59 +10,32 @@ interface MapReferenceProps {
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
   const hasCalledOnReady = useRef(false);
-  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     // Only call onMapReady once per instance
     if (map && onMapReady && !hasCalledOnReady.current) {
       console.log('Map is ready, will call onMapReady after initialization');
       
-      // Clear any existing timeout to prevent multiple calls
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current);
-      }
-      
       // Wait until the map is fully initialized before calling onMapReady
-      initTimeoutRef.current = setTimeout(() => {
+      setTimeout(() => {
         try {
-          if (map && typeof map.getContainer === 'function') {
-            // Check if the map has a valid container
-            const container = map.getContainer();
-            if (container && document.body.contains(container)) {
-              hasCalledOnReady.current = true; // Mark as called first
-              map.invalidateSize();
-              console.log('Map container verified, calling onMapReady');
-              onMapReady(map);
-            } else {
-              console.warn('Map container not properly attached to DOM, delaying onMapReady');
-              // Single retry attempt with timeout
-              if (initTimeoutRef.current) {
-                clearTimeout(initTimeoutRef.current);
-              }
-              
-              initTimeoutRef.current = setTimeout(() => {
-                if (!hasCalledOnReady.current && map && typeof map.getContainer === 'function') {
-                  hasCalledOnReady.current = true; // Mark as called
-                  map.invalidateSize();
-                  console.log('Delayed map initialization complete, calling onMapReady');
-                  onMapReady(map);
-                }
-              }, 300);
-            }
+          if (map && map.getContainer()) {
+            hasCalledOnReady.current = true;
+            map.invalidateSize();
+            console.log('Map container verified, calling onMapReady');
+            onMapReady(map);
           }
         } catch (err) {
           console.error('Error in map initialization:', err);
         }
-      }, 200);
+      }, 100);
     }
     
     // Clean up function
     return () => {
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current);
-      }
+      hasCalledOnReady.current = false;
     };
-  }, [map, onMapReady]); // Only re-run if map or onMapReady changes
+  }, [map, onMapReady]);
   
   return null;
 };
