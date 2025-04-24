@@ -1,3 +1,4 @@
+
 import { getConnectionStatus } from './api-service';
 
 export interface LocationMarker {
@@ -14,15 +15,29 @@ export interface LocationMarker {
 export function saveMarker(marker: LocationMarker): void {
   const savedMarkers = getSavedMarkers();
   
-  // Check if marker already exists (for updates)
+  // Check if marker already exists or is too close to an existing one
   const existingIndex = savedMarkers.findIndex(m => m.id === marker.id);
+  const similarPositionIndex = savedMarkers.findIndex(m => {
+    const distance = calculateDistance(m.position, marker.position);
+    // Consider markers within 1 meter as duplicates
+    return distance < 1;
+  });
   
-  if (existingIndex >= 0) {
-    // Update existing marker
+  if (similarPositionIndex >= 0 && existingIndex === -1) {
+    // Update existing marker at very similar position if it's not an update
+    savedMarkers[similarPositionIndex] = {
+      ...marker,
+      id: savedMarkers[similarPositionIndex].id // Keep original ID
+    };
+    console.log('Updated existing marker at similar position');
+  } else if (existingIndex >= 0) {
+    // Update existing marker with same ID
     savedMarkers[existingIndex] = marker;
+    console.log('Updated marker with ID:', marker.id);
   } else {
     // Add new marker
     savedMarkers.push(marker);
+    console.log('Added new marker with ID:', marker.id);
   }
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
@@ -52,6 +67,24 @@ export function getSavedMarkers(): LocationMarker[] {
     console.error('Failed to parse saved markers', e);
     return [];
   }
+}
+
+function calculateDistance(pos1: [number, number], pos2: [number, number]): number {
+  // Simple Haversine formula to calculate distance between two coordinates in meters
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = (pos1[0] * Math.PI) / 180;
+  const φ2 = (pos2[0] * Math.PI) / 180;
+  const Δφ = ((pos2[0] - pos1[0]) * Math.PI) / 180;
+  const Δλ = ((pos2[1] - pos1[1]) * Math.PI) / 180;
+  
+  const a = 
+    Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  
+  return R * c; // Distance in meters
 }
 
 export function deleteMarker(id: string): void {

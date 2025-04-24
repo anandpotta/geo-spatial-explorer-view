@@ -95,66 +95,80 @@ const NewMarkerForm = ({
       autoClose={false} 
       autoPan={false}
       className="marker-form-popup"
-      onClick={stopPropagation}
+      // Remove onClick from Popup props as it's not supported
     >
-      <form 
-        ref={formRef}
-        onSubmit={handleSubmit} 
-        className="p-2" 
-        onClick={stopPropagation}
-      >
-        <Input 
-          type="text"
-          placeholder="Location name"
-          value={markerName}
-          onChange={handleInputChange}
+      <div onClick={stopPropagation} className="popup-container">
+        <form 
+          ref={formRef}
+          onSubmit={handleSubmit} 
+          className="p-2" 
           onClick={stopPropagation}
-          // Add specific event handlers for keyboard events
-          onKeyDown={(e) => e.stopPropagation()}
-          onKeyPress={(e) => e.stopPropagation()}
-          onKeyUp={(e) => e.stopPropagation()}
-          className="mb-2 z-50"
-          autoFocus
-          style={{ zIndex: 9999 }}
-        />
-        <div className="flex mb-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'pin' ? 'default' : 'outline'}
-            className="flex-1"
-            onClick={(e) => handleTypeSelect(e, 'pin')}
-          >
-            Pin
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'area' ? 'default' : 'outline'}
-            className="flex-1"
-            onClick={(e) => handleTypeSelect(e, 'area')}
-          >
-            Area
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'building' ? 'default' : 'outline'}
-            className="flex-1"
-            onClick={(e) => handleTypeSelect(e, 'building')}
-          >
-            Building
-          </Button>
-        </div>
-        <Button 
-          type="submit"
-          disabled={!markerName.trim()}
-          className="w-full"
-          onClick={handleSaveClick}
+          id="marker-form"
+          name="marker-form"
         >
-          Save Location
-        </Button>
-      </form>
+          <Input 
+            type="text"
+            placeholder="Location name"
+            value={markerName}
+            onChange={handleInputChange}
+            onClick={stopPropagation}
+            // Add specific event handlers for keyboard events
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyPress={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
+            className="mb-2 z-50"
+            autoFocus
+            style={{ zIndex: 9999 }}
+            id="marker-name"
+            name="marker-name"
+          />
+          <div className="flex mb-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'pin' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={(e) => handleTypeSelect(e, 'pin')}
+              id="type-pin"
+              name="type-pin"
+            >
+              Pin
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'area' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={(e) => handleTypeSelect(e, 'area')}
+              id="type-area"
+              name="type-area"
+            >
+              Area
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'building' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={(e) => handleTypeSelect(e, 'building')}
+              id="type-building"
+              name="type-building"
+            >
+              Building
+            </Button>
+          </div>
+          <Button 
+            type="submit"
+            disabled={!markerName.trim()}
+            className="w-full"
+            onClick={handleSaveClick}
+            id="save-marker"
+            name="save-marker"
+          >
+            Save Location
+          </Button>
+        </form>
+      </div>
     </Popup>
   );
 };

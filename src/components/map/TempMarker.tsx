@@ -26,9 +26,10 @@ const TempMarker = ({
   const isInitializedRef = useRef(false);
   const flagIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
   
   // Disable ALL map keyboard events while marker is active
-  useMapEvents({
+  const map = useMapEvents({
     // Use event handlers with higher priority to intercept events
     keypress: (e) => {
       e.originalEvent.stopPropagation();
@@ -45,6 +46,9 @@ const TempMarker = ({
   });
   
   useEffect(() => {
+    // Store map reference safely
+    mapRef.current = map;
+    
     // Only run this once per marker instance
     if (isInitializedRef.current) return;
     isInitializedRef.current = true;
@@ -93,9 +97,12 @@ const TempMarker = ({
     `;
     document.head.appendChild(style);
     
-    // Add a class to the map container to help with styling
-    if (markerRef.current && markerRef.current._map && markerRef.current._map._container) {
-      markerRef.current._map._container.classList.add('marker-form-active');
+    // Add a class to the map container using proper API
+    if (mapRef.current) {
+      const container = mapRef.current.getContainer();
+      if (container) {
+        container.classList.add('marker-form-active');
+      }
     }
     
     return () => {
@@ -109,14 +116,17 @@ const TempMarker = ({
       document.head.removeChild(style);
       
       // Remove the class from the map container
-      if (markerRef.current && markerRef.current._map && markerRef.current._map._container) {
-        markerRef.current._map._container.classList.remove('marker-form-active');
+      if (mapRef.current) {
+        const container = mapRef.current.getContainer();
+        if (container) {
+          container.classList.remove('marker-form-active');
+        }
       }
       
       window.tempMarkerPlaced = true;
       window.userHasInteracted = true;
     };
-  }, [position]);
+  }, [position, map]);
   
   // Save handler with propagation control
   const handleSave = (e?: React.MouseEvent) => {
