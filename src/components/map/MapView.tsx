@@ -1,3 +1,4 @@
+
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
@@ -7,8 +8,9 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
+import 'leaflet/dist/leaflet.css';
 
 interface MapViewProps {
   position: [number, number];
@@ -49,6 +51,13 @@ const MapView = ({
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+  const [mapKey, setMapKey] = useState<number>(0);
+
+  // Force a remount of the MapContainer to ensure proper tile loading
+  useEffect(() => {
+    // Set a unique key to force a re-render of the map component
+    setMapKey(prevKey => prevKey + 1);
+  }, []);
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
@@ -71,14 +80,26 @@ const MapView = ({
       </div>
       
       <MapContainer 
+        key={mapKey}
         className="w-full h-full"
         attributionControl={false}
         center={position}
         zoom={zoom}
+        zoomControl={false}
+        fadeAnimation={true}
+        markerZoomAnimation={true}
+        preferCanvas={true}
       >
-        <MapReference onMapReady={onMapReady} />
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <TileLayer 
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+          maxZoom={19}
+          subdomains={['a', 'b', 'c']}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          className="leaflet-tile-pane"
+        />
         <AttributionControl position="bottomright" prefix={false} />
+        
+        <MapReference onMapReady={onMapReady} />
         
         <DrawingControlsContainer
           onShapeCreated={onShapeCreated}
