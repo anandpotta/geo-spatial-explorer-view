@@ -15,21 +15,31 @@ interface DrawToolsProps {
 }
 
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
-  const editControlRef = useRef<any>(null);
   const context = useLeafletContext();
   const hasInitialized = useRef<boolean>(false);
+  const editControlRef = useRef<any>(null);
 
   // Check if map is ready before rendering EditControl
   useEffect(() => {
-    if (!editControlRef.current || !activeTool) return;
+    if (!context || !context.map || !activeTool) return;
     
     const map = context.map;
-    const leafletElement = editControlRef.current.leafletElement;
-    if (!leafletElement || !leafletElement._modes || !map) return;
     
     // Ensure map is fully initialized before proceeding
-    if (!map.getContainer()) {
+    if (!map.getContainer() || !document.contains(map.getContainer())) {
       console.warn('Map container not ready for drawing tools');
+      return;
+    }
+    
+    // Access the EditControl instance via ref
+    if (!editControlRef.current || !editControlRef.current.leafletElement) {
+      console.warn('EditControl not initialized yet');
+      return;
+    }
+
+    const leafletElement = editControlRef.current.leafletElement;
+    if (!leafletElement || !leafletElement._modes) {
+      console.warn('Drawing tools not initialized');
       return;
     }
 
@@ -75,7 +85,7 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
         }
       }
     };
-  }, [activeTool, context.map]);
+  }, [activeTool, context]);
 
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
@@ -121,22 +131,23 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
     return null;
   }
 
+  // The key is to wrap EditControl in a div so it's available when the ref is set
   return (
-    <EditControl
-      ref={(el) => {
-        editControlRef.current = el;
-      }}
-      position="topright"
-      onCreated={handleCreated}
-      draw={{
-        rectangle: true,
-        polygon: true,
-        circle: true,
-        circlemarker: false,
-        marker: true,
-        polyline: false
-      }}
-    />
+    <div className="leaflet-draw-container">
+      <EditControl
+        ref={editControlRef}
+        position="topright"
+        onCreated={handleCreated}
+        draw={{
+          rectangle: true,
+          polygon: true,
+          circle: true,
+          circlemarker: false,
+          marker: true,
+          polyline: false
+        }}
+      />
+    </div>
   );
 };
 
