@@ -22,7 +22,26 @@ export function useMarkerHandlers(mapState: any) {
       mapState.setTempMarker(exactPosition);
       mapState.setMarkerName('New Marker');
     } else {
-      mapState.setCurrentDrawing(shape);
+      // Create a safe copy of the shape without potential circular references
+      const safeShape = {
+        type: shape.type,
+        id: shape.id,
+        coordinates: shape.coordinates || [],
+        // If geoJSON exists, create a clean copy
+        geoJSON: shape.geoJSON ? {
+          type: shape.geoJSON.type,
+          geometry: shape.geoJSON.geometry,
+          properties: shape.geoJSON.properties || {}
+        } : undefined,
+        options: shape.options || {},
+        properties: shape.properties || {
+          name: `New ${shape.type}`,
+          color: '#3388ff',
+          createdAt: new Date()
+        }
+      };
+      
+      mapState.setCurrentDrawing(safeShape);
       toast.success(`${shape.type} created - Click to tag this building`);
     }
   };

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
@@ -18,6 +19,7 @@ export function useMapState(selectedLocation?: Location) {
   const [currentDrawing, setCurrentDrawing] = useState<DrawingData | null>(null);
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -43,14 +45,23 @@ export function useMapState(selectedLocation?: Location) {
     saveMarker(newMarker);
     
     if (currentDrawing) {
-      saveDrawing({
+      // Create a safe copy of currentDrawing without circular references
+      const safeDrawing: DrawingData = {
         ...currentDrawing,
+        // Remove any potential circular references from geoJSON
+        geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
+          type: currentDrawing.geoJSON.type,
+          geometry: currentDrawing.geoJSON.geometry,
+          properties: currentDrawing.geoJSON.properties
+        })) : undefined,
         properties: {
           ...currentDrawing.properties,
           name: markerName,
           associatedMarkerId: newMarker.id
         }
-      });
+      };
+      
+      saveDrawing(safeDrawing);
     }
     
     setTempMarker(null);
@@ -90,6 +101,8 @@ export function useMapState(selectedLocation?: Location) {
     setShowFloorPlan,
     selectedDrawing,
     setSelectedDrawing,
+    activeTool,
+    setActiveTool,
     handleSaveMarker,
     handleDeleteMarker,
     handleRegionClick
