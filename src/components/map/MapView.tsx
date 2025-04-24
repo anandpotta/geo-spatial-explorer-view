@@ -31,6 +31,7 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
+  mapContainerId?: string;
 }
 
 const MapView = ({
@@ -50,12 +51,11 @@ const MapView = ({
   onShapeCreated,
   activeTool,
   onRegionClick,
-  onClearAll
+  onClearAll,
+  mapContainerId = 'leaflet-map'
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
-  // Use a random key to force a new map instance when needed
-  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
@@ -86,7 +86,7 @@ const MapView = ({
       </div>
       
       <MapContainer 
-        key={mapKey}
+        id={mapContainerId}
         className="w-full h-full"
         attributionControl={false}
         center={position}
@@ -95,6 +95,12 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
+        whenReady={(map) => {
+          // Short timeout to ensure all DOM elements are properly set up
+          setTimeout(() => {
+            if (onMapReady) onMapReady(map.target);
+          }, 100);
+        }}
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 

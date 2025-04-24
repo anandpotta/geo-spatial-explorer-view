@@ -14,31 +14,38 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   useEffect(() => {
     // Only call onMapReady once per instance
     if (map && onMapReady && !hasCalledOnReady.current) {
-      console.log('Map is ready, will call onMapReady after initialization');
+      console.log('Map is ready in MapReference');
       
-      // Make sure map is properly initialized
-      setTimeout(() => {
+      // Make sure map is fully initialized and has a valid container
+      if (map.getContainer() && map.getContainer().parentElement) {
         try {
-          if (map && map.getContainer()) {
-            hasCalledOnReady.current = true;
-            map.invalidateSize();
-            console.log('Map container verified, calling onMapReady');
-            
-            // Ensure proper event handlers are set up
-            map.on('click', (e) => {
-              console.log('Map was clicked at:', e.latlng);
-            });
-            
-            onMapReady(map);
-          }
+          // Ensure the map is properly sized
+          map.invalidateSize(true);
+          
+          // Ensure proper event handlers are set up
+          map.on('click', (e) => {
+            console.log('Map was clicked at:', e.latlng);
+          });
+          
+          // Mark as called to prevent duplicate calls
+          hasCalledOnReady.current = true;
+          
+          // Call the callback
+          onMapReady(map);
         } catch (err) {
           console.error('Error in map initialization:', err);
         }
-      }, 100);
+      } else {
+        console.warn('Map container not ready yet, will try again');
+      }
     }
     
     // Clean up function
     return () => {
+      if (map) {
+        // Remove click event listener to prevent memory leaks
+        map.off('click');
+      }
       hasCalledOnReady.current = false;
     };
   }, [map, onMapReady]);

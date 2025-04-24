@@ -20,6 +20,7 @@ interface LeafletMapProps {
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<string>(`map-container-${Date.now()}`);
   const loadedMarkersRef = useRef(false);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   
@@ -42,14 +43,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
         try {
-          if (mapRef.current && mapRef.current.remove) {
-            try {
-              mapRef.current.getContainer();
-              mapRef.current.remove();
-            } catch (e) {
-              console.log('Map already removed');
-            }
-          }
+          mapRef.current.remove();
         } catch (err) {
           console.error('Error cleaning up map:', err);
         }
@@ -62,14 +56,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     if (selectedLocation && mapRef.current) {
       try {
         // Only try to fly if the map is properly initialized
-        if (mapRef.current.getContainer()) {
-          console.log('Flying to selected location:', selectedLocation);
-          // Use flyTo with animation for smooth transition
-          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-            animate: true,
-            duration: 1.5 // seconds
-          });
-        }
+        mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+          animate: true,
+          duration: 1.5 // seconds
+        });
       } catch (err) {
         console.error('Error flying to location:', err);
         // If there's an error, recreate the map
@@ -82,36 +72,37 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     console.log('Map reference provided');
     
     if (mapRef.current) {
-      console.log('Map reference already exists, skipping assignment');
-      return;
+      console.warn('Map reference already exists, cleaning up old instance first');
+      try {
+        mapRef.current.remove();
+      } catch (err) {
+        console.error('Error removing old map:', err);
+      }
     }
     
     try {
-      // Verify map is properly initialized
-      if (map && map.getContainer()) {
-        console.log('Map container verified, storing reference');
-        mapRef.current = map;
-        
-        // Force invalidate size to ensure proper rendering
-        map.invalidateSize(true);
-        
-        // Only fly to location if we have one and the map is ready
-        if (selectedLocation) {
-          console.log('Flying to initial location');
-          setTimeout(() => {
-            if (map.getContainer()) {
-              map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-                animate: true,
-                duration: 1.5
-              });
-            }
-          }, 200);
+      // Store the map reference
+      mapRef.current = map;
+      
+      // Force invalidate size to ensure proper rendering
+      setTimeout(() => {
+        if (map && !map._container._leaflet_id) {
+          map.invalidateSize(true);
+          
+          // Only fly to location if we have one and the map is ready
+          if (selectedLocation) {
+            console.log('Flying to initial location');
+            map.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+              animate: true,
+              duration: 1.5
+            });
+          }
+          
+          if (onMapReady) {
+            onMapReady(map);
+          }
         }
-        
-        if (onMapReady) {
-          onMapReady(map);
-        }
-      }
+      }, 200);
     } catch (err) {
       console.error('Error setting map reference:', err);
     }
@@ -189,6 +180,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       activeTool={activeTool || mapState.activeTool}
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAll}
+      mapContainerId={mapContainerRef.current}
     />
   );
 };
