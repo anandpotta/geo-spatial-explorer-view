@@ -22,6 +22,22 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const [initAttempts, setInitAttempts] = useState(0);
   const maxAttempts = 20;
   
+  // Helper function to check if container is valid
+  const isContainerValid = () => {
+    if (!map) return false;
+    
+    try {
+      const container = map.getContainer();
+      return container && 
+             document.contains(container) && 
+             container.offsetWidth > 0 && 
+             container.offsetHeight > 0;
+    } catch (err) {
+      console.error('Error checking map container:', err);
+      return false;
+    }
+  };
+  
   // Clear any pending timeouts on unmount
   useEffect(() => {
     return () => {
@@ -50,7 +66,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         }
 
         // Ensure map is properly sized and has valid container
-        if (!map || !map.getContainer() || !document.contains(map.getContainer())) {
+        if (!isContainerValid()) {
           console.log('Map container not ready, retrying... (attempt ' + (initAttempts + 1) + ')');
           setInitAttempts(prev => prev + 1);
           // Try again in a moment
@@ -73,13 +89,13 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         // Wait a bit to ensure map is ready
         initTimeoutRef.current = window.setTimeout(() => {
           try {
-            if (map && map.getContainer() && document.contains(map.getContainer())) {
+            if (isContainerValid()) {
               map.invalidateSize(true);
               
               // One final invalidation to be safe
               initTimeoutRef.current = window.setTimeout(() => {
                 try {
-                  if (map && map.getContainer() && document.contains(map.getContainer())) {
+                  if (isContainerValid()) {
                     map.invalidateSize(true);
                     
                     // Set flag on map instance to indicate it's fully initialized

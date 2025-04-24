@@ -28,14 +28,33 @@ export const useMapReferenceHandler = (
     // First invalidation to ensure map is properly sized
     map.invalidateSize(true);
     
+    // Use a more reliable approach to checking if the map container is valid
+    const checkMapContainer = () => {
+      if (!mapRef.current) return false;
+      
+      try {
+        const container = mapRef.current.getContainer();
+        return container && document.body.contains(container) && 
+               container.clientWidth > 0 && container.clientHeight > 0;
+      } catch (err) {
+        console.error('Error checking map container:', err);
+        return false;
+      }
+    };
+    
     // Start initialization sequence with longer delays
     setTimeout(() => {
       if (!mapRef.current || cleanupInProgress.current) return;
       
       try {
         // Check if map container is available in DOM
-        if (!mapRef.current.getContainer() || !document.body.contains(mapRef.current.getContainer())) {
-          console.warn('Map container not found or not in DOM');
+        if (!checkMapContainer()) {
+          console.warn('Map container not found, not in DOM, or has zero dimensions');
+          
+          // Try again if we haven't exceeded max attempts
+          if (mapReadyAttempts < 5) {
+            setMapReadyAttempts(mapReadyAttempts + 1);
+          }
           return;
         }
         
@@ -47,8 +66,13 @@ export const useMapReferenceHandler = (
           if (!mapRef.current || cleanupInProgress.current) return;
           
           try {
-            if (!mapRef.current.getContainer() || !document.body.contains(mapRef.current.getContainer())) {
+            if (!checkMapContainer()) {
               console.warn('Map container disappeared during initialization');
+              
+              // Try again if we haven't exceeded max attempts
+              if (mapReadyAttempts < 5) {
+                setMapReadyAttempts(mapReadyAttempts + 1);
+              }
               return;
             }
             
@@ -60,46 +84,52 @@ export const useMapReferenceHandler = (
               if (!mapRef.current || cleanupInProgress.current) return;
               
               try {
-                if (!mapRef.current.getContainer() || !document.body.contains(mapRef.current.getContainer())) {
+                if (!checkMapContainer()) {
                   console.warn('Map container disappeared during final initialization');
                   return;
                 }
                 
                 // Check for map pane as indicator of map readiness
-                const mapPane = mapRef.current.getContainer().querySelector('.leaflet-map-pane');
-                if (!mapPane) {
-                  console.warn('Map pane not found, map may not be ready');
-                  
-                  // Try again if we haven't exceeded max attempts
-                  if (mapReadyAttempts < 5) {
-                    setMapReadyAttempts(mapReadyAttempts + 1); // Fixed: direct value instead of function
-                    return;
+                if (mapRef.current && mapRef.current.getContainer()) {
+                  const mapPane = mapRef.current.getContainer().querySelector('.leaflet-map-pane');
+                  if (!mapPane) {
+                    console.warn('Map pane not found, map may not be ready');
+                    
+                    // Try again if we haven't exceeded max attempts
+                    if (mapReadyAttempts < 5) {
+                      setMapReadyAttempts(mapReadyAttempts + 1);
+                      return;
+                    }
                   }
                 }
                 
                 // Final invalidateSize to ensure map is fully ready
-                mapRef.current.invalidateSize(true);
-                
-                // Mark as initialized after all checks pass
-                setTimeout(() => {
-                  if (!mapRef.current || cleanupInProgress.current) return;
+                if (mapRef.current) {
+                  mapRef.current.invalidateSize(true);
                   
-                  // Set flag for successful initialization
-                  setIsMapInitialized(true);
-                  mapInitializedSuccessfully.current = true;
-                  
-                  console.log('Map successfully initialized');
-                  
-                  // Call the onMapReady callback if provided
-                  if (onMapReady && mapRef.current) {
-                    onMapReady(mapRef.current);
-                  }
-                }, 150); // Slightly longer delay for final initialization
+                  // Mark as initialized after all checks pass
+                  setTimeout(() => {
+                    if (!mapRef.current || cleanupInProgress.current) return;
+                    
+                    if (checkMapContainer()) {
+                      // Set flag for successful initialization
+                      setIsMapInitialized(true);
+                      mapInitializedSuccessfully.current = true;
+                      
+                      console.log('Map successfully initialized');
+                      
+                      // Call the onMapReady callback if provided
+                      if (onMapReady && mapRef.current) {
+                        onMapReady(mapRef.current);
+                      }
+                    }
+                  }, 150); // Slightly longer delay for final initialization
+                }
               } catch (err) {
                 console.error('Error during final map initialization:', err);
                 
                 if (mapReadyAttempts < 5) {
-                  setMapReadyAttempts(mapReadyAttempts + 1); // Fixed: direct value instead of function
+                  setMapReadyAttempts(mapReadyAttempts + 1);
                 }
               }
             }, 500); // Increased from 300ms to 500ms
@@ -107,7 +137,7 @@ export const useMapReferenceHandler = (
             console.error('Error in second initialization step:', err);
             
             if (mapReadyAttempts < 5) {
-              setMapReadyAttempts(mapReadyAttempts + 1); // Fixed: direct value instead of function
+              setMapReadyAttempts(mapReadyAttempts + 1);
             }
           }
         }, 500); // Increased from 300ms to 500ms
