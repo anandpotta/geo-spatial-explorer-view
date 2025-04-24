@@ -39,7 +39,7 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       onCreated={handleCreated}
       draw={{
         ...drawOptions,
-        // Always show these tools in the toolbar
+        // Enable tools based on activeTool state, but also show them in toolbar
         polygon: true,
         rectangle: true, 
         circle: true,
@@ -55,7 +55,7 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
             fillOpacity: 0.1
           }
         },
-        remove: true // Changed from empty object to boolean true to match expected type
+        remove: true 
       }}
     />
   );
