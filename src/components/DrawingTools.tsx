@@ -1,9 +1,11 @@
-
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import DrawingToolButton from './drawing/DrawingToolButton';
 import MapControls from './drawing/MapControls';
 import ShapeTools from './drawing/ShapeTools';
+import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
+import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
+import { toast } from 'sonner';
 
 interface Position {
   x: number;
@@ -28,9 +30,28 @@ const DrawingTools = ({
   const [isDragging, setIsDragging] = useState(false);
   
   const handleToolClick = (tool: string) => {
+    if (tool === 'clear') {
+      handleClearAll();
+      return;
+    }
+    
     const newActiveTool = tool === activeTool ? null : tool;
     setActiveTool(newActiveTool);
     onToolSelect(tool);
+  };
+
+  const handleClearAll = () => {
+    const markers = getSavedMarkers();
+    markers.forEach(marker => {
+      deleteMarker(marker.id);
+    });
+
+    const drawings = getSavedDrawings();
+    drawings.forEach(drawing => {
+      deleteDrawing(drawing.id);
+    });
+
+    toast.success('All layers cleared');
   };
 
   const handleMouseDown = (event: React.MouseEvent) => {
