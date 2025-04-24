@@ -7,6 +7,15 @@ interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
 }
 
+// Define interface for internal map properties not exposed in TypeScript definitions
+interface LeafletMapInternal extends L.Map {
+  _panes?: {
+    mapPane?: {
+      _leaflet_pos?: any;
+    };
+  };
+}
+
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
   const hasCalledOnReady = useRef(false);
@@ -24,7 +33,9 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             
             // Check if map is valid before trying to invalidate size
             try {
-              if (map._panes && map._panes.mapPane && map._panes.mapPane._leaflet_pos) {
+              // Cast to internal map type to access private properties
+              const internalMap = map as LeafletMapInternal;
+              if (internalMap._panes && internalMap._panes.mapPane && internalMap._panes.mapPane._leaflet_pos) {
                 map.invalidateSize();
               } else {
                 console.log('Map panes not fully initialized yet, skipping invalidateSize');
