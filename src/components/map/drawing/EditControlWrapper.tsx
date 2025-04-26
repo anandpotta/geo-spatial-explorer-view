@@ -1,6 +1,5 @@
 
 import { forwardRef, useImperativeHandle } from 'react';
-import { FeatureGroup, useLeafletContext } from 'react-leaflet';
 import { EditControl } from 'react-leaflet-draw';
 
 interface EditControlProps {
