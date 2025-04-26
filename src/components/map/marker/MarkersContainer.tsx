@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import UserMarker from '../UserMarker';
 import TempMarker from '../TempMarker';
@@ -42,12 +43,28 @@ const MarkersContainer = ({
     
     return acc;
   }, []);
+  
+  // Listen for storage or markers updated events
+  useEffect(() => {
+    const handleStorageChange = () => {
+      // This is just to ensure the component re-renders when markers are updated externally
+      console.log('Storage event received in MarkersContainer, markers count:', markers.length);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('markersUpdated', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('markersUpdated', handleStorageChange);
+    };
+  }, [markers.length]);
 
   return (
     <>
       {Array.isArray(deduplicatedMarkers) && deduplicatedMarkers.map((marker) => (
         <UserMarker 
-          key={marker.id} 
+          key={`marker-${marker.id}-${Date.now()}`} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />

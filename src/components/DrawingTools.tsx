@@ -101,8 +101,8 @@ const DrawingTools = ({
     localStorage.removeItem('savedMarkers');
     localStorage.removeItem('savedDrawings');
 
+    window.dispatchEvent(new CustomEvent('markersUpdated'));
     window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('markersUpdated'));
     
     if (onClearAll) {
       onClearAll();
@@ -137,6 +137,7 @@ const DrawingTools = ({
         <button
           className="w-full p-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
           onClick={() => handleToolClick('clear')}
+          data-testid="clear-all-button"
         >
           <Trash2 className="h-5 w-5" />
         </button>

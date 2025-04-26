@@ -1,4 +1,5 @@
-import { useRef, useEffect, useState } from 'react';
+
+import { useRef, useEffect, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { setupLeafletIcons } from './LeafletMapIcons';
@@ -194,22 +195,42 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
+    // Clear all state related to markers and drawings
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
     mapState.setMarkerType('building');
     mapState.setCurrentDrawing(null);
     mapState.setShowFloorPlan(false);
     mapState.setSelectedDrawing(null);
+    mapState.setMarkers([]);  // Clear markers array in state
+    mapState.setDrawings([]); // Clear drawings array in state
     
+    // Refresh the map layers if Leaflet map instance exists
     if (mapRef.current) {
       try {
-        mapRef.current.invalidateSize();
+        // Clear all layers on the map
+        mapRef.current.eachLayer(layer => {
+          // Don't remove the base tile layer
+          if (!(layer instanceof L.TileLayer)) {
+            mapRef.current?.removeLayer(layer);
+          }
+        });
+        
+        // Force invalidate size to refresh the map
+        mapRef.current.invalidateSize(true);
       } catch (err) {
-        console.error('Error invalidating map size:', err);
+        console.error('Error clearing map layers:', err);
       }
     }
-  };
+    
+    // Force a re-render of the map by updating the key
+    setMapInstanceKey(Date.now());
+    
+    // This causes storage events to be re-emitted
+    window.dispatchEvent(new CustomEvent('markersUpdated'));
+    window.dispatchEvent(new Event('storage'));
+  }, [mapState]);
 
   if (mapState.showFloorPlan) {
     return (
