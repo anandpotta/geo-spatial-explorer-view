@@ -1,5 +1,6 @@
 
-import { forwardRef } from 'react';
+import { forwardRef, useImperativeHandle } from 'react';
+import { FeatureGroup, useLeafletContext } from 'react-leaflet';
 import { EditControl } from 'react-leaflet-draw';
 
 interface EditControlProps {
@@ -16,7 +17,10 @@ interface EditControlProps {
 }
 
 const EditControlWrapper = forwardRef<any, EditControlProps>((props, ref) => {
-  return <EditControl ref={ref} {...props} />;
+  // This is the correct way to ensure the ref is properly passed through
+  return (
+    <EditControl ref={ref} {...props} />
+  );
 });
 
 EditControlWrapper.displayName = 'EditControlWrapper';
