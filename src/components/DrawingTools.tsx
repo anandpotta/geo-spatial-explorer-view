@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
@@ -102,7 +103,8 @@ const DrawingTools = ({
     localStorage.removeItem('savedDrawings');
 
     window.dispatchEvent(new CustomEvent('markersUpdated'));
-    window.dispatchEvent(new Event('storage'));
+    // Use our custom event instead of 'storage'
+    window.dispatchEvent(new CustomEvent('mapLayersClearEvent'));
     
     if (onClearAll) {
       onClearAll();

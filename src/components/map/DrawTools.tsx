@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
@@ -81,11 +82,11 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       handleClearAllLayers();
     };
     
-    // Listen for the storage event as it's dispatched during clear all
-    window.addEventListener('storage', handleClearEvent);
+    // Use a custom event name to avoid circular calls
+    window.addEventListener('mapLayersClearEvent', handleClearEvent);
     
     return () => {
-      window.removeEventListener('storage', handleClearEvent);
+      window.removeEventListener('mapLayersClearEvent', handleClearEvent);
     };
   }, [handleClearAllLayers]);
 

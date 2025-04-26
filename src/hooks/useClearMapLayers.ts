@@ -53,8 +53,11 @@ export function useClearMapLayers({
     
     setMapInstanceKey(Date.now());
     
+    // Dispatch custom events separately
     window.dispatchEvent(new CustomEvent('markersUpdated'));
-    window.dispatchEvent(new Event('storage'));
+    
+    // Use a custom event name instead of 'storage'
+    window.dispatchEvent(new CustomEvent('mapLayersClearEvent'));
   }, [
     mapRef,
     setMapInstanceKey,

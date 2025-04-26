@@ -51,12 +51,13 @@ const MarkersContainer = ({
       console.log('Storage event received in MarkersContainer, markers count:', markers.length);
     };
     
-    window.addEventListener('storage', handleStorageChange);
     window.addEventListener('markersUpdated', handleStorageChange);
+    // Use our custom event instead of 'storage'
+    window.addEventListener('mapLayersClearEvent', handleStorageChange);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('markersUpdated', handleStorageChange);
+      window.removeEventListener('mapLayersClearEvent', handleStorageChange);
     };
   }, [markers.length]);
 
