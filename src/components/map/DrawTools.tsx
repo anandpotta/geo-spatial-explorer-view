@@ -1,10 +1,9 @@
-
 import { useEffect, useRef, useCallback } from 'react';
-import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
+import EditControlWrapper from './drawing/EditControlWrapper';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
@@ -130,7 +129,7 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   };
 
   return (
-    <EditControl
+    <EditControlWrapper
       ref={editControlRef}
       position="topright"
       onCreated={handleCreated}
