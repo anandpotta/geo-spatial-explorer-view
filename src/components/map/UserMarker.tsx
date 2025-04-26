@@ -11,9 +11,6 @@ interface UserMarkerProps {
 }
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
-  // Create a unique key based on marker ID and a timestamp
-  const markerKey = `marker-${marker.id}-${Date.now()}`;
-  
   const handleDragEnd = (e: L.DragEndEvent) => {
     const updatedMarker = e.target;
     const newPosition = updatedMarker.getLatLng();

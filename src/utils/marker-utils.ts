@@ -17,19 +17,10 @@ export function saveMarker(marker: LocationMarker): void {
   // Check if marker already exists (for updates)
   const existingIndex = savedMarkers.findIndex(m => m.id === marker.id);
   
-  // Also check if there's already a marker at almost the exact same location (within 0.0001 degrees)
-  const nearbyIndex = savedMarkers.findIndex(m => {
-    if (m.id === marker.id) return false; // Skip the same marker
-    const distLat = Math.abs(m.position[0] - marker.position[0]);
-    const distLng = Math.abs(m.position[1] - marker.position[1]);
-    return distLat < 0.0001 && distLng < 0.0001; // Very close markers
-  });
-  
-  // If nearly duplicate marker exists, don't add a new one and possibly remove the duplicate
-  if (nearbyIndex >= 0) {
-    console.warn('Prevented duplicate marker at nearly same location');
-    // We could optionally remove the nearby one here, but it's safer to leave it
-    return;
+  // Only check for duplicates on new markers, not when updating existing ones
+  if (existingIndex === -1) {
+    // Intentionally removed the nearby duplicate detection to allow placing 
+    // multiple markers close to each other - this was preventing multiple markers
   }
   
   if (existingIndex >= 0) {
