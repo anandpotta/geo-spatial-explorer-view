@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
@@ -20,13 +19,12 @@ export function useMapState(selectedLocation?: Location) {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Load existing markers on mount
   useEffect(() => {
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     
-    // Listen for marker updates
     const handleMarkersUpdated = () => {
       setMarkers(getSavedMarkers());
     };
@@ -40,7 +38,6 @@ export function useMapState(selectedLocation?: Location) {
     };
   }, []);
 
-  // Set up global position update handler for draggable markers
   useEffect(() => {
     window.tempMarkerPositionUpdate = setTempMarker;
     
@@ -50,7 +47,9 @@ export function useMapState(selectedLocation?: Location) {
   }, []);
 
   const handleSaveMarker = () => {
-    if (!tempMarker || !markerName.trim()) return;
+    if (!tempMarker || !markerName.trim() || isSaving) return;
+    
+    setIsSaving(true);
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
@@ -61,14 +60,11 @@ export function useMapState(selectedLocation?: Location) {
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined
     };
     
-    // Save the marker
     saveMarker(newMarker);
     
     if (currentDrawing) {
-      // Create a safe copy of currentDrawing without circular references
       const safeDrawing: DrawingData = {
         ...currentDrawing,
-        // Remove any potential circular references from geoJSON
         geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
           type: currentDrawing.geoJSON.type,
           geometry: currentDrawing.geoJSON.geometry,
@@ -84,20 +80,21 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Clear the temporary marker to allow placing a new one
     setTempMarker(null);
     setMarkerName('');
     setCurrentDrawing(null);
     
-    // Update the markers state with the new marker
     setMarkers(getSavedMarkers());
     
     toast.success("Location saved successfully");
+    
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 500);
   };
 
   const handleDeleteMarker = (id: string) => {
     deleteMarker(id);
-    // Update the markers state
     setMarkers(markers.filter(marker => marker.id !== id));
     toast.success("Location removed");
   };
@@ -130,13 +127,13 @@ export function useMapState(selectedLocation?: Location) {
     setSelectedDrawing,
     activeTool,
     setActiveTool,
+    isSaving,
     handleSaveMarker,
     handleDeleteMarker,
     handleRegionClick
   };
 }
 
-// Extend the Window interface to include our custom property
 declare global {
   interface Window {
     tempMarkerPositionUpdate?: (pos: [number, number]) => void;

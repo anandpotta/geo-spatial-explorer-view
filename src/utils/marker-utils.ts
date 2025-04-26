@@ -1,4 +1,3 @@
-
 import { getConnectionStatus } from './api-service';
 
 export interface LocationMarker {
@@ -18,6 +17,21 @@ export function saveMarker(marker: LocationMarker): void {
   // Check if marker already exists (for updates)
   const existingIndex = savedMarkers.findIndex(m => m.id === marker.id);
   
+  // Also check if there's already a marker at almost the exact same location (within 0.0001 degrees)
+  const nearbyIndex = savedMarkers.findIndex(m => {
+    if (m.id === marker.id) return false; // Skip the same marker
+    const distLat = Math.abs(m.position[0] - marker.position[0]);
+    const distLng = Math.abs(m.position[1] - marker.position[1]);
+    return distLat < 0.0001 && distLng < 0.0001; // Very close markers
+  });
+  
+  // If nearly duplicate marker exists, don't add a new one and possibly remove the duplicate
+  if (nearbyIndex >= 0) {
+    console.warn('Prevented duplicate marker at nearly same location');
+    // We could optionally remove the nearby one here, but it's safer to leave it
+    return;
+  }
+  
   if (existingIndex >= 0) {
     // Update existing marker
     savedMarkers[existingIndex] = marker;
@@ -28,8 +42,14 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Dispatch a custom event to notify components that markers have been updated
-  window.dispatchEvent(new CustomEvent('markersUpdated'));
+  // Use a debounced event dispatch to prevent multiple rapid dispatches
+  if (!window.markerUpdateDebounceTimer) {
+    window.markerUpdateDebounceTimer = setTimeout(() => {
+      // Dispatch a custom event to notify components that markers have been updated
+      window.dispatchEvent(new CustomEvent('markersUpdated'));
+      window.markerUpdateDebounceTimer = null;
+    }, 50); 
+  }
   
   syncMarkersWithBackend(savedMarkers);
 }
