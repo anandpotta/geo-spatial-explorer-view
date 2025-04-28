@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
@@ -10,11 +10,17 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
-  onClearAll?: () => void; // Add onClearAll prop
+  onClearAll?: () => void;
 }
 
-const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
+// Convert DrawTools to use forwardRef
+const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
+  
+  // Expose the editControlRef to parent components
+  useImperativeHandle(ref, () => ({
+    getEditControl: () => editControlRef.current,
+  }));
 
   useEffect(() => {
     if (!editControlRef.current || !activeTool) return;
@@ -107,6 +113,9 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }}
     />
   );
-};
+});
+
+// Set a display name for the component
+DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;

@@ -13,7 +13,7 @@ interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick?: (drawing: DrawingData) => void;
-  onClearAll?: () => void; // Add new prop for clearing all state
+  onClearAll?: () => void;
 }
 
 declare module 'leaflet' {
@@ -24,6 +24,7 @@ declare module 'leaflet' {
 
 const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps) => {
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
   
   useEffect(() => {
@@ -63,6 +64,7 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
   return (
     <FeatureGroup ref={featureGroupRef}>
       <DrawTools 
+        ref={drawToolsRef}
         onCreated={onCreated} 
         activeTool={activeTool} 
         onClearAll={onClearAll} 
