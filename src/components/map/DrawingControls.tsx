@@ -28,13 +28,11 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
   const { savedDrawings } = useDrawings();
   const [drawingsWithFloorPlans, setDrawingsWithFloorPlans] = useState<DrawingData[]>([]);
   
-  // Expose methods to parent
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current
   }));
   
-  // Check which drawings have floor plans
   useEffect(() => {
     const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
     const withFloorPlans = savedDrawings.filter(
@@ -86,7 +84,6 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
         onClearAll={onClearAll} 
       />
       
-      {/* Add floor plan overlays */}
       {drawingsWithFloorPlans.map(drawing => {
         const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
         const floorPlan = floorPlans[drawing.id];
@@ -97,7 +94,7 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
               key={drawing.id}
               drawingId={drawing.id}
               coordinates={drawing.coordinates}
-              imageUrl={floorPlan.data}
+              floorPlanUrl={floorPlan.data}
             />
           );
         }
@@ -107,7 +104,6 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
   );
 });
 
-// Set display name
 DrawingControls.displayName = 'DrawingControls';
 
 export default DrawingControls;

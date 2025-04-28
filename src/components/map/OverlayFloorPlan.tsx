@@ -1,8 +1,5 @@
-
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { DrawingData } from '@/utils/geo-utils';
 import { calculateFitScale } from '@/utils/image-transform-utils';
 import { useImageTransform } from '@/hooks/useImageTransform';
@@ -14,9 +11,10 @@ interface OverlayFloorPlanProps {
   coordinates: Array<[number, number]>;
   onBack: () => void;
   drawing?: DrawingData | null;
+  floorPlanUrl?: string;  // Changed from imageUrl to floorPlanUrl
 }
 
-const OverlayFloorPlan = ({ drawingId, coordinates, onBack, drawing }: OverlayFloorPlanProps) => {
+const OverlayFloorPlan = ({ drawingId, coordinates, onBack, drawing, floorPlanUrl }: OverlayFloorPlanProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPdf, setIsPdf] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("");
