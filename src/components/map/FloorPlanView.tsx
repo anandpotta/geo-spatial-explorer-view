@@ -1,13 +1,8 @@
-
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
-import { useImageTransform } from '@/hooks/useImageTransform';
-import { calculateFitScale } from '@/utils/image-transform-utils'; // Import the missing function
-import FloorPlanControls from './FloorPlanControls';
-import FloorPlanUpload from './FloorPlanUpload';
-import EmptyFloorPlanState from './EmptyFloorPlanState';
-import FloorPlanPreview from './FloorPlanPreview';
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -18,25 +13,20 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPdf, setIsPdf] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("");
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const imageContainerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-
-  const {
-    rotation,
-    scale,
-    position,
-    setPosition,
-    handleRotateLeft,
-    handleRotateRight,
-    handleZoomIn,
-    handleZoomOut,
-    handleReset,
-    handleUpdateScale,
-    saveTransformation
-  } = useImageTransform({ drawingId: drawing?.id });
-
+  
+  // Check if there's a saved floor plan for this building in localStorage
+  useEffect(() => {
+    if (drawing?.id) {
+      const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+      if (savedFloorPlans[drawing.id]) {
+        const savedData = savedFloorPlans[drawing.id];
+        setSelectedImage(savedData.data);
+        setIsPdf(savedData.isPdf);
+        setFileName(savedData.fileName);
+      }
+    }
+  }, [drawing]);
+  
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -46,6 +36,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       return;
     }
     
+    // Save file name and check if it's a PDF
     setFileName(file.name);
     setIsPdf(file.type.includes('pdf'));
     
@@ -55,8 +46,8 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       if (result) {
         const dataUrl = result as string;
         setSelectedImage(dataUrl);
-        handleReset();
         
+        // Save to localStorage for this specific building
         if (drawing?.id) {
           const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
           savedFloorPlans[drawing.id] = {
@@ -67,110 +58,88 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           };
           localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
           toast.success('Floor plan uploaded successfully');
-          setTimeout(() => {
-            if (imageContainerRef.current && imageRef.current) {
-              const container = imageContainerRef.current.getBoundingClientRect();
-              const image = imageRef.current;
-              const newScale = calculateFitScale(
-                container.width,
-                container.height,
-                image.naturalWidth,
-                image.naturalHeight
-              );
-              handleUpdateScale(newScale);
-              setPosition({ x: 0, y: 0 });
-            }
-          }, 500);
         }
       }
     };
     reader.readAsDataURL(file);
   };
 
-  // Mouse event handlers
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    setPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    });
-  };
-
-  const handleMouseUp = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      saveTransformation();
-    }
-  };
-
   return (
-    <div 
-      className="relative w-full h-full"
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      <FloorPlanUpload
-        onBack={onBack}
-        onFileSelect={handleFileUpload}
-        selectedImage={selectedImage}
-      />
-
-      {!isPdf && selectedImage && (
-        <FloorPlanControls
-          scale={scale}
-          onRotateLeft={handleRotateLeft}
-          onRotateRight={handleRotateRight}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onFitToBorders={() => {
-            if (imageContainerRef.current && imageRef.current) {
-              const container = imageContainerRef.current.getBoundingClientRect();
-              const image = imageRef.current;
-              const newScale = calculateFitScale(
-                container.width,
-                container.height,
-                image.naturalWidth,
-                image.naturalHeight
-              );
-              handleUpdateScale(newScale);
-              setPosition({ x: 0, y: 0 });
-              toast.success('Image fit to borders');
-            }
-          }}
-          onReset={handleReset}
-          onScaleChange={handleUpdateScale}
-        />
-      )}
-      
-      <div className="w-full h-full flex items-center justify-center bg-black/5">
-        {selectedImage ? (
-          <FloorPlanPreview
-            selectedImage={selectedImage}
-            isPdf={isPdf}
-            fileName={fileName}
-            title={drawing?.properties?.name || 'Floor Plan View'}
-            containerRef={imageContainerRef}
-            imageRef={imageRef}
-            isDragging={isDragging}
-            transformation={{ rotation, scale, position }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
+    <div className="relative w-full h-full">
+      <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="bg-white/80 backdrop-blur-sm"
+        >
+          <FlipHorizontal className="mr-2 h-4 w-4" />
+          Back to Map
+        </Button>
+        <label className="cursor-pointer">
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*,.pdf"
+            onChange={handleFileUpload}
           />
-        ) : (
-          <EmptyFloorPlanState
-            onSelectFile={() => {
+          <Button
+            variant="outline"
+            className="bg-white/80 backdrop-blur-sm"
+            type="button"
+            onClick={() => {
+              // This will trigger the file input click
               const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
               if (fileInput) fileInput.click();
             }}
-          />
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {selectedImage ? 'Change Floor Plan' : 'Upload Floor Plan'}
+          </Button>
+        </label>
+      </div>
+      <div className="w-full h-full flex items-center justify-center bg-black/5">
+        {selectedImage ? (
+          <div className="space-y-4 text-center max-w-[90%]">
+            <h2 className="text-xl font-semibold">
+              {drawing?.properties?.name || 'Floor Plan View'} 
+              {fileName && <span className="text-sm font-normal ml-2 text-gray-500">({fileName})</span>}
+            </h2>
+            
+            {isPdf ? (
+              <div className="w-full max-h-[75vh] overflow-hidden rounded-lg shadow-lg border border-gray-200">
+                <iframe 
+                  src={selectedImage} 
+                  className="w-full h-[70vh]" 
+                  title="PDF Floor Plan"
+                />
+              </div>
+            ) : (
+              <img
+                src={selectedImage}
+                alt="Floor Plan"
+                className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
+              />
+            )}
+          </div>
+        ) : (
+          <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg bg-white/80">
+            <div className="flex flex-col items-center gap-4">
+              <Upload className="h-12 w-12 text-gray-400" />
+              <h3 className="text-lg font-medium">Upload Floor Plan</h3>
+              <p className="text-gray-600 text-center max-w-md">
+                Click the Upload Floor Plan button above to add a floor plan image or PDF
+              </p>
+              <Button 
+                onClick={() => {
+                  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                  if (fileInput) fileInput.click();
+                }}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Select File
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

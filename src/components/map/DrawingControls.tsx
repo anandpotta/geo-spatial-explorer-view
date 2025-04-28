@@ -1,8 +1,12 @@
 
-import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { FeatureGroup } from 'react-leaflet';
+import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
-import DrawingCanvas from './drawing/DrawingCanvas';
+import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-drawing-config';
+import DrawTools from './DrawTools';
+import { getSavedMarkers } from '@/utils/marker-utils';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawingControlsProps {
@@ -12,42 +16,70 @@ interface DrawingControlsProps {
   onClearAll?: () => void;
 }
 
-const DrawingControls = forwardRef(({ 
-  onCreated, 
-  activeTool, 
-  onRegionClick, 
-  onClearAll 
-}: DrawingControlsProps, ref) => {
+declare module 'leaflet' {
+  interface Layer {
+    drawingId?: string;
+  }
+}
+
+const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps, ref) => {
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
-  const [drawingsWithFloorPlans, setDrawingsWithFloorPlans] = useState<DrawingData[]>([]);
-  const canvasRef = useRef<{ featureGroupRef: React.RefObject<any>, drawToolsRef: React.RefObject<any> }>(null);
   
+  // Expose methods to parent
   useImperativeHandle(ref, () => ({
-    getFeatureGroup: () => canvasRef.current?.featureGroupRef.current,
-    getDrawTools: () => canvasRef.current?.drawToolsRef.current
+    getFeatureGroup: () => featureGroupRef.current,
+    getDrawTools: () => drawToolsRef.current
   }));
   
   useEffect(() => {
-    const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    const withFloorPlans = savedDrawings.filter(
-      drawing => savedFloorPlans[drawing.id] && savedFloorPlans[drawing.id].data
-    );
-    setDrawingsWithFloorPlans(withFloorPlans);
-  }, [savedDrawings]);
+    if (!featureGroupRef.current || !savedDrawings.length) return;
+    
+    featureGroupRef.current.clearLayers();
+    const markers = getSavedMarkers();
+    
+    savedDrawings.forEach(drawing => {
+      if (drawing.geoJSON) {
+        try {
+          const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
+          const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
+          
+          if (layer) {
+            layer.eachLayer((l: L.Layer) => {
+              if (l) {
+                l.drawingId = drawing.id;
+                
+                if (onRegionClick) {
+                  l.on('click', () => {
+                    onRegionClick(drawing);
+                  });
+                }
+              }
+            });
+            
+            layer.addTo(featureGroupRef.current!);
+          }
+        } catch (err) {
+          console.error('Error adding drawing layer:', err);
+        }
+      }
+    });
+  }, [savedDrawings, onRegionClick]);
 
   return (
-    <DrawingCanvas
-      ref={canvasRef}
-      onCreated={onCreated}
-      activeTool={activeTool}
-      onRegionClick={onRegionClick}
-      onClearAll={onClearAll}
-      savedDrawings={savedDrawings}
-      drawingsWithFloorPlans={drawingsWithFloorPlans}
-    />
+    <FeatureGroup ref={featureGroupRef}>
+      <DrawTools 
+        ref={drawToolsRef}
+        onCreated={onCreated} 
+        activeTool={activeTool} 
+        onClearAll={onClearAll} 
+      />
+    </FeatureGroup>
   );
 });
 
+// Set display name
 DrawingControls.displayName = 'DrawingControls';
 
 export default DrawingControls;
