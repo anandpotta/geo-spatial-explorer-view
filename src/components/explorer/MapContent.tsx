@@ -91,6 +91,22 @@ const MapContent = ({
     }
   };
 
+  const handleClearAll = () => {
+    if (currentView === 'leaflet' && leafletMapRef.current) {
+      // Clear all layers in Leaflet map
+      const layers = leafletMapRef.current._layers;
+      if (layers) {
+        Object.keys(layers).forEach(layerId => {
+          const layer = layers[layerId];
+          if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+            leafletMapRef.current.removeLayer(layer);
+          }
+        });
+        toast.info('All shapes cleared');
+      }
+    }
+  };
+
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
@@ -133,6 +149,7 @@ const MapContent = ({
               onMapReady={handleLeafletMapRef}
               activeTool={activeTool}
               key={`leaflet-${mapKey}`}
+              onClearAll={handleClearAll}
             />
           )}
         </div>
@@ -142,6 +159,7 @@ const MapContent = ({
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
+          onClearAll={handleClearAll}
         />
       </div>
       

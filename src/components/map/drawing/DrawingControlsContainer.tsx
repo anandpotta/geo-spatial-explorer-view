@@ -1,7 +1,7 @@
 
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
-import { forwardRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 
 interface DrawingControlsContainerProps {
   onShapeCreated: (shape: any) => void;
@@ -16,13 +16,21 @@ const DrawingControlsContainer = forwardRef(({
   onRegionClick,
   onClearAll
 }: DrawingControlsContainerProps, ref) => {
+  const drawingControlsRef = useRef(null);
+  
+  // Forward the ref through to the inner DrawingControls component
+  useImperativeHandle(ref, () => ({
+    // Forward any methods from DrawingControls
+    ...drawingControlsRef.current
+  }));
+  
   return (
     <DrawingControls 
+      ref={drawingControlsRef}
       onCreated={onShapeCreated}
       activeTool={activeTool}
       onRegionClick={onRegionClick}
       onClearAll={onClearAll}
-      ref={ref}
     />
   );
 });

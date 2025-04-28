@@ -112,11 +112,11 @@ const MapView = ({
         <MapReference onMapReady={onMapReady} />
         
         <DrawingControlsContainer
+          ref={drawingControlsRef}
           onShapeCreated={onShapeCreated}
           activeTool={activeTool}
           onRegionClick={handleRegionClick}
           onClearAll={onClearAll}
-          ref={drawingControlsRef}
         />
         
         <MarkersContainer
