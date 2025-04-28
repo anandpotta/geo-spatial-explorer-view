@@ -95,6 +95,7 @@ const LayerManager = ({
                 if (l && isMountedRef.current) {
                   (l as any).drawingId = drawing.id;
                   
+                  // Always add the remove button when in edit mode
                   if (activeTool === 'edit' && isMountedRef.current) {
                     let buttonPosition;
                     if ('getLatLng' in l) {
@@ -131,7 +132,8 @@ const LayerManager = ({
                     }
                   }
                   
-                  if (onRegionClick && isMountedRef.current) {
+                  // Always make clicking on a shape that has a floor plan trigger the handler
+                  if (hasFloorPlan && onRegionClick && isMountedRef.current) {
                     l.on('click', () => {
                       if (isMountedRef.current) {
                         onRegionClick(drawing);
@@ -159,7 +161,17 @@ const LayerManager = ({
     if (!featureGroup || !isMountedRef.current) return;
     updateLayers();
     
+    // Also update layers when storage changes
+    const handleStorageChange = () => {
+      if (isMountedRef.current) {
+        updateLayers();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
     return () => {
+      window.removeEventListener('storage', handleStorageChange);
       if (featureGroup && featureGroup.clearLayers) {
         try {
           featureGroup.clearLayers();

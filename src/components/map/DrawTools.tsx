@@ -46,22 +46,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         polyline: false
       }}
       edit={{
-        edit: activeTool === 'edit' ? {
-          selectedPathOptions: {
-            color: "#fe57a1",
-            opacity: 0.6,
-            fillOpacity: 0.3,
-            dashArray: "10, 10",
-            weight: 3
-          }
-        } : false,
-        remove: activeTool === 'edit'
+        edit: true,
+        remove: true,
+        selectedPathOptions: {
+          color: "#fe57a1",
+          opacity: 0.6,
+          fillOpacity: 0.3,
+          dashArray: "10, 10",
+          weight: 3
+        }
       }}
-      // Pass the feature group as a prop to EditControl
+      // Associate feature group with the draw control
       onMounted={(drawControl) => {
-        // This is the correct way to associate the feature group
         if (drawControl && featureGroupRef.current) {
-          // Associate the feature group with the draw control
           drawControl.options.edit.featureGroup = featureGroupRef.current;
         }
       }}

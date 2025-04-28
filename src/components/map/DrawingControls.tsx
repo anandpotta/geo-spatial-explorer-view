@@ -49,9 +49,10 @@ const DrawingControls = forwardRef(({
     const handleFloorPlanUpdated = () => {
       if (featureGroupRef.current && mountedRef.current) {
         try {
-          featureGroupRef.current.clearLayers();
+          // Don't clear layers on floor plan update - we just want to redraw them with new styles
+          window.dispatchEvent(new Event('storage'));
         } catch (err) {
-          console.error('Error clearing layers on floor plan update:', err);
+          console.error('Error handling floor plan update:', err);
         }
       }
     };

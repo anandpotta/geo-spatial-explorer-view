@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
@@ -83,7 +84,13 @@ const DrawingTools = ({
       setIsClearDialogOpen(true);
       return;
     }
-    onToolSelect(tool);
+    
+    // Also set edit mode to activate delete controls in Leaflet
+    if (tool === 'edit') {
+      onToolSelect(tool);
+    } else {
+      onToolSelect(tool);
+    }
   };
 
   const handleClearAll = () => {
@@ -135,10 +142,19 @@ const DrawingTools = ({
         <div className="h-4" />
         
         <button
-          className="w-full p-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
+          className="w-full p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"
           onClick={() => handleToolClick('clear')}
         >
           <Trash2 className="h-5 w-5" />
+        </button>
+        
+        <div className="h-4" />
+        
+        <button
+          className="w-full p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
+          onClick={() => handleToolClick('edit')}
+        >
+          Edit
         </button>
       </div>
 
