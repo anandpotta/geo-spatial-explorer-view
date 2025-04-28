@@ -33,6 +33,7 @@ const DrawingControls = forwardRef(({
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
+  const mountedRef = useRef<boolean>(true);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
@@ -43,16 +44,23 @@ const DrawingControls = forwardRef(({
     getDrawingIdsWithFloorPlans();
     
     const handleFloorPlanUpdated = () => {
-      if (featureGroupRef.current) {
+      if (featureGroupRef.current && mountedRef.current) {
         featureGroupRef.current.clearLayers();
       }
     };
     
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     return () => {
+      mountedRef.current = false;
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
   }, []);
+
+  const handleRemoveShape = (drawingId: string) => {
+    if (onRemoveShape) {
+      onRemoveShape(drawingId);
+    }
+  };
 
   return (
     <FeatureGroup ref={featureGroupRef}>
@@ -62,7 +70,7 @@ const DrawingControls = forwardRef(({
           savedDrawings={savedDrawings}
           activeTool={activeTool}
           onRegionClick={onRegionClick}
-          onRemoveShape={onRemoveShape}
+          onRemoveShape={handleRemoveShape}
         />
       )}
       <DrawTools 
@@ -78,4 +86,3 @@ const DrawingControls = forwardRef(({
 DrawingControls.displayName = 'DrawingControls';
 
 export default DrawingControls;
-

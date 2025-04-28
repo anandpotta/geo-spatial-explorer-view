@@ -13,7 +13,6 @@ interface DrawToolsProps {
   onClearAll?: () => void;
 }
 
-// Convert DrawTools to use forwardRef
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
@@ -28,10 +27,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
     const leafletElement = editControlRef.current.leafletElement;
     if (!leafletElement || !leafletElement._modes) return;
     
-    // Disable all active tools first
+    // Safely disable all active tools first
     Object.keys(leafletElement._modes).forEach((mode) => {
       if (leafletElement._modes[mode].handler && 
           leafletElement._modes[mode].handler.enabled && 
+          typeof leafletElement._modes[mode].handler.enabled === 'function' && 
           leafletElement._modes[mode].handler.enabled()) {
         try {
           leafletElement._modes[mode].handler.disable();
@@ -45,11 +45,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
       polygon: "Click on map to start drawing polygon",
       marker: "Click on map to place marker",
       circle: "Click on map to draw circle",
-      rectangle: "Click on map to draw rectangle"
+      rectangle: "Click on map to draw rectangle",
+      edit: "Click on a shape to edit it"
     };
 
-    // Enable the requested tool if it exists
-    if (leafletElement._modes[activeTool] && leafletElement._modes[activeTool].handler) {
+    // Safely enable the requested tool if it exists
+    if (leafletElement._modes[activeTool] && 
+        leafletElement._modes[activeTool].handler &&
+        typeof leafletElement._modes[activeTool].handler.enable === 'function') {
       try {
         leafletElement._modes[activeTool].handler.enable();
         toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
@@ -110,6 +113,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         circlemarker: false,
         marker: true,
         polyline: false
+      }}
+      edit={{
+        remove: false, // Disable built-in remove button since we're using our own
+        edit: true
       }}
     />
   );

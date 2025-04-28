@@ -26,6 +26,11 @@ const LayerManager = ({
   onRemoveShape 
 }: LayerManagerProps) => {
   const handleRemoveShape = (drawingId: string) => {
+    if (!drawingId) {
+      console.warn('Missing drawing ID for removal');
+      return;
+    }
+    
     deleteDrawing(drawingId);
     if (onRemoveShape) {
       onRemoveShape(drawingId);
@@ -35,7 +40,16 @@ const LayerManager = ({
   };
 
   const updateLayers = () => {
-    featureGroup.clearLayers();
+    if (!featureGroup) return;
+    
+    // Clear existing layers safely
+    try {
+      featureGroup.clearLayers();
+    } catch (err) {
+      console.error('Error clearing feature group layers:', err);
+      return;
+    }
+    
     const markers = getSavedMarkers();
     const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
     
@@ -57,23 +71,48 @@ const LayerManager = ({
           if (layer) {
             layer.eachLayer((l: L.Layer) => {
               if (l) {
+                // Ensure each layer has the drawingId
                 l.drawingId = drawing.id;
                 
-                const container = L.DomUtil.create('div', 'relative');
-                
+                // Add remove button in edit mode
                 if (activeTool === 'edit') {
-                  const removeButton = L.DomUtil.create('div', 'absolute z-50', container);
-                  const removeButtonInstance = document.createElement('div');
-                  removeButton.appendChild(removeButtonInstance);
+                  // Get the center point for the remove button
+                  let buttonPosition;
+                  if ('getLatLng' in l) {
+                    buttonPosition = l.getLatLng();
+                  } else if ('getBounds' in l) {
+                    buttonPosition = l.getBounds().getNorthEast();
+                  }
                   
-                  const root = ReactDOM.createRoot(removeButtonInstance);
-                  root.render(
-                    <RemoveButton 
-                      onClick={() => handleRemoveShape(drawing.id)} 
-                    />
-                  );
+                  if (buttonPosition) {
+                    const buttonLayer = L.marker(buttonPosition, {
+                      icon: L.divIcon({
+                        className: 'remove-button-container',
+                        html: '<div class="remove-button-placeholder"></div>',
+                        iconSize: [24, 24]
+                      }),
+                      interactive: true,
+                      zIndexOffset: 1000
+                    });
+                    
+                    buttonLayer.addTo(featureGroup);
+                    
+                    // Use setTimeout to ensure the DOM element is available
+                    setTimeout(() => {
+                      const container = document.querySelector('.remove-button-placeholder');
+                      if (container) {
+                        const root = ReactDOM.createRoot(container);
+                        root.render(
+                          <RemoveButton 
+                            onClick={() => handleRemoveShape(drawing.id)} 
+                          />
+                        );
+                      }
+                    }, 0);
+                  }
                 }
                 
+                // Add click handler for region
                 if (onRegionClick) {
                   l.on('click', () => {
                     onRegionClick(drawing);
@@ -100,4 +139,3 @@ const LayerManager = ({
 };
 
 export default LayerManager;
-
