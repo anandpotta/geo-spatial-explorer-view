@@ -42,14 +42,26 @@ export const constrainPosition = (
   scale: number,
   rotation: number
 ): Position => {
-  // This is a simplified constraint - for full implementation with rotation,
-  // we would need more complex calculations
-  const maxX = containerBounds.width / 2;
-  const maxY = containerBounds.height / 2;
+  // Calculate image corners after rotation
+  const imageWidth = imageBounds.width * scale;
+  const imageHeight = imageBounds.height * scale;
+  
+  // Calculate rotated dimensions
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(rad));
+  const sin = Math.abs(Math.sin(rad));
+  const rotatedWidth = imageWidth * cos + imageHeight * sin;
+  const rotatedHeight = imageWidth * sin + imageHeight * cos;
+  
+  // Calculate constraints
+  const maxX = (containerBounds.width + rotatedWidth) / 2;
+  const maxY = (containerBounds.height + rotatedHeight) / 2;
+  const minX = -maxX;
+  const minY = -maxY;
   
   return {
-    x: Math.max(-maxX, Math.min(maxX, position.x)),
-    y: Math.max(-maxY, Math.min(maxY, position.y)),
+    x: Math.max(minX, Math.min(maxX, position.x)),
+    y: Math.max(minY, Math.min(maxY, position.y))
   };
 };
 
@@ -68,26 +80,16 @@ export const calculatePolygonFit = (
   const centerX = polygonBounds.minX + polygonWidth / 2;
   const centerY = polygonBounds.minY + polygonHeight / 2;
   
-  // Calculate scale to fit within polygon
-  const imageAspect = imageWidth / imageHeight;
-  const polygonAspect = polygonWidth / polygonHeight;
-  
-  let scale;
-  if (imageAspect > polygonAspect) {
-    // Image is wider compared to its height than the polygon
-    scale = polygonWidth / imageWidth * 0.9; // 90% to leave some padding
-  } else {
-    // Image is taller compared to its width than the polygon
-    scale = polygonHeight / imageHeight * 0.9; // 90% to leave some padding
-  }
+  // Calculate scale to fit within polygon while maintaining aspect ratio
+  const scale = Math.min(
+    polygonWidth / imageWidth,
+    polygonHeight / imageHeight
+  ) * 0.9; // 90% to leave some padding
   
   return {
     scale,
     rotation: 0,
-    position: { 
-      x: centerX, 
-      y: centerY 
-    }
+    position: { x: centerX, y: centerY }
   };
 };
 
