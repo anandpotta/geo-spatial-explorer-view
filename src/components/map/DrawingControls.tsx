@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
@@ -8,13 +7,18 @@ import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-dr
 import DrawTools from './DrawTools';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import RemoveButton from './drawing/RemoveButton';
+import { deleteDrawing } from '@/utils/drawing-utils';
+import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { ReactDOM } from './drawing/ReactDOMUtils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onRegionClick?: (drawing: DrawingData) => void;
   onClearAll?: () => void;
+  onRemoveShape?: (drawingId: string) => void;
 }
 
 declare module 'leaflet' {
@@ -23,26 +27,21 @@ declare module 'leaflet' {
   }
 }
 
-const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps, ref) => {
+const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onClearAll, onRemoveShape }: DrawingControlsProps, ref) => {
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
   
-  // Expose methods to parent
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current
   }));
   
-  // Track drawings that have floor plans
   useEffect(() => {
-    // This ensures floor plans are loaded when DrawingControls is mounted
     getDrawingIdsWithFloorPlans();
     
     const handleFloorPlanUpdated = () => {
-      // This will trigger a re-render when floor plans are updated
       if (featureGroupRef.current) {
-        // Re-add layers to reflect updated styling for drawings with floor plans
         updateLayers();
       }
     };
@@ -53,11 +52,23 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
     };
   }, []);
   
-  // Update layers when savedDrawings changes
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
     updateLayers();
   }, [savedDrawings]);
+  
+  const handleRemoveShape = (drawingId: string) => {
+    if (!featureGroupRef.current) return;
+    
+    deleteDrawing(drawingId);
+    if (onRemoveShape) {
+      onRemoveShape(drawingId);
+    }
+    
+    // Trigger a re-render of the layers
+    updateLayers();
+    toast.success('Shape removed successfully');
+  };
   
   const updateLayers = () => {
     if (!featureGroupRef.current) return;
@@ -72,10 +83,9 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
           const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
           const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
           
-          // Customize options based on whether drawing has a floor plan
           const options = getDefaultDrawingOptions(drawing.properties.color);
           if (hasFloorPlan) {
-            options.fillColor = '#3b82f6'; // Blue for drawings with floor plans
+            options.fillColor = '#3b82f6';
             options.fillOpacity = 0.4;
             options.color = '#1d4ed8';
           }
@@ -86,6 +96,24 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
             layer.eachLayer((l: L.Layer) => {
               if (l) {
                 l.drawingId = drawing.id;
+                
+                // Create a container for the layer and remove button
+                const container = L.DomUtil.create('div', 'relative');
+                
+                // Add the remove button if editing is active
+                if (activeTool === 'edit') {
+                  const removeButton = L.DomUtil.create('div', 'absolute z-50', container);
+                  const removeButtonInstance = document.createElement('div');
+                  removeButton.appendChild(removeButtonInstance);
+                  
+                  // Render the RemoveButton component
+                  const root = ReactDOM.createRoot(removeButtonInstance);
+                  root.render(
+                    <RemoveButton 
+                      onClick={() => handleRemoveShape(drawing.id)} 
+                    />
+                  );
+                }
                 
                 if (onRegionClick) {
                   l.on('click', () => {
@@ -116,7 +144,6 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
   );
 });
 
-// Set display name
 DrawingControls.displayName = 'DrawingControls';
 
 export default DrawingControls;
