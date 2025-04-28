@@ -20,3 +20,30 @@ export {
   getSavedDrawings,
   deleteDrawing,
 } from './drawing-utils';
+
+// Export image transformation utilities
+export {
+  calculateFitScale,
+  constrainPosition,
+  saveImageTransformation,
+} from './image-transform-utils';
+
+// Types for image transformations
+export interface Position {
+  x: number;
+  y: number;
+}
+
+export interface ImageTransformation {
+  rotation: number;
+  scale: number;
+  position: Position;
+}
+
+export interface FloorPlanData {
+  data: string;
+  isPdf: boolean;
+  fileName: string;
+  timestamp: string;
+  transformation?: ImageTransformation;
+}
