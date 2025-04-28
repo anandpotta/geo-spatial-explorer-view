@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Marker } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
@@ -10,7 +10,7 @@ interface UserMarkerProps {
 }
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
-  const handleDragEnd = (e: any) => {
+  const handleDragEnd = useCallback((e: any) => {
     const updatedMarker = e.target;
     const newPosition = updatedMarker.getLatLng();
     
@@ -30,12 +30,12 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     
     // Dispatch event to update other components
     window.dispatchEvent(new CustomEvent('markersUpdated'));
-  };
+  }, [marker.id]);
   
   return (
     <Marker 
       position={marker.position} 
-      key={marker.id}
+      key={`marker-${marker.id}`}
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd
@@ -46,4 +46,4 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   );
 };
 
-export default UserMarker;
+export default React.memo(UserMarker);

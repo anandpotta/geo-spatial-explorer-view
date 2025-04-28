@@ -19,6 +19,9 @@ const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => 
     if (isDeleting) return;
     
     e.stopPropagation();
+    e.preventDefault();
+    
+    console.log("Marker selected:", marker.name, marker.position);
     onSelect(marker.position);
   };
   

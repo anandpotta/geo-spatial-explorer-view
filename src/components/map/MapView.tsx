@@ -1,3 +1,4 @@
+
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
@@ -30,6 +31,7 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
+  isMapReady?: boolean;
 }
 
 const MapView = ({
@@ -49,7 +51,8 @@ const MapView = ({
   onShapeCreated,
   activeTool,
   onRegionClick,
-  onClearAll
+  onClearAll,
+  isMapReady = false
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
@@ -79,7 +82,10 @@ const MapView = ({
   return (
     <div className="w-full h-full relative">
       <div className="absolute top-4 right-4 z-[1000]">
-        <SavedLocationsDropdown onLocationSelect={handleLocationSelect} />
+        <SavedLocationsDropdown 
+          onLocationSelect={handleLocationSelect} 
+          isMapReady={isMapReady}
+        />
       </div>
       
       <MapContainer 

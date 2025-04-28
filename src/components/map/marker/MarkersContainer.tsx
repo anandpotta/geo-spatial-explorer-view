@@ -1,6 +1,7 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
+import { memo } from 'react';
 
 interface MarkersContainerProps {
   markers: LocationMarker[];
@@ -13,7 +14,7 @@ interface MarkersContainerProps {
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
 }
 
-const MarkersContainer = ({
+const MarkersContainer = memo(({
   markers,
   tempMarker,
   markerName,
@@ -35,6 +36,8 @@ const MarkersContainer = ({
       setMarkerType={setMarkerType}
     />
   );
-};
+});
+
+MarkersContainer.displayName = 'MarkersContainer';
 
 export default MarkersContainer;

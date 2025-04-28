@@ -13,15 +13,18 @@ import DeleteLocationDialog from '@/components/saved-locations/DeleteLocationDia
 import LocationsList from './dropdown/LocationsList';
 import AddLocationForm from './dropdown/AddLocationForm';
 import { createMarker, deleteMarker } from '@/utils/marker-utils';
+import { toast } from 'sonner';
 
 interface SavedLocationsDropdownProps {
   onLocationSelect: (position: [number, number]) => void;
+  isMapReady?: boolean;
 }
 
 const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({ 
-  onLocationSelect 
+  onLocationSelect,
+  isMapReady = false
 }) => {
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const {
     markers,
     isDeleteDialogOpen,
@@ -52,7 +55,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       deleteMarker(markerToDelete.id);
       setIsDeleteDialogOpen(false);
       setMarkerToDelete(null);
-      toast({
+      uiToast({
         title: "Success",
         description: "Location removed",
       });
@@ -64,7 +67,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
 
   const handleAddLocation = async () => {
     if (!newLocationName || newLocationName.trim() === "") {
-      toast({
+      uiToast({
         title: "Error",
         description: "Location name cannot be empty.",
         variant: "destructive",
@@ -73,7 +76,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     }
 
     if (newLocationLat === undefined || newLocationLng === undefined) {
-      toast({
+      uiToast({
         title: "Error",
         description: "Latitude and Longitude must be valid numbers.",
         variant: "destructive",
@@ -89,7 +92,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
 
     createMarker(newMarker);
       
-    toast({
+    uiToast({
       title: "Success",
       description: "Location saved",
     });
@@ -98,6 +101,14 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     setNewLocationLat(undefined);
     setNewLocationLng(undefined);
     setIsAddingLocation(false);
+  };
+
+  const handleSelectLocation = (position: [number, number]) => {
+    if (!isMapReady) {
+      toast.warning("Map is not ready yet, please wait a moment and try again");
+      return;
+    }
+    onLocationSelect(position);
   };
 
   return (
@@ -111,7 +122,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
         <DropdownMenuContent className="w-56">
           <LocationsList
             markers={markers}
-            onSelect={onLocationSelect}
+            onSelect={handleSelectLocation}
             onDelete={handleDeleteClick}
           />
           {!isAddingLocation ? (

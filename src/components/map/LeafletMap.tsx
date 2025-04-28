@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -8,6 +9,7 @@ import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import { getSavedMarkers } from '@/utils/marker-utils';
+import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -22,6 +24,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   const mapRef = useRef<L.Map | null>(null);
   const loadedMarkersRef = useRef(false);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
+  const [isMapReady, setIsMapReady] = useState(false);
   
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
@@ -68,6 +71,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         
         // Ensure the reference is cleared
         mapRef.current = null;
+        setIsMapReady(false);
       }
     };
   }, [mapInstanceKey]);
@@ -89,7 +93,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   }, []);
 
   useEffect(() => {
-    if (selectedLocation && mapRef.current) {
+    if (selectedLocation && mapRef.current && isMapReady) {
       try {
         // Only try to fly if the map is properly initialized
         const container = mapRef.current.getContainer();
@@ -107,7 +111,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         setMapInstanceKey(Date.now());
       }
     }
-  }, [selectedLocation]);
+  }, [selectedLocation, isMapReady]);
 
   const handleSetMapRef = (map: L.Map) => {
     console.log('Map reference provided');
@@ -130,11 +134,12 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
           if (mapRef.current) {
             try {
               mapRef.current.invalidateSize(true);
+              setIsMapReady(true);
             } catch (err) {
               console.warn('Error invalidating map size:', err);
             }
           }
-        }, 100);
+        }, 300);
         
         // Only fly to location if we have one and the map is ready
         if (selectedLocation) {
@@ -153,7 +158,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
                 console.warn('Error flying to initial location:', err);
               }
             }
-          }, 200);
+          }, 500);
         }
         
         // Call onMapReady callback
@@ -170,27 +175,38 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
-    if (mapRef.current) {
-      try {
-        // Use flyTo with animation for smooth transition
-        mapRef.current.flyTo(position, 18, {
-          animate: true,
-          duration: 1.5 // seconds
-        });
-        
-        // If we have an onLocationSelect callback, create a Location object and pass it up
-        if (onLocationSelect) {
-          const location: Location = {
-            id: `loc-${position[0]}-${position[1]}`,
-            label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-            x: position[1],
-            y: position[0]
-          };
-          onLocationSelect(location);
-        }
-      } catch (err) {
-        console.error('Error flying to location:', err);
+    if (!mapRef.current || !isMapReady) {
+      console.warn("Map is not ready yet, cannot navigate");
+      toast.error("Map is not fully loaded yet. Please try again in a moment.");
+      return;
+    }
+    
+    try {
+      if (!mapRef.current.getContainer() || !document.body.contains(mapRef.current.getContainer())) {
+        console.warn("Map container is not in DOM, cannot navigate");
+        toast.error("Map view is not available. Please refresh the page.");
+        return;
       }
+      
+      // Use flyTo with animation for smooth transition
+      mapRef.current.flyTo(position, 18, {
+        animate: true,
+        duration: 1.5 // seconds
+      });
+      
+      // If we have an onLocationSelect callback, create a Location object and pass it up
+      if (onLocationSelect) {
+        const location: Location = {
+          id: `loc-${position[0]}-${position[1]}`,
+          label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+          x: position[1],
+          y: position[0]
+        };
+        onLocationSelect(location);
+      }
+    } catch (err) {
+      console.error('Error flying to location:', err);
+      toast.error("Could not navigate to location. Please try again.");
     }
   };
 
@@ -240,6 +256,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       activeTool={activeTool || mapState.activeTool}
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAll}
+      isMapReady={isMapReady}
     />
   );
 };
