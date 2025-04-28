@@ -46,15 +46,16 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         polyline: false
       }}
       edit={{
-        edit: true,
-        remove: true,
-        selectedPathOptions: {
-          color: "#fe57a1",
-          opacity: 0.6,
-          fillOpacity: 0.3,
-          dashArray: "10, 10",
-          weight: 3
-        }
+        edit: {
+          selectedPathOptions: {
+            color: "#fe57a1",
+            opacity: 0.6,
+            fillOpacity: 0.3,
+            dashArray: "10, 10",
+            weight: 3
+          }
+        },
+        remove: true
       }}
       // Associate feature group with the draw control
       onMounted={(drawControl) => {
