@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -22,10 +22,16 @@ declare module 'leaflet' {
   }
 }
 
-const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps) => {
+const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onClearAll }: DrawingControlsProps, ref) => {
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
+  
+  // Expose methods to parent
+  useImperativeHandle(ref, () => ({
+    getFeatureGroup: () => featureGroupRef.current,
+    getDrawTools: () => drawToolsRef.current
+  }));
   
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
@@ -71,6 +77,9 @@ const DrawingControls = ({ onCreated, activeTool, onRegionClick, onClearAll }: D
       />
     </FeatureGroup>
   );
-};
+});
+
+// Set display name
+DrawingControls.displayName = 'DrawingControls';
 
 export default DrawingControls;
