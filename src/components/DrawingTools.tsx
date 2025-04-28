@@ -14,6 +14,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { DrawingData } from '@/utils/drawing';
 
 interface Position {
   x: number;

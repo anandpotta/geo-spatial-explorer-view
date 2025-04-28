@@ -1,5 +1,4 @@
-
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/drawing';
 import DrawingControls from '../DrawingControls';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 
@@ -18,9 +17,7 @@ const DrawingControlsContainer = forwardRef(({
 }: DrawingControlsContainerProps, ref) => {
   const drawingControlsRef = useRef(null);
   
-  // Forward the ref through to the inner DrawingControls component
   useImperativeHandle(ref, () => ({
-    // Forward any methods from DrawingControls
     ...drawingControlsRef.current
   }));
   

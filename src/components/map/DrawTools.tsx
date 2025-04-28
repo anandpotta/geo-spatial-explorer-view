@@ -1,8 +1,7 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
-import { saveDrawing } from '@/utils/drawing-utils';
+import { saveDrawing } from '@/utils/drawing';
 import { toast } from 'sonner';
 import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
 import 'leaflet-draw/dist/leaflet.draw.css';
