@@ -54,6 +54,44 @@ export const constrainPosition = (
 };
 
 /**
+ * Calculate transformation to fit an image within a polygon
+ */
+export const calculatePolygonFit = (
+  imageWidth: number,
+  imageHeight: number,
+  polygonBounds: { minX: number, minY: number, maxX: number, maxY: number }
+): ImageTransformation => {
+  const polygonWidth = polygonBounds.maxX - polygonBounds.minX;
+  const polygonHeight = polygonBounds.maxY - polygonBounds.minY;
+  
+  // Calculate center position of the polygon
+  const centerX = polygonBounds.minX + polygonWidth / 2;
+  const centerY = polygonBounds.minY + polygonHeight / 2;
+  
+  // Calculate scale to fit within polygon
+  const imageAspect = imageWidth / imageHeight;
+  const polygonAspect = polygonWidth / polygonHeight;
+  
+  let scale;
+  if (imageAspect > polygonAspect) {
+    // Image is wider compared to its height than the polygon
+    scale = polygonWidth / imageWidth * 0.9; // 90% to leave some padding
+  } else {
+    // Image is taller compared to its width than the polygon
+    scale = polygonHeight / imageHeight * 0.9; // 90% to leave some padding
+  }
+  
+  return {
+    scale,
+    rotation: 0,
+    position: { 
+      x: centerX, 
+      y: centerY 
+    }
+  };
+};
+
+/**
  * Save image transformation to localStorage
  */
 export const saveImageTransformation = (

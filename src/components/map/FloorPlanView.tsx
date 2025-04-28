@@ -5,6 +5,7 @@ import { FlipHorizontal, Upload, RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
 import { Slider } from "@/components/ui/slider";
+import { calculateFitScale, constrainPosition, saveImageTransformation } from "@/utils/image-transform-utils";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -84,6 +85,9 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           };
           localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
           toast.success('Floor plan uploaded successfully');
+          
+          // Auto-fit the image after a short delay to ensure it's loaded
+          setTimeout(handleFitToBorders, 500);
         }
       }
     };
@@ -142,20 +146,19 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     if (!imageContainerRef.current || !imageRef.current) return;
     
     const container = imageContainerRef.current.getBoundingClientRect();
-    const image = imageRef.current.getBoundingClientRect();
+    const image = imageRef.current;
+    
+    // Get actual image dimensions
+    const naturalWidth = image.naturalWidth;
+    const naturalHeight = image.naturalHeight;
     
     // Calculate scale to fit within container while maintaining aspect ratio
-    const containerAspect = container.width / container.height;
-    const imageAspect = image.width / image.height;
-    
-    let newScale;
-    if (containerAspect > imageAspect) {
-      // Container is wider than image
-      newScale = (container.height * 0.9) / (image.height / scale);
-    } else {
-      // Container is taller than image
-      newScale = (container.width * 0.9) / (image.width / scale);
-    }
+    const newScale = calculateFitScale(
+      container.width,
+      container.height,
+      naturalWidth,
+      naturalHeight
+    );
     
     setScale(newScale);
     setPosition({ x: 0, y: 0 });

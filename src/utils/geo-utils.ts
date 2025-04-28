@@ -26,6 +26,7 @@ export {
   calculateFitScale,
   constrainPosition,
   saveImageTransformation,
+  calculatePolygonFit
 } from './image-transform-utils';
 
 // Types for image transformations

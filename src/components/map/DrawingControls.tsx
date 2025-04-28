@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -7,6 +7,7 @@ import { useDrawings } from '@/hooks/useDrawings';
 import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-drawing-config';
 import DrawTools from './DrawTools';
 import { getSavedMarkers } from '@/utils/marker-utils';
+import OverlayFloorPlan from './OverlayFloorPlan';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawingControlsProps {
@@ -26,12 +27,22 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
+  const [drawingsWithFloorPlans, setDrawingsWithFloorPlans] = useState<DrawingData[]>([]);
   
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current
   }));
+  
+  // Check which drawings have floor plans
+  useEffect(() => {
+    const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+    const withFloorPlans = savedDrawings.filter(
+      drawing => savedFloorPlans[drawing.id] && savedFloorPlans[drawing.id].data
+    );
+    setDrawingsWithFloorPlans(withFloorPlans);
+  }, [savedDrawings]);
   
   useEffect(() => {
     if (!featureGroupRef.current || !savedDrawings.length) return;
@@ -75,6 +86,24 @@ const DrawingControls = forwardRef(({ onCreated, activeTool, onRegionClick, onCl
         activeTool={activeTool} 
         onClearAll={onClearAll} 
       />
+      
+      {/* Add floor plan overlays */}
+      {drawingsWithFloorPlans.map(drawing => {
+        const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+        const floorPlan = floorPlans[drawing.id];
+        
+        if (floorPlan && floorPlan.data && !floorPlan.isPdf && drawing.coordinates) {
+          return (
+            <OverlayFloorPlan 
+              key={drawing.id}
+              drawingId={drawing.id}
+              coordinates={drawing.coordinates}
+              imageUrl={floorPlan.data}
+            />
+          );
+        }
+        return null;
+      })}
     </FeatureGroup>
   );
 });
