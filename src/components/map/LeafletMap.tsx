@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -18,9 +17,10 @@ interface LeafletMapProps {
   onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
   onLocationSelect?: (location: Location) => void;
+  onClearAll?: () => void;
 }
 
-const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect }: LeafletMapProps) => {
+const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect, onClearAll }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const loadedMarkersRef = useRef(false);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
@@ -41,21 +41,16 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       document.head.appendChild(link);
     }
     
-    // Load saved markers from storage
     const savedMarkers = getSavedMarkers();
     mapState.setMarkers(savedMarkers);
     
-    // Clean up function to properly destroy the map instance
     return () => {
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
         
-        // Properly remove the map to prevent container reuse errors
         try {
-          // Only try to remove if the map container still exists
           if (mapRef.current && mapRef.current.remove) {
             try {
-              // First check if container exists and is attached to DOM
               const container = mapRef.current.getContainer();
               if (container && document.body.contains(container)) {
                 console.log('Map container exists and is attached - removing map instance');
@@ -69,14 +64,12 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
           console.error('Error cleaning up map:', err);
         }
         
-        // Ensure the reference is cleared
         mapRef.current = null;
         setIsMapReady(false);
       }
     };
   }, [mapInstanceKey]);
 
-  // Listen for marker updates
   useEffect(() => {
     const handleMarkersUpdated = () => {
       const savedMarkers = getSavedMarkers();
@@ -95,19 +88,16 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   useEffect(() => {
     if (selectedLocation && mapRef.current && isMapReady) {
       try {
-        // Only try to fly if the map is properly initialized
         const container = mapRef.current.getContainer();
         if (container && document.body.contains(container)) {
           console.log('Flying to selected location:', selectedLocation);
-          // Use flyTo with animation for smooth transition
           mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
             animate: true,
-            duration: 1.5 // seconds
+            duration: 1.5
           });
         }
       } catch (err) {
         console.error('Error flying to location:', err);
-        // If there's an error, recreate the map with a new key
         setMapInstanceKey(Date.now());
       }
     }
@@ -116,20 +106,17 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   const handleSetMapRef = (map: L.Map) => {
     console.log('Map reference provided');
     
-    // Check if we already have a valid reference
     if (mapRef.current) {
       console.log('Map reference already exists, skipping assignment');
       return;
     }
     
     try {
-      // Store reference only if container exists and is attached
       const container = map.getContainer();
       if (container && document.body.contains(container)) {
         console.log('Map container verified, storing reference');
         mapRef.current = map;
         
-        // Force invalidate size to ensure proper rendering
         setTimeout(() => {
           if (mapRef.current) {
             try {
@@ -141,7 +128,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
           }
         }, 300);
         
-        // Only fly to location if we have one and the map is ready
         if (selectedLocation) {
           console.log('Flying to initial location');
           setTimeout(() => {
@@ -161,7 +147,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
           }, 500);
         }
         
-        // Call onMapReady callback
         if (onMapReady) {
           onMapReady(map);
         }
@@ -188,13 +173,11 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         return;
       }
       
-      // Use flyTo with animation for smooth transition
       mapRef.current.flyTo(position, 18, {
         animate: true,
-        duration: 1.5 // seconds
+        duration: 1.5
       });
       
-      // If we have an onLocationSelect callback, create a Location object and pass it up
       if (onLocationSelect) {
         const location: Location = {
           id: `loc-${position[0]}-${position[1]}`,
@@ -217,6 +200,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     mapState.setCurrentDrawing(null);
     mapState.setShowFloorPlan(false);
     mapState.setSelectedDrawing(null);
+    
+    if (onClearAll) {
+      onClearAll();
+    }
     
     if (mapRef.current) {
       try {
