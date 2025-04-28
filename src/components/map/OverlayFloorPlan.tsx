@@ -1,10 +1,14 @@
-import { useState, useRef } from 'react';
-import { toast } from 'sonner';
-import { DrawingData } from '@/utils/geo-utils';
-import { calculateFitScale } from '@/utils/image-transform-utils';
+import { useState, useRef } from "react";
+import { toast } from "sonner";
+import { DrawingData } from "@/utils/geo-utils";
 import { useImageTransform } from '@/hooks/useImageTransform';
 import FloorPlanControls from './FloorPlanControls';
 import FloorPlanUpload from './FloorPlanUpload';
+import EmptyFloorPlanState from './EmptyFloorPlanState';
+import FloorPlanPreview from './FloorPlanPreview';
+import { Button } from '@/components/ui/button';
+import { Upload } from 'lucide-react';
+import { calculateFitScale } from '@/utils/image-transform-utils';
 
 interface OverlayFloorPlanProps {
   drawingId: string;

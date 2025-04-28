@@ -4,7 +4,7 @@ interface Position {
   y: number;
 }
 
-interface ImageTransformation {
+export interface ImageTransformation {
   rotation: number;
   scale: number;
   position: Position;
