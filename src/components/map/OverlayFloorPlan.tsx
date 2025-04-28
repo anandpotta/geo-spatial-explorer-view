@@ -1,220 +1,240 @@
 
-import { useEffect, useState, useRef } from 'react';
-import L from 'leaflet';
-import { useMap } from 'react-leaflet';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
+import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RotateCw, RotateCcw, ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
-import { Slider } from '@/components/ui/slider';
-import { calculatePolygonFit } from '@/utils/image-transform-utils';
+import { DrawingData } from '@/utils/geo-utils';
+import { calculateFitScale } from '@/utils/image-transform-utils';
+import { useImageTransform } from '@/hooks/useImageTransform';
+import FloorPlanControls from './FloorPlanControls';
+import FloorPlanUpload from './FloorPlanUpload';
 
 interface OverlayFloorPlanProps {
   drawingId: string;
   coordinates: Array<[number, number]>;
-  imageUrl: string;
+  onBack: () => void;
+  drawing?: DrawingData | null;
 }
 
-const OverlayFloorPlan = ({ drawingId, coordinates, imageUrl }: OverlayFloorPlanProps) => {
-  const map = useMap();
-  const imageOverlayRef = useRef<L.ImageOverlay | null>(null);
-  const [rotation, setRotation] = useState(0);
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState<[number, number] | null>(null);
-  const [showControls, setShowControls] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  
-  // Load saved transformation from localStorage
-  useEffect(() => {
-    const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    if (savedFloorPlans[drawingId]?.transformation) {
-      const t = savedFloorPlans[drawingId].transformation;
-      setRotation(t.rotation || 0);
-      setScale(t.scale || 1);
-      
-      // Position needs to be converted for map coordinates
-      if (coordinates && coordinates.length > 0) {
-        // Calculate center of the polygon
-        let bounds = calculateBounds(coordinates);
-        setPosition([
-          (bounds.minLat + bounds.maxLat) / 2,
-          (bounds.minLng + bounds.maxLng) / 2
-        ]);
+const OverlayFloorPlan = ({ drawingId, coordinates, onBack, drawing }: OverlayFloorPlanProps) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isPdf, setIsPdf] = useState<boolean>(false);
+  const [fileName, setFileName] = useState<string>("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  const {
+    rotation,
+    scale,
+    position,
+    setPosition,
+    handleRotateLeft,
+    handleRotateRight,
+    handleZoomIn,
+    handleZoomOut,
+    handleReset,
+    handleUpdateScale,
+    saveTransformation
+  } = useImageTransform({ drawingId });
+
+  // Load saved floor plan
+  useState(() => {
+    if (drawingId) {
+      const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+      if (savedFloorPlans[drawingId]) {
+        const savedData = savedFloorPlans[drawingId];
+        setSelectedImage(savedData.data);
+        setIsPdf(savedData.isPdf);
+        setFileName(savedData.fileName);
       }
     }
-    setImageLoaded(true);
-  }, [drawingId, coordinates]);
-  
-  // Calculate bounds of polygon
-  const calculateBounds = (coords: Array<[number, number]>): { 
-    minLat: number, minLng: number, maxLat: number, maxLng: number 
-  } => {
-    if (!coords || coords.length === 0) {
-      return { minLat: 0, minLng: 0, maxLat: 0, maxLng: 0 };
+  });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/') && !file.type.includes('pdf')) {
+      toast.error('Please upload an image or PDF file');
+      return;
     }
     
-    return coords.reduce((acc, [lat, lng]) => ({
-      minLat: Math.min(acc.minLat, lat),
-      minLng: Math.min(acc.minLng, lng),
-      maxLat: Math.max(acc.maxLat, lat),
-      maxLng: Math.max(acc.maxLng, lng)
-    }), { 
-      minLat: coords[0][0], 
-      minLng: coords[0][1], 
-      maxLat: coords[0][0], 
-      maxLng: coords[0][1] 
-    });
-  };
-  
-  // Calculate and create image overlay based on polygon
-  useEffect(() => {
-    if (!map || !coordinates || coordinates.length === 0 || !imageUrl || !imageLoaded) return;
+    setFileName(file.name);
+    setIsPdf(file.type.includes('pdf'));
     
-    // Clean up previous overlay
-    if (imageOverlayRef.current) {
-      imageOverlayRef.current.remove();
-    }
-    
-    // Calculate bounds
-    const bounds = calculateBounds(coordinates);
-    
-    // Create the bounding box for the image
-    const southWest = L.latLng(bounds.minLat, bounds.minLng);
-    const northEast = L.latLng(bounds.maxLat, bounds.maxLng);
-    const latLngBounds = L.latLngBounds(southWest, northEast);
-    
-    // Create a temporary image to get dimensions
-    const tempImg = new Image();
-    tempImg.onload = () => {
-      // Create the image overlay
-      const overlay = L.imageOverlay(imageUrl, latLngBounds, {
-        opacity: 0.8,
-        interactive: true
-      }).addTo(map);
-      
-      imageOverlayRef.current = overlay;
-      
-      // Add click handler to show controls
-      overlay.on('click', () => {
-        setShowControls(true);
-      });
-      
-      // Apply saved transformations if available
-      applyTransformation();
-    };
-    tempImg.src = imageUrl;
-    
-    // Click outside to hide controls
-    map.on('click', () => {
-      setShowControls(false);
-    });
-    
-    return () => {
-      if (imageOverlayRef.current) {
-        imageOverlayRef.current.remove();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result;
+      if (result) {
+        const dataUrl = result as string;
+        setSelectedImage(dataUrl);
+        
+        handleReset();
+        
+        if (drawingId) {
+          const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+          savedFloorPlans[drawingId] = {
+            data: dataUrl,
+            isPdf: file.type.includes('pdf'),
+            fileName: file.name,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
+          toast.success('Floor plan uploaded successfully');
+          
+          setTimeout(handleFitToBorders, 500);
+        }
       }
     };
-  }, [map, coordinates, imageUrl, imageLoaded]);
-  
-  // Apply transformation to the image overlay
-  const applyTransformation = () => {
-    if (!imageOverlayRef.current || !position) return;
-    
-    const overlay = imageOverlayRef.current;
-    const element = overlay.getElement();
-    
-    if (element) {
-      element.style.transform = `rotate(${rotation}deg) scale(${scale})`;
-      element.style.transformOrigin = 'center center';
-    }
+    reader.readAsDataURL(file);
   };
-  
-  // Update transformation when values change
-  useEffect(() => {
-    applyTransformation();
-    
-    // Save to localStorage
-    const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    if (savedFloorPlans[drawingId]) {
-      savedFloorPlans[drawingId].transformation = {
-        rotation,
-        scale,
-        position
-      };
-      localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
-    }
-  }, [rotation, scale, position, drawingId]);
-  
-  // Handle rotation
-  const handleRotateLeft = () => {
-    setRotation(prev => prev - 15);
-  };
-  
-  const handleRotateRight = () => {
-    setRotation(prev => prev + 15);
-  };
-  
-  // Handle zoom
-  const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.1, 3));
-  };
-  
-  const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.2));
-  };
-  
-  // Handle fit to borders
+
   const handleFitToBorders = () => {
-    if (!coordinates || coordinates.length === 0) return;
+    if (!imageContainerRef.current || !imageRef.current) return;
     
-    // Reset rotation and scale
-    setScale(1);
-    setRotation(0);
+    const container = imageContainerRef.current.getBoundingClientRect();
+    const image = imageRef.current;
     
-    toast.success('Floor plan fit to shape borders');
+    const newScale = calculateFitScale(
+      container.width,
+      container.height,
+      image.naturalWidth,
+      image.naturalHeight
+    );
+    
+    handleUpdateScale(newScale);
+    setPosition({ x: 0, y: 0 });
+    toast.success('Image fit to borders');
   };
-  
-  // Handle reset
-  const handleReset = () => {
-    setRotation(0);
-    setScale(1);
-    toast.info('Floor plan reset');
+
+  // Drag handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
   };
-  
-  if (!showControls) return null;
-  
-  return (
-    <div className="absolute top-20 left-4 z-[1000] bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-md">
-      <div className="flex gap-1">
-        <Button variant="outline" size="icon" onClick={handleRotateLeft} title="Rotate Left">
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleRotateRight} title="Rotate Right">
-          <RotateCw className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleZoomIn} title="Zoom In">
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleZoomOut} title="Zoom Out">
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleFitToBorders} title="Fit to Borders">
-          <Maximize2 className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleReset} title="Reset">
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="flex items-center gap-2 mt-2">
-        <span className="text-xs">Scale:</span>
-        <Slider 
-          value={[scale]} 
-          min={0.2} 
-          max={3} 
-          step={0.05} 
-          className="w-32"
-          onValueChange={(values) => setScale(values[0])}
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    
+    setPosition({ x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      saveTransformation();
+    }
+  };
+
+  if (!selectedImage) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-black/5">
+        <FloorPlanUpload
+          onBack={onBack}
+          onFileSelect={handleFileUpload}
+          selectedImage={selectedImage}
         />
-        <span className="text-xs">{Math.round(scale * 100)}%</span>
+        <div className="p-8 border-2 border-dashed border-gray-300 rounded-lg bg-white/80">
+          <div className="flex flex-col items-center gap-4">
+            <Upload className="h-12 w-12 text-gray-400" />
+            <h3 className="text-lg font-medium">Upload Floor Plan</h3>
+            <p className="text-gray-600 text-center max-w-md">
+              Click the Upload Floor Plan button above to add a floor plan image or PDF
+            </p>
+            <Button 
+              onClick={() => {
+                const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                if (fileInput) fileInput.click();
+              }}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Select File
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="relative w-full h-full"
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      <FloorPlanUpload
+        onBack={onBack}
+        onFileSelect={handleFileUpload}
+        selectedImage={selectedImage}
+      />
+
+      {!isPdf && (
+        <FloorPlanControls
+          scale={scale}
+          onRotateLeft={handleRotateLeft}
+          onRotateRight={handleRotateRight}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onFitToBorders={handleFitToBorders}
+          onReset={handleReset}
+          onScaleChange={handleUpdateScale}
+        />
+      )}
+      
+      <div className="w-full h-full flex items-center justify-center bg-black/5">
+        <div className="space-y-4 text-center max-w-[90%]">
+          <h2 className="text-xl font-semibold">
+            {drawing?.properties?.name || 'Floor Plan View'} 
+            {fileName && <span className="text-sm font-normal ml-2 text-gray-500">({fileName})</span>}
+          </h2>
+          
+          {isPdf ? (
+            <div className="w-full max-h-[75vh] overflow-hidden rounded-lg shadow-lg border border-gray-200">
+              <iframe 
+                src={selectedImage} 
+                className="w-full h-[70vh]" 
+                title="PDF Floor Plan"
+              />
+            </div>
+          ) : (
+            <div 
+              ref={imageContainerRef}
+              className="max-h-[70vh] max-w-full overflow-hidden rounded-lg shadow-lg border border-gray-200 bg-gray-50 relative"
+              style={{
+                width: "90%",
+                height: "70vh",
+                margin: "0 auto"
+              }}
+            >
+              <div
+                className={`absolute cursor-${isDragging ? 'grabbing' : 'grab'}`}
+                style={{
+                  transform: `translate(${position.x}px, ${position.y}px) rotate(${rotation}deg) scale(${scale})`,
+                  transformOrigin: 'center center',
+                  transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+              >
+                <img
+                  ref={imageRef}
+                  src={selectedImage}
+                  alt="Floor Plan"
+                  className="max-h-[70vh] max-w-full object-contain"
+                  style={{ pointerEvents: 'none' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
