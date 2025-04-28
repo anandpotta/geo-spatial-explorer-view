@@ -8,7 +8,7 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -57,6 +57,7 @@ const MapView = ({
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
+  const drawingControlsRef = useRef(null);
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
@@ -115,6 +116,7 @@ const MapView = ({
           activeTool={activeTool}
           onRegionClick={handleRegionClick}
           onClearAll={onClearAll}
+          ref={drawingControlsRef}
         />
         
         <MarkersContainer
