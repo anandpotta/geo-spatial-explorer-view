@@ -3,7 +3,6 @@ import React from 'react';
 import { Marker } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
-import L from 'leaflet';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -11,7 +10,7 @@ interface UserMarkerProps {
 }
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
-  const handleDragEnd = (e: L.DragEndEvent) => {
+  const handleDragEnd = (e: any) => {
     const updatedMarker = e.target;
     const newPosition = updatedMarker.getLatLng();
     
@@ -41,13 +40,6 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       eventHandlers={{
         dragend: handleDragEnd
       }}
-      // Add unique identification to the marker DOM element
-      icon={L.divIcon({
-        className: `custom-marker marker-${marker.id}`,
-        html: `<div class="marker-inner" data-marker-id="${marker.id}"></div>`,
-        iconSize: L.point(25, 41),
-        iconAnchor: L.point(12, 41)
-      })}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
     </Marker>

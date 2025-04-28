@@ -1,16 +1,16 @@
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
+import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
-import EditControlWrapper from './drawing/EditControlWrapper';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
-  onClearAll?: () => void;
+  onClearAll?: () => void; // Add onClearAll prop
 }
 
 const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
@@ -52,43 +52,6 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
       }
     }
   }, [activeTool]);
-  
-  // Add a special handler for clear all
-  const handleClearAllLayers = useCallback(() => {
-    // If we have access to the edit control, clear all its layers
-    if (editControlRef.current && editControlRef.current.leafletElement) {
-      try {
-        const { map } = editControlRef.current.leafletElement;
-        const featureGroup = editControlRef.current.leafletElement.options.edit.featureGroup;
-        
-        // Clear the feature group
-        if (featureGroup) {
-          featureGroup.clearLayers();
-        }
-      } catch (err) {
-        console.warn('Error clearing drawing layers:', err);
-      }
-    }
-    
-    // Call the parent onClearAll if provided
-    if (onClearAll) {
-      onClearAll();
-    }
-  }, [onClearAll]);
-  
-  // Listen for external clear all events
-  useEffect(() => {
-    const handleClearEvent = () => {
-      handleClearAllLayers();
-    };
-    
-    // Use a custom event name to avoid circular calls
-    window.addEventListener('mapLayersClearEvent', handleClearEvent);
-    
-    return () => {
-      window.removeEventListener('mapLayersClearEvent', handleClearEvent);
-    };
-  }, [handleClearAllLayers]);
 
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
@@ -130,7 +93,7 @@ const DrawTools = ({ onCreated, activeTool, onClearAll }: DrawToolsProps) => {
   };
 
   return (
-    <EditControlWrapper
+    <EditControl
       ref={editControlRef}
       position="topright"
       onCreated={handleCreated}
