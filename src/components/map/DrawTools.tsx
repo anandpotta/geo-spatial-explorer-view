@@ -117,10 +117,13 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
       edit={{
         remove: false, // Disable built-in remove button since we're using our own
         edit: {
+          // Fix for maintainColor - using only valid PathOptions properties
           selectedPathOptions: {
-            maintainColor: true,
+            color: "#fe57a1", // Use a distinctive color for edit mode
             opacity: 0.7,
-            fillOpacity: 0.3
+            fillOpacity: 0.3,
+            dashArray: "10, 10", // Add dashed lines to indicate edit mode
+            weight: 3
           }
         }
       }}
