@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
@@ -7,6 +6,8 @@ import { useDrawings } from '@/hooks/useDrawings';
 import DrawTools from './DrawTools';
 import LayerManager from './drawing/LayerManager';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
+import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawingControlsProps {
@@ -41,7 +42,6 @@ const DrawingControls = forwardRef(({
     getDrawTools: () => drawToolsRef.current
   }));
   
-  // Set up event listener for floor plan updates
   useEffect(() => {
     getDrawingIdsWithFloorPlans();
     
@@ -63,12 +63,34 @@ const DrawingControls = forwardRef(({
     };
   }, []);
 
-  // Initialize feature group ref when it's available
   useEffect(() => {
     if (featureGroupRef.current && !isInitialized) {
       setIsInitialized(true);
     }
   }, [featureGroupRef.current]);
+
+  const handleClearAll = () => {
+    if (featureGroupRef.current) {
+      featureGroupRef.current.clearLayers();
+      
+      const markers = getSavedMarkers();
+      markers.forEach(marker => {
+        deleteMarker(marker.id);
+      });
+      
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('savedDrawings');
+      
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      
+      if (onClearAll) {
+        onClearAll();
+      }
+      
+      toast.success('All drawings and markers cleared');
+    }
+  };
 
   const handleRemoveShape = (drawingId: string) => {
     if (onRemoveShape) {
@@ -91,7 +113,7 @@ const DrawingControls = forwardRef(({
         ref={drawToolsRef}
         onCreated={onCreated} 
         activeTool={activeTool} 
-        onClearAll={onClearAll} 
+        onClearAll={handleClearAll}
       />
     </FeatureGroup>
   );
