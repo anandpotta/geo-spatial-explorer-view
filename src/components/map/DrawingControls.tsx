@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -34,27 +34,41 @@ const DrawingControls = forwardRef(({
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
   const mountedRef = useRef<boolean>(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current
   }));
   
+  // Set up event listener for floor plan updates
   useEffect(() => {
     getDrawingIdsWithFloorPlans();
     
     const handleFloorPlanUpdated = () => {
       if (featureGroupRef.current && mountedRef.current) {
-        featureGroupRef.current.clearLayers();
+        try {
+          featureGroupRef.current.clearLayers();
+        } catch (err) {
+          console.error('Error clearing layers on floor plan update:', err);
+        }
       }
     };
     
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    
     return () => {
       mountedRef.current = false;
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
   }, []);
+
+  // Initialize feature group ref when it's available
+  useEffect(() => {
+    if (featureGroupRef.current && !isInitialized) {
+      setIsInitialized(true);
+    }
+  }, [featureGroupRef.current]);
 
   const handleRemoveShape = (drawingId: string) => {
     if (onRemoveShape) {
@@ -64,7 +78,7 @@ const DrawingControls = forwardRef(({
 
   return (
     <FeatureGroup ref={featureGroupRef}>
-      {featureGroupRef.current && (
+      {featureGroupRef.current && isInitialized && (
         <LayerManager 
           featureGroup={featureGroupRef.current}
           savedDrawings={savedDrawings}

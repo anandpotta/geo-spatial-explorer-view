@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
@@ -8,7 +8,7 @@ import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-dr
 import { deleteDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import RemoveButton from './RemoveButton';
-import { ReactDOM } from './ReactDOMUtils';
+import ReactDOM from 'react-dom/client';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -25,6 +25,16 @@ const LayerManager = ({
   onRegionClick,
   onRemoveShape 
 }: LayerManagerProps) => {
+  // Track mounted state to avoid updates after component unmount
+  const isMountedRef = useRef(true);
+  
+  // Clean up all React portals and event listeners
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const handleRemoveShape = (drawingId: string) => {
     if (!drawingId) {
       console.warn('Missing drawing ID for removal');
@@ -40,7 +50,7 @@ const LayerManager = ({
   };
 
   const updateLayers = () => {
-    if (!featureGroup) return;
+    if (!featureGroup || !isMountedRef.current) return;
     
     // Clear existing layers safely
     try {
@@ -54,7 +64,7 @@ const LayerManager = ({
     const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
     
     savedDrawings.forEach(drawing => {
-      if (drawing.geoJSON) {
+      if (drawing.geoJSON && isMountedRef.current) {
         try {
           const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
           const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
@@ -70,18 +80,18 @@ const LayerManager = ({
           
           if (layer) {
             layer.eachLayer((l: L.Layer) => {
-              if (l) {
+              if (l && isMountedRef.current) {
                 // Ensure each layer has the drawingId
-                l.drawingId = drawing.id;
+                (l as any).drawingId = drawing.id;
                 
                 // Add remove button in edit mode
-                if (activeTool === 'edit') {
+                if (activeTool === 'edit' && isMountedRef.current) {
                   // Get the center point for the remove button
                   let buttonPosition;
                   if ('getLatLng' in l) {
                     buttonPosition = (l as L.Marker).getLatLng();
                   } else if ('getBounds' in l) {
-                    buttonPosition = (l as L.Polygon).getBounds().getNorthEast();
+                    buttonPosition = (l as any).getBounds().getNorthEast();
                   }
                   
                   if (buttonPosition) {
@@ -95,33 +105,43 @@ const LayerManager = ({
                       zIndexOffset: 1000
                     });
                     
-                    buttonLayer.addTo(featureGroup);
-                    
-                    // Use setTimeout to ensure the DOM element is available
-                    setTimeout(() => {
-                      const container = document.querySelector('.remove-button-placeholder');
-                      if (container && ReactDOM && ReactDOM.createRoot) {
-                        const root = ReactDOM.createRoot(container);
-                        root.render(
-                          <RemoveButton 
-                            onClick={() => handleRemoveShape(drawing.id)} 
-                          />
-                        );
-                      }
-                    }, 0);
+                    // Add the button layer to the feature group
+                    if (isMountedRef.current) {
+                      buttonLayer.addTo(featureGroup);
+                      
+                      // Use setTimeout to ensure the DOM element is available
+                      setTimeout(() => {
+                        const container = document.querySelector('.remove-button-placeholder');
+                        if (container && isMountedRef.current) {
+                          try {
+                            const root = ReactDOM.createRoot(container as HTMLElement);
+                            root.render(
+                              <RemoveButton onClick={() => handleRemoveShape(drawing.id)} />
+                            );
+                          } catch (err) {
+                            console.error('Error rendering remove button:', err);
+                          }
+                        }
+                      }, 0);
+                    }
                   }
                 }
                 
                 // Add click handler for region
-                if (onRegionClick) {
+                if (onRegionClick && isMountedRef.current) {
                   l.on('click', () => {
-                    onRegionClick(drawing);
+                    if (isMountedRef.current) {
+                      onRegionClick(drawing);
+                    }
                   });
                 }
               }
             });
             
-            layer.addTo(featureGroup);
+            // Add the layer to the feature group
+            if (isMountedRef.current) {
+              layer.addTo(featureGroup);
+            }
           }
         } catch (err) {
           console.error('Error adding drawing layer:', err);
@@ -130,9 +150,23 @@ const LayerManager = ({
     });
   };
 
+  // Update layers when savedDrawings or activeTool changes
   useEffect(() => {
-    if (!featureGroup || !savedDrawings.length) return;
+    if (!featureGroup || !isMountedRef.current) return;
+    
+    console.log('Updating layers, active tool:', activeTool);
     updateLayers();
+    
+    return () => {
+      // Cleanup function to ensure we don't update layers after unmount
+      if (featureGroup && featureGroup.clearLayers) {
+        try {
+          featureGroup.clearLayers();
+        } catch (err) {
+          console.error('Error clearing layers on unmount:', err);
+        }
+      }
+    };
   }, [savedDrawings, activeTool]);
 
   return null;
