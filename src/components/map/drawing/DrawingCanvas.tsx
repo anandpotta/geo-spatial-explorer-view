@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -17,78 +17,84 @@ interface DrawingCanvasProps {
   drawingsWithFloorPlans: DrawingData[];
 }
 
-const DrawingCanvas = ({
-  onCreated,
-  activeTool,
-  onRegionClick,
-  onClearAll,
-  savedDrawings,
-  drawingsWithFloorPlans
-}: DrawingCanvasProps) => {
-  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
-  const drawToolsRef = useRef<any>(null);
+// Extend the Layer interface to include drawingId property
+declare module 'leaflet' {
+  interface Layer {
+    drawingId?: string;
+  }
+}
 
-  useEffect(() => {
-    if (!featureGroupRef.current || !savedDrawings.length) return;
-    
-    featureGroupRef.current.clearLayers();
-    const markers = getSavedMarkers();
-    
-    savedDrawings.forEach(drawing => {
-      if (drawing.geoJSON) {
-        try {
-          const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
-          
-          if (layer) {
-            layer.eachLayer((l: L.Layer) => {
-              if (l) {
-                l.drawingId = drawing.id;
-                
-                if (onRegionClick) {
-                  l.on('click', () => {
-                    onRegionClick(drawing);
-                  });
-                }
-              }
-            });
-            
-            layer.addTo(featureGroupRef.current!);
-          }
-        } catch (err) {
-          console.error('Error adding drawing layer:', err);
-        }
-      }
-    });
-  }, [savedDrawings, onRegionClick]);
+const DrawingCanvas = forwardRef<{ featureGroupRef: React.RefObject<L.FeatureGroup | null>, drawToolsRef: React.RefObject<any> }, DrawingCanvasProps>(
+  ({ onCreated, activeTool, onRegionClick, onClearAll, savedDrawings, drawingsWithFloorPlans }, ref) => {
+    const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+    const drawToolsRef = useRef<any>(null);
 
-  return (
-    <FeatureGroup ref={featureGroupRef}>
-      <DrawTools 
-        ref={drawToolsRef}
-        onCreated={onCreated} 
-        activeTool={activeTool} 
-        onClearAll={onClearAll} 
-      />
+    // Forward refs using useImperativeHandle is now handled in the parent component
+
+    useEffect(() => {
+      if (!featureGroupRef.current || !savedDrawings.length) return;
       
-      {drawingsWithFloorPlans.map(drawing => {
-        const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-        const floorPlan = floorPlans[drawing.id];
-        
-        if (floorPlan && floorPlan.data && !floorPlan.isPdf && drawing.coordinates) {
-          return (
-            <OverlayFloorPlan 
-              key={drawing.id}
-              drawingId={drawing.id}
-              coordinates={drawing.coordinates}
-              floorPlanUrl={floorPlan.data}
-              onBack={() => {}} // Add empty onBack handler to fix build error
-            />
-          );
+      featureGroupRef.current.clearLayers();
+      const markers = getSavedMarkers();
+      
+      savedDrawings.forEach(drawing => {
+        if (drawing.geoJSON) {
+          try {
+            const layer = createDrawingLayer(drawing, getDefaultDrawingOptions(drawing.properties.color));
+            
+            if (layer) {
+              layer.eachLayer((l: L.Layer) => {
+                if (l) {
+                  l.drawingId = drawing.id;
+                  
+                  if (onRegionClick) {
+                    l.on('click', () => {
+                      onRegionClick(drawing);
+                    });
+                  }
+                }
+              });
+              
+              layer.addTo(featureGroupRef.current!);
+            }
+          } catch (err) {
+            console.error('Error adding drawing layer:', err);
+          }
         }
-        return null;
-      })}
-    </FeatureGroup>
-  );
-};
+      });
+    }, [savedDrawings, onRegionClick]);
+
+    return (
+      <FeatureGroup ref={featureGroupRef}>
+        <DrawTools 
+          ref={drawToolsRef}
+          onCreated={onCreated} 
+          activeTool={activeTool} 
+          onClearAll={onClearAll} 
+        />
+        
+        {drawingsWithFloorPlans.map(drawing => {
+          const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+          const floorPlan = floorPlans[drawing.id];
+          
+          if (floorPlan && floorPlan.data && !floorPlan.isPdf && drawing.coordinates) {
+            return (
+              <OverlayFloorPlan 
+                key={drawing.id}
+                drawingId={drawing.id}
+                coordinates={drawing.coordinates}
+                floorPlanUrl={floorPlan.data}
+                onBack={() => {}} // Add empty onBack handler to fix build error
+              />
+            );
+          }
+          return null;
+        })}
+      </FeatureGroup>
+    );
+  }
+);
+
+DrawingCanvas.displayName = 'DrawingCanvas';
 
 export default DrawingCanvas;

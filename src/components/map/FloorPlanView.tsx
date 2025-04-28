@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
 import { useImageTransform } from '@/hooks/useImageTransform';
+import { calculateFitScale } from '@/utils/image-transform-utils'; // Import the missing function
 import FloorPlanControls from './FloorPlanControls';
 import FloorPlanUpload from './FloorPlanUpload';
 import EmptyFloorPlanState from './EmptyFloorPlanState';

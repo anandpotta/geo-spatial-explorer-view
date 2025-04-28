@@ -20,7 +20,7 @@ const DrawingControls = forwardRef(({
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
   const [drawingsWithFloorPlans, setDrawingsWithFloorPlans] = useState<DrawingData[]>([]);
-  const canvasRef = useRef<any>(null);
+  const canvasRef = useRef<{ featureGroupRef: React.RefObject<any>, drawToolsRef: React.RefObject<any> }>(null);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => canvasRef.current?.featureGroupRef.current,
