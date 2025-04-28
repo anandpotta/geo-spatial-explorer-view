@@ -1,23 +1,40 @@
 
 import { useState, useEffect } from 'react';
 import { DrawingData, getSavedDrawings } from '@/utils/drawing-utils';
+import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 
 export function useDrawings() {
   const [savedDrawings, setSavedDrawings] = useState<DrawingData[]>([]);
+  const [drawingsWithFloorPlans, setDrawingsWithFloorPlans] = useState<string[]>([]);
   
   useEffect(() => {
     const loadDrawings = () => {
       const drawings = getSavedDrawings();
       setSavedDrawings(drawings);
+      setDrawingsWithFloorPlans(getDrawingIdsWithFloorPlans());
     };
     
     loadDrawings();
     
-    window.addEventListener('storage', loadDrawings);
-    return () => window.removeEventListener('storage', loadDrawings);
+    const handleStorageChange = () => {
+      loadDrawings();
+    };
+    
+    const handleFloorPlanUpdated = () => {
+      setDrawingsWithFloorPlans(getDrawingIdsWithFloorPlans());
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    };
   }, []);
 
   return {
-    savedDrawings
+    savedDrawings,
+    drawingsWithFloorPlans
   };
 }

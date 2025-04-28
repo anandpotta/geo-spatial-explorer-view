@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
+import { saveFloorPlan, getFloorPlanById } from "@/utils/floor-plan-utils";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -17,12 +19,16 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   // Check if there's a saved floor plan for this building in localStorage
   useEffect(() => {
     if (drawing?.id) {
-      const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-      if (savedFloorPlans[drawing.id]) {
-        const savedData = savedFloorPlans[drawing.id];
-        setSelectedImage(savedData.data);
-        setIsPdf(savedData.isPdf);
-        setFileName(savedData.fileName);
+      const savedFloorPlan = getFloorPlanById(drawing.id);
+      if (savedFloorPlan) {
+        setSelectedImage(savedFloorPlan.data);
+        setIsPdf(savedFloorPlan.isPdf);
+        setFileName(savedFloorPlan.fileName);
+      } else {
+        // Reset state if no floor plan is found
+        setSelectedImage(null);
+        setIsPdf(false);
+        setFileName('');
       }
     }
   }, [drawing]);
@@ -43,25 +49,29 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result;
-      if (result) {
+      if (result && drawing?.id) {
         const dataUrl = result as string;
         setSelectedImage(dataUrl);
         
-        // Save to localStorage for this specific building
-        if (drawing?.id) {
-          const savedFloorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-          savedFloorPlans[drawing.id] = {
-            data: dataUrl,
-            isPdf: file.type.includes('pdf'),
-            fileName: file.name,
-            timestamp: new Date().toISOString()
-          };
-          localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
-          toast.success('Floor plan uploaded successfully');
-        }
+        // Save to utils for this specific building
+        saveFloorPlan(
+          drawing.id,
+          dataUrl,
+          file.type.includes('pdf'),
+          file.name
+        );
+        
+        toast.success('Floor plan uploaded successfully');
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  // Helper function to calculate proper scaling for the image
+  const calculateFitScale = (imgWidth: number, imgHeight: number, containerWidth: number, containerHeight: number) => {
+    const widthRatio = containerWidth / imgWidth;
+    const heightRatio = containerHeight / imgHeight;
+    return Math.min(widthRatio, heightRatio, 1); // Never scale up, only down
   };
 
   return (
@@ -118,6 +128,19 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
                 src={selectedImage}
                 alt="Floor Plan"
                 className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
+                onLoad={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  const container = img.parentElement?.parentElement;
+                  if (container) {
+                    const containerWidth = container.clientWidth * 0.9;
+                    const containerHeight = container.clientHeight * 0.7;
+                    const scale = calculateFitScale(img.naturalWidth, img.naturalHeight, containerWidth, containerHeight);
+                    if (scale < 1) {
+                      img.style.maxWidth = `${img.naturalWidth * scale}px`;
+                      img.style.maxHeight = `${img.naturalHeight * scale}px`;
+                    }
+                  }
+                }}
               />
             )}
           </div>
