@@ -1,9 +1,8 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
-import { deleteDrawing, getSavedDrawings } from '@/utils/drawing';
+import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -15,7 +14,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { DrawingData } from '@/utils/drawing';
 
 interface Position {
   x: number;

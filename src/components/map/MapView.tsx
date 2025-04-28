@@ -1,14 +1,15 @@
+
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
 import MapEvents from './MapEvents';
-import { LocationMarker } from '@/utils/geo-utils';
+import { LocationMarker } from '@/utils/marker-utils';
 import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
 import { useState, useRef } from 'react';
-import { DrawingData } from '@/utils/drawing';
+import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
