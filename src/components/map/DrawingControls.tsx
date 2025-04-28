@@ -99,8 +99,15 @@ const DrawingControls = forwardRef(({
     }
   };
 
+  // Make sure we get the feature group ref from the FeatureGroup component
+  const setFeatureGroupRef = (ref: L.FeatureGroup) => {
+    if (ref && !featureGroupRef.current) {
+      featureGroupRef.current = ref;
+    }
+  };
+
   return (
-    <FeatureGroup ref={featureGroupRef}>
+    <FeatureGroup ref={setFeatureGroupRef}>
       {featureGroupRef.current && isInitialized && (
         <LayerManager 
           featureGroup={featureGroupRef.current}

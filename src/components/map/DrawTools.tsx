@@ -57,7 +57,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         } : false,
         remove: activeTool === 'edit'
       }}
-      featureGroup={featureGroupRef.current}
+      // Pass the feature group as a prop to EditControl
+      onMounted={(drawControl) => {
+        // This is the correct way to associate the feature group
+        if (drawControl && featureGroupRef.current) {
+          // Associate the feature group with the draw control
+          drawControl.options.edit.featureGroup = featureGroupRef.current;
+        }
+      }}
     />
   );
 });
