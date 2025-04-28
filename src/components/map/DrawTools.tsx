@@ -116,7 +116,13 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
       }}
       edit={{
         remove: false, // Disable built-in remove button since we're using our own
-        edit: true
+        edit: {
+          selectedPathOptions: {
+            maintainColor: true,
+            opacity: 0.7,
+            fillOpacity: 0.3
+          }
+        }
       }}
     />
   );

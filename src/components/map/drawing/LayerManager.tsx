@@ -79,9 +79,9 @@ const LayerManager = ({
                   // Get the center point for the remove button
                   let buttonPosition;
                   if ('getLatLng' in l) {
-                    buttonPosition = l.getLatLng();
+                    buttonPosition = (l as L.Marker).getLatLng();
                   } else if ('getBounds' in l) {
-                    buttonPosition = l.getBounds().getNorthEast();
+                    buttonPosition = (l as L.Polygon).getBounds().getNorthEast();
                   }
                   
                   if (buttonPosition) {
@@ -100,7 +100,7 @@ const LayerManager = ({
                     // Use setTimeout to ensure the DOM element is available
                     setTimeout(() => {
                       const container = document.querySelector('.remove-button-placeholder');
-                      if (container) {
+                      if (container && ReactDOM && ReactDOM.createRoot) {
                         const root = ReactDOM.createRoot(container);
                         root.render(
                           <RemoveButton 
