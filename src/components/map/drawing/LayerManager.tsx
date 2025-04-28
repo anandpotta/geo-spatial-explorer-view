@@ -27,6 +27,7 @@ const LayerManager = ({
 }: LayerManagerProps) => {
   const isMountedRef = useRef(true);
   const removeButtonRoots = useRef<Map<string, any>>(new Map());
+  const layersRef = useRef<Map<string, L.Layer>>(new Map());
 
   useEffect(() => {
     return () => {
@@ -40,6 +41,7 @@ const LayerManager = ({
         }
       });
       removeButtonRoots.current.clear();
+      layersRef.current.clear();
     };
   }, []);
 
@@ -71,6 +73,7 @@ const LayerManager = ({
         }
       });
       removeButtonRoots.current.clear();
+      layersRef.current.clear();
       
       const markers = getSavedMarkers();
       const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
@@ -88,12 +91,19 @@ const LayerManager = ({
               options.color = '#1d4ed8';
             }
             
+            // Always ensure opacity is set to visible values
+            options.opacity = 1;
+            options.fillOpacity = options.fillOpacity || 0.2;
+            
             const layer = createDrawingLayer(drawing, options);
             
             if (layer) {
               layer.eachLayer((l: L.Layer) => {
                 if (l && isMountedRef.current) {
                   (l as any).drawingId = drawing.id;
+                  
+                  // Store the layer reference
+                  layersRef.current.set(drawing.id, l);
                   
                   // Always add the remove button when in edit mode
                   if (activeTool === 'edit' && isMountedRef.current) {
@@ -156,6 +166,21 @@ const LayerManager = ({
       console.error('Error updating layers:', err);
     }
   };
+
+  // Listen for marker updates to ensure drawings stay visible
+  useEffect(() => {
+    const handleMarkerUpdated = () => {
+      if (isMountedRef.current) {
+        // Small delay to ensure storage is updated first
+        setTimeout(updateLayers, 50);
+      }
+    };
+    
+    window.addEventListener('markersUpdated', handleMarkerUpdated);
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkerUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     if (!featureGroup || !isMountedRef.current) return;

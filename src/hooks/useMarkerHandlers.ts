@@ -28,13 +28,17 @@ export function useMarkerHandlers(mapState: any) {
       // Create a safe copy of the shape without potential circular references
       const safeShape = {
         type: shape.type,
-        id: shape.id,
+        id: shape.id || crypto.randomUUID(), // Ensure there's always an ID
         coordinates: shape.coordinates || [],
         // If geoJSON exists, create a clean copy
         geoJSON: shape.geoJSON ? {
           type: shape.geoJSON.type,
           geometry: shape.geoJSON.geometry,
           properties: shape.geoJSON.properties || {}
+        } : shape.layer ? {
+          type: "Feature",
+          geometry: shape.layer.toGeoJSON().geometry,
+          properties: {}
         } : undefined,
         options: shape.options || {},
         properties: shape.properties || {
@@ -44,7 +48,12 @@ export function useMarkerHandlers(mapState: any) {
         }
       };
       
+      // Store the safe shape in the current drawing
       mapState.setCurrentDrawing(safeShape);
+      
+      // Also immediately save the drawing to prevent loss
+      saveDrawing(safeShape);
+      
       toast.success(`${shape.type} created - Click to tag this building`);
     }
   };
