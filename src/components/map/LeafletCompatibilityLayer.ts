@@ -9,16 +9,32 @@ export const EditControl = React.forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Ensure edit is properly formatted as an object, not a boolean
-  const editOptions = typeof edit === 'boolean' ? {
-    edit: edit,
-    featureGroup: featureGroup
-  } : {
-    ...(edit || {}),
-    featureGroup: featureGroup
-  };
+  // Format the edit options properly - this is where the fix is needed
+  let editOptions;
+  
+  // Handle different types of edit parameters
+  if (typeof edit === 'boolean') {
+    // If edit is a boolean, create a proper object structure
+    editOptions = {
+      edit: edit,
+      featureGroup: featureGroup
+    };
+  } else if (edit && typeof edit === 'object') {
+    // If edit is an object, merge with featureGroup
+    editOptions = {
+      ...edit,
+      featureGroup: featureGroup
+    };
+  } else {
+    // Default case if edit is undefined or null
+    editOptions = {
+      edit: false,
+      featureGroup: featureGroup
+    };
+  }
   
   // Return the original EditControl with proper prop structure
+  // Important: Do not pass featureGroup at top level as it causes confusion
   return React.createElement(OriginalEditControl, {
     ...otherProps,
     edit: editOptions,
