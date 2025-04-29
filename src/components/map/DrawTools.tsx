@@ -22,9 +22,42 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const handleCreated = (e: any) => {
     try {
       const { layerType, layer } = e;
-      if (layer) {
-        onCreated({ type: layerType, layer });
+      
+      if (!layer) {
+        console.error('No layer created');
+        return;
       }
+      
+      // Create a properly structured shape object
+      let shape: any = { type: layerType, layer };
+      
+      // For markers, extract position information
+      if (layerType === 'marker' && layer.getLatLng) {
+        const position = layer.getLatLng();
+        shape.position = [position.lat, position.lng];
+      }
+      
+      // For polygons, rectangles, and circles
+      else if (['polygon', 'rectangle', 'circle'].includes(layerType)) {
+        // Convert to GeoJSON to have a consistent format
+        shape.geoJSON = layer.toGeoJSON();
+        
+        // Extract coordinates based on shape type
+        if (layerType === 'polygon' || layerType === 'rectangle') {
+          const latLngs = layer.getLatLngs();
+          if (Array.isArray(latLngs) && latLngs.length > 0) {
+            // Handle potentially nested arrays (multi-polygons)
+            const firstRing = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
+            shape.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng]);
+          }
+        } else if (layerType === 'circle') {
+          const center = layer.getLatLng();
+          shape.coordinates = [[center.lat, center.lng]];
+          shape.radius = layer.getRadius();
+        }
+      }
+      
+      onCreated(shape);
     } catch (err) {
       console.error('Error handling created shape:', err);
       toast.error('Error creating shape');
@@ -45,22 +78,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
-        edit: {
-          selectedPathOptions: {
-            color: "#fe57a1",
-            opacity: 0.6,
-            fillOpacity: 0.3,
-            dashArray: "10, 10",
-            weight: 3
-          }
-        },
-        remove: true
-      }}
-      onMounted={(drawControl) => {
-        if (drawControl) {
-          // This is the critical part - directly setting the featureGroup property
-          drawControl.options.edit.featureGroup = featureGroup;
-        }
+        edit: true,
+        remove: true,
+        featureGroup: featureGroup
       }}
     />
   );

@@ -17,13 +17,24 @@ export function useMarkerHandlers(mapState: any) {
 
   const handleShapeCreated = (shape: any) => {
     if (shape.type === 'marker') {
-      // Ensure we get the precise coordinates
-      const exactPosition: [number, number] = [
-        shape.position[0],
-        shape.position[1]
-      ];
-      mapState.setTempMarker(exactPosition);
-      mapState.setMarkerName('New Marker');
+      // Ensure position exists and is valid before accessing it
+      if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
+        const exactPosition: [number, number] = [
+          shape.position[0],
+          shape.position[1]
+        ];
+        mapState.setTempMarker(exactPosition);
+        mapState.setMarkerName('New Marker');
+      } else if (shape.layer && shape.layer.getLatLng) {
+        // Alternative: try to get position from the layer if available
+        const latLng = shape.layer.getLatLng();
+        mapState.setTempMarker([latLng.lat, latLng.lng]);
+        mapState.setMarkerName('New Marker');
+      } else {
+        console.error('Invalid marker position data:', shape);
+        toast.error('Could not create marker: invalid position data');
+        return;
+      }
     } else {
       // Create a safe copy of the shape without potential circular references
       const safeShape = {
