@@ -87,9 +87,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
             weight: 3
           }
         },
-        remove: true,
-        featureGroup: featureGroup
+        remove: true
       }}
+      featureGroup={featureGroup}
     />
   );
 });
