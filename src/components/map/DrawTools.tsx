@@ -55,8 +55,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
             weight: 3
           }
         },
-        remove: true,
-        featureGroup: featureGroupRef.current
+        remove: true
       }}
       onMounted={(drawControl) => {
         if (drawControl && featureGroupRef.current) {
