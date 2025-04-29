@@ -78,7 +78,15 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
-        edit: true,
+        edit: {
+          selectedPathOptions: {
+            color: "#fe57a1",
+            opacity: 0.6,
+            fillOpacity: 0.3,
+            dashArray: "10, 10",
+            weight: 3
+          }
+        },
         remove: true,
         featureGroup: featureGroup
       }}
