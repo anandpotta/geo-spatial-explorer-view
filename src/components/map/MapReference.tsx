@@ -42,7 +42,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
                   internalMap._panes && 
                   internalMap._panes.mapPane) {
                 console.log('Map panes initialized, calling invalidateSize');
-                map.invalidateSize();
+                map.invalidateSize(true);
               } else {
                 console.log('Map panes not fully initialized yet, skipping invalidateSize');
               }
@@ -52,6 +52,20 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             
             console.log('Map container verified, calling onMapReady');
             onMapReady(map);
+            
+            // Additional size invalidations after different timeouts
+            const additionalTimings = [500, 1500, 3000];
+            additionalTimings.forEach(timing => {
+              setTimeout(() => {
+                if (map && !map.remove['_leaflet_id']) {
+                  try {
+                    map.invalidateSize(true);
+                  } catch (err) {
+                    // Ignore errors during additional invalidations
+                  }
+                }
+              }, timing);
+            });
           } else {
             console.log('Map container not ready or not attached to DOM');
           }

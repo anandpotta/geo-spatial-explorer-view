@@ -10,10 +10,14 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const [isMapReady, setIsMapReady] = useState(false);
   const mapAttachedRef = useRef(false);
+  const validityChecksRef = useRef(0);
+  const recoveryAttemptRef = useRef(0);
   
   useEffect(() => {
     setupLeafletIcons();
     mapAttachedRef.current = false;
+    validityChecksRef.current = 0;
+    recoveryAttemptRef.current = 0;
     
     if (!document.querySelector('link[href*="leaflet.css"]')) {
       const link = document.createElement('link');
@@ -63,16 +67,33 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         // Safe check for container validity
         const container = mapRef.current.getContainer();
         const isValid = container && document.body.contains(container);
+        validityChecksRef.current += 1;
         
         // If we previously thought the map was ready but now it's not valid
         if (isMapReady && !isValid) {
           console.warn('Map container is no longer valid, marking map as not ready');
           setIsMapReady(false);
           mapAttachedRef.current = false;
+          
+          // Try recovery if we've had too many failed checks
+          if (validityChecksRef.current > 5 && recoveryAttemptRef.current < 2) {
+            console.log('Attempting to recover map after multiple failed validity checks');
+            recoveryAttemptRef.current += 1;
+            setTimeout(() => {
+              if (mapRef.current) {
+                try {
+                  mapRef.current.invalidateSize(true);
+                } catch (err) {
+                  // Ignore errors during recovery
+                }
+              }
+            }, 500);
+          }
         }
         
         // If we know the map is attached but it's not marked as ready
         if (mapAttachedRef.current && !isMapReady) {
+          console.log('Map is attached but not marked as ready, fixing state');
           setIsMapReady(true);
         }
       } catch (err) {
@@ -86,7 +107,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     };
     
     // Check validity less frequently to reduce overhead
-    const interval = setInterval(checkMapValidity, 2000);
+    const interval = setInterval(checkMapValidity, 3000);
     
     return () => {
       clearInterval(interval);
@@ -108,16 +129,27 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         mapRef.current = map;
         mapAttachedRef.current = true;
         
-        setTimeout(() => {
-          if (mapRef.current) {
-            try {
-              mapRef.current.invalidateSize(true);
-              setIsMapReady(true);
-            } catch (err) {
-              console.warn('Error invalidating map size:', err);
+        // Reset counters when we get a valid map
+        validityChecksRef.current = 0;
+        recoveryAttemptRef.current = 0;
+        
+        // Sequence of invalidation attempts to ensure the map is fully initialized
+        const invalidateTimings = [300, 800, 1500, 3000];
+        invalidateTimings.forEach((timing, index) => {
+          setTimeout(() => {
+            if (mapRef.current) {
+              try {
+                mapRef.current.invalidateSize(true);
+                if (index === invalidateTimings.length - 1) {
+                  console.log('Final map invalidation completed, marking as ready');
+                  setIsMapReady(true);
+                }
+              } catch (err) {
+                console.warn(`Error during invalidation ${index}:`, err);
+              }
             }
-          }
-        }, 300);
+          }, timing);
+        });
         
         if (selectedLocation) {
           console.log('Flying to initial location');
@@ -135,7 +167,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
                 console.warn('Error flying to initial location:', err);
               }
             }
-          }, 500);
+          }, 2000); // Increased timeout for flying to location
         }
       } else {
         console.warn('Map container not verified, skipping reference assignment');

@@ -45,22 +45,40 @@ export function useLocationSelection(
         return;
       }
       
-      mapRef.current.flyTo(position, 18, {
-        animate: true,
-        duration: 1.5
-      });
-      
-      if (onLocationSelect) {
-        const location: Location = {
-          id: `loc-${position[0]}-${position[1]}`,
-          label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-          x: position[1],
-          y: position[0]
-        };
-        onLocationSelect(location);
+      // Add a try-catch inside the actual fly operation
+      try {
+        mapRef.current.flyTo(position, 18, {
+          animate: true,
+          duration: 1.5
+        });
+        
+        // If the fly operation succeeded, proceed with location selection
+        if (onLocationSelect) {
+          const location: Location = {
+            id: `loc-${position[0]}-${position[1]}`,
+            label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+            x: position[1],
+            y: position[0]
+          };
+          onLocationSelect(location);
+        }
+      } catch (flyError) {
+        console.error('Error during map navigation:', flyError);
+        toast.error("Navigation failed. The map may be in an invalid state.");
+        
+        // Try to recover the map state
+        setTimeout(() => {
+          if (mapRef.current) {
+            try {
+              mapRef.current.invalidateSize(true);
+            } catch (err) {
+              // Ignore recovery errors
+            }
+          }
+        }, 500);
       }
     } catch (err) {
-      console.error('Error flying to location:', err);
+      console.error('Error handling location selection:', err);
       toast.error("Could not navigate to location. Please try again.");
     }
   };
