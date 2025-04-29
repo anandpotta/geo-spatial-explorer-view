@@ -2,10 +2,10 @@
 // This file provides compatibility with newer versions of react-leaflet-draw
 // by ensuring that we can still pass certain props like featureGroup to EditControl
 import { EditControl as OriginalEditControl } from "react-leaflet-draw";
-import React from 'react';
+import React, { forwardRef } from 'react';
 
 // Create a wrapper component that forwards the ref and handles the featureGroup prop
-export const EditControl = React.forwardRef((props: any, ref: any) => {
+export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
@@ -16,11 +16,10 @@ export const EditControl = React.forwardRef((props: any, ref: any) => {
   if (typeof edit === 'boolean') {
     // If edit is a boolean, create a proper object structure
     editOptions = {
-      edit: edit,
       featureGroup: featureGroup
     };
   } else if (edit && typeof edit === 'object') {
-    // If edit is an object, merge with featureGroup
+    // If edit is an object, merge with featureGroup but don't overwrite featureGroup
     editOptions = {
       ...edit,
       featureGroup: featureGroup
@@ -28,7 +27,6 @@ export const EditControl = React.forwardRef((props: any, ref: any) => {
   } else {
     // Default case if edit is undefined or null
     editOptions = {
-      edit: false,
       featureGroup: featureGroup
     };
   }
