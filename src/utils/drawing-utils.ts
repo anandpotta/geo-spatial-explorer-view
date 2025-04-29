@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getConnectionStatus } from './api-service';
@@ -8,7 +9,7 @@ export interface DrawingData {
   coordinates: Array<[number, number]>;
   geoJSON?: any;
   options?: any;
-  svgPath?: string; // Add SVG path data
+  svgPath?: string; // SVG path data for the drawing
   properties: {
     name?: string;
     description?: string;

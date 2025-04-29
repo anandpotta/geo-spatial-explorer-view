@@ -17,14 +17,20 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   
   // Force SVG renderer instead of canvas
   useEffect(() => {
-    // Disable canvas rendering globally
-    if (L.Browser.canvas) {
-      L.Browser.canvas = false;
-    }
+    // Disable canvas rendering by modifying browser check
+    // instead of directly modifying the read-only property
+    const originalCanvas = L.Browser.canvas;
+    Object.defineProperty(L.Browser, 'canvas', {
+      value: false,
+      configurable: true
+    });
     
-    // Ensure renderers use SVG
-    L.SVG.create = (name) => {
-      return document.createElementNS("http://www.w3.org/2000/svg", name);
+    return () => {
+      // Restore original value when component unmounts
+      Object.defineProperty(L.Browser, 'canvas', {
+        value: originalCanvas,
+        configurable: true
+      });
     };
   }, []);
   
@@ -32,24 +38,35 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     getEditControl: () => editControlRef.current,
     getPathElements: () => {
       const pathElements: SVGPathElement[] = [];
-      // Find all SVG paths within the feature group container
-      const container = featureGroup.getElement();
-      if (container) {
-        const paths = container.querySelectorAll('path');
-        paths.forEach(path => {
-          pathElements.push(path);
-        });
+      // Find all SVG paths within the map container
+      if (featureGroup && featureGroup._map) {
+        const container = featureGroup._map.getContainer();
+        if (container) {
+          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+          svgElements.forEach(svg => {
+            const paths = svg.querySelectorAll('path');
+            paths.forEach(path => {
+              pathElements.push(path as SVGPathElement);
+            });
+          });
+        }
       }
       return pathElements;
     },
     getSVGPathData: () => {
       const pathData: string[] = [];
-      const container = featureGroup.getElement();
-      if (container) {
-        const paths = container.querySelectorAll('path');
-        paths.forEach(path => {
-          pathData.push(path.getAttribute('d') || '');
-        });
+      // Find all SVG paths within the map container
+      if (featureGroup && featureGroup._map) {
+        const container = featureGroup._map.getContainer();
+        if (container) {
+          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+          svgElements.forEach(svg => {
+            const paths = svg.querySelectorAll('path');
+            paths.forEach(path => {
+              pathData.push(path.getAttribute('d') || '');
+            });
+          });
+        }
       }
       return pathData;
     }

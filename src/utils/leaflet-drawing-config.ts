@@ -3,28 +3,32 @@ import L from 'leaflet';
 
 export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
   try {
-    // Force SVG renderer instead of canvas
-    if (options) {
-      options.renderer = L.svg();
+    // Create a copy of options without renderer for GeoJSON
+    const geoJSONOptions = { ...options };
+    // Remove renderer from GeoJSON options as it's not a valid property
+    if ('renderer' in geoJSONOptions) {
+      delete geoJSONOptions.renderer;
     }
     
-    const layer = L.geoJSON(drawing.geoJSON, { 
-      style: options,
-      renderer: L.svg() // Force SVG renderer
-    });
+    // Create layer with corrected options
+    const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
     
-    // Store SVG path data if available
-    if (drawing.svgPath) {
-      layer.eachLayer((l: any) => {
-        if (l._path) {
-          try {
-            l._path.setAttribute('d', drawing.svgPath);
-          } catch (err) {
-            console.error('Error setting path data:', err);
-          }
+    // After creation, apply SVG renderer to each layer
+    layer.eachLayer((l: any) => {
+      if (l && l.options) {
+        // Apply SVG renderer to the layer options
+        l.options.renderer = L.svg();
+      }
+      
+      // Store SVG path data if available
+      if (drawing.svgPath && l._path) {
+        try {
+          l._path.setAttribute('d', drawing.svgPath);
+        } catch (err) {
+          console.error('Error setting path data:', err);
         }
-      });
-    }
+      }
+    });
     
     return layer;
   } catch (error) {
@@ -87,4 +91,3 @@ export const getSVGPathFromLayer = (layer: any): string | null => {
   
   return null;
 };
-
