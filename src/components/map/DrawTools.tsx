@@ -20,17 +20,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useEffect(() => {
     // Instead of trying to modify the read-only property, configure the renderer
     // when creating layers
-    const originalCreatePath = L.Path.prototype._updatePath;
-    L.Path.prototype._updatePath = function() {
+    const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
+    const originalUpdatePath = pathPrototype._updatePath;
+    
+    pathPrototype._updatePath = function() {
       if (this.options && !this.options.renderer) {
         this.options.renderer = L.svg();
       }
-      originalCreatePath.call(this);
+      originalUpdatePath.call(this);
     };
     
     return () => {
       // Restore original function when component unmounts
-      L.Path.prototype._updatePath = originalCreatePath;
+      pathPrototype._updatePath = originalUpdatePath;
     };
   }, []);
   
