@@ -1,6 +1,5 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { EditControl } from "react-leaflet-draw";
+import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -89,7 +88,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         },
         remove: true
       }}
-      featureGroup={featureGroup}
     />
   );
 });

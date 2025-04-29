@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
-import { FeatureGroup } from 'react-leaflet';
+import { FeatureGroup, useLeaflet } from 'react-leaflet';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
