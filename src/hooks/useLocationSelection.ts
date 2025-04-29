@@ -2,6 +2,7 @@
 import { toast } from 'sonner';
 import { Location } from '@/utils/geo-utils';
 import L from 'leaflet';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 
 // Define interface for internal map properties not exposed in TypeScript definitions
 interface LeafletMapInternal extends L.Map {
@@ -15,9 +16,44 @@ export function useLocationSelection(
 ) {
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in useLocationSelection:", position);
-    if (!mapRef.current || !isMapReady) {
+    
+    // Use utility function to validate map
+    if (!mapRef.current || !isMapValid(mapRef.current) || !isMapReady) {
       console.warn("Map is not ready yet, cannot navigate");
       toast.error("Map is not fully loaded yet. Please try again in a moment.");
+      
+      // Try to recover with a delayed retry
+      setTimeout(() => {
+        if (mapRef.current && isMapValid(mapRef.current)) {
+          try {
+            console.log("Retrying location selection after delay");
+            mapRef.current.invalidateSize(true);
+            
+            // Retry the fly operation after a short delay
+            setTimeout(() => {
+              if (mapRef.current && isMapValid(mapRef.current)) {
+                mapRef.current.flyTo(position, 18, {
+                  animate: true,
+                  duration: 1.5
+                });
+                
+                if (onLocationSelect) {
+                  const location: Location = {
+                    id: `loc-${position[0]}-${position[1]}`,
+                    label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+                    x: position[1],
+                    y: position[0]
+                  };
+                  onLocationSelect(location);
+                }
+              }
+            }, 500);
+          } catch (err) {
+            console.error('Retry failed:', err);
+          }
+        }
+      }, 1000);
+      
       return;
     }
     
@@ -84,7 +120,7 @@ export function useLocationSelection(
   };
 
   const handleClearAll = () => {
-    if (mapRef.current) {
+    if (mapRef.current && isMapReady) {
       try {
         // Cast to internal map type to access private properties
         const internalMap = mapRef.current as LeafletMapInternal;
