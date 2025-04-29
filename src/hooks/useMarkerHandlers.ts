@@ -2,6 +2,7 @@
 import { toast } from 'sonner';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import L from 'leaflet';
+import { getSvgPathFromLayer } from '@/utils/leaflet-drawing-config';
 
 export function useMarkerHandlers(mapState: any) {
   const handleMapClick = (latlng: L.LatLng) => {
@@ -76,12 +77,28 @@ export function useMarkerHandlers(mapState: any) {
           properties: {}
         } : undefined,
         options: shape.options || {},
+        // Include SVG path data if available
+        svgPath: shape.svgPath,
         properties: shape.properties || {
           name: `New ${shape.type}`,
           color: '#3388ff',
           createdAt: new Date()
         }
       };
+      
+      // Log the path data for debugging
+      if (shape.svgPath) {
+        console.log(`Saved shape path: ${shape.svgPath}`);
+      } else if (shape.layer) {
+        // Try to generate path from layer if not provided
+        try {
+          const svgPath = getSvgPathFromLayer(shape.layer, shape.type);
+          safeShape.svgPath = svgPath;
+          console.log(`Generated path from layer: ${svgPath}`);
+        } catch (err) {
+          console.warn('Could not generate SVG path from layer:', err);
+        }
+      }
       
       // Store the safe shape in the current drawing
       mapState.setCurrentDrawing(safeShape);

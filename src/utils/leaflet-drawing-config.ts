@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 
 export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
@@ -36,4 +37,28 @@ export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[n
     return [[center.lat, center.lng]];
   }
   return [];
+};
+
+// New function to generate path string from coordinates
+export const getPathStringFromCoordinates = (coordinates: Array<[number, number]>): string => {
+  if (!coordinates || coordinates.length === 0) return '';
+  
+  // Start with M (move to) command for the first coordinate
+  let pathString = `M ${coordinates[0][1]},${coordinates[0][0]}`;
+  
+  // Add L (line to) commands for subsequent coordinates
+  for (let i = 1; i < coordinates.length; i++) {
+    pathString += ` L ${coordinates[i][1]},${coordinates[i][0]}`;
+  }
+  
+  // Close the path if it's a polygon (connect back to start)
+  pathString += ' Z';
+  
+  return pathString;
+};
+
+// New function to extract SVG path from Leaflet layer
+export const getSvgPathFromLayer = (layer: any, layerType: string): string => {
+  const coordinates = getCoordinatesFromLayer(layer, layerType);
+  return getPathStringFromCoordinates(coordinates);
 };
