@@ -4,6 +4,7 @@ import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { getMapFromLayer } from '@/utils/leaflet-type-utils';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -39,16 +40,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     getPathElements: () => {
       const pathElements: SVGPathElement[] = [];
       // Find all SVG paths within the map container
-      if (featureGroup && featureGroup._map) {
-        const container = featureGroup._map.getContainer();
-        if (container) {
-          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
-          svgElements.forEach(svg => {
-            const paths = svg.querySelectorAll('path');
-            paths.forEach(path => {
-              pathElements.push(path as SVGPathElement);
+      if (featureGroup) {
+        const map = getMapFromLayer(featureGroup);
+        if (map) {
+          const container = map.getContainer();
+          if (container) {
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            svgElements.forEach(svg => {
+              const paths = svg.querySelectorAll('path');
+              paths.forEach(path => {
+                pathElements.push(path as SVGPathElement);
+              });
             });
-          });
+          }
         }
       }
       return pathElements;
@@ -56,16 +60,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     getSVGPathData: () => {
       const pathData: string[] = [];
       // Find all SVG paths within the map container
-      if (featureGroup && featureGroup._map) {
-        const container = featureGroup._map.getContainer();
-        if (container) {
-          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
-          svgElements.forEach(svg => {
-            const paths = svg.querySelectorAll('path');
-            paths.forEach(path => {
-              pathData.push(path.getAttribute('d') || '');
+      if (featureGroup) {
+        const map = getMapFromLayer(featureGroup);
+        if (map) {
+          const container = map.getContainer();
+          if (container) {
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            svgElements.forEach(svg => {
+              const paths = svg.querySelectorAll('path');
+              paths.forEach(path => {
+                pathData.push(path.getAttribute('d') || '');
+              });
             });
-          });
+          }
         }
       }
       return pathData;
