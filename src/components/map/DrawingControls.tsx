@@ -19,7 +19,6 @@ interface DrawingControlsProps {
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadToDrawing?: (drawingId: string, file: File) => void;
-  onPathUpdate?: (path: string | null) => void;
 }
 
 const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({ 
@@ -28,8 +27,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onRegionClick, 
   onClearAll, 
   onRemoveShape,
-  onUploadToDrawing,
-  onPathUpdate
+  onUploadToDrawing
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
   const {
@@ -52,8 +50,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
     activateEditMode,
-    openFileUploadDialog,
-    getCurrentPath: () => drawToolsRef.current?.getCurrentPath?.()
+    openFileUploadDialog
   }));
   
   useEffect(() => {
@@ -65,20 +62,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       mountedRef.current = false;
     };
   }, []);
-
-  // Effect to forward path updates to parent component
-  useEffect(() => {
-    if (drawToolsRef.current && onPathUpdate) {
-      const checkForPathUpdates = setInterval(() => {
-        const currentPath = drawToolsRef.current?.getCurrentPath?.();
-        if (currentPath) {
-          onPathUpdate(currentPath);
-        }
-      }, 500);
-      
-      return () => clearInterval(checkForPathUpdates);
-    }
-  }, [drawToolsRef.current, onPathUpdate]);
 
   const handleClearAll = () => {
     if (featureGroupRef.current) {
@@ -99,11 +82,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
         onClearAll();
       }
       
-      // Clear any displayed path data
-      if (onPathUpdate) {
-        onPathUpdate(null);
-      }
-      
       toast.success('All drawings and markers cleared');
     }
   };
@@ -117,21 +95,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const handleDrawingClick = (drawing: DrawingData) => {
     if (onRegionClick) {
       onRegionClick(drawing);
-    }
-    
-    // If the drawing has path data, update it
-    if (drawing.svgPath && onPathUpdate) {
-      onPathUpdate(drawing.svgPath);
-    }
-  };
-
-  const handleShapeCreated = (shape: any) => {
-    // Forward to parent handler
-    onCreated(shape);
-    
-    // Forward path data if available
-    if (shape.svgPath && onPathUpdate) {
-      onPathUpdate(shape.svgPath);
     }
   };
 
@@ -156,7 +119,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
         )}
         <DrawTools 
           ref={drawToolsRef}
-          onCreated={handleShapeCreated} 
+          onCreated={onCreated} 
           activeTool={activeTool} 
           onClearAll={handleClearAll}
           featureGroup={featureGroupRef.current}
