@@ -17,6 +17,7 @@ interface DrawingControlsProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
+  onUploadToDrawing?: (drawingId: string, file: File) => void;
 }
 
 declare module 'leaflet' {
@@ -30,13 +31,16 @@ const DrawingControls = forwardRef(({
   activeTool, 
   onRegionClick, 
   onClearAll, 
-  onRemoveShape 
+  onRemoveShape,
+  onUploadToDrawing
 }: DrawingControlsProps, ref) => {
   const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
   const mountedRef = useRef<boolean>(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
@@ -52,8 +56,24 @@ const DrawingControls = forwardRef(({
           }
         }
       }
+    },
+    // New method to trigger file upload dialog
+    openFileUploadDialog: (drawingId: string) => {
+      setSelectedDrawing(drawingId);
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
     }
   }));
+  
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0 && selectedDrawing && onUploadToDrawing) {
+      const file = e.target.files[0];
+      onUploadToDrawing(selectedDrawing, file);
+      e.target.value = ''; // Reset file input
+    }
+  };
   
   useEffect(() => {
     getDrawingIdsWithFloorPlans();
@@ -139,25 +159,46 @@ const DrawingControls = forwardRef(({
     }
   };
 
+  const handleDrawingClick = (drawing: DrawingData) => {
+    if (onRegionClick) {
+      onRegionClick(drawing);
+    }
+  };
+
   return (
-    <FeatureGroup ref={featureGroupRef}>
-      {featureGroupRef.current && isInitialized && (
-        <LayerManager 
-          featureGroup={featureGroupRef.current}
-          savedDrawings={savedDrawings}
-          activeTool={activeTool}
-          onRegionClick={onRegionClick}
-          onRemoveShape={handleRemoveShape}
-        />
-      )}
-      <DrawTools 
-        ref={drawToolsRef}
-        onCreated={onCreated} 
-        activeTool={activeTool} 
-        onClearAll={handleClearAll}
-        featureGroup={featureGroupRef.current}
+    <>
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+        accept="image/*,application/pdf"
       />
-    </FeatureGroup>
+      <FeatureGroup ref={featureGroupRef}>
+        {featureGroupRef.current && isInitialized && (
+          <LayerManager 
+            featureGroup={featureGroupRef.current}
+            savedDrawings={savedDrawings}
+            activeTool={activeTool}
+            onRegionClick={handleDrawingClick}
+            onRemoveShape={handleRemoveShape}
+            onUploadRequest={(drawingId) => {
+              setSelectedDrawing(drawingId);
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}
+          />
+        )}
+        <DrawTools 
+          ref={drawToolsRef}
+          onCreated={onCreated} 
+          activeTool={activeTool} 
+          onClearAll={handleClearAll}
+          featureGroup={featureGroupRef.current}
+        />
+      </FeatureGroup>
+    </>
   );
 });
 
