@@ -105,22 +105,37 @@ const LayerManager = ({
                   // Store the layer reference
                   layersRef.current.set(drawing.id, l);
                   
-                  // Always add the remove button when in edit mode
+                  // Add the remove button when in edit mode
                   if (activeTool === 'edit' && isMountedRef.current) {
                     let buttonPosition;
+                    
                     if ('getLatLng' in l) {
+                      // For markers
                       buttonPosition = (l as L.Marker).getLatLng();
                     } else if ('getBounds' in l) {
-                      buttonPosition = (l as any).getBounds().getNorthEast();
+                      // For polygons, rectangles, etc.
+                      const bounds = (l as any).getBounds();
+                      if (bounds) {
+                        buttonPosition = bounds.getNorthEast();
+                      }
+                    } else if ('getLatLngs' in l) {
+                      // For polylines or complex shapes
+                      const latlngs = (l as any).getLatLngs();
+                      if (latlngs && latlngs.length > 0) {
+                        buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
+                      }
                     }
                     
                     if (buttonPosition) {
                       const container = document.createElement('div');
+                      container.className = 'remove-button-wrapper';
+                      
                       const buttonLayer = L.marker(buttonPosition, {
                         icon: L.divIcon({
                           className: 'remove-button-container',
                           html: container,
-                          iconSize: [24, 24]
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
                         }),
                         interactive: true,
                         zIndexOffset: 1000

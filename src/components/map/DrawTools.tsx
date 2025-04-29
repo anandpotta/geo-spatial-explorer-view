@@ -46,6 +46,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         polyline: false
       }}
       edit={{
+        featureGroup: featureGroupRef.current,
         edit: {
           selectedPathOptions: {
             color: "#fe57a1",

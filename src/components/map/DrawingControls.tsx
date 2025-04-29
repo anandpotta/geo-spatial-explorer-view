@@ -40,7 +40,16 @@ const DrawingControls = forwardRef(({
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
-    getDrawTools: () => drawToolsRef.current
+    getDrawTools: () => drawToolsRef.current,
+    activateEditMode: () => {
+      if (drawToolsRef.current?.getEditControl()) {
+        // Activate the edit mode
+        const editHandler = drawToolsRef.current.getEditControl()?.options?.edit?.handler;
+        if (editHandler && typeof editHandler.enable === 'function') {
+          editHandler.enable();
+        }
+      }
+    }
   }));
   
   useEffect(() => {
@@ -64,6 +73,29 @@ const DrawingControls = forwardRef(({
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
   }, []);
+
+  // Effect to activate edit mode when activeTool changes to 'edit'
+  useEffect(() => {
+    if (activeTool === 'edit' && drawToolsRef.current?.getEditControl()) {
+      setTimeout(() => {
+        try {
+          if (drawToolsRef.current && mountedRef.current) {
+            const editControl = drawToolsRef.current.getEditControl();
+            if (editControl && editControl.options && editControl._toolbars && editControl._toolbars.edit) {
+              // This activates the edit mode in Leaflet Draw
+              Object.values(editControl._toolbars.edit._modes).forEach((mode: any) => {
+                if (mode.handler && mode.handler.enable) {
+                  mode.handler.enable();
+                }
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error activating edit mode:', err);
+        }
+      }, 300);
+    }
+  }, [activeTool, isInitialized]);
 
   useEffect(() => {
     if (featureGroupRef.current && !isInitialized) {
