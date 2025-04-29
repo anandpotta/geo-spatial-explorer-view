@@ -104,7 +104,6 @@ export const createLayerControls = ({
       const root = createRoot(container);
       removeButtonRoots.set(drawingId, root);
       
-      // Fix the event handler type issue by ensuring it accepts an event parameter
       root.render(
         <RemoveButton onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
@@ -140,7 +139,7 @@ export const createLayerControls = ({
         uploadButtonRoots.set(`${drawingId}-upload`, uploadRoot);
         uploadRoot.render(
           <UploadButton 
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               try {
                 onUploadRequest(drawingId);

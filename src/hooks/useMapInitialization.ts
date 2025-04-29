@@ -57,35 +57,36 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   // Set up an interval to continually check map validity
   useEffect(() => {
     const checkMapValidity = () => {
-      if (mapRef.current) {
-        try {
-          const container = mapRef.current.getContainer();
-          const isValid = container && document.body.contains(container);
-          
-          // If we previously thought the map was ready but now it's not valid
-          if (isMapReady && !isValid) {
-            console.warn('Map container is no longer valid, marking map as not ready');
-            setIsMapReady(false);
-            mapAttachedRef.current = false;
-          }
-          
-          // If we know the map is attached but it's not marked as ready
-          if (mapAttachedRef.current && !isMapReady) {
-            setIsMapReady(true);
-          }
-        } catch (err) {
-          // If we can't check the container, the map is probably not valid
-          if (isMapReady) {
-            console.warn('Map reference error, marking map as not ready:', err);
-            setIsMapReady(false);
-            mapAttachedRef.current = false;
-          }
+      if (!mapRef.current) return;
+      
+      try {
+        // Safe check for container validity
+        const container = mapRef.current.getContainer();
+        const isValid = container && document.body.contains(container);
+        
+        // If we previously thought the map was ready but now it's not valid
+        if (isMapReady && !isValid) {
+          console.warn('Map container is no longer valid, marking map as not ready');
+          setIsMapReady(false);
+          mapAttachedRef.current = false;
+        }
+        
+        // If we know the map is attached but it's not marked as ready
+        if (mapAttachedRef.current && !isMapReady) {
+          setIsMapReady(true);
+        }
+      } catch (err) {
+        // Don't log the error as it causes console noise
+        // Only update state if needed
+        if (isMapReady) {
+          setIsMapReady(false);
+          mapAttachedRef.current = false;
         }
       }
     };
     
-    // Check validity frequently but not too often
-    const interval = setInterval(checkMapValidity, 1000);
+    // Check validity less frequently to reduce overhead
+    const interval = setInterval(checkMapValidity, 2000);
     
     return () => {
       clearInterval(interval);
