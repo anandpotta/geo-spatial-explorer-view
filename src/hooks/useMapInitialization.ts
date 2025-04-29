@@ -3,14 +3,17 @@ import { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
 import { getSavedMarkers } from '@/utils/marker-utils';
+import { toast } from 'sonner';
 
 export function useMapInitialization(selectedLocation?: { x: number, y: number }) {
   const mapRef = useRef<L.Map | null>(null);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const [isMapReady, setIsMapReady] = useState(false);
+  const mapAttachedRef = useRef(false);
   
   useEffect(() => {
     setupLeafletIcons();
+    mapAttachedRef.current = false;
     
     if (!document.querySelector('link[href*="leaflet.css"]')) {
       const link = document.createElement('link');
@@ -20,6 +23,9 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       link.crossOrigin = '';
       document.head.appendChild(link);
     }
+    
+    // Reset map ready state when key changes
+    setIsMapReady(false);
     
     return () => {
       if (mapRef.current) {
@@ -42,10 +48,49 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         }
         
         mapRef.current = null;
+        mapAttachedRef.current = false;
         setIsMapReady(false);
       }
     };
   }, [mapInstanceKey]);
+
+  // Set up an interval to continually check map validity
+  useEffect(() => {
+    const checkMapValidity = () => {
+      if (mapRef.current) {
+        try {
+          const container = mapRef.current.getContainer();
+          const isValid = container && document.body.contains(container);
+          
+          // If we previously thought the map was ready but now it's not valid
+          if (isMapReady && !isValid) {
+            console.warn('Map container is no longer valid, marking map as not ready');
+            setIsMapReady(false);
+            mapAttachedRef.current = false;
+          }
+          
+          // If we know the map is attached but it's not marked as ready
+          if (mapAttachedRef.current && !isMapReady) {
+            setIsMapReady(true);
+          }
+        } catch (err) {
+          // If we can't check the container, the map is probably not valid
+          if (isMapReady) {
+            console.warn('Map reference error, marking map as not ready:', err);
+            setIsMapReady(false);
+            mapAttachedRef.current = false;
+          }
+        }
+      }
+    };
+    
+    // Check validity frequently but not too often
+    const interval = setInterval(checkMapValidity, 1000);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isMapReady]);
 
   const handleSetMapRef = (map: L.Map) => {
     console.log('Map reference provided');
@@ -60,6 +105,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       if (container && document.body.contains(container)) {
         console.log('Map container verified, storing reference');
         mapRef.current = map;
+        mapAttachedRef.current = true;
         
         setTimeout(() => {
           if (mapRef.current) {

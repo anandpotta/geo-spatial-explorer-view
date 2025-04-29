@@ -16,9 +16,24 @@ export function useLocationSelection(
     }
     
     try {
-      if (!mapRef.current.getContainer() || !document.body.contains(mapRef.current.getContainer())) {
-        console.warn("Map container is not in DOM, cannot navigate");
+      // Enhanced check for map container validity
+      if (!mapRef.current.getContainer()) {
+        console.warn("Map container is not available, cannot navigate");
         toast.error("Map view is not available. Please refresh the page.");
+        return;
+      }
+      
+      // Check if the container is actually in the DOM
+      if (!document.body.contains(mapRef.current.getContainer())) {
+        console.warn("Map container is not in DOM, cannot navigate");
+        toast.error("Map view is not currently visible. Please switch to map view first.");
+        return;
+      }
+      
+      // Additional check to ensure the map is properly initialized
+      if (!mapRef.current._loaded) {
+        console.warn("Map is not fully loaded yet, cannot navigate");
+        toast.error("Map is still initializing. Please try again in a moment.");
         return;
       }
       
@@ -43,7 +58,7 @@ export function useLocationSelection(
   };
 
   const handleClearAll = () => {
-    if (mapRef.current) {
+    if (mapRef.current && mapRef.current._loaded) {
       try {
         mapRef.current.invalidateSize();
       } catch (err) {
