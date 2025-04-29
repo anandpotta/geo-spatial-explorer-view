@@ -3,6 +3,7 @@ import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { toast } from 'sonner';
+import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 
 interface DrawingControlsContainerProps {
   onShapeCreated: (shape: any) => void;
@@ -12,17 +13,28 @@ interface DrawingControlsContainerProps {
   onRemoveShape?: (drawingId: string) => void;
 }
 
-const DrawingControlsContainer = forwardRef(({
+const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsContainerProps>(({
   onShapeCreated,
   activeTool,
   onRegionClick,
   onClearAll,
   onRemoveShape
 }: DrawingControlsContainerProps, ref) => {
-  const drawingControlsRef = useRef(null);
+  const drawingControlsRef = useRef<DrawingControlsRef>(null);
   
   useImperativeHandle(ref, () => ({
-    ...drawingControlsRef.current
+    getFeatureGroup: () => {
+      return drawingControlsRef.current?.getFeatureGroup() as L.FeatureGroup;
+    },
+    getDrawTools: () => {
+      return drawingControlsRef.current?.getDrawTools();
+    },
+    activateEditMode: () => {
+      drawingControlsRef.current?.activateEditMode();
+    },
+    openFileUploadDialog: (drawingId: string) => {
+      drawingControlsRef.current?.openFileUploadDialog(drawingId);
+    }
   }));
   
   const handleUploadToDrawing = (drawingId: string, file: File) => {
@@ -39,9 +51,6 @@ const DrawingControlsContainer = forwardRef(({
       toast.error('File size should be less than 5MB');
       return;
     }
-    
-    // In a real implementation, you would upload the file to a server
-    // For this example, we'll just save to localStorage for demonstration
     
     // Convert the file to base64 string
     const reader = new FileReader();
