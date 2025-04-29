@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
@@ -85,12 +84,7 @@ const DrawingTools = ({
       return;
     }
     
-    // Also set edit mode to activate delete controls in Leaflet
-    if (tool === 'edit') {
-      onToolSelect(tool);
-    } else {
-      onToolSelect(tool);
-    }
+    onToolSelect(tool);
   };
 
   const handleClearAll = () => {

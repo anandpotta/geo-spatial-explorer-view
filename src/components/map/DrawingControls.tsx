@@ -32,7 +32,7 @@ const DrawingControls = forwardRef(({
   onClearAll, 
   onRemoveShape 
 }: DrawingControlsProps, ref) => {
-  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
   const mountedRef = useRef<boolean>(true);
@@ -44,9 +44,12 @@ const DrawingControls = forwardRef(({
     activateEditMode: () => {
       if (drawToolsRef.current?.getEditControl()) {
         // Activate the edit mode
-        const editHandler = drawToolsRef.current.getEditControl()?.options?.edit?.handler;
-        if (editHandler && typeof editHandler.enable === 'function') {
-          editHandler.enable();
+        const editControl = drawToolsRef.current.getEditControl();
+        if (editControl && editControl._toolbars && editControl._toolbars.edit) {
+          const editModes = editControl._toolbars.edit._modes;
+          if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
+            editModes.edit.handler.enable();
+          }
         }
       }
     }
@@ -80,14 +83,18 @@ const DrawingControls = forwardRef(({
       setTimeout(() => {
         try {
           if (drawToolsRef.current && mountedRef.current) {
+            // This is the updated code to safely activate edit mode
             const editControl = drawToolsRef.current.getEditControl();
-            if (editControl && editControl.options && editControl._toolbars && editControl._toolbars.edit) {
-              // This activates the edit mode in Leaflet Draw
-              Object.values(editControl._toolbars.edit._modes).forEach((mode: any) => {
-                if (mode.handler && mode.handler.enable) {
-                  mode.handler.enable();
-                }
-              });
+            if (editControl && editControl._toolbars && editControl._toolbars.edit) {
+              const editModes = editControl._toolbars.edit._modes;
+              if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
+                editModes.edit.handler.enable();
+                console.log("Edit mode activated successfully");
+              } else {
+                console.warn("Edit handler not found or not a function");
+              }
+            } else {
+              console.warn("Edit toolbar not found");
             }
           }
         } catch (err) {
@@ -98,10 +105,10 @@ const DrawingControls = forwardRef(({
   }, [activeTool, isInitialized]);
 
   useEffect(() => {
-    if (featureGroupRef.current && !isInitialized) {
+    if (featureGroupRef.current) {
       setIsInitialized(true);
     }
-  }, [featureGroupRef.current]);
+  }, []);
 
   const handleClearAll = () => {
     if (featureGroupRef.current) {
@@ -132,15 +139,8 @@ const DrawingControls = forwardRef(({
     }
   };
 
-  // Make sure we get the feature group ref from the FeatureGroup component
-  const setFeatureGroupRef = (ref: L.FeatureGroup) => {
-    if (ref && !featureGroupRef.current) {
-      featureGroupRef.current = ref;
-    }
-  };
-
   return (
-    <FeatureGroup ref={setFeatureGroupRef}>
+    <FeatureGroup ref={featureGroupRef}>
       {featureGroupRef.current && isInitialized && (
         <LayerManager 
           featureGroup={featureGroupRef.current}
@@ -155,6 +155,7 @@ const DrawingControls = forwardRef(({
         onCreated={onCreated} 
         activeTool={activeTool} 
         onClearAll={handleClearAll}
+        featureGroup={featureGroupRef.current}
       />
     </FeatureGroup>
   );

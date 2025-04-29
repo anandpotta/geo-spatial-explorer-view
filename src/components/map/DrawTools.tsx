@@ -9,15 +9,14 @@ interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onClearAll?: () => void;
+  featureGroup: L.FeatureGroup;
 }
 
-const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsProps, ref) => {
+const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
-  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
   
   useImperativeHandle(ref, () => ({
-    getEditControl: () => editControlRef.current,
-    getFeatureGroup: () => featureGroupRef.current
+    getEditControl: () => editControlRef.current
   }));
 
   const handleCreated = (e: any) => {
@@ -58,8 +57,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         remove: true
       }}
       onMounted={(drawControl) => {
-        if (drawControl && featureGroupRef.current) {
-          drawControl.options.edit.featureGroup = featureGroupRef.current;
+        if (drawControl) {
+          // This is the critical part - directly setting the featureGroup property
+          drawControl.options.edit.featureGroup = featureGroup;
         }
       }}
     />
