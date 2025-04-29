@@ -25,7 +25,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   const markerOptions = {
     draggable: true,
     autoPan: true,
-    zIndexOffset: 1000, // Higher z-index
+    zIndexOffset: 9999, // Higher z-index to ensure visibility
     eventHandlers: {
       dragend: (e: L.LeafletEvent) => {
         // Update marker position when dragged
@@ -35,8 +35,22 @@ const TempMarker: React.FC<TempMarkerProps> = ({
           // Update the position through the global handler
           if (window.tempMarkerPositionUpdate) {
             window.tempMarkerPositionUpdate([position.lat, position.lng]);
+            console.log("Marker position updated:", [position.lat, position.lng]);
           }
         }
+      },
+      add: () => {
+        // Force popup to open when marker is added to the map
+        setTimeout(() => {
+          const markerElement = document.querySelector('.leaflet-marker-draggable');
+          if (markerElement) {
+            markerElement.dispatchEvent(new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            }));
+          }
+        }, 100);
       }
     }
   };

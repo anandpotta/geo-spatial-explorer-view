@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,19 @@ const NewMarkerForm = ({
   setMarkerType,
   onSave
 }: NewMarkerFormProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+    // Focus on input when component mounts
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleSaveButtonClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -30,6 +43,7 @@ const NewMarkerForm = ({
     <Popup>
       <div className="p-2">
         <Input 
+          ref={inputRef}
           type="text"
           placeholder="Location name"
           value={markerName}
