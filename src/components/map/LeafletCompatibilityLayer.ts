@@ -9,11 +9,14 @@ export const EditControl = React.forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Prepare edit options properly
-  const editOptions = edit ? {
-    ...edit,
+  // Ensure edit is properly formatted as an object, not a boolean
+  const editOptions = typeof edit === 'boolean' ? {
+    edit: edit,
     featureGroup: featureGroup
-  } : edit;
+  } : {
+    ...(edit || {}),
+    featureGroup: featureGroup
+  };
   
   // Return the original EditControl with proper prop structure
   return React.createElement(OriginalEditControl, {

@@ -78,10 +78,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
-        edit: true,  // Simplified from object to boolean to prevent layering issues
+        edit: true,
         remove: true,
-        featureGroup: featureGroup  // Explicitly pass the featureGroup to edit options
+        featureGroup: featureGroup  // This is now properly handled by our wrapper
       }}
+      featureGroup={featureGroup}  // Also pass featureGroup at the top level for backwards compatibility
     />
   );
 });
