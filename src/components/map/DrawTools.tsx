@@ -56,9 +56,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
           }
         },
         remove: true,
-        featureGroup: featureGroupRef.current // Move featureGroup inside the edit object
+        featureGroup: featureGroupRef.current
       }}
-      // Remove the direct featureGroup prop
       onMounted={(drawControl) => {
         if (drawControl && featureGroupRef.current) {
           drawControl.options.edit.featureGroup = featureGroupRef.current;
