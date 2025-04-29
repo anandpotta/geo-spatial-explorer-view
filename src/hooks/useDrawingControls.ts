@@ -1,13 +1,8 @@
-
 import { useRef, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
 import { DrawingData } from '@/utils/drawing-utils';
-
-// Define interface for internal map properties not exposed in TypeScript definitions
-interface LeafletMapInternal extends L.Map {
-  _loaded?: boolean;
-}
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
@@ -28,8 +23,8 @@ export function useDrawingControls() {
     // Check if the feature group is attached to a valid map
     const featureGroup = featureGroupRef.current;
     try {
-      const map = featureGroup._map as LeafletMapInternal;
-      if (!map || !map._loaded) {
+      const map = getMapFromLayer(featureGroup);
+      if (!map || !(map as any)._loaded) {
         console.warn("Map is not fully loaded, cannot proceed");
         toast.error("Map view is not ready. Please try again in a moment.");
         return false;
