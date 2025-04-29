@@ -47,14 +47,26 @@ const DrawingControls = forwardRef(({
     getDrawTools: () => drawToolsRef.current,
     activateEditMode: () => {
       if (drawToolsRef.current?.getEditControl()) {
-        // Activate the edit mode
-        const editControl = drawToolsRef.current.getEditControl();
-        if (editControl && editControl._toolbars && editControl._toolbars.edit) {
-          const editModes = editControl._toolbars.edit._modes;
-          if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
-            editModes.edit.handler.enable();
+        // Safer activation of edit mode with error handling
+        try {
+          console.log("Attempting to activate edit mode");
+          const editControl = drawToolsRef.current.getEditControl();
+          if (editControl) {
+            // Get the handler from current implementation
+            const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+            if (editHandler && typeof editHandler.enable === 'function') {
+              editHandler.enable();
+              console.log("Edit mode activated successfully");
+            } else {
+              console.warn("Edit handler not found or not a function");
+            }
           }
+        } catch (err) {
+          console.error('Failed to activate edit mode:', err);
+          toast.error('Could not enable edit mode');
         }
+      } else {
+        console.warn("Draw tools ref or edit control not available");
       }
     },
     // New method to trigger file upload dialog
@@ -99,26 +111,29 @@ const DrawingControls = forwardRef(({
 
   // Effect to activate edit mode when activeTool changes to 'edit'
   useEffect(() => {
-    if (activeTool === 'edit' && drawToolsRef.current?.getEditControl()) {
+    if (activeTool === 'edit' && isInitialized) {
       setTimeout(() => {
         try {
           if (drawToolsRef.current && mountedRef.current) {
-            // This is the updated code to safely activate edit mode
+            console.log("Activating edit mode from effect");
+            // Try to activate edit mode safely
             const editControl = drawToolsRef.current.getEditControl();
-            if (editControl && editControl._toolbars && editControl._toolbars.edit) {
-              const editModes = editControl._toolbars.edit._modes;
-              if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
-                editModes.edit.handler.enable();
-                console.log("Edit mode activated successfully");
+            if (editControl) {
+              // More careful handling of edit mode activation
+              const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+              if (editHandler && typeof editHandler.enable === 'function') {
+                editHandler.enable();
+                console.log("Edit mode activated successfully from effect");
               } else {
-                console.warn("Edit handler not found or not a function");
+                console.warn("Edit handler not available");
               }
             } else {
-              console.warn("Edit toolbar not found");
+              console.warn("Edit control not available");
             }
           }
         } catch (err) {
           console.error('Error activating edit mode:', err);
+          toast.error('Could not enable edit mode');
         }
       }, 300);
     }
