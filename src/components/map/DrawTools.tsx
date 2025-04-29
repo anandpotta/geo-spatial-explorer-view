@@ -16,22 +16,21 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
-  // Force SVG renderer instead of canvas
+  // Force SVG renderer but in a safer way
   useEffect(() => {
-    // Disable canvas rendering by modifying browser check
-    // instead of directly modifying the read-only property
-    const originalCanvas = L.Browser.canvas;
-    Object.defineProperty(L.Browser, 'canvas', {
-      value: false,
-      configurable: true
-    });
+    // Instead of trying to modify the read-only property, configure the renderer
+    // when creating layers
+    const originalCreatePath = L.Path.prototype._updatePath;
+    L.Path.prototype._updatePath = function() {
+      if (this.options && !this.options.renderer) {
+        this.options.renderer = L.svg();
+      }
+      originalCreatePath.call(this);
+    };
     
     return () => {
-      // Restore original value when component unmounts
-      Object.defineProperty(L.Browser, 'canvas', {
-        value: originalCanvas,
-        configurable: true
-      });
+      // Restore original function when component unmounts
+      L.Path.prototype._updatePath = originalCreatePath;
     };
   }, []);
   
