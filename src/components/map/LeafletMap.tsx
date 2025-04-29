@@ -27,7 +27,7 @@ const LeafletMap = ({
   onLocationSelect, 
   onClearAll 
 }: LeafletMapProps) => {
-  const [loadedMarkersRef] = useState(false);
+  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
   
   // Custom hooks
   const mapState = useMapState(selectedLocation);
@@ -58,7 +58,7 @@ const LeafletMap = ({
 
   // Handle selected location changes
   useEffect(() => {
-    if (selectedLocation && mapRef.current && isMapReady) {
+    if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
       try {
         const container = mapRef.current.getContainer();
         if (container && document.body.contains(container)) {
@@ -70,17 +70,20 @@ const LeafletMap = ({
         }
       } catch (err) {
         console.error('Error flying to location:', err);
-        // We'll avoid resetting the map instance key here as it could cause issues
       }
     }
-  }, [selectedLocation, isMapReady]);
+  }, [selectedLocation, isMapReady, isMapReferenceSet]);
 
-  // Pass mapRef to parent when ready
-  useEffect(() => {
-    if (mapRef.current && isMapReady && onMapReady) {
-      onMapReady(mapRef.current);
+  // Custom map reference handler that sets our local state
+  const handleMapRefWrapper = (map: L.Map) => {
+    handleSetMapRef(map);
+    setIsMapReferenceSet(true);
+    
+    // Only call parent onMapReady once when the map is first ready
+    if (onMapReady && !isMapReferenceSet) {
+      onMapReady(map);
     }
-  }, [isMapReady, onMapReady]);
+  };
 
   // Clear all layers and reset state
   const handleClearAllWrapper = () => {
@@ -116,7 +119,7 @@ const LeafletMap = ({
       tempMarker={mapState.tempMarker}
       markerName={mapState.markerName}
       markerType={mapState.markerType}
-      onMapReady={handleSetMapRef}
+      onMapReady={handleMapRefWrapper}
       onLocationSelect={handleLocationSelect}
       onMapClick={handleMapClick}
       onDeleteMarker={mapState.handleDeleteMarker}

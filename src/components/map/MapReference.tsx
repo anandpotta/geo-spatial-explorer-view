@@ -41,6 +41,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         try {
           // Check if map container still exists and is attached to DOM
           if (map && map.getContainer() && document.body.contains(map.getContainer())) {
+            // Mark as called immediately to prevent duplicate calls
             hasCalledOnReady.current = true;
             
             // Check if map is valid before trying to invalidate size
@@ -69,27 +70,18 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
               setIsStable(true);
             }, 500);
             
-            // Additional size invalidations after different timeouts
-            const additionalTimings = [500, 1500, 3000];
-            additionalTimings.forEach(timing => {
-              const additionalTimeout = setTimeout(() => {
-                if (map && !map.remove['_leaflet_id']) {
-                  try {
-                    map.invalidateSize(true);
-                    // After the final invalidate, ensure map is marked ready
-                    if (timing === additionalTimings[additionalTimings.length - 1]) {
-                      // Force another validity check
-                      if (map.getContainer() && document.body.contains(map.getContainer())) {
-                        console.log('Final map validation complete');
-                      }
-                    }
-                  } catch (err) {
-                    // Ignore errors during additional invalidations
-                  }
+            // Just one additional invalidation after a reasonable delay
+            const additionalTimeout = setTimeout(() => {
+              if (map && !map.remove['_leaflet_id']) {
+                try {
+                  map.invalidateSize(true);
+                  console.log('Final map invalidation completed');
+                } catch (err) {
+                  // Ignore errors during additional invalidations
                 }
-              }, timing);
-              timeoutRefs.current.push(additionalTimeout);
-            });
+              }
+            }, 1500);
+            timeoutRefs.current.push(additionalTimeout);
           } else {
             console.log('Map container not ready or not attached to DOM');
             // Retry in case the map container wasn't ready yet
@@ -116,11 +108,6 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       
       timeoutRefs.current.push(timeout);
     }
-    
-    // Clean up function
-    return () => {
-      hasCalledOnReady.current = false;
-    };
   }, [map, onMapReady]);
   
   return null;
