@@ -1,6 +1,12 @@
 
 import { toast } from 'sonner';
 import { Location } from '@/utils/geo-utils';
+import L from 'leaflet';
+
+// Define interface for internal map properties not exposed in TypeScript definitions
+interface LeafletMapInternal extends L.Map {
+  _loaded?: boolean;
+}
 
 export function useLocationSelection(
   mapRef: React.MutableRefObject<L.Map | null>,
@@ -31,7 +37,9 @@ export function useLocationSelection(
       }
       
       // Additional check to ensure the map is properly initialized
-      if (!mapRef.current._loaded) {
+      // Cast to internal map type to access private properties
+      const internalMap = mapRef.current as LeafletMapInternal;
+      if (!internalMap._loaded) {
         console.warn("Map is not fully loaded yet, cannot navigate");
         toast.error("Map is still initializing. Please try again in a moment.");
         return;
@@ -58,9 +66,13 @@ export function useLocationSelection(
   };
 
   const handleClearAll = () => {
-    if (mapRef.current && mapRef.current._loaded) {
+    if (mapRef.current) {
       try {
-        mapRef.current.invalidateSize();
+        // Cast to internal map type to access private properties
+        const internalMap = mapRef.current as LeafletMapInternal;
+        if (internalMap._loaded) {
+          mapRef.current.invalidateSize();
+        }
       } catch (err) {
         console.error('Error invalidating map size:', err);
       }
