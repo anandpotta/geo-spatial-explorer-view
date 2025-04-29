@@ -4,6 +4,7 @@ import { createRoot } from '@/components/map/drawing/ReactDOMUtils';
 import RemoveButton from './RemoveButton';
 import UploadButton from './UploadButton';
 import { toast } from 'sonner';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 interface LayerControlsProps {
   layer: L.Layer;
@@ -32,8 +33,8 @@ export const createLayerControls = ({
 
   // Check if the map is valid
   try {
-    const map = featureGroup._map;
-    if (!map || !map.getContainer() || !document.body.contains(map.getContainer())) {
+    const map = getMapFromLayer(featureGroup);
+    if (!isMapValid(map)) {
       console.warn("Map container is not valid, skipping layer controls");
       return;
     }
@@ -102,8 +103,10 @@ export const createLayerControls = ({
       
       const root = createRoot(container);
       removeButtonRoots.set(drawingId, root);
+      
+      // Fix the event handler type issue by ensuring it accepts an event parameter
       root.render(
-        <RemoveButton onClick={(e) => {
+        <RemoveButton onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
           onRemoveShape(drawingId);
         }} />
