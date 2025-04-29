@@ -5,6 +5,7 @@ import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-dr
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
+import { toast } from 'sonner';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -34,6 +35,13 @@ export const createLayerFromDrawing = ({
   if (!drawing.geoJSON || !isMounted) return;
 
   try {
+    // Check if the feature group is attached to a valid map
+    const map = featureGroup._map;
+    if (!map) {
+      console.warn("No map attached to feature group, skipping layer creation");
+      return;
+    }
+
     const markers = getSavedMarkers();
     const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
     
@@ -78,7 +86,12 @@ export const createLayerFromDrawing = ({
           
           // Make clicking on any shape trigger the click handler
           if (onRegionClick && isMounted) {
-            l.on('click', () => {
+            l.on('click', (e) => {
+              // Stop event propagation to prevent map click
+              if (e.originalEvent) {
+                L.DomEvent.stopPropagation(e.originalEvent);
+              }
+              
               if (isMounted) {
                 onRegionClick(drawing);
               }
@@ -88,7 +101,11 @@ export const createLayerFromDrawing = ({
       });
       
       if (isMounted) {
-        layer.addTo(featureGroup);
+        try {
+          layer.addTo(featureGroup);
+        } catch (err) {
+          console.error('Error adding layer to featureGroup:', err);
+        }
       }
     }
   } catch (err) {

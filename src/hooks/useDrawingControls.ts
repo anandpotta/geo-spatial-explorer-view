@@ -4,6 +4,11 @@ import L from 'leaflet';
 import { toast } from 'sonner';
 import { DrawingData } from '@/utils/drawing-utils';
 
+// Define interface for internal map properties not exposed in TypeScript definitions
+interface LeafletMapInternal extends L.Map {
+  _loaded?: boolean;
+}
+
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
   getDrawTools: () => any;
@@ -19,7 +24,35 @@ export function useDrawingControls() {
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isMapValid = () => {
+    // Check if the feature group is attached to a valid map
+    const featureGroup = featureGroupRef.current;
+    try {
+      const map = featureGroup._map as LeafletMapInternal;
+      if (!map || !map._loaded) {
+        console.warn("Map is not fully loaded, cannot proceed");
+        toast.error("Map view is not ready. Please try again in a moment.");
+        return false;
+      }
+
+      // Check if map container is valid
+      if (!map.getContainer() || !document.body.contains(map.getContainer())) {
+        console.warn("Map container is not in DOM, cannot proceed");
+        toast.error("Map view is not available. Please refresh the page.");
+        return false;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Error checking map validity:', err);
+      toast.error("Could not validate map state. Please refresh the page.");
+      return false;
+    }
+  };
+
   const activateEditMode = () => {
+    if (!isMapValid()) return;
+
     if (drawToolsRef.current?.getEditControl()) {
       try {
         console.log("Attempting to activate edit mode");
@@ -43,6 +76,8 @@ export function useDrawingControls() {
   };
 
   const openFileUploadDialog = (drawingId: string) => {
+    if (!isMapValid()) return;
+    
     setSelectedDrawing(drawingId);
     if (fileInputRef.current) {
       fileInputRef.current.click();

@@ -3,6 +3,7 @@ import L from 'leaflet';
 import { createRoot } from '@/components/map/drawing/ReactDOMUtils';
 import RemoveButton from './RemoveButton';
 import UploadButton from './UploadButton';
+import { toast } from 'sonner';
 
 interface LayerControlsProps {
   layer: L.Layer;
@@ -29,36 +30,53 @@ export const createLayerControls = ({
 }: LayerControlsProps) => {
   if (activeTool !== 'edit' || !isMounted) return;
 
+  // Check if the map is valid
+  try {
+    const map = featureGroup._map;
+    if (!map || !map.getContainer() || !document.body.contains(map.getContainer())) {
+      console.warn("Map container is not valid, skipping layer controls");
+      return;
+    }
+  } catch (err) {
+    console.error('Error validating map for layer controls:', err);
+    return;
+  }
+
   let buttonPosition;
   let uploadButtonPosition;
   
-  if ('getLatLng' in layer) {
-    // For markers
-    buttonPosition = (layer as L.Marker).getLatLng();
-    uploadButtonPosition = L.latLng(
-      buttonPosition.lat + 0.0001,
-      buttonPosition.lng
-    );
-  } else if ('getBounds' in layer) {
-    // For polygons, rectangles, etc.
-    const bounds = (layer as any).getBounds();
-    if (bounds) {
-      buttonPosition = bounds.getNorthEast();
-      uploadButtonPosition = L.latLng(
-        bounds.getNorthEast().lat,
-        bounds.getNorthEast().lng - 0.0002
-      );
-    }
-  } else if ('getLatLngs' in layer) {
-    // For polylines or complex shapes
-    const latlngs = (layer as any).getLatLngs();
-    if (latlngs && latlngs.length > 0) {
-      buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
+  try {
+    if ('getLatLng' in layer) {
+      // For markers
+      buttonPosition = (layer as L.Marker).getLatLng();
       uploadButtonPosition = L.latLng(
         buttonPosition.lat + 0.0001,
         buttonPosition.lng
       );
+    } else if ('getBounds' in layer) {
+      // For polygons, rectangles, etc.
+      const bounds = (layer as any).getBounds();
+      if (bounds) {
+        buttonPosition = bounds.getNorthEast();
+        uploadButtonPosition = L.latLng(
+          bounds.getNorthEast().lat,
+          bounds.getNorthEast().lng - 0.0002
+        );
+      }
+    } else if ('getLatLngs' in layer) {
+      // For polylines or complex shapes
+      const latlngs = (layer as any).getLatLngs();
+      if (latlngs && latlngs.length > 0) {
+        buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
+        uploadButtonPosition = L.latLng(
+          buttonPosition.lat + 0.0001,
+          buttonPosition.lng
+        );
+      }
     }
+  } catch (err) {
+    console.error('Error determining button positions:', err);
+    return;
   }
   
   if (!buttonPosition) return;
@@ -79,13 +97,16 @@ export const createLayerControls = ({
   });
   
   if (isMounted) {
-    buttonLayer.addTo(featureGroup);
-    
     try {
+      buttonLayer.addTo(featureGroup);
+      
       const root = createRoot(container);
       removeButtonRoots.set(drawingId, root);
       root.render(
-        <RemoveButton onClick={() => onRemoveShape(drawingId)} />
+        <RemoveButton onClick={(e) => {
+          e.stopPropagation();
+          onRemoveShape(drawingId);
+        }} />
       );
     } catch (err) {
       console.error('Error rendering remove button:', err);
@@ -109,13 +130,23 @@ export const createLayerControls = ({
     });
     
     if (isMounted) {
-      uploadButtonLayer.addTo(featureGroup);
-      
       try {
+        uploadButtonLayer.addTo(featureGroup);
+        
         const uploadRoot = createRoot(uploadContainer);
         uploadButtonRoots.set(`${drawingId}-upload`, uploadRoot);
         uploadRoot.render(
-          <UploadButton onClick={() => onUploadRequest(drawingId)} />
+          <UploadButton 
+            onClick={(e) => {
+              e.stopPropagation();
+              try {
+                onUploadRequest(drawingId);
+              } catch (err) {
+                console.error('Error in upload request:', err);
+                toast.error('Could not initiate upload. Please try again.');
+              }
+            }} 
+          />
         );
       } catch (err) {
         console.error('Error rendering upload button:', err);
