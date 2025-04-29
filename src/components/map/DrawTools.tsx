@@ -15,8 +15,44 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
+  // Force SVG renderer instead of canvas
+  useEffect(() => {
+    // Disable canvas rendering globally
+    if (L.Browser.canvas) {
+      L.Browser.canvas = false;
+    }
+    
+    // Ensure renderers use SVG
+    L.SVG.create = (name) => {
+      return document.createElementNS("http://www.w3.org/2000/svg", name);
+    };
+  }, []);
+  
   useImperativeHandle(ref, () => ({
-    getEditControl: () => editControlRef.current
+    getEditControl: () => editControlRef.current,
+    getPathElements: () => {
+      const pathElements: SVGPathElement[] = [];
+      // Find all SVG paths within the feature group container
+      const container = featureGroup.getElement();
+      if (container) {
+        const paths = container.querySelectorAll('path');
+        paths.forEach(path => {
+          pathElements.push(path);
+        });
+      }
+      return pathElements;
+    },
+    getSVGPathData: () => {
+      const pathData: string[] = [];
+      const container = featureGroup.getElement();
+      if (container) {
+        const paths = container.querySelectorAll('path');
+        paths.forEach(path => {
+          pathData.push(path.getAttribute('d') || '');
+        });
+      }
+      return pathData;
+    }
   }));
 
   const handleCreated = (e: any) => {
@@ -30,6 +66,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       
       // Create a properly structured shape object
       let shape: any = { type: layerType, layer };
+      
+      // Extract SVG path data if available
+      if (layer._path) {
+        shape.svgPath = layer._path.getAttribute('d');
+      }
       
       // For markers, extract position information
       if (layerType === 'marker' && layer.getLatLng) {
@@ -57,7 +98,15 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         }
       }
       
-      onCreated(shape);
+      // Wait for the next tick to ensure DOM is updated
+      setTimeout(() => {
+        // Try to get SVG path data after layer is rendered
+        if (!shape.svgPath && layer._path) {
+          shape.svgPath = layer._path.getAttribute('d');
+        }
+        
+        onCreated(shape);
+      }, 50);
     } catch (err) {
       console.error('Error handling created shape:', err);
       toast.error('Error creating shape');
