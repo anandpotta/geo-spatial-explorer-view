@@ -25,6 +25,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           if (layer && !layer.editing) {
             // Ensure each layer has editing capability
             if (layer instanceof L.Path) {
+              // Use type assertion for PolyEdit
               layer.editing = new (L.Handler as any).PolyEdit(layer);
             }
           }
@@ -106,6 +107,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       
       // Ensure the layer has editing capability
       if (layer instanceof L.Path && !layer.editing) {
+        // Use type assertion for PolyEdit
         layer.editing = new (L.Handler as any).PolyEdit(layer);
       }
       

@@ -70,6 +70,7 @@ export function useDrawingControls() {
           if (layer && !layer.editing) {
             // Initialize editing capability if missing
             if (layer instanceof L.Path) {
+              // Use type assertion for PolyEdit
               layer.editing = new (L.Handler as any).PolyEdit(layer);
             }
           }

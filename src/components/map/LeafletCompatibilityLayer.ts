@@ -24,7 +24,10 @@ export const EditControl = forwardRef((props: any, ref: any) => {
         featureGroup.eachLayer((layer: any) => {
           if (layer && !layer.editing) {
             // Initialize editing capability if not present
-            layer.editing = new L.Handler.PolyEdit(layer);
+            if (layer instanceof L.Path) {
+              // Use type assertion to handle the PolyEdit constructor
+              layer.editing = new (L.Handler as any).PolyEdit(layer);
+            }
           }
         });
       } catch (err) {
