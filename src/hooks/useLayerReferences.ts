@@ -11,25 +11,46 @@ export function useLayerReferences() {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      // Cleanup all React roots
-      removeButtonRoots.current.forEach(root => {
+      
+      // Safely unmount React roots with proper error handling
+      const safelyUnmountRoot = (root: any) => {
+        if (!root) return;
+        
         try {
-          root.unmount();
+          // Check if root has unmount method before calling
+          if (root.unmount && typeof root.unmount === 'function') {
+            // Use a try-catch to prevent errors during unmounting
+            try {
+              root.unmount();
+            } catch (err) {
+              console.error('Error unmounting React root:', err);
+            }
+          }
         } catch (err) {
-          console.error('Error unmounting root:', err);
+          console.error('Error accessing React root:', err);
         }
-      });
+      };
+      
+      // Safely clean up all React roots
+      try {
+        removeButtonRoots.current.forEach(root => {
+          safelyUnmountRoot(root);
+        });
+      } catch (err) {
+        console.error('Error cleaning up remove button roots:', err);
+      }
+      
       removeButtonRoots.current.clear();
       
-      uploadButtonRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting upload button root:', err);
-        }
-      });
-      uploadButtonRoots.current.clear();
+      try {
+        uploadButtonRoots.current.forEach(root => {
+          safelyUnmountRoot(root);
+        });
+      } catch (err) {
+        console.error('Error cleaning up upload button roots:', err);
+      }
       
+      uploadButtonRoots.current.clear();
       layersRef.current.clear();
     };
   }, []);

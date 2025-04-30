@@ -16,18 +16,45 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   if (typeof edit === 'boolean') {
     // If edit is a boolean, create a proper object structure
     editOptions = {
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      edit: {
+        // Add proper edit options with safe defaults
+        selectedPathOptions: {
+          maintainColor: false,
+          opacity: 0.7
+        },
+        // Apply error handling to edit handlers
+        edit: {
+          noMissingHandlers: true
+        }
+      }
     };
   } else if (edit && typeof edit === 'object') {
     // If edit is an object, merge with featureGroup but don't overwrite featureGroup
     editOptions = {
       ...edit,
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      edit: {
+        ...edit.edit,
+        // Ensure edit handlers have proper error handling
+        selectedPathOptions: edit.selectedPathOptions || {
+          maintainColor: false,
+          opacity: 0.7
+        },
+        noMissingHandlers: true
+      }
     };
   } else {
     // Default case if edit is undefined or null
     editOptions = {
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      edit: {
+        selectedPathOptions: {
+          maintainColor: false,
+          opacity: 0.7
+        },
+        noMissingHandlers: true
+      }
     };
   }
   

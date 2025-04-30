@@ -29,28 +29,36 @@ export function useLayerUpdates({
   onRemoveShape,
   onUploadRequest
 }: LayerUpdatesProps) {
+  const safelyUnmountRoot = (root: any) => {
+    if (!root) return;
+    try {
+      if (root.unmount && typeof root.unmount === 'function') {
+        root.unmount();
+      }
+    } catch (err) {
+      console.error('Error unmounting root:', err);
+    }
+  };
+  
   const updateLayers = () => {
     if (!featureGroup || !isMountedRef.current) return;
     
     try {
-      // Clear existing layers and React roots
-      featureGroup.clearLayers();
+      // Safely clear existing layers with proper error handling
+      try {
+        featureGroup.clearLayers();
+      } catch (err) {
+        console.error('Error clearing feature group layers:', err);
+      }
       
+      // Safely unmount all React roots
       removeButtonRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting root:', err);
-        }
+        safelyUnmountRoot(root);
       });
       removeButtonRoots.current.clear();
       
       uploadButtonRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting upload button root:', err);
-        }
+        safelyUnmountRoot(root);
       });
       uploadButtonRoots.current.clear();
       
@@ -58,18 +66,22 @@ export function useLayerUpdates({
       
       // Create layers for each drawing
       savedDrawings.forEach(drawing => {
-        createLayerFromDrawing({
-          drawing,
-          featureGroup,
-          activeTool,
-          isMounted: isMountedRef.current,
-          layersRef: layersRef.current,
-          removeButtonRoots: removeButtonRoots.current,
-          uploadButtonRoots: uploadButtonRoots.current,
-          onRegionClick,
-          onRemoveShape,
-          onUploadRequest
-        });
+        try {
+          createLayerFromDrawing({
+            drawing,
+            featureGroup,
+            activeTool,
+            isMounted: isMountedRef.current,
+            layersRef: layersRef.current,
+            removeButtonRoots: removeButtonRoots.current,
+            uploadButtonRoots: uploadButtonRoots.current,
+            onRegionClick,
+            onRemoveShape,
+            onUploadRequest
+          });
+        } catch (err) {
+          console.error(`Error creating layer for drawing ${drawing.id}:`, err);
+        }
       });
     } catch (err) {
       console.error('Error updating layers:', err);
@@ -93,6 +105,13 @@ export function useLayerUpdates({
 
   useEffect(() => {
     if (!featureGroup || !isMountedRef.current) return;
+    
+    // Add a check to ensure featureGroup has required methods
+    if (!featureGroup.clearLayers || typeof featureGroup.clearLayers !== 'function') {
+      console.error('Feature group is missing clearLayers method');
+      return;
+    }
+    
     updateLayers();
     
     // Also update layers when storage changes
@@ -106,7 +125,9 @@ export function useLayerUpdates({
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      if (featureGroup && featureGroup.clearLayers) {
+      
+      // Only try to clear layers if the featureGroup is still valid
+      if (featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {
         try {
           featureGroup.clearLayers();
         } catch (err) {
