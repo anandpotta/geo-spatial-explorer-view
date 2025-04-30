@@ -1,9 +1,8 @@
-
 import { useEffect, useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
-import { safelyDisableEditForLayer, safelyCleanupFeatureGroup } from '@/utils/leaflet-type-utils';
+import { safelyDisableEditForLayer, safelyCleanupFeatureGroup } from '@/utils/leaflet';
 
 interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;

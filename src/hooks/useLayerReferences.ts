@@ -1,7 +1,6 @@
-
 import { useRef, useEffect } from 'react';
 import L from 'leaflet';
-import { safelyDisableEditForLayer } from '@/utils/leaflet-type-utils';
+import { safelyDisableEditForLayer } from '@/utils/leaflet';
 
 export function useLayerReferences() {
   const isMountedRef = useRef(true);

@@ -1,10 +1,9 @@
-
 import L from 'leaflet';
 import { createRoot } from '@/components/map/drawing/ReactDOMUtils';
 import RemoveButton from './RemoveButton';
 import UploadButton from './UploadButton';
 import { toast } from 'sonner';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet';
 
 interface LayerControlsProps {
   layer: L.Layer;

@@ -1,10 +1,9 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { getMapFromLayer, safelyDisableEditForLayer } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer, safelyDisableEditForLayer } from '@/utils/leaflet';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;

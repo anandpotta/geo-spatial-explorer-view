@@ -1,7 +1,6 @@
-
 import L from 'leaflet';
 import { toast } from 'sonner';
-import { isMapValid } from '@/utils/leaflet-type-utils';
+import { isMapValid } from '@/utils/leaflet';
 
 /**
  * Sets up validation checking for a Leaflet map instance
