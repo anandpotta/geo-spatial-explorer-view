@@ -32,7 +32,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
       return drawingControlsRef.current?.getDrawTools();
     },
     activateEditMode: () => {
-      drawingControlsRef.current?.activateEditMode();
+      return drawingControlsRef.current?.activateEditMode() ?? false;
     },
     openFileUploadDialog: (drawingId: string) => {
       drawingControlsRef.current?.openFileUploadDialog(drawingId);
