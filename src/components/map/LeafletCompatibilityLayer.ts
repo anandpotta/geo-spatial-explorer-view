@@ -1,4 +1,3 @@
-
 // This file provides compatibility with newer versions of react-leaflet-draw
 // by ensuring that we can still pass certain props like featureGroup to EditControl
 import { EditControl as OriginalEditControl } from "react-leaflet-draw";
@@ -15,7 +14,8 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     // Force Leaflet to use SVG renderer by default for all vector layers
     const originalFactory = L.SVG;
     L.SVG = function(options?: any) {
-      const renderer = originalFactory(options);
+      // Use 'new' with the original factory
+      const renderer = new originalFactory(options);
       if (renderer._initContainer) {
         const originalInitContainer = renderer._initContainer;
         renderer._initContainer = function() {
