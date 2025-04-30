@@ -88,3 +88,61 @@ export const getAllMapPathData = (map: any): string[] => {
   const paths = findAllPathsInMap(map);
   return paths.map(path => path.getAttribute('d') || '').filter(Boolean);
 };
+
+/**
+ * Create an SVG clipPath element for masking an image
+ */
+export const createSvgClipPath = (pathData: string, id: string): SVGClipPathElement => {
+  const ns = "http://www.w3.org/2000/svg";
+  
+  // Create clipPath element
+  const clipPath = document.createElementNS(ns, "clipPath");
+  clipPath.setAttribute("id", id);
+  
+  // Create path element
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", pathData);
+  
+  // Append path to clipPath
+  clipPath.appendChild(path);
+  
+  return clipPath;
+};
+
+/**
+ * Apply clipPath to an image element
+ */
+export const applyClipPathToImage = (
+  imgElement: HTMLImageElement, 
+  svgElement: SVGSVGElement | null, 
+  pathData: string,
+  clipPathId: string
+): void => {
+  if (!svgElement || !imgElement || !pathData) return;
+  
+  // Ensure we have the SVG namespace
+  const ns = "http://www.w3.org/2000/svg";
+  
+  // Clear existing defs
+  const existingDefs = svgElement.querySelector("defs");
+  if (existingDefs) {
+    existingDefs.remove();
+  }
+  
+  // Create defs element
+  const defs = document.createElementNS(ns, "defs");
+  svgElement.appendChild(defs);
+  
+  // Create clipPath element
+  const clipPath = document.createElementNS(ns, "clipPath");
+  clipPath.setAttribute("id", clipPathId);
+  defs.appendChild(clipPath);
+  
+  // Create path element
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", pathData);
+  clipPath.appendChild(path);
+  
+  // Apply clip-path to image
+  imgElement.style.clipPath = `url(#${clipPathId})`;
+};

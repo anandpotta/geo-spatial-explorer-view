@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
 interface UseFileUploadProps {
@@ -7,6 +7,8 @@ interface UseFileUploadProps {
 }
 
 export function useFileUpload({ onUploadToDrawing }: UseFileUploadProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  
   // Handle file selection
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -27,12 +29,16 @@ export function useFileUpload({ onUploadToDrawing }: UseFileUploadProps) {
       return;
     }
     
+    setIsUploading(true);
+    
     // Get the selected drawing ID from component state
     const selectedId = e.target.dataset.drawingId;
     if (selectedId) {
       onUploadToDrawing(selectedId, file);
+      setIsUploading(false);
     } else {
       toast.error('No drawing selected for upload');
+      setIsUploading(false);
     }
   }, [onUploadToDrawing]);
   
@@ -51,6 +57,7 @@ export function useFileUpload({ onUploadToDrawing }: UseFileUploadProps) {
   
   return {
     handleFileChange,
-    handleUploadRequest
+    handleUploadRequest,
+    isUploading
   };
 }

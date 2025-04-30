@@ -34,6 +34,12 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
     },
     openFileUploadDialog: (drawingId: string) => {
       drawingControlsRef.current?.openFileUploadDialog(drawingId);
+    },
+    getSvgPaths: () => {
+      if (drawingControlsRef.current) {
+        return drawingControlsRef.current.getSvgPaths();
+      }
+      return [];
     }
   }));
   
@@ -56,12 +62,37 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target && e.target.result) {
-        // Save the file data to localStorage
+        // Get the path data for clipping
+        let pathData = "";
+        const layer = drawingControlsRef.current?.getFeatureGroup()?.getLayers().find((l: any) => l.drawingId === drawingId);
+        
+        if (layer) {
+          try {
+            // Try to get SVG path from layer
+            if (layer._path) {
+              pathData = layer._path.getAttribute('d') || "";
+            }
+            
+            // For feature groups or multi-layer objects
+            if (!pathData && typeof layer.eachLayer === 'function') {
+              layer.eachLayer((subLayer: any) => {
+                if (!pathData && subLayer._path) {
+                  pathData = subLayer._path.getAttribute('d') || "";
+                }
+              });
+            }
+          } catch (err) {
+            console.error('Error getting path data:', err);
+          }
+        }
+        
+        // Save the file data to localStorage with path info for clipping
         const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
         floorPlans[drawingId] = {
           data: e.target.result,
           name: file.name,
           type: file.type,
+          pathData: pathData, // Store the path data for clipping
           uploaded: new Date().toISOString()
         };
         
