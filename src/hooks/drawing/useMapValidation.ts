@@ -1,33 +1,58 @@
 
-import { toast } from 'sonner';
 import L from 'leaflet';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 export function useMapValidation() {
-  const checkMapValidity = (featureGroup: L.FeatureGroup) => {
-    // Check if the feature group is attached to a valid map
+  /**
+   * Check if the map associated with a layer is valid
+   */
+  const checkMapValidity = (layer: L.Layer): boolean => {
     try {
-      const map = getMapFromLayer(featureGroup);
-      if (!map || !(map as any)._loaded) {
-        console.warn("Map is not fully loaded, cannot proceed");
-        toast.error("Map view is not ready. Please try again in a moment.");
+      // Try to get the map from the layer
+      const map = (layer as any)._map;
+      
+      // If no map, try to get it from the feature group
+      if (!map && 'getLayers' in layer) {
+        const layers = (layer as L.FeatureGroup).getLayers();
+        if (layers.length > 0) {
+          const firstLayerMap = (layers[0] as any)._map;
+          if (firstLayerMap) {
+            return isMapValid(firstLayerMap);
+          }
+        }
         return false;
       }
-
-      // Check if map container is valid
-      if (!map.getContainer() || !document.body.contains(map.getContainer())) {
-        console.warn("Map container is not in DOM, cannot proceed");
-        toast.error("Map view is not available. Please refresh the page.");
+      
+      return isMapValid(map);
+    } catch (err) {
+      console.error('Error checking map validity:', err);
+      return false;
+    }
+  };
+  
+  /**
+   * Check if a map instance is valid
+   */
+  const isMapValid = (map: any): boolean => {
+    if (!map) return false;
+    
+    try {
+      // Check if the map has a valid container
+      const container = map.getContainer();
+      if (!container || !document.body.contains(container)) {
+        return false;
+      }
+      
+      // Check if the map has been initialized
+      if (!map._loaded) {
         return false;
       }
       
       return true;
     } catch (err) {
-      console.error('Error checking map validity:', err);
-      toast.error("Could not validate map state. Please refresh the page.");
+      console.error('Error in isMapValid:', err);
       return false;
     }
   };
-
-  return { checkMapValidity };
+  
+  return { checkMapValidity, isMapValid };
 }
