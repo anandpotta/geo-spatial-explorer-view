@@ -7,12 +7,13 @@ interface LeafletMapInternal extends L.Map {
   _container?: HTMLElement;
 }
 
-// Define interface for internal layer properties
-interface LeafletLayerInternal extends L.Layer {
+// Instead of extending L.Layer (which has protected properties),
+// define a type that intersects Layer with the internal properties
+type LeafletLayerInternal = L.Layer & {
   _map?: L.Map;
   _path?: SVGPathElement;
   editing?: any;
-}
+};
 
 export const getMapFromLayer = (layer: any): L.Map | null => {
   if (!layer) return null;
