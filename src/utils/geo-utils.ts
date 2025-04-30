@@ -28,3 +28,12 @@ export {
   getSavedFloorPlans,
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
+
+export {
+  getSvgPathFromElement,
+  simplifyPath,
+  extractPointsFromPath,
+  simplifyPoints,
+  pointsToPathData,
+  getAllSvgPaths,
+} from './svg-utils';

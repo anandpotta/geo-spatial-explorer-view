@@ -1,3 +1,4 @@
+
 import { useRef, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
@@ -7,8 +8,9 @@ import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
   getDrawTools: () => any;
-  activateEditMode: () => void;
+  activateEditMode: () => boolean;
   openFileUploadDialog: (drawingId: string) => void;
+  getSvgPaths: () => string[];
 }
 
 export function useDrawingControls() {
@@ -45,8 +47,8 @@ export function useDrawingControls() {
     }
   };
 
-  const activateEditMode = () => {
-    if (!isMapValid()) return;
+  const activateEditMode = (): boolean => {
+    if (!isMapValid()) return false;
 
     if (drawToolsRef.current?.getEditControl()) {
       try {
@@ -57,6 +59,7 @@ export function useDrawingControls() {
           if (editHandler && typeof editHandler.enable === 'function') {
             editHandler.enable();
             console.log("Edit mode activated successfully");
+            return true;
           } else {
             console.warn("Edit handler not found or not a function");
           }
@@ -68,6 +71,8 @@ export function useDrawingControls() {
     } else {
       console.warn("Draw tools ref or edit control not available");
     }
+    
+    return false;
   };
 
   const openFileUploadDialog = (drawingId: string) => {

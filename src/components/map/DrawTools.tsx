@@ -70,7 +70,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
             svgElements.forEach(svg => {
               const paths = svg.querySelectorAll('path');
               paths.forEach(path => {
-                pathData.push(path.getAttribute('d') || '');
+                const d = path.getAttribute('d');
+                if (d) {
+                  pathData.push(d);
+                }
               });
             });
           }
