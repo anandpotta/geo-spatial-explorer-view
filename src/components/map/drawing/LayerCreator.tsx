@@ -74,11 +74,23 @@ export const createLayerFromDrawing = ({
           (l as any).drawingId = drawing.id;
           
           // Ensure the layer has proper editing capabilities
-          if ((l as any).editing && typeof (l as any).editing === 'undefined') {
+          if (!(l as any).editing || typeof (l as any).editing === 'undefined') {
             // Initialize editing capability if missing
-            if ('enableEdit' in l && typeof (l as any).enableEdit === 'function') {
-              (l as any).enableEdit();
-            }
+            (l as any).editing = {
+              _enabled: false,
+              enable: () => {
+                if ((l as any)._path) {
+                  (l as any)._path.classList.add('leaflet-edit-enabled');
+                }
+                (l as any).editing._enabled = true;
+              },
+              disable: () => {
+                if ((l as any)._path) {
+                  (l as any)._path.classList.remove('leaflet-edit-enabled');
+                }
+                (l as any).editing._enabled = false;
+              }
+            };
           }
           
           // Store the layer reference

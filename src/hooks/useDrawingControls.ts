@@ -58,17 +58,44 @@ export function useDrawingControls() {
       }
       
       // Safely access the edit handler
-      const editModes = editControl._toolbars?.edit?._modes;
-      if (!editModes || !editModes.edit) {
+      if (!editControl._toolbars) {
+        console.warn("Edit toolbars not initialized");
+        return false;
+      }
+      
+      const editToolbar = editControl._toolbars.edit;
+      if (!editToolbar || !editToolbar._modes || !editToolbar._modes.edit) {
         console.warn("Edit modes not available");
         return false;
       }
       
-      const editHandler = editModes.edit.handler;
-      if (!editHandler || typeof editHandler.enable !== 'function') {
-        console.warn("Edit handler not found or not a function");
+      const editHandler = editToolbar._modes.edit.handler;
+      if (!editHandler) {
+        console.warn("Edit handler not found");
         return false;
       }
+      
+      // Ensure each layer in the feature group has editing capability
+      featureGroupRef.current.eachLayer((layer: any) => {
+        if (layer && !layer.editing) {
+          // Add minimal editing interface if not present
+          layer.editing = {
+            _enabled: false,
+            enable: () => {
+              if (layer._path) {
+                layer._path.classList.add('leaflet-edit-enabled');
+              }
+              layer.editing._enabled = true;
+            },
+            disable: () => {
+              if (layer._path) {
+                layer._path.classList.remove('leaflet-edit-enabled');
+              }
+              layer.editing._enabled = false;
+            }
+          };
+        }
+      });
       
       // Ensure the edit handler has a valid feature group with proper event listeners
       if (!editHandler._featureGroup) {
@@ -77,9 +104,14 @@ export function useDrawingControls() {
       }
       
       // Safely enable edit mode
-      editHandler.enable();
-      console.log("Edit mode activated successfully");
-      return true;
+      if (typeof editHandler.enable === 'function') {
+        editHandler.enable();
+        console.log("Edit mode activated successfully");
+        return true;
+      } else {
+        console.warn("Edit handler's enable method is not a function");
+        return false;
+      }
     } catch (err) {
       console.error('Failed to activate edit mode:', err);
       toast.error('Could not enable edit mode');

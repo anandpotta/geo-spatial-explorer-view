@@ -35,6 +35,37 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       pathPrototype._updatePath = originalUpdatePath;
     };
   }, []);
+
+  // Prepare layers for editing when needed
+  useEffect(() => {
+    if (!featureGroup) return;
+    
+    try {
+      // Add editing capability to all layers in the feature group
+      featureGroup.eachLayer((layer: any) => {
+        if (layer && !layer.editing) {
+          // Add minimal editing interface if not present
+          layer.editing = {
+            _enabled: false,
+            enable: () => {
+              if (layer._path) {
+                layer._path.classList.add('leaflet-edit-enabled');
+              }
+              layer.editing._enabled = true;
+            },
+            disable: () => {
+              if (layer._path) {
+                layer._path.classList.remove('leaflet-edit-enabled');
+              }
+              layer.editing._enabled = false;
+            }
+          };
+        }
+      });
+    } catch (err) {
+      console.error('Error initializing layer editing capabilities:', err);
+    }
+  }, [featureGroup]);
   
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
@@ -90,6 +121,25 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       if (!layer) {
         console.error('No layer created');
         return;
+      }
+      
+      // Ensure the layer has editing capability
+      if (!layer.editing) {
+        layer.editing = {
+          _enabled: false,
+          enable: () => {
+            if (layer._path) {
+              layer._path.classList.add('leaflet-edit-enabled');
+            }
+            layer.editing._enabled = true;
+          },
+          disable: () => {
+            if (layer._path) {
+              layer._path.classList.remove('leaflet-edit-enabled');
+            }
+            layer.editing._enabled = false;
+          }
+        };
       }
       
       // Create a properly structured shape object
