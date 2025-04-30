@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { createImageFromFile, applyPathMaskToImage } from '@/utils/image-mask-utils';
 import { getSavedDrawings, saveDrawing } from '@/utils/drawing/operations';

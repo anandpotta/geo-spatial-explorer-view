@@ -26,20 +26,23 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
             // Ensure each layer has editing capability
             if (layer instanceof L.Path) {
               // Use type assertion for PolyEdit
-              layer.editing = new (L.Handler as any).PolyEdit(layer);
+              const editHandler = new (L.Handler as any).PolyEdit(layer);
               
-              // Add fallback methods to prevent errors
-              if (layer.editing && !layer.editing.disable) {
-                layer.editing.disable = function() {
+              // Add fallback methods as part of the handler
+              if (!editHandler.disable) {
+                editHandler.disable = function(this: L.Handler): void {
                   console.log("Disable called on layer without proper handler");
                 };
               }
               
-              if (layer.editing && !layer.editing.enable) {
-                layer.editing.enable = function() {
+              if (!editHandler.enable) {
+                editHandler.enable = function(this: L.Handler): void {
                   console.log("Enable called on layer without proper handler");
                 };
               }
+              
+              // Assign the properly typed handler to layer.editing
+              layer.editing = editHandler;
             }
           }
         });
@@ -144,21 +147,24 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       
       // Ensure the layer has editing capability
       if (layer instanceof L.Path && !layer.editing) {
-        // Use type assertion for PolyEdit
-        layer.editing = new (L.Handler as any).PolyEdit(layer);
+        // Create the edit handler with proper type
+        const editHandler = new (L.Handler as any).PolyEdit(layer);
         
-        // Add fallback methods to prevent errors
-        if (layer.editing && !layer.editing.disable) {
-          layer.editing.disable = function() {
+        // Add fallback methods with proper typing
+        if (!editHandler.disable) {
+          editHandler.disable = function(this: L.Handler): void {
             console.log("Disable called on layer without proper handler");
           };
         }
         
-        if (layer.editing && !layer.editing.enable) {
-          layer.editing.enable = function() {
+        if (!editHandler.enable) {
+          editHandler.enable = function(this: L.Handler): void {
             console.log("Enable called on layer without proper handler");
           };
         }
+        
+        // Assign the properly typed handler
+        layer.editing = editHandler;
       }
       
       // Create a properly structured shape object
