@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/geo-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 export interface DrawingControlsRef {

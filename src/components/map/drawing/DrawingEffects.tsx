@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { getDrawingIdsWithFloorPlans } from '@/utils/geo-utils';
 
 interface DrawingEffectsProps {
   activeTool: string | null;

@@ -1,17 +1,17 @@
 
 import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/geo-utils';
 import { useDrawings } from '@/hooks/useDrawings';
 import DrawTools from './DrawTools';
 import LayerManager from './drawing/LayerManager';
-import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
+import { deleteMarker, getSavedMarkers } from '@/utils/geo-utils';
 import { toast } from 'sonner';
 import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
 import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { extractSvgPaths, findAllPathsInMap, getAllMapPathData } from '@/utils/svg-path-utils';
+import { getAllMapPathData, findAllPathsInMap } from '@/utils/svg-path-utils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
