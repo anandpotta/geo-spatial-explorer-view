@@ -4,7 +4,7 @@ import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { initializeLayerEditing, createEditOptions } from './drawing/LayerEditingUtils';
-import { setupSvgPathRendering, getPathElements, getSVGPathData } from './drawing/PathUtils';
+import { setupSvgPathRendering, getPathElements, getSVGPathData, forceSvgPathCreation } from './drawing/PathUtils';
 import { handleShapeCreated } from './drawing/ShapeCreationHandler';
 
 interface DrawToolsProps {
@@ -22,13 +22,28 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     // Initialize editing for existing layers
     if (featureGroup) {
       initializeLayerEditing(featureGroup);
+      
+      // Apply SVG renderer to all existing layers
+      featureGroup.eachLayer((layer: L.Layer) => {
+        forceSvgPathCreation(layer);
+      });
     }
     
     // Override Leaflet's circle and rectangle rendering to force SVG path creation
     const cleanup = setupSvgPathRendering();
     
+    // Periodically check for and force SVG path creation on layers
+    const intervalId = setInterval(() => {
+      if (featureGroup) {
+        featureGroup.eachLayer((layer: L.Layer) => {
+          forceSvgPathCreation(layer);
+        });
+      }
+    }, 1000);
+    
     return () => {
       cleanup();
+      clearInterval(intervalId);
     };
   }, [featureGroup]);
   
@@ -36,21 +51,51 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
     getPathElements: () => getPathElements(featureGroup),
-    getSVGPathData: () => getSVGPathData(featureGroup)
+    getSVGPathData: () => {
+      // Force SVG path creation before getting path data
+      if (featureGroup) {
+        featureGroup.eachLayer((layer: L.Layer) => {
+          forceSvgPathCreation(layer);
+        });
+      }
+      
+      return getSVGPathData(featureGroup);
+    }
   }));
 
   // Create edit options for the control with proper structure
   const editOptions = createEditOptions(featureGroup);
+  
+  // Custom handler for created shapes
+  const handleCreated = (e: any) => {
+    console.log('Shape created:', e.layerType);
+    handleShapeCreated(e, (shape) => {
+      console.log('Shape processed with SVG path:', shape.svgPath);
+      onCreated(shape);
+    });
+  };
 
   return (
     <EditControl
       ref={editControlRef}
       position="topright"
-      onCreated={(e) => handleShapeCreated(e, onCreated)}
+      onCreated={handleCreated}
       draw={{
-        rectangle: true,
-        polygon: true,
-        circle: true,
+        rectangle: {
+          shapeOptions: {
+            renderer: L.svg()
+          }
+        },
+        polygon: {
+          shapeOptions: {
+            renderer: L.svg()
+          }
+        },
+        circle: {
+          shapeOptions: {
+            renderer: L.svg()
+          }
+        },
         circlemarker: false,
         marker: true,
         polyline: false

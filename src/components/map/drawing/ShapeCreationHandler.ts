@@ -38,17 +38,18 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
       layer.options.renderer = L.svg();
     }
     
+    // Ensure layer is added to a map for rendering
+    if (layer._map && layer._renderer) {
+      // Force redraw to ensure SVG element is created
+      if (typeof layer._updatePath === 'function') {
+        layer._updatePath();
+      }
+    }
+    
     // Extract SVG path data if available
     if (layer._path) {
       shape.svgPath = layer._path.getAttribute('d');
-    } else {
-      // For circle or other shapes, try to regenerate the path
-      setTimeout(() => {
-        if (layer._path) {
-          shape.svgPath = layer._path.getAttribute('d');
-          onCreated(shape);
-        }
-      }, 10);
+      console.log('SVG path extracted:', shape.svgPath);
     }
     
     // For markers, extract position information
@@ -82,12 +83,55 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
       // Try to get SVG path data after layer is rendered
       if (!shape.svgPath && layer._path) {
         shape.svgPath = layer._path.getAttribute('d');
+        console.log('SVG path extracted after timeout:', shape.svgPath);
+      }
+      
+      // If still no SVG path for polygon/rectangle, try to generate it
+      if (!shape.svgPath && (layerType === 'polygon' || layerType === 'rectangle') && shape.coordinates) {
+        console.log('Attempting to generate SVG path from coordinates');
+        // This is a fallback approach to create an SVG path from coordinates
+        const svgPath = generateSvgPathFromCoordinates(shape.coordinates, layer);
+        if (svgPath) {
+          shape.svgPath = svgPath;
+          console.log('Generated SVG path:', svgPath);
+        }
       }
       
       onCreated(shape);
-    }, 50);
+    }, 100); // Increased timeout to ensure rendering completes
   } catch (err) {
     console.error('Error handling created shape:', err);
     toast.error('Error creating shape');
+  }
+}
+
+/**
+ * Generates an SVG path string from coordinates as a fallback
+ */
+function generateSvgPathFromCoordinates(coordinates: [number, number][], layer: L.Layer): string | null {
+  if (!coordinates || coordinates.length < 3) return null;
+  
+  try {
+    // Get the map and its bounds for projection
+    const map = (layer as any)._map;
+    if (!map) return null;
+    
+    // Convert geographic coordinates to pixel coordinates
+    const pixelPoints = coordinates.map(coord => {
+      const point = map.latLngToLayerPoint(L.latLng(coord[0], coord[1]));
+      return [point.x, point.y];
+    });
+    
+    // Create the SVG path string
+    let pathString = `M ${pixelPoints[0][0]},${pixelPoints[0][1]}`;
+    for (let i = 1; i < pixelPoints.length; i++) {
+      pathString += ` L ${pixelPoints[i][0]},${pixelPoints[i][1]}`;
+    }
+    pathString += ' Z'; // Close the path
+    
+    return pathString;
+  } catch (err) {
+    console.error('Error generating SVG path from coordinates:', err);
+    return null;
   }
 }

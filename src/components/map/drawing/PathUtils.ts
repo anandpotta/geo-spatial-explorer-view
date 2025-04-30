@@ -26,6 +26,16 @@ export function setupSvgPathRendering(): () => void {
     }
   };
   
+  // Override Polygon initialization too
+  const originalPolygonInitialize = (L.Polygon as any).prototype.initialize;
+  (L.Polygon as any).prototype.initialize = function(...args: any[]) {
+    if (!args[1]?.renderer) {
+      if (!args[1]) args[1] = {};
+      args[1].renderer = L.svg();
+    }
+    return originalPolygonInitialize.apply(this, args);
+  };
+  
   // Do the same for Rectangle
   const originalRectInitialize = (L.Rectangle as any).prototype.initialize;
   
@@ -43,6 +53,7 @@ export function setupSvgPathRendering(): () => void {
     (L.Circle as any).prototype.initialize = originalCircleInitialize;
     (L.Circle as any).prototype._updatePath = originalCircleRedraw;
     (L.Rectangle as any).prototype.initialize = originalRectInitialize;
+    (L.Polygon as any).prototype.initialize = originalPolygonInitialize;
   };
 }
 
@@ -67,6 +78,15 @@ export function getPathElements(featureGroup: L.FeatureGroup): SVGPathElement[] 
         });
       }
     }
+    
+    // If no paths found through container, try to get directly from layers
+    if (pathElements.length === 0 && featureGroup) {
+      featureGroup.eachLayer((layer: any) => {
+        if (layer._path) {
+          pathElements.push(layer._path);
+        }
+      });
+    }
   } catch (err) {
     console.error('Error getting path elements:', err);
   }
@@ -81,19 +101,29 @@ export function getSVGPathData(featureGroup: L.FeatureGroup): string[] {
   const pathData: string[] = [];
   
   try {
-    // Find all SVG paths within the map container
-    const map = getMapFromLayer(featureGroup);
-    if (map) {
-      const container = map.getContainer();
-      if (container) {
-        const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
-        svgElements.forEach(svg => {
-          const paths = svg.querySelectorAll('path');
-          paths.forEach(path => {
-            pathData.push(path.getAttribute('d') || '');
-          });
-        });
+    // Get path elements first
+    const pathElements = getPathElements(featureGroup);
+    
+    // Extract path data from elements
+    pathElements.forEach(path => {
+      const data = path.getAttribute('d');
+      if (data) {
+        pathData.push(data);
+        console.log('Found SVG path data:', data);
       }
+    });
+    
+    // If no paths found through elements, try to get directly from layers
+    if (pathData.length === 0 && featureGroup) {
+      featureGroup.eachLayer((layer: any) => {
+        if (layer._path) {
+          const d = layer._path.getAttribute('d');
+          if (d) {
+            pathData.push(d);
+            console.log('Found SVG path data from layer:', d);
+          }
+        }
+      });
     }
   } catch (err) {
     console.error('Error getting SVG path data:', err);
@@ -122,4 +152,38 @@ function getMapFromLayer(layer: L.Layer): L.Map | null {
   }
   
   return null;
+}
+
+/**
+ * Force SVG path creation for a layer
+ */
+export function forceSvgPathCreation(layer: L.Layer): void {
+  if (!layer) return;
+  
+  try {
+    // Ensure layer has SVG renderer
+    if ((layer as any).options) {
+      (layer as any).options.renderer = L.svg();
+    }
+    
+    // Force update path if applicable
+    if (typeof (layer as any)._updatePath === 'function') {
+      (layer as any)._updatePath();
+    }
+    
+    // For feature groups, apply to each layer
+    if (typeof (layer as any).eachLayer === 'function') {
+      (layer as any).eachLayer((subLayer: any) => {
+        if (subLayer.options) {
+          subLayer.options.renderer = L.svg();
+        }
+        
+        if (typeof subLayer._updatePath === 'function') {
+          subLayer._updatePath();
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Error forcing SVG path creation:', err);
+  }
 }
