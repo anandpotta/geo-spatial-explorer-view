@@ -28,6 +28,19 @@ export function addEditingCapability(layer: L.Path): void {
     } catch (err) {
       console.error('Error adding editing capability to layer:', err);
     }
+  } else {
+    // Ensure existing handlers have the required methods
+    if (layer.editing && !layer.editing.disable) {
+      layer.editing.disable = function(this: L.Handler): void {
+        console.log("Disable called on layer with incomplete handler");
+      };
+    }
+    
+    if (layer.editing && !layer.editing.enable) {
+      layer.editing.enable = function(this: L.Handler): void {
+        console.log("Enable called on layer with incomplete handler");
+      };
+    }
   }
 }
 

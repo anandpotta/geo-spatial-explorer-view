@@ -46,6 +46,19 @@ export const EditControl = forwardRef((props: any, ref: any) => {
               // Assign the properly typed handler
               layer.editing = editHandler;
             }
+          } else if (layer && layer.editing) {
+            // Ensure the editing handler has required methods
+            if (!layer.editing.disable) {
+              layer.editing.disable = function(this: any): void {
+                console.log("Disable called on layer with incomplete handler");
+              };
+            }
+            
+            if (!layer.editing.enable) {
+              layer.editing.enable = function(this: any): void {
+                console.log("Enable called on layer with incomplete handler");
+              };
+            }
           }
         });
       } catch (err) {
