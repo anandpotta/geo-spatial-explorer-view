@@ -50,33 +50,50 @@ export const createLayerControls = ({
     if ('getLatLng' in layer) {
       // For markers
       buttonPosition = (layer as L.Marker).getLatLng();
-      // Position the upload button to the right of the remove button
+      // Position the upload button slightly to the right of the marker
       uploadButtonPosition = L.latLng(
         buttonPosition.lat,
-        buttonPosition.lng + 0.00015
+        buttonPosition.lng + 0.0002 // Increase the spacing to avoid overlap
       );
     } else if ('getBounds' in layer) {
       // For polygons, rectangles, etc.
       const bounds = (layer as any).getBounds();
       if (bounds) {
-        // Position at the northeast corner
+        // Position remove button at the northeast corner
         buttonPosition = bounds.getNorthEast();
-        // Position upload button to the left of the remove button
+        
+        // Position upload button at the northwest corner to create clear separation
         uploadButtonPosition = L.latLng(
-          bounds.getNorthEast().lat,
-          bounds.getNorthEast().lng - 0.00015
+          bounds.getNorthWest().lat,
+          bounds.getNorthWest().lng
         );
       }
     } else if ('getLatLngs' in layer) {
       // For polylines or complex shapes
       const latlngs = (layer as any).getLatLngs();
       if (latlngs && latlngs.length > 0) {
+        // For the remove button, use the first point
         buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
-        // Position upload button below the remove button
-        uploadButtonPosition = L.latLng(
-          buttonPosition.lat - 0.00015,
-          buttonPosition.lng
-        );
+        
+        // For the upload button, use the last point to ensure separation
+        const lastPoints = Array.isArray(latlngs[0]) ? latlngs[0] : latlngs;
+        const lastPoint = lastPoints[lastPoints.length - 1];
+        uploadButtonPosition = L.latLng(lastPoint.lat, lastPoint.lng);
+        
+        // If they happen to be too close, adjust position
+        if (uploadButtonPosition && buttonPosition) {
+          const distance = map.distance(
+            [buttonPosition.lat, buttonPosition.lng],
+            [uploadButtonPosition.lat, uploadButtonPosition.lng]
+          );
+          
+          if (distance < 10) { // If less than 10 meters apart
+            uploadButtonPosition = L.latLng(
+              buttonPosition.lat - 0.0002,
+              buttonPosition.lng
+            );
+          }
+        }
       }
     }
   } catch (err) {

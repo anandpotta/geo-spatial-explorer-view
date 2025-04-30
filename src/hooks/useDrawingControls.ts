@@ -19,6 +19,7 @@ export function useDrawingControls() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activationAttemptsRef = useRef<number>(0);
 
   // Ensure we clean up properly when unmounting
   useEffect(() => {
@@ -58,70 +59,89 @@ export function useDrawingControls() {
     
     console.log("Attempting to activate edit mode");
     
-    // First try to enable edit mode through layers directly in case the toolbar isn't working
-    try {
-      const group = featureGroupRef.current;
-      if (group) {
-        let activatedAny = false;
-        group.eachLayer(layer => {
-          if (safelyEnableEditForLayer(layer)) {
-            activatedAny = true;
-          }
-        });
-        
-        if (activatedAny) {
-          console.log("Activated edit mode on at least one layer directly");
-          return;
-        }
-      }
-    } catch (err) {
-      console.error("Error activating edit mode directly on layers:", err);
-    }
-
-    // Try to enable edit mode through edit control
-    if (drawToolsRef.current?.getEditControl()) {
+    // Retry logic with progressive delay
+    const maxAttempts = 5;
+    const attemptActivation = () => {
+      // First try to enable edit mode through layers directly in case the toolbar isn't working
       try {
-        const editControl = drawToolsRef.current.getEditControl();
-        if (editControl) {
-          // First make sure the edit toolbar is visible
-          if (editControl._map && typeof editControl._showToolbar === 'function') {
-            try {
-              editControl._showToolbar();
-            } catch (err) {
-              console.warn("Could not show toolbar:", err);
+        const group = featureGroupRef.current;
+        if (group) {
+          let activatedAny = false;
+          group.eachLayer(layer => {
+            if (safelyEnableEditForLayer(layer)) {
+              activatedAny = true;
             }
+          });
+          
+          if (activatedAny) {
+            console.log("Activated edit mode on at least one layer directly");
+            activationAttemptsRef.current = 0;
+            return true;
           }
-          
-          // Then try to activate the edit handler
-          const editHandlers = [
-            // Try multiple paths to find the edit handler
-            editControl._toolbars?.edit?._modes?.edit?.handler,
-            editControl._handler,
-            editControl._modes?.edit?.handler
-          ];
-          
-          for (const handler of editHandlers) {
-            if (handler && typeof handler.enable === 'function') {
-              try {
-                handler.enable();
-                console.log("Edit mode activated successfully");
-                return;
-              } catch (e) {
-                console.warn("Failed to enable this edit handler:", e);
-                // Continue to next handler if this one fails
-              }
-            }
-          }
-          
-          console.warn("None of the edit handlers could be activated");
         }
       } catch (err) {
-        console.error('Failed to activate edit mode:', err);
-        toast.error('Could not enable edit mode');
+        console.error("Error activating edit mode directly on layers:", err);
       }
-    } else {
-      console.warn("Draw tools ref or edit control not available");
-    }
+
+      // Try to enable edit mode through edit control
+      if (drawToolsRef.current?.getEditControl()) {
+        try {
+          const editControl = drawToolsRef.current.getEditControl();
+          if (editControl) {
+            // First make sure the edit toolbar is visible
+            if (editControl._map && typeof editControl._showToolbar === 'function') {
+              try {
+                editControl._showToolbar();
+              } catch (err) {
+                console.warn("Could not show toolbar:", err);
+              }
+            }
+            
+            // Then try to activate the edit handler
+            const editHandlers = [
+              // Try multiple paths to find the edit handler
+              editControl._toolbars?.edit?._modes?.edit?.handler,
+              editControl._handler,
+              editControl._modes?.edit?.handler
+            ];
+            
+            for (const handler of editHandlers) {
+              if (handler && typeof handler.enable === 'function') {
+                try {
+                  handler.enable();
+                  console.log("Edit mode activated successfully");
+                  activationAttemptsRef.current = 0;
+                  return true;
+                } catch (e) {
+                  console.warn("Failed to enable this edit handler:", e);
+                  // Continue to next handler if this one fails
+                }
+              }
+            }
+            
+            console.warn("None of the edit handlers could be activated");
+          }
+        } catch (err) {
+          console.error('Failed to activate edit mode:', err);
+        }
+      } else {
+        console.warn("Draw tools ref or edit control not available");
+        
+        // Retry with exponential backoff
+        activationAttemptsRef.current += 1;
+        if (activationAttemptsRef.current < maxAttempts) {
+          const delay = Math.min(100 * Math.pow(2, activationAttemptsRef.current), 2000);
+          console.log(`Retrying activation in ${delay}ms (attempt ${activationAttemptsRef.current})`);
+          setTimeout(attemptActivation, delay);
+        } else {
+          toast.error('Could not enable edit mode after multiple attempts');
+          activationAttemptsRef.current = 0;
+        }
+      }
+      return false;
+    };
+    
+    return attemptActivation();
   }, [checkMapValidity]);
 
   const openFileUploadDialog = useCallback((drawingId: string) => {
