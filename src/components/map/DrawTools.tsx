@@ -142,7 +142,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           
           // Track the timeout so it can be cleared if needed
           if (window._leafletCleanupTimers) {
-            window._leafletCleanupTimers.push(timerId);
+            // Convert the NodeJS.Timeout to a number 
+            window._leafletCleanupTimers.push(Number(timerId));
           }
         }
       } catch (err) {

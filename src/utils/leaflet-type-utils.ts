@@ -7,8 +7,7 @@ interface LeafletMapInternal extends L.Map {
   _container?: HTMLElement;
 }
 
-// Instead of extending L.Layer (which has protected properties),
-// define a type that intersects Layer with the internal properties
+// Using type intersection for LeafletLayerInternal instead of interface extension
 type LeafletLayerInternal = L.Layer & {
   _map?: L.Map;
   _path?: SVGPathElement;
@@ -134,16 +133,20 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
       if (layer.editing._verticesHandlers) {
         for (const handler of Object.values(layer.editing._verticesHandlers || {})) {
           try {
-            if (handler && typeof handler.disable === 'function') {
-              handler.disable();
+            // Type safety check before accessing disable method
+            const typedHandler = handler as { disable?: () => void; dispose?: () => void };
+            if (typedHandler && typeof typedHandler.disable === 'function') {
+              typedHandler.disable();
             }
           } catch (e) {
             console.warn("Error disabling vertex handler:", e);
           }
           
           try {
-            if (handler && typeof handler.dispose === 'function') {
-              handler.dispose();
+            // Type safety check before accessing dispose method
+            const typedHandler = handler as { disable?: () => void; dispose?: () => void };
+            if (typedHandler && typeof typedHandler.dispose === 'function') {
+              typedHandler.dispose();
             }
           } catch (e) {
             console.warn("Error disposing vertex handler:", e);
