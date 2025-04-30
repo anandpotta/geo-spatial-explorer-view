@@ -16,26 +16,49 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   if (typeof edit === 'boolean') {
     // If edit is a boolean, create a proper object structure
     editOptions = {
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      edit: {
+        selectedPathOptions: {
+          maintainColor: true,
+          opacity: 0.7,
+          dashArray: '10, 10',
+        }
+      }
     };
   } else if (edit && typeof edit === 'object') {
-    // If edit is an object, merge with featureGroup but don't overwrite featureGroup
+    // If edit is an object, merge with featureGroup but ensure consistent structure
     editOptions = {
       ...edit,
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      edit: {
+        ...(edit.edit || {}),
+        selectedPathOptions: {
+          ...(edit.edit?.selectedPathOptions || {}),
+          maintainColor: true,
+          opacity: 0.7,
+          dashArray: '10, 10',
+        }
+      }
     };
   } else {
     // Default case if edit is undefined or null
     editOptions = {
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      edit: {
+        selectedPathOptions: {
+          maintainColor: true,
+          opacity: 0.7,
+          dashArray: '10, 10',
+        }
+      }
     };
   }
   
   // Return the original EditControl with proper prop structure
-  // Important: Do not pass featureGroup at top level as it causes confusion
   return React.createElement(OriginalEditControl, {
     ...otherProps,
-    edit: editOptions,
+    edit: editOptions.edit,
+    featureGroup: featureGroup,
     ref
   });
 });

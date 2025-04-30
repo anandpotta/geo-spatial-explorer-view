@@ -4,7 +4,7 @@ import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { getMapFromLayer } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -20,7 +20,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useEffect(() => {
     // Instead of trying to modify the read-only property, configure the renderer
     // when creating layers
-    const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
+    const pathPrototype = L.Path.prototype as any;
     const originalUpdatePath = pathPrototype._updatePath;
     
     pathPrototype._updatePath = function() {
@@ -43,7 +43,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Find all SVG paths within the map container
       if (featureGroup) {
         const map = getMapFromLayer(featureGroup);
-        if (map) {
+        if (map && isMapValid(map)) {
           const container = map.getContainer();
           if (container) {
             const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
@@ -63,7 +63,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Find all SVG paths within the map container
       if (featureGroup) {
         const map = getMapFromLayer(featureGroup);
-        if (map) {
+        if (map && isMapValid(map)) {
           const container = map.getContainer();
           if (container) {
             const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
@@ -141,6 +141,15 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   };
 
+  // Ensure proper edit configuration
+  const editConfig = {
+    selectedPathOptions: {
+      maintainColor: true,
+      opacity: 0.7,
+      dashArray: '10, 10'
+    }
+  };
+
   return (
     <EditControl
       ref={editControlRef}
@@ -155,9 +164,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
+        featureGroup: featureGroup,
+        edit: editConfig,
         remove: true
       }}
-      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
+      featureGroup={featureGroup}
     />
   );
 });

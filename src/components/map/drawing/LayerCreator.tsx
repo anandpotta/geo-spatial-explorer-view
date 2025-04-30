@@ -60,18 +60,32 @@ export const createLayerFromDrawing = ({
     options.opacity = 1;
     options.fillOpacity = options.fillOpacity || 0.2;
     
+    // Ensure proper GeoJSON options
+    if (typeof options.renderer === 'undefined') {
+      options.renderer = L.svg();
+    }
+    
     const layer = createDrawingLayer(drawing, options);
     
     if (layer) {
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
+          // Ensure the layer has required properties for edit mode
           (l as any).drawingId = drawing.id;
+          
+          // Ensure the layer has proper editing capabilities
+          if ((l as any).editing && typeof (l as any).editing === 'undefined') {
+            // Initialize editing capability if missing
+            if ('enableEdit' in l && typeof (l as any).enableEdit === 'function') {
+              (l as any).enableEdit();
+            }
+          }
           
           // Store the layer reference
           layersRef.set(drawing.id, l);
           
           // Add the remove and upload buttons when in edit mode
-          if (onRemoveShape && onUploadRequest) {
+          if (activeTool === 'edit' && onRemoveShape && onUploadRequest) {
             createLayerControls({
               layer: l,
               drawingId: drawing.id,

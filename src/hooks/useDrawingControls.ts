@@ -21,21 +21,14 @@ export function useDrawingControls() {
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isMapValid = () => {
+  const checkMapValidity = () => {
     // Check if the feature group is attached to a valid map
     const featureGroup = featureGroupRef.current;
     try {
       const map = getMapFromLayer(featureGroup);
-      if (!map || !(map as any)._loaded) {
+      if (!isMapValid(map)) {
         console.warn("Map is not fully loaded, cannot proceed");
         toast.error("Map view is not ready. Please try again in a moment.");
-        return false;
-      }
-
-      // Check if map container is valid
-      if (!map.getContainer() || !document.body.contains(map.getContainer())) {
-        console.warn("Map container is not in DOM, cannot proceed");
-        toast.error("Map view is not available. Please refresh the page.");
         return false;
       }
       
@@ -48,35 +41,54 @@ export function useDrawingControls() {
   };
 
   const activateEditMode = (): boolean => {
-    if (!isMapValid()) return false;
+    if (!checkMapValidity()) return false;
 
-    if (drawToolsRef.current?.getEditControl()) {
-      try {
-        console.log("Attempting to activate edit mode");
-        const editControl = drawToolsRef.current.getEditControl();
-        if (editControl) {
-          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
-          if (editHandler && typeof editHandler.enable === 'function') {
-            editHandler.enable();
-            console.log("Edit mode activated successfully");
-            return true;
-          } else {
-            console.warn("Edit handler not found or not a function");
-          }
-        }
-      } catch (err) {
-        console.error('Failed to activate edit mode:', err);
-        toast.error('Could not enable edit mode');
+    try {
+      console.log("Attempting to activate edit mode");
+      
+      if (!drawToolsRef.current) {
+        console.warn("Draw tools reference not available");
+        return false;
       }
-    } else {
-      console.warn("Draw tools ref or edit control not available");
+      
+      const editControl = drawToolsRef.current.getEditControl();
+      if (!editControl) {
+        console.warn("Edit control not available");
+        return false;
+      }
+      
+      // Safely access the edit handler
+      const editModes = editControl._toolbars?.edit?._modes;
+      if (!editModes || !editModes.edit) {
+        console.warn("Edit modes not available");
+        return false;
+      }
+      
+      const editHandler = editModes.edit.handler;
+      if (!editHandler || typeof editHandler.enable !== 'function') {
+        console.warn("Edit handler not found or not a function");
+        return false;
+      }
+      
+      // Ensure the edit handler has a valid feature group with proper event listeners
+      if (!editHandler._featureGroup) {
+        console.warn("Edit handler's feature group is not set");
+        editHandler._featureGroup = featureGroupRef.current;
+      }
+      
+      // Safely enable edit mode
+      editHandler.enable();
+      console.log("Edit mode activated successfully");
+      return true;
+    } catch (err) {
+      console.error('Failed to activate edit mode:', err);
+      toast.error('Could not enable edit mode');
+      return false;
     }
-    
-    return false;
   };
 
   const openFileUploadDialog = (drawingId: string) => {
-    if (!isMapValid()) return;
+    if (!checkMapValidity()) return;
     
     setSelectedDrawing(drawingId);
     if (fileInputRef.current) {

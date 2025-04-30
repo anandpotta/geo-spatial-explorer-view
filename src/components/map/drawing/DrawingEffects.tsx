@@ -1,6 +1,7 @@
 
 import { useEffect } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { toast } from 'sonner';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
@@ -35,19 +36,38 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
   // Effect to activate edit mode when activeTool changes to 'edit'
   useEffect(() => {
     if (activeTool === 'edit' && isInitialized) {
-      setTimeout(() => {
+      // Add delay to ensure map and tools are fully initialized
+      const timerId = setTimeout(() => {
         try {
           console.log("Activating edit mode from effect");
-          const activated = activateEditMode();
-          if (activated) {
-            console.log("Edit mode successfully activated");
-          } else {
-            console.log("Failed to activate edit mode");
-          }
+          
+          // Make multiple attempts if needed
+          let attempts = 0;
+          const tryActivate = () => {
+            attempts++;
+            const activated = activateEditMode();
+            
+            if (activated) {
+              console.log("Edit mode successfully activated");
+              toast.success("Edit mode activated");
+            } else if (attempts < 3) {
+              // Try again with a delay
+              console.log(`Attempt ${attempts} failed, trying again in 500ms`);
+              setTimeout(tryActivate, 500);
+            } else {
+              console.log("Failed to activate edit mode after multiple attempts");
+              toast.error("Could not activate edit mode. Try toggling the tool again.");
+            }
+          };
+          
+          tryActivate();
         } catch (err) {
           console.error('Error activating edit mode:', err);
+          toast.error('Error activating edit mode');
         }
-      }, 300);
+      }, 500);
+      
+      return () => clearTimeout(timerId);
     }
   }, [activeTool, isInitialized, activateEditMode]);
 
