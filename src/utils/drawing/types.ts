@@ -8,6 +8,11 @@ export interface DrawingData {
   geoJSON?: any;
   options?: any;
   svgPath?: string; // SVG path data for the drawing
+  maskedImage?: {
+    src: string;
+    rotation: number;
+    originalFile?: string;
+  };
   properties: {
     name?: string;
     description?: string;

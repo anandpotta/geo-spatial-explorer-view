@@ -7,6 +7,8 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import ImageRotationControls from './ImageRotationControls';
+import { createRoot } from './ReactDOMUtils';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -16,9 +18,11 @@ interface CreateLayerOptions {
   layersRef: Map<string, L.Layer>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
+  rotationControlRoots: Map<string, any>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  onRotateImage?: (drawingId: string, degrees: number) => void;
 }
 
 export const createLayerFromDrawing = ({
@@ -29,9 +33,11 @@ export const createLayerFromDrawing = ({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
+  rotationControlRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
+  onUploadRequest,
+  onRotateImage
 }: CreateLayerOptions) => {
   if (!drawing.geoJSON || !isMounted) return;
 
@@ -54,6 +60,15 @@ export const createLayerFromDrawing = ({
       options.fillColor = '#3b82f6';
       options.fillOpacity = 0.4;
       options.color = '#1d4ed8';
+    }
+    
+    // Special handling for masked images
+    if (drawing.maskedImage) {
+      options.fillPattern = {
+        url: drawing.maskedImage.src,
+        pattern: true
+      };
+      options.fillOpacity = 1;
     }
     
     // Always ensure opacity is set to visible values
@@ -84,6 +99,11 @@ export const createLayerFromDrawing = ({
             if (drawing.svgPath && (l as any)._path.getAttribute('d') !== drawing.svgPath) {
               (l as any)._path.setAttribute('d', drawing.svgPath);
             }
+            
+            // Apply masked image if available
+            if (drawing.maskedImage && drawing.maskedImage.src) {
+              applyImageToSvgPath((l as any)._path, drawing.maskedImage.src);
+            }
           }
           
           // Store the layer reference
@@ -101,6 +121,18 @@ export const createLayerFromDrawing = ({
               isMounted,
               onRemoveShape,
               onUploadRequest
+            });
+          }
+          
+          // Add rotation controls if there's a masked image
+          if (drawing.maskedImage && onRotateImage) {
+            addRotationControls({
+              layer: l,
+              drawingId: drawing.id,
+              featureGroup,
+              rotationControlRoots,
+              isMounted,
+              onRotateImage
             });
           }
           
@@ -130,5 +162,129 @@ export const createLayerFromDrawing = ({
     }
   } catch (err) {
     console.error('Error adding drawing layer:', err);
+  }
+};
+
+// Add image pattern to SVG path
+const applyImageToSvgPath = (pathElement: SVGPathElement, imageSrc: string) => {
+  try {
+    // Get the SVG parent
+    const svgElement = pathElement.ownerSVGElement;
+    if (!svgElement) return;
+    
+    // Check if a pattern with this ID already exists
+    const patternId = `pattern-${Math.random().toString(36).substr(2, 9)}`;
+    let pattern = svgElement.querySelector(`#${patternId}`);
+    
+    if (!pattern) {
+      // Create pattern element if it doesn't exist
+      const defs = svgElement.querySelector('defs') || 
+                  svgElement.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'defs'), 
+                  svgElement.firstChild);
+      
+      pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+      pattern.setAttribute('id', patternId);
+      pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+      pattern.setAttribute('width', '100%');
+      pattern.setAttribute('height', '100%');
+      
+      const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      image.setAttribute('href', imageSrc);
+      image.setAttribute('width', '100%');
+      image.setAttribute('height', '100%');
+      image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      
+      pattern.appendChild(image);
+      defs.appendChild(pattern);
+    }
+    
+    // Apply pattern to path
+    pathElement.setAttribute('fill', `url(#${patternId})`);
+    pathElement.setAttribute('stroke-width', '2');
+  } catch (err) {
+    console.error('Error applying image to SVG path:', err);
+  }
+};
+
+// Add rotation controls for images
+const addRotationControls = ({
+  layer,
+  drawingId,
+  featureGroup,
+  rotationControlRoots,
+  isMounted,
+  onRotateImage
+}: {
+  layer: L.Layer;
+  drawingId: string;
+  featureGroup: L.FeatureGroup;
+  rotationControlRoots: Map<string, any>;
+  isMounted: boolean;
+  onRotateImage: (drawingId: string, degrees: number) => void;
+}) => {
+  if (!isMounted) return;
+  
+  try {
+    // Determine position for controls
+    let position;
+    
+    if ('getLatLng' in layer) {
+      // For markers
+      position = (layer as L.Marker).getLatLng();
+    } else if ('getBounds' in layer) {
+      // For polygons, rectangles, etc.
+      const bounds = (layer as any).getBounds();
+      if (bounds) {
+        // Position at the south center
+        const southWest = bounds.getSouthWest();
+        const southEast = bounds.getSouthEast();
+        position = L.latLng(
+          southWest.lat,
+          southWest.lng + (southEast.lng - southWest.lng) / 2
+        );
+      }
+    } else if ('getLatLngs' in layer) {
+      // For polylines or complex shapes
+      const latlngs = (layer as any).getLatLngs();
+      if (latlngs && latlngs.length > 0) {
+        position = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
+      }
+    }
+    
+    if (!position) return;
+    
+    // Create container for rotation controls
+    const container = document.createElement('div');
+    container.className = 'rotation-controls-wrapper';
+    
+    // Create marker for rotation controls
+    const controlsLayer = L.marker(position, {
+      icon: L.divIcon({
+        className: 'rotation-controls-container',
+        html: container,
+        iconSize: [80, 30],
+        iconAnchor: [40, -10] // Position above the shape
+      }),
+      interactive: true,
+      zIndexOffset: 1000
+    });
+    
+    try {
+      controlsLayer.addTo(featureGroup);
+      
+      const root = createRoot(container);
+      rotationControlRoots.set(drawingId, root);
+      
+      root.render(
+        <ImageRotationControls
+          onRotateLeft={() => onRotateImage(drawingId, -90)}
+          onRotateRight={() => onRotateImage(drawingId, 90)}
+        />
+      );
+    } catch (err) {
+      console.error('Error rendering rotation controls:', err);
+    }
+  } catch (err) {
+    console.error('Error adding rotation controls:', err);
   }
 };
