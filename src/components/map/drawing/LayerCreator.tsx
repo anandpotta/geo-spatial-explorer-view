@@ -44,55 +44,47 @@ export const createLayerFromDrawing = ({
   if (!layer) return;
 
   try {
-    layer.eachLayer((l: L.Layer) => {
-      if (l && isMounted) {
-        // Prepare the layer with basic properties
-        prepareLayerForDrawing(l, drawing.id);
-        
-        // Setup SVG path attributes if available
-        setupSvgPathAttributes(l, drawing);
-        
-        // Store the layer reference
-        layersRef.set(drawing.id, l);
-        
-        // Add the remove and upload buttons when in edit mode
-        if (onRemoveShape && onUploadRequest) {
-          createLayerControls({
-            layer: l,
-            drawingId: drawing.id,
-            activeTool,
-            featureGroup,
-            removeButtonRoots,
-            uploadButtonRoots,
-            isMounted,
-            onRemoveShape,
-            onUploadRequest
-          });
-        }
-        
-        // Add rotation controls if there's a masked image
-        if (drawing.maskedImage && onRotateImage) {
-          addRotationControls({
-            layer: l,
-            drawingId: drawing.id,
-            featureGroup,
-            rotationControlRoots,
-            isMounted,
-            onRotateImage
-          });
-        }
-        
-        // Setup click handler for region interaction
-        setupLayerClickHandler({
+    // Check if layer is a feature group or collection
+    if ('eachLayer' in layer) {
+      // Process each layer in the collection
+      (layer as L.FeatureGroup).eachLayer((l: L.Layer) => {
+        processIndividualLayer({
           layer: l,
           drawing,
+          featureGroup,
+          activeTool,
           isMounted,
-          onRegionClick
+          layersRef,
+          removeButtonRoots,
+          uploadButtonRoots,
+          rotationControlRoots,
+          onRegionClick,
+          onRemoveShape,
+          onUploadRequest,
+          onRotateImage
         });
-      }
-    });
+      });
+    } else {
+      // Process single layer
+      processIndividualLayer({
+        layer,
+        drawing,
+        featureGroup,
+        activeTool,
+        isMounted,
+        layersRef,
+        removeButtonRoots,
+        uploadButtonRoots,
+        rotationControlRoots,
+        onRegionClick,
+        onRemoveShape,
+        onUploadRequest,
+        onRotateImage
+      });
+    }
     
-    if (isMounted) {
+    // Add layer to feature group if it hasn't already been added as part of processing
+    if (isMounted && !('eachLayer' in layer)) {
       try {
         layer.addTo(featureGroup);
       } catch (err) {
@@ -102,4 +94,67 @@ export const createLayerFromDrawing = ({
   } catch (err) {
     console.error('Error adding drawing layer:', err);
   }
+};
+
+// Helper function to process each individual layer
+const processIndividualLayer = ({
+  layer,
+  drawing,
+  featureGroup,
+  activeTool,
+  isMounted,
+  layersRef,
+  removeButtonRoots,
+  uploadButtonRoots,
+  rotationControlRoots,
+  onRegionClick,
+  onRemoveShape,
+  onUploadRequest,
+  onRotateImage
+}: CreateLayerOptions & { layer: L.Layer }) => {
+  if (!layer || !isMounted) return;
+  
+  // Prepare the layer with basic properties
+  prepareLayerForDrawing(layer, drawing.id);
+  
+  // Setup SVG path attributes if available
+  setupSvgPathAttributes(layer, drawing);
+  
+  // Store the layer reference
+  layersRef.set(drawing.id, layer);
+  
+  // Add the remove and upload buttons when in edit mode
+  if (onRemoveShape && onUploadRequest) {
+    createLayerControls({
+      layer,
+      drawingId: drawing.id,
+      activeTool,
+      featureGroup,
+      removeButtonRoots,
+      uploadButtonRoots,
+      isMounted,
+      onRemoveShape,
+      onUploadRequest
+    });
+  }
+  
+  // Add rotation controls if there's a masked image
+  if (drawing.maskedImage && onRotateImage) {
+    addRotationControls({
+      layer,
+      drawingId: drawing.id,
+      featureGroup,
+      rotationControlRoots,
+      isMounted,
+      onRotateImage
+    });
+  }
+  
+  // Setup click handler for region interaction
+  setupLayerClickHandler({
+    layer,
+    drawing,
+    isMounted,
+    onRegionClick
+  });
 };
