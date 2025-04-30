@@ -1,5 +1,5 @@
 
-import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
+import { useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
@@ -99,7 +99,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     return () => clearInterval(intervalId);
   }, [isInitialized, activeTool]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     if (featureGroupRef.current) {
       featureGroupRef.current.clearLayers();
       
@@ -120,21 +120,21 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       
       toast.success('All drawings and markers cleared');
     }
-  };
+  }, [onClearAll]);
 
-  const handleRemoveShape = (drawingId: string) => {
+  const handleRemoveShape = useCallback((drawingId: string) => {
     if (onRemoveShape) {
       onRemoveShape(drawingId);
     }
-  };
+  }, [onRemoveShape]);
 
-  const handleDrawingClick = (drawing: DrawingData) => {
+  const handleDrawingClick = useCallback((drawing: DrawingData) => {
     if (onRegionClick) {
       onRegionClick(drawing);
     }
-  };
+  }, [onRegionClick]);
 
-  const handleCreatedWrapper = (shape: any) => {
+  const handleCreatedWrapper = useCallback((shape: any) => {
     // Process the shape and check for SVG path data
     if (shape.svgPath) {
       // Add path to state
@@ -144,7 +144,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       }
     }
     onCreated(shape);
-  };
+  }, [onCreated, svgPaths, onPathsUpdated]);
 
   return (
     <>
