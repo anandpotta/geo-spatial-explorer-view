@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing/types';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
@@ -64,7 +63,8 @@ export const createLayerFromDrawing = ({
     
     // Special handling for masked images
     if (drawing.maskedImage) {
-      options.fillPattern = {
+      // Use the patternOptions in a way TypeScript understands
+      (options as any).fillPattern = {
         url: drawing.maskedImage.src,
         pattern: true
       };

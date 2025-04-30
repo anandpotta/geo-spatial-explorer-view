@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { createImageFromFile, applyPathMaskToImage } from '@/utils/image-mask-utils';
 import { getSavedDrawings, saveDrawing } from '@/utils/drawing/operations';
-import { getSvgPathFromLayer } from '@/utils/leaflet-drawing-config';
+import { getSVGPathFromLayer } from '@/utils/leaflet-drawing-config';
 
 export function useFileUpload({ onUploadToDrawing }: { 
   onUploadToDrawing?: (drawingId: string, file: File) => void 
