@@ -1,6 +1,12 @@
 
 import L from 'leaflet';
 
+// Define interface for internal map properties not exposed in TypeScript definitions
+interface LeafletMapInternal extends L.Map {
+  _loaded?: boolean;
+  _container?: HTMLElement;
+}
+
 export const getMapFromLayer = (layer: any): L.Map | null => {
   try {
     if (!layer) return null;
@@ -40,8 +46,11 @@ export const isMapValid = (map: L.Map | null): boolean => {
   try {
     if (!map) return false;
     
+    // Cast to internal map type to access private properties
+    const internalMap = map as LeafletMapInternal;
+    
     // Check if map has required properties and methods
-    if (!map._loaded) return false;
+    if (!internalMap._loaded) return false;
     
     // Check if map container exists and is in the DOM
     if (!map.getContainer) return false;
