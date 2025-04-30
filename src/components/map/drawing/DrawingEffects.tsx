@@ -1,6 +1,7 @@
 
 import { useEffect } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { toast } from 'sonner';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
@@ -35,14 +36,18 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
   // Effect to activate edit mode when activeTool changes to 'edit'
   useEffect(() => {
     if (activeTool === 'edit' && isInitialized) {
-      setTimeout(() => {
+      // Use a longer delay to ensure all components are fully initialized
+      const timeoutId = setTimeout(() => {
         try {
-          console.log("Activating edit mode from effect");
+          console.log("Activating edit mode from effect with delay");
           activateEditMode();
         } catch (err) {
           console.error('Error activating edit mode:', err);
+          toast.error('Could not activate edit mode. Please try again.');
         }
-      }, 300);
+      }, 500); // Increased delay for better initialization
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [activeTool, isInitialized, activateEditMode]);
 

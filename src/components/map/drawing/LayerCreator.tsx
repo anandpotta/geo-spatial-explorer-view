@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
@@ -59,12 +60,21 @@ export const createLayerFromDrawing = ({
     options.opacity = 1;
     options.fillOpacity = options.fillOpacity || 0.2;
     
+    // Ensure we have a valid transform function for edit mode
+    options.transform = true;
+    
     const layer = createDrawingLayer(drawing, options);
     
     if (layer) {
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
+          // Store drawing ID on the layer for reference
           (l as any).drawingId = drawing.id;
+          
+          // Ensure the layer has necessary properties for edit mode
+          if ((l as any)._path) {
+            (l as any)._path.setAttribute('data-drawing-id', drawing.id);
+          }
           
           // Store the layer reference
           layersRef.set(drawing.id, l);

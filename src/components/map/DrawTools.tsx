@@ -138,6 +138,18 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   };
 
+  // Make sure we don't try to enable edit mode on non-existing layers
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
+    },
+    remove: true
+  };
+
   return (
     <EditControl
       ref={editControlRef}
@@ -151,10 +163,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         marker: true,
         polyline: false
       }}
-      edit={{
-        remove: true
-      }}
-      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
+      edit={editOptions}
     />
   );
 });

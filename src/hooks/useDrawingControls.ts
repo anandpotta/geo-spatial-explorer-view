@@ -1,3 +1,4 @@
+
 import { useRef, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
@@ -52,13 +53,45 @@ export function useDrawingControls() {
       try {
         console.log("Attempting to activate edit mode");
         const editControl = drawToolsRef.current.getEditControl();
+        
         if (editControl) {
-          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
-          if (editHandler && typeof editHandler.enable === 'function') {
-            editHandler.enable();
-            console.log("Edit mode activated successfully");
+          // Get the map to ensure proper context
+          const map = getMapFromLayer(featureGroupRef.current);
+          if (!map) {
+            console.warn("Map not available for edit mode");
+            return;
+          }
+          
+          // Access the edit toolbar and handler with proper checks
+          const toolbar = editControl._toolbars?.edit;
+          if (toolbar) {
+            // Make sure we have at least one layer to edit
+            if (featureGroupRef.current.getLayers().length === 0) {
+              console.warn("No layers to edit");
+              toast.error("No drawings to edit. Create a drawing first.");
+              return;
+            }
+            
+            // Get the edit handler
+            const editHandler = toolbar._modes?.edit?.handler;
+            if (editHandler) {
+              // Check if enable method exists
+              if (typeof editHandler.enable === 'function') {
+                // Initialize the edit handler with the feature group
+                editHandler._featureGroup = featureGroupRef.current;
+                
+                // Enable the edit mode
+                editHandler.enable();
+                console.log("Edit mode activated successfully");
+              } else {
+                console.warn("Edit handler enable method not found");
+                toast.error("Could not enable edit mode");
+              }
+            } else {
+              console.warn("Edit handler not found in toolbar");
+            }
           } else {
-            console.warn("Edit handler not found or not a function");
+            console.warn("Edit toolbar not found");
           }
         }
       } catch (err) {
