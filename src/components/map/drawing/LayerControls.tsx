@@ -105,10 +105,14 @@ export const createLayerControls = ({
       removeButtonRoots.set(drawingId, root);
       
       root.render(
-        <RemoveButton onClick={(e: React.MouseEvent) => {
-          e.stopPropagation();
-          onRemoveShape(drawingId);
-        }} />
+        <RemoveButton 
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            onRemoveShape(drawingId);
+            toast.success('Shape removed');
+          }} 
+          className="animate-pulse"
+        />
       );
     } catch (err) {
       console.error('Error rendering remove button:', err);

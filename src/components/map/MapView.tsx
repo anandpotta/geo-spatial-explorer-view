@@ -32,6 +32,7 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
+  onRemoveShape?: (drawingId: string) => void;
   isMapReady?: boolean;
 }
 
@@ -53,6 +54,7 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
+  onRemoveShape,
   isMapReady = false
 }: MapViewProps) => {
   const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
@@ -100,6 +102,7 @@ const MapView = ({
           activeTool={activeTool}
           onRegionClick={handleRegionClick}
           onClearAll={onClearAll}
+          onRemoveShape={onRemoveShape}
         />
         
         <MarkersContainer
