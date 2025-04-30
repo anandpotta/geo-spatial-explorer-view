@@ -5,6 +5,7 @@ import { createLayerFromDrawingData, prepareLayerForDrawing, setupSvgPathAttribu
 import { createLayerControls } from './LayerControls';
 import { setupLayerClickHandler } from './LayerInteractionHandler';
 import { addRotationControls } from './RotationControlsCreator';
+import { ensureLayerVisibility, forceSvgPathCreation } from './PathUtils';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -86,7 +87,19 @@ export const createLayerFromDrawing = ({
     // Add layer to feature group if it hasn't already been added as part of processing
     if (isMounted && !('eachLayer' in layer)) {
       try {
+        // Set default style options for visibility
+        if ((layer as any).options) {
+          (layer as any).options.fillOpacity = (layer as any).options.fillOpacity || 0.5;
+          (layer as any).options.opacity = (layer as any).options.opacity || 1;
+          (layer as any).options.weight = (layer as any).options.weight || 3;
+          (layer as any).options.color = (layer as any).options.color || '#3388ff';
+        }
+        
         layer.addTo(featureGroup);
+        
+        // Force SVG path creation and ensure visibility after adding to the feature group
+        forceSvgPathCreation(layer);
+        ensureLayerVisibility(layer);
       } catch (err) {
         console.error('Error adding layer to featureGroup:', err);
       }
@@ -119,6 +132,18 @@ const processIndividualLayer = ({
   
   // Setup SVG path attributes if available
   setupSvgPathAttributes(layer, drawing);
+  
+  // Ensure the layer has proper styling for visibility
+  if ((layer as any).options) {
+    (layer as any).options.fillOpacity = (layer as any).options.fillOpacity || 0.5;
+    (layer as any).options.opacity = (layer as any).options.opacity || 1;
+    (layer as any).options.weight = (layer as any).options.weight || 3;
+    (layer as any).options.color = (layer as any).options.color || '#3388ff';
+  }
+  
+  // Force SVG path creation and ensure visibility
+  forceSvgPathCreation(layer);
+  ensureLayerVisibility(layer);
   
   // Store the layer reference
   layersRef.set(drawing.id, layer);

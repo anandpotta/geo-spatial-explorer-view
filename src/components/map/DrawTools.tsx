@@ -22,10 +22,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     // Patch Leaflet.Draw to fix the "type is not defined" error
     if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
       // Store the original method
-      const originalGetTooltipText = L.Draw.Polygon.prototype._getTooltipText;
+      const originalGetTooltipText = (L.Draw.Polygon.prototype as any)._getTooltipText;
       
       // Override the method to handle the error
-      L.Draw.Polygon.prototype._getTooltipText = function() {
+      (L.Draw.Polygon.prototype as any)._getTooltipText = function() {
         try {
           // Try to call the original method
           return originalGetTooltipText.apply(this);
@@ -107,19 +107,28 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       draw={{
         rectangle: {
           shapeOptions: {
-            renderer: L.svg()
+            renderer: L.svg(),
+            fillOpacity: 0.5,
+            color: '#3388ff',
+            weight: 3
           }
         },
         polygon: {
           shapeOptions: {
             renderer: L.svg(),
+            fillOpacity: 0.5,
+            color: '#3388ff',
+            weight: 3,
             // Explicitly set this to work around the tooltip error
             showArea: true
           }
         },
         circle: {
           shapeOptions: {
-            renderer: L.svg()
+            renderer: L.svg(),
+            fillOpacity: 0.5,
+            color: '#3388ff',
+            weight: 3
           }
         },
         circlemarker: false,
@@ -135,4 +144,3 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
 DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;
-

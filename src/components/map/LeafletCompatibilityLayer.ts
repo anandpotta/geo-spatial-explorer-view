@@ -14,9 +14,9 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   useEffect(() => {
     // Patch the readableArea function to ensure 'type' is defined
     if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
-      const originalReadableArea = L.Draw.Polygon.prototype._getTooltipText;
+      const originalReadableArea = (L.Draw.Polygon.prototype as any)._getTooltipText;
       if (originalReadableArea) {
-        L.Draw.Polygon.prototype._getTooltipText = function() {
+        (L.Draw.Polygon.prototype as any)._getTooltipText = function() {
           try {
             return originalReadableArea.apply(this);
           } catch (err) {
@@ -24,7 +24,7 @@ export const EditControl = forwardRef((props: any, ref: any) => {
             if (err.toString().includes('type is not defined')) {
               const result: any = {};
               result.text = this._endLabelText || 'Click first point to close this shape';
-              result.subtext = this._getMeasurementString();
+              result.subtext = this._getMeasurementString ? this._getMeasurementString() : 'Calculate area after completion';
               return result;
             }
             throw err;
@@ -144,10 +144,10 @@ if (typeof window !== 'undefined' && window.L && window.L.Draw) {
     
     // If Leaflet Draw is loaded, patch the prototype
     if (originalDraw.Polygon) {
-      const originalReadableArea = originalDraw.Polygon.prototype._getTooltipText;
+      const originalReadableArea = (originalDraw.Polygon.prototype as any)._getTooltipText;
       
       if (originalReadableArea) {
-        originalDraw.Polygon.prototype._getTooltipText = function() {
+        (originalDraw.Polygon.prototype as any)._getTooltipText = function() {
           try {
             return originalReadableArea.apply(this);
           } catch (err) {
@@ -157,7 +157,7 @@ if (typeof window !== 'undefined' && window.L && window.L.Draw) {
             result.text = this._endLabelText || 'Click first point to close this shape';
             // Safely call _getMeasurementString with a type property defined
             try {
-              result.subtext = this._getMeasurementString();
+              result.subtext = this._getMeasurementString ? this._getMeasurementString() : "Calculate area after completion";
             } catch (measureErr) {
               result.subtext = "Calculate area after completion";
             }
@@ -170,4 +170,3 @@ if (typeof window !== 'undefined' && window.L && window.L.Draw) {
     console.error("Error patching Leaflet Draw:", err);
   }
 }
-

@@ -2,6 +2,7 @@
 import L from 'leaflet';
 import { toast } from 'sonner';
 import { addEditingCapability } from './LayerEditingUtils';
+import { ensureLayerVisibility, forceSvgPathCreation } from './PathUtils';
 
 interface Shape {
   type: string;
@@ -36,6 +37,10 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
     // Force rendering as SVG path
     if (layer.options) {
       layer.options.renderer = L.svg();
+      layer.options.fillOpacity = 0.5; // Ensure fill opacity is set
+      layer.options.opacity = 1; // Ensure stroke opacity is set
+      layer.options.weight = 3; // Ensure stroke width is visible
+      layer.options.color = '#3388ff'; // Ensure color is set
     }
     
     // Ensure layer is added to a map for rendering
@@ -44,12 +49,24 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
       if (typeof layer._updatePath === 'function') {
         layer._updatePath();
       }
+      
+      // Explicitly ensure the layer is visible
+      ensureLayerVisibility(layer);
     }
+    
+    // Force SVG path creation
+    forceSvgPathCreation(layer);
     
     // Extract SVG path data if available
     if (layer._path) {
       shape.svgPath = layer._path.getAttribute('d');
       console.log('SVG path extracted:', shape.svgPath);
+      
+      // Explicitly set visibility styles
+      layer._path.style.display = 'block';
+      layer._path.style.visibility = 'visible';
+      layer._path.style.opacity = '1';
+      layer._path.style.fillOpacity = '0.5';
     }
     
     // For markers, extract position information
@@ -96,6 +113,12 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
           console.log('Generated SVG path:', svgPath);
         }
       }
+      
+      // Final check to ensure layer visibility
+      ensureLayerVisibility(layer);
+      
+      // Force path creation one more time
+      forceSvgPathCreation(layer);
       
       onCreated(shape);
     }, 100); // Increased timeout to ensure rendering completes
