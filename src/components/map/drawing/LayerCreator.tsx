@@ -60,8 +60,8 @@ export const createLayerFromDrawing = ({
     options.opacity = 1;
     options.fillOpacity = options.fillOpacity || 0.2;
     
-    // Ensure we have a valid transform function for edit mode
-    options.transform = true;
+    // Remove transform property - it's not part of PathOptions
+    // Instead, ensure the layer is prepared for edit mode by other means
     
     const layer = createDrawingLayer(drawing, options);
     
