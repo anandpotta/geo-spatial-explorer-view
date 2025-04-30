@@ -51,11 +51,18 @@ export function initializeLayerEditing(featureGroup: L.FeatureGroup): void {
  */
 export function createEditOptions(featureGroup: L.FeatureGroup, edit?: any): any {
   return {
-    featureGroup: featureGroup,
-    // Set some sensible defaults for edit handlers
-    edit: true,
+    edit: {
+      featureGroup: featureGroup,
+      selectedPathOptions: {
+        dashArray: '10, 10',
+        fill: true,
+        fillColor: '#fe57a1',
+        fillOpacity: 0.1,
+        maintainColor: false
+      }
+    },
     remove: true,
-    // Ensure we have proper edit handler initialization
+    // Merge any additional edit options
     ...(typeof edit === 'object' ? edit : {})
   };
 }

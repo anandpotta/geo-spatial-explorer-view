@@ -74,11 +74,18 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   
   // Ensure we have a proper edit options structure
   const editOptions = {
-    featureGroup: featureGroup,
-    // Set some sensible defaults for edit handlers
-    edit: true,
+    edit: {
+      featureGroup: featureGroup,
+      selectedPathOptions: {
+        dashArray: '10, 10',
+        fill: true,
+        fillColor: '#fe57a1',
+        fillOpacity: 0.1,
+        maintainColor: false
+      }
+    },
     remove: true,
-    // Ensure we have proper edit handler initialization
+    // Merge user-provided edit options if present
     ...(typeof edit === 'object' ? edit : {})
   };
   

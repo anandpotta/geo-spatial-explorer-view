@@ -39,7 +39,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     getSVGPathData: () => getSVGPathData(featureGroup)
   }));
 
-  // Create edit options for the control
+  // Create edit options for the control with proper structure
   const editOptions = createEditOptions(featureGroup);
 
   return (
