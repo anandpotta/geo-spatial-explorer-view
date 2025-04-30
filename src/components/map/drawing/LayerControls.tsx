@@ -50,18 +50,21 @@ export const createLayerControls = ({
     if ('getLatLng' in layer) {
       // For markers
       buttonPosition = (layer as L.Marker).getLatLng();
+      // Position the upload button to the right of the remove button
       uploadButtonPosition = L.latLng(
-        buttonPosition.lat + 0.00005, // Position closer to the path
-        buttonPosition.lng + 0.00005
+        buttonPosition.lat,
+        buttonPosition.lng + 0.00015
       );
     } else if ('getBounds' in layer) {
       // For polygons, rectangles, etc.
       const bounds = (layer as any).getBounds();
       if (bounds) {
+        // Position at the northeast corner
         buttonPosition = bounds.getNorthEast();
+        // Position upload button to the left of the remove button
         uploadButtonPosition = L.latLng(
           bounds.getNorthEast().lat,
-          bounds.getNorthEast().lng - 0.00005 // Position closer to the path
+          bounds.getNorthEast().lng - 0.00015
         );
       }
     } else if ('getLatLngs' in layer) {
@@ -69,9 +72,10 @@ export const createLayerControls = ({
       const latlngs = (layer as any).getLatLngs();
       if (latlngs && latlngs.length > 0) {
         buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
+        // Position upload button below the remove button
         uploadButtonPosition = L.latLng(
-          buttonPosition.lat + 0.00005, // Position closer to the path
-          buttonPosition.lng + 0.00005
+          buttonPosition.lat - 0.00015,
+          buttonPosition.lng
         );
       }
     }
@@ -90,8 +94,8 @@ export const createLayerControls = ({
     icon: L.divIcon({
       className: 'remove-button-container',
       html: container,
-      iconSize: [20, 20], // Set to 20px x 20px
-      iconAnchor: [10, 10]  // Adjusted anchor to center of the icon
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
     }),
     interactive: true,
     zIndexOffset: 1000
@@ -128,8 +132,8 @@ export const createLayerControls = ({
       icon: L.divIcon({
         className: 'upload-button-container',
         html: uploadContainer,
-        iconSize: [20, 20], // Set to 20px x 20px
-        iconAnchor: [10, 10] // Adjusted anchor to center of the icon
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
       }),
       interactive: true,
       zIndexOffset: 1000
