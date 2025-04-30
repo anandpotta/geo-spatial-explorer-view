@@ -10,34 +10,29 @@ export function setupSvgPathRendering(): () => void {
   const originalCircleRedraw = (L.Circle as any).prototype._updatePath;
   
   (L.Circle as any).prototype.initialize = function(...args: any[]) {
-    // Make sure we're only modifying an object, not a number parameter
-    if (args.length >= 2) {
-      // For Circle, args[0] is latlng, args[1] is options OR radius
-      if (typeof args[1] === 'object') {
-        // If second param is options, ensure renderer is set
-        if (!args[1].renderer) {
-          args[1].renderer = L.svg();
-        }
-      } else if (typeof args[1] === 'number' && args.length >= 3 && !args[2]) {
-        // In some cases, args[1] is radius and args[2] is options
-        // If options doesn't exist, create it
-        args[2] = { renderer: L.svg() };
-      } else if (typeof args[1] === 'number' && args.length >= 3 && typeof args[2] === 'object') {
-        // If options exists, ensure renderer is set
-        if (!args[2].renderer) {
-          args[2].renderer = L.svg();
-        }
-      }
+    // Safely call the original initialize method
+    const result = originalCircleInitialize.apply(this, args);
+    
+    // After initialization, make sure the renderer is set to SVG
+    if (this.options) {
+      this.options.renderer = L.svg();
+    } else {
+      this.options = { renderer: L.svg() };
     }
-    return originalCircleInitialize.apply(this, args);
+    
+    return result;
   };
   
   // Ensure circle redraws properly generate SVG paths
   (L.Circle as any).prototype._updatePath = function() {
     originalCircleRedraw.call(this);
     if (this._path && !this._path.getAttribute('d')) {
-      const d = this._renderer._curvePointsToPath([this._point]);
-      if (d) this._path.setAttribute('d', d);
+      try {
+        const d = this._renderer._curvePointsToPath([this._point]);
+        if (d) this._path.setAttribute('d', d);
+      } catch (err) {
+        console.error('Error setting path data for circle', err);
+      }
     }
     // Ensure the path is visible
     if (this._path) {
@@ -51,11 +46,16 @@ export function setupSvgPathRendering(): () => void {
   // Override Polygon initialization too
   const originalPolygonInitialize = (L.Polygon as any).prototype.initialize;
   (L.Polygon as any).prototype.initialize = function(...args: any[]) {
+    // Force SVG renderer for all polygons
     if (args.length >= 2 && typeof args[1] === 'object') {
       if (!args[1].renderer) {
         args[1].renderer = L.svg();
       }
+    } else if (args.length >= 1 && !this.options) {
+      // If options aren't passed, add them
+      this.options = { renderer: L.svg() };
     }
+    
     return originalPolygonInitialize.apply(this, args);
   };
   
@@ -67,7 +67,11 @@ export function setupSvgPathRendering(): () => void {
       if (!args[1].renderer) {
         args[1].renderer = L.svg();
       }
+    } else if (args.length >= 1 && !this.options) {
+      // If options aren't passed, add them
+      this.options = { renderer: L.svg() };
     }
+    
     return originalRectInitialize.apply(this, args);
   };
   
@@ -107,7 +111,7 @@ export function getPathElements(featureGroup: L.FeatureGroup): SVGPathElement[] 
     if (map) {
       const container = map.getContainer();
       if (container) {
-        const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+        const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane--vector-layer svg');
         svgElements.forEach(svg => {
           const paths = svg.querySelectorAll('path');
           paths.forEach(path => {
@@ -221,6 +225,7 @@ export function forceSvgPathCreation(layer: L.Layer): void {
         (layer as any)._path.style.visibility = 'visible';
         (layer as any)._path.style.opacity = '1';
         (layer as any)._path.style.fillOpacity = '0.5';
+        (layer as any)._path.style.pointerEvents = 'auto';
       }
     }
     
@@ -243,6 +248,7 @@ export function forceSvgPathCreation(layer: L.Layer): void {
             subLayer._path.style.visibility = 'visible';
             subLayer._path.style.opacity = '1';
             subLayer._path.style.fillOpacity = '0.5';
+            subLayer._path.style.pointerEvents = 'auto';
           }
         }
       });
@@ -255,6 +261,7 @@ export function forceSvgPathCreation(layer: L.Layer): void {
       path.style.visibility = 'visible';
       path.style.opacity = '1';
       path.style.fillOpacity = '0.5';
+      path.style.pointerEvents = 'auto';
     }
   } catch (err) {
     console.error('Error forcing SVG path creation:', err);
@@ -273,6 +280,7 @@ export function ensureLayerVisibility(layer: L.Layer): void {
       path.style.visibility = 'visible';
       path.style.opacity = '1';
       path.style.fillOpacity = '0.5';
+      path.style.pointerEvents = 'auto';
     }
     
     // For feature groups
@@ -284,6 +292,7 @@ export function ensureLayerVisibility(layer: L.Layer): void {
           path.style.visibility = 'visible';
           path.style.opacity = '1';
           path.style.fillOpacity = '0.5';
+          path.style.pointerEvents = 'auto';
         }
       });
     }

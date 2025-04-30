@@ -12,6 +12,25 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   
   // Apply patch for the "type is not defined" error in Leaflet Draw
   useEffect(() => {
+    // Force Leaflet to use SVG renderer by default for all vector layers
+    const originalFactory = L.SVG;
+    L.SVG = function(options?: any) {
+      const renderer = originalFactory(options);
+      if (renderer._initContainer) {
+        const originalInitContainer = renderer._initContainer;
+        renderer._initContainer = function() {
+          originalInitContainer.call(this);
+          if (this._container) {
+            // Set attributes that might help with visibility
+            this._container.setAttribute('style', 'pointer-events: auto;');
+            this._container.style.visibility = 'visible';
+            this._container.style.opacity = '1';
+          }
+        };
+      }
+      return renderer;
+    } as any;
+    
     // Patch the readableArea function to ensure 'type' is defined
     if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
       const originalReadableArea = (L.Draw.Polygon.prototype as any)._getTooltipText;
@@ -31,6 +50,21 @@ export const EditControl = forwardRef((props: any, ref: any) => {
           }
         };
       }
+      
+      // Ensure markers and guides are visible during polygon drawing
+      if ((L.Draw.Polygon.prototype as any)._createMarker) {
+        const originalCreateMarker = (L.Draw.Polygon.prototype as any)._createMarker;
+        (L.Draw.Polygon.prototype as any)._createMarker = function(latlng: L.LatLng, index: number) {
+          const marker = originalCreateMarker.call(this, latlng, index);
+          if (marker && marker._icon) {
+            marker._icon.style.visibility = 'visible';
+            marker._icon.style.opacity = '1';
+            marker._icon.style.zIndex = '10000';
+            marker._icon.style.pointerEvents = 'auto';
+          }
+          return marker;
+        };
+      }
     }
 
     // Initialize stylesheet to ensure drawing elements are visible
@@ -48,9 +82,10 @@ export const EditControl = forwardRef((props: any, ref: any) => {
         .leaflet-div-icon {
           visibility: visible !important;
           opacity: 1 !important;
+          pointer-events: auto !important;
         }
         .leaflet-marker-icon {
-          z-index: 1000 !important;
+          z-index: 10000 !important;
         }
         .leaflet-draw-guide-dash {
           visibility: visible !important;
@@ -59,7 +94,17 @@ export const EditControl = forwardRef((props: any, ref: any) => {
         .leaflet-editing-icon {
           visibility: visible !important;
           opacity: 1 !important;
-          z-index: 1000 !important;
+          z-index: 10000 !important;
+          pointer-events: auto !important;
+        }
+        svg.leaflet-zoom-animated > g > path {
+          pointer-events: auto;
+        }
+        .leaflet-interactive {
+          pointer-events: auto !important;
+        }
+        .leaflet-pane svg path {
+          pointer-events: auto;
         }
       `;
       document.head.appendChild(styleElement);
@@ -77,11 +122,17 @@ export const EditControl = forwardRef((props: any, ref: any) => {
               const element = node as Element;
               if (element.classList.contains('leaflet-marker-icon') || 
                   element.classList.contains('leaflet-editing-icon')) {
-                element.setAttribute('style', 'visibility: visible !important; opacity: 1 !important; z-index: 1000 !important;');
+                element.setAttribute('style', 'visibility: visible !important; opacity: 1 !important; z-index: 10000 !important; pointer-events: auto !important;');
               }
               if (element.classList.contains('leaflet-marker-shadow')) {
-                element.setAttribute('style', 'visibility: visible !important; opacity: 1 !important; z-index: 999 !important;');
+                element.setAttribute('style', 'visibility: visible !important; opacity: 1 !important; z-index: 9999 !important;');
               }
+              
+              // Check for SVG paths within added elements
+              const paths = element.querySelectorAll('path');
+              paths.forEach(path => {
+                path.setAttribute('style', 'pointer-events: auto !important;');
+              });
             }
           });
         }
@@ -241,7 +292,8 @@ if (typeof window !== 'undefined' && window.L && window.L.Draw) {
               if (marker._icon) {
                 marker._icon.style.visibility = 'visible';
                 marker._icon.style.opacity = '1';
-                marker._icon.style.zIndex = '1000';
+                marker._icon.style.zIndex = '10000';
+                marker._icon.style.pointerEvents = 'auto';
               }
             });
           }

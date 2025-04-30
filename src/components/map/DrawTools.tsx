@@ -56,6 +56,26 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           return marker;
         };
       }
+      
+      // Override the vertex marker creation to ensure they're visible
+      if ((L.Draw.Polygon.prototype as any)._updateGuide) {
+        const originalUpdateGuide = (L.Draw.Polygon.prototype as any)._updateGuide;
+        
+        (L.Draw.Polygon.prototype as any)._updateGuide = function(latlng: L.LatLng) {
+          originalUpdateGuide.call(this, latlng);
+          
+          // Make sure all vertex markers are visible
+          if (this._markers) {
+            this._markers.forEach((marker: any) => {
+              if (marker && marker._icon) {
+                marker._icon.style.visibility = 'visible';
+                marker._icon.style.opacity = '1';
+                marker._icon.style.zIndex = '1000';
+              }
+            });
+          }
+        };
+      }
     }
 
     // Ensure vertex markers are visible with proper styling
@@ -87,6 +107,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           visibility: visible !important;
           opacity: 1 !important;
           z-index: 1000 !important;
+          pointer-events: auto !important;
         }
         .leaflet-marker-shadow {
           visibility: visible !important;
@@ -97,6 +118,16 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           visibility: visible !important;
           opacity: 1 !important;
           z-index: 1001 !important;
+        }
+        .leaflet-editing-icon {
+          visibility: visible !important;
+          opacity: 1 !important;
+          z-index: 1000 !important;
+          pointer-events: auto !important;
+        }
+        .leaflet-draw-guide-dash {
+          visibility: visible !important;
+          opacity: 1 !important;
         }
       `;
       document.head.appendChild(style);
@@ -127,9 +158,26 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       }
     }, 1000);
     
+    // Add an event listener to ensure SVG elements are created when the map is first loaded
+    const map = (featureGroup as any)._map;
+    if (map) {
+      map.on('load moveend zoomend', () => {
+        setTimeout(() => {
+          if (featureGroup) {
+            featureGroup.eachLayer((layer: L.Layer) => {
+              forceSvgPathCreation(layer);
+            });
+          }
+        }, 100);
+      });
+    }
+    
     return () => {
       cleanup();
       clearInterval(intervalId);
+      if (map) {
+        map.off('load moveend zoomend');
+      }
     };
   }, [featureGroup]);
   

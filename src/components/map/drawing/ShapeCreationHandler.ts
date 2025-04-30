@@ -41,17 +41,17 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
       layer.options.opacity = 1; // Ensure stroke opacity is set
       layer.options.weight = 3; // Ensure stroke width is visible
       layer.options.color = '#3388ff'; // Ensure color is set
+      // Ensure interactive is set
+      layer.options.interactive = true;
     }
     
-    // Ensure layer is added to a map for rendering
-    if (layer._map && layer._renderer) {
-      // Force redraw to ensure SVG element is created
-      if (typeof layer._updatePath === 'function') {
-        layer._updatePath();
-      }
-      
-      // Explicitly ensure the layer is visible
-      ensureLayerVisibility(layer);
+    // If the layer has a _path property, make sure it's visible
+    if (layer._path) {
+      layer._path.style.visibility = 'visible';
+      layer._path.style.display = 'block';
+      layer._path.style.opacity = '1';
+      layer._path.style.fillOpacity = '0.5';
+      layer._path.style.pointerEvents = 'auto';
     }
     
     // Force SVG path creation
@@ -67,6 +67,7 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
       layer._path.style.visibility = 'visible';
       layer._path.style.opacity = '1';
       layer._path.style.fillOpacity = '0.5';
+      layer._path.style.pointerEvents = 'auto';
     }
     
     // For markers, extract position information
@@ -120,8 +121,13 @@ export function handleShapeCreated(e: any, onCreated: (shape: any) => void): voi
       // Force path creation one more time
       forceSvgPathCreation(layer);
       
+      // Add an SVG class to the path if it exists
+      if (layer._path) {
+        layer._path.classList.add('leaflet-interactive');
+      }
+      
       onCreated(shape);
-    }, 100); // Increased timeout to ensure rendering completes
+    }, 200); // Increased timeout to ensure rendering completes
   } catch (err) {
     console.error('Error handling created shape:', err);
     toast.error('Error creating shape');
