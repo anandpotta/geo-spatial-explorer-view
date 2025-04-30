@@ -78,7 +78,7 @@ export function useDrawingControls() {
                 layer.options.renderer = L.svg();
               }
               
-              // If layer has _path but not SVG data, try to regenerate it
+              // If layer has SVG element but not path data, try to regenerate it
               if (layer._path && !layer._path.getAttribute('d')) {
                 if (layer._updatePath) {
                   layer._updatePath();

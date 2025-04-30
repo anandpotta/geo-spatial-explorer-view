@@ -5,6 +5,9 @@ import L from 'leaflet';
 declare module 'leaflet' {
   interface Path {
     editing?: L.Handler;
+    _path?: SVGElement; // Internal Leaflet property for the SVG element
+    _updatePath?: () => void; // Internal method to update SVG path
+    _renderer?: any; // Renderer instance
   }
   
   namespace Handler {
