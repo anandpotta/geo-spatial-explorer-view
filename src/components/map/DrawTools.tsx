@@ -17,6 +17,30 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
+  // Apply patch for the type reference error
+  useEffect(() => {
+    // Patch Leaflet.Draw to fix the "type is not defined" error
+    if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
+      // Store the original method
+      const originalGetTooltipText = L.Draw.Polygon.prototype._getTooltipText;
+      
+      // Override the method to handle the error
+      L.Draw.Polygon.prototype._getTooltipText = function() {
+        try {
+          // Try to call the original method
+          return originalGetTooltipText.apply(this);
+        } catch (err) {
+          // If we catch the "type is not defined" error, return a fallback object
+          console.log("Caught error in tooltip generation, providing fallback");
+          return {
+            text: this._endLabelText || 'Click first point to close this shape',
+            subtext: 'Area will be calculated when complete'
+          };
+        }
+      };
+    }
+  }, []);
+  
   // Setup SVG rendering for all shapes
   useEffect(() => {
     // Initialize editing for existing layers
@@ -88,7 +112,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         },
         polygon: {
           shapeOptions: {
-            renderer: L.svg()
+            renderer: L.svg(),
+            // Explicitly set this to work around the tooltip error
+            showArea: true
           }
         },
         circle: {
@@ -109,3 +135,4 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
 DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;
+

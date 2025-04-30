@@ -10,6 +10,30 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
+  // Apply patch for the "type is not defined" error in Leaflet Draw
+  useEffect(() => {
+    // Patch the readableArea function to ensure 'type' is defined
+    if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
+      const originalReadableArea = L.Draw.Polygon.prototype._getTooltipText;
+      if (originalReadableArea) {
+        L.Draw.Polygon.prototype._getTooltipText = function() {
+          try {
+            return originalReadableArea.apply(this);
+          } catch (err) {
+            // If the error is about 'type', provide a default text
+            if (err.toString().includes('type is not defined')) {
+              const result: any = {};
+              result.text = this._endLabelText || 'Click first point to close this shape';
+              result.subtext = this._getMeasurementString();
+              return result;
+            }
+            throw err;
+          }
+        };
+      }
+    }
+  }, []);
+  
   // Make sure we have a valid featureGroup before proceeding
   if (!featureGroup || !featureGroup.getLayers) {
     console.warn("EditControl: Invalid featureGroup provided");
@@ -111,3 +135,39 @@ export const EditControl = forwardRef((props: any, ref: any) => {
 });
 
 EditControl.displayName = "EditControl";
+
+// Patch L.Draw.Polygon.prototype to ensure readableArea is defined
+if (typeof window !== 'undefined' && window.L && window.L.Draw) {
+  try {
+    // Create a global patch that will affect all instances
+    const originalDraw = window.L.Draw;
+    
+    // If Leaflet Draw is loaded, patch the prototype
+    if (originalDraw.Polygon) {
+      const originalReadableArea = originalDraw.Polygon.prototype._getTooltipText;
+      
+      if (originalReadableArea) {
+        originalDraw.Polygon.prototype._getTooltipText = function() {
+          try {
+            return originalReadableArea.apply(this);
+          } catch (err) {
+            // If error is about 'type is not defined', provide fallback
+            console.log("Caught error in _getTooltipText:", err.message);
+            const result: any = {};
+            result.text = this._endLabelText || 'Click first point to close this shape';
+            // Safely call _getMeasurementString with a type property defined
+            try {
+              result.subtext = this._getMeasurementString();
+            } catch (measureErr) {
+              result.subtext = "Calculate area after completion";
+            }
+            return result;
+          }
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Error patching Leaflet Draw:", err);
+  }
+}
+
