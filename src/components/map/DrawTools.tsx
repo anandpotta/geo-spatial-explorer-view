@@ -4,7 +4,7 @@ import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { getMapFromLayer } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -18,9 +18,24 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   
   // Force SVG renderer but in a safer way
   useEffect(() => {
-    // Instead of trying to modify the read-only property, configure the renderer
-    // when creating layers
-    const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
+    // Add editing capability to all existing layers in the feature group
+    if (featureGroup) {
+      try {
+        featureGroup.eachLayer((layer: any) => {
+          if (layer && !layer.editing) {
+            // Ensure each layer has editing capability
+            if (layer instanceof L.Path) {
+              layer.editing = new (L.Handler as any).PolyEdit(layer);
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Error initializing layer editing:', err);
+      }
+    }
+    
+    // Override some Leaflet methods to ensure SVG rendering
+    const pathPrototype = L.Path.prototype as any;
     const originalUpdatePath = pathPrototype._updatePath;
     
     pathPrototype._updatePath = function() {
@@ -34,7 +49,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Restore original function when component unmounts
       pathPrototype._updatePath = originalUpdatePath;
     };
-  }, []);
+  }, [featureGroup]);
   
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
@@ -87,6 +102,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       if (!layer) {
         console.error('No layer created');
         return;
+      }
+      
+      // Ensure the layer has editing capability
+      if (layer instanceof L.Path && !layer.editing) {
+        layer.editing = new (L.Handler as any).PolyEdit(layer);
       }
       
       // Create a properly structured shape object
@@ -164,6 +184,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={editOptions}
+      featureGroup={featureGroup}
     />
   );
 });

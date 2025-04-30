@@ -71,6 +71,11 @@ export const createLayerFromDrawing = ({
           // Store drawing ID on the layer for reference
           (l as any).drawingId = drawing.id;
           
+          // Ensure each layer has editing capability
+          if (l instanceof L.Path && !(l as any).editing) {
+            (l as any).editing = new (L.Handler as any).PolyEdit(l);
+          }
+          
           // Ensure the layer has necessary properties for edit mode
           if ((l as any)._path) {
             (l as any)._path.setAttribute('data-drawing-id', drawing.id);

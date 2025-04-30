@@ -36,18 +36,24 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
   // Effect to activate edit mode when activeTool changes to 'edit'
   useEffect(() => {
     if (activeTool === 'edit' && isInitialized) {
-      // Use a longer delay to ensure all components are fully initialized
-      const timeoutId = setTimeout(() => {
-        try {
-          console.log("Activating edit mode from effect with delay");
-          activateEditMode();
-        } catch (err) {
-          console.error('Error activating edit mode:', err);
-          toast.error('Could not activate edit mode. Please try again.');
-        }
-      }, 500); // Increased delay for better initialization
+      // Use multiple attempts with increasing delays to ensure initialization
+      const attempts = [100, 300, 600, 1000];
       
-      return () => clearTimeout(timeoutId);
+      attempts.forEach((delay, index) => {
+        const timeoutId = setTimeout(() => {
+          try {
+            console.log(`Activating edit mode attempt ${index + 1} with delay ${delay}ms`);
+            activateEditMode();
+          } catch (err) {
+            console.error(`Error activating edit mode (attempt ${index + 1}):`, err);
+            if (index === attempts.length - 1) {
+              toast.error('Could not activate edit mode. Please try again.');
+            }
+          }
+        }, delay);
+        
+        return () => clearTimeout(timeoutId);
+      });
     }
   }, [activeTool, isInitialized, activateEditMode]);
 
