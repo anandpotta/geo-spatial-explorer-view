@@ -10,9 +10,24 @@ export function setupSvgPathRendering(): () => void {
   const originalCircleRedraw = (L.Circle as any).prototype._updatePath;
   
   (L.Circle as any).prototype.initialize = function(...args: any[]) {
-    if (!args[1]?.renderer) {
-      if (!args[1]) args[1] = {};
-      args[1].renderer = L.svg();
+    // Make sure we're only modifying an object, not a number parameter
+    if (args.length >= 2) {
+      // For Circle, args[0] is latlng, args[1] is options OR radius
+      if (typeof args[1] === 'object') {
+        // If second param is options, ensure renderer is set
+        if (!args[1].renderer) {
+          args[1].renderer = L.svg();
+        }
+      } else if (typeof args[1] === 'number' && args.length >= 3 && !args[2]) {
+        // In some cases, args[1] is radius and args[2] is options
+        // If options doesn't exist, create it
+        args[2] = { renderer: L.svg() };
+      } else if (typeof args[1] === 'number' && args.length >= 3 && typeof args[2] === 'object') {
+        // If options exists, ensure renderer is set
+        if (!args[2].renderer) {
+          args[2].renderer = L.svg();
+        }
+      }
     }
     return originalCircleInitialize.apply(this, args);
   };
@@ -29,9 +44,10 @@ export function setupSvgPathRendering(): () => void {
   // Override Polygon initialization too
   const originalPolygonInitialize = (L.Polygon as any).prototype.initialize;
   (L.Polygon as any).prototype.initialize = function(...args: any[]) {
-    if (!args[1]?.renderer) {
-      if (!args[1]) args[1] = {};
-      args[1].renderer = L.svg();
+    if (args.length >= 2 && typeof args[1] === 'object') {
+      if (!args[1].renderer) {
+        args[1].renderer = L.svg();
+      }
     }
     return originalPolygonInitialize.apply(this, args);
   };
@@ -40,9 +56,10 @@ export function setupSvgPathRendering(): () => void {
   const originalRectInitialize = (L.Rectangle as any).prototype.initialize;
   
   (L.Rectangle as any).prototype.initialize = function(...args: any[]) {
-    if (!args[1]?.renderer) {
-      if (!args[1]) args[1] = {};
-      args[1].renderer = L.svg();
+    if (args.length >= 2 && typeof args[1] === 'object') {
+      if (!args[1].renderer) {
+        args[1].renderer = L.svg();
+      }
     }
     return originalRectInitialize.apply(this, args);
   };
