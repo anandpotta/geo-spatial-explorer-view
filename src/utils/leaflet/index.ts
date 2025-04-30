@@ -10,7 +10,7 @@ import L from 'leaflet';
 export function isMapValid(map: L.Map | null): boolean {
   return Boolean(
     map && 
-    !map.isRemoved && 
+    // Remove the non-existent isRemoved property
     map.getContainer && 
     map.getContainer() && 
     document.body.contains(map.getContainer())
