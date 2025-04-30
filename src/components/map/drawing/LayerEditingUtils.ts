@@ -12,13 +12,13 @@ export function addEditingCapability(layer: L.Path): void {
       
       // Add fallback methods with proper typing
       if (!editHandler.disable) {
-        editHandler.disable = function(this: L.Handler): void {
+        editHandler.disable = function(): void {
           console.log("Disable called on layer without proper handler");
         };
       }
       
       if (!editHandler.enable) {
-        editHandler.enable = function(this: L.Handler): void {
+        editHandler.enable = function(): void {
           console.log("Enable called on layer without proper handler");
         };
       }
@@ -31,15 +31,17 @@ export function addEditingCapability(layer: L.Path): void {
   } else {
     // Ensure existing handlers have the required methods
     if (layer.editing && !layer.editing.disable) {
-      layer.editing.disable = function(this: L.Handler): void {
+      // Use a type assertion to ensure compatibility
+      layer.editing.disable = function(): void {
         console.log("Disable called on layer with incomplete handler");
-      };
+      } as any;
     }
     
     if (layer.editing && !layer.editing.enable) {
-      layer.editing.enable = function(this: L.Handler): void {
+      // Use a type assertion to ensure compatibility
+      layer.editing.enable = function(): void {
         console.log("Enable called on layer with incomplete handler");
-      };
+      } as any;
     }
   }
 }

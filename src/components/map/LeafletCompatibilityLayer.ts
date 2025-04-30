@@ -30,14 +30,14 @@ export const EditControl = forwardRef((props: any, ref: any) => {
               
               // Add fallback methods with proper type annotations
               if (!editHandler.disable) {
-                editHandler.disable = function(this: L.Handler): void {
+                editHandler.disable = function(): void {
                   // No-op function to prevent errors
                   console.log("Disable called on layer without proper handler");
                 };
               }
               
               if (!editHandler.enable) {
-                editHandler.enable = function(this: L.Handler): void {
+                editHandler.enable = function(): void {
                   // No-op function to prevent errors
                   console.log("Enable called on layer without proper handler");
                 };
@@ -49,13 +49,13 @@ export const EditControl = forwardRef((props: any, ref: any) => {
           } else if (layer && layer.editing) {
             // Ensure the editing handler has required methods
             if (!layer.editing.disable) {
-              layer.editing.disable = function(this: any): void {
+              layer.editing.disable = function(): void {
                 console.log("Disable called on layer with incomplete handler");
               };
             }
             
             if (!layer.editing.enable) {
-              layer.editing.enable = function(this: any): void {
+              layer.editing.enable = function(): void {
                 console.log("Enable called on layer with incomplete handler");
               };
             }
