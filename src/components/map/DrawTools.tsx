@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -44,6 +45,41 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       window._leafletCleanupTimers = [];
     }
     
+    // Mark any handlers to make them safe
+    const makeEditHandlersSafe = () => {
+      try {
+        if (editControlRef.current && editControlRef.current._toolbars) {
+          const editToolbar = editControlRef.current._toolbars.edit;
+          
+          if (editToolbar && editToolbar._modes) {
+            // Add safety to all edit modes
+            Object.values(editToolbar._modes).forEach((mode: any) => {
+              if (!mode || !mode.handler) return;
+              
+              // Patch missing functions that could cause errors
+              if (mode.handler._verticesHandlers) {
+                Object.values(mode.handler._verticesHandlers).forEach((handler: any) => {
+                  // Ensure these methods exist to prevent errors
+                  if (handler) {
+                    if (!handler.dispose) handler.dispose = function() {};
+                    if (!handler.disable) handler.disable = function() {};
+                  }
+                });
+              }
+              
+              // Patch any other potential error points
+              if (!mode.handler.dispose) mode.handler.dispose = function() {};
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error applying safety patches to edit handlers:', err);
+      }
+    };
+    
+    // Add this to cleanup functions
+    cleanupFunctionsRef.current.push(makeEditHandlersSafe);
+    
     return () => {
       // Mark component as unmounted to prevent further operations
       isComponentMounted.current = false;
@@ -72,6 +108,46 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
 
   // Make sure the edit control is properly disposed when component unmounts
   useEffect(() => {
+    // Run safety patches early
+    const applySafetyPatches = () => {
+      if (!editControlRef.current) return;
+      setTimeout(() => {
+        try {
+          if (editControlRef.current && editControlRef.current._toolbars) {
+            const editToolbar = editControlRef.current._toolbars.edit;
+            
+            if (editToolbar && editToolbar._modes) {
+              Object.values(editToolbar._modes).forEach((mode: any) => {
+                if (!mode || !mode.handler) return;
+                
+                // Make dispose and disable safe methods
+                if (!mode.handler.dispose) mode.handler.dispose = function() {};
+                if (!mode.handler.disable) mode.handler.disable = function() {};
+                
+                // Special handling for vertex handlers which cause most errors
+                if (mode.handler._verticesHandlers) {
+                  Object.values(mode.handler._verticesHandlers).forEach((handler: any) => {
+                    if (handler) {
+                      // Add safe methods
+                      if (!handler.dispose) handler.dispose = function() {};
+                      if (!handler.disable) handler.disable = function() {};
+                    }
+                  });
+                }
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('Error applying safety patches:', err);
+        }
+      }, 200);
+    };
+    
+    // Apply patches when editControl is available
+    if (editControlRef.current) {
+      applySafetyPatches();
+    }
+    
     return () => {
       if (!isComponentMounted.current) return;
 
@@ -94,17 +170,20 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
                       }
                     }
                     
-                    // Also check for dispose method
-                    if (mode.handler && typeof mode.handler.dispose === 'function') {
-                      try {
-                        mode.handler.dispose();
-                      } catch (err) {
-                        console.error('Error disposing edit mode handler:', err);
-                      }
-                    }
-                    
-                    // Reset the handler completely to avoid further issues
+                    // Also check for dispose method and make it safe
                     if (mode.handler) {
+                      if (typeof mode.handler.dispose === 'function') {
+                        try {
+                          mode.handler.dispose();
+                        } catch (err) {
+                          console.error('Error disposing edit mode handler:', err);
+                        }
+                      } else {
+                        // Add a safe dispose method if missing
+                        mode.handler.dispose = function() {};
+                      }
+                      
+                      // Reset the handler completely to avoid further issues
                       Object.keys(mode.handler).forEach(key => {
                         try {
                           if (typeof mode.handler[key] === 'object' && mode.handler[key] !== null) {
@@ -142,7 +221,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           
           // Track the timeout so it can be cleared if needed
           if (window._leafletCleanupTimers) {
-            // Convert the NodeJS.Timeout to a number 
+            // Convert the NodeJS.Timeout to a number
             window._leafletCleanupTimers.push(Number(timerId));
           }
         }

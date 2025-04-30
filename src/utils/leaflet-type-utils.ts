@@ -14,6 +14,12 @@ type LeafletLayerInternal = L.Layer & {
   editing?: any;
 };
 
+// Define a safe handler interface for type checking
+interface SafeHandler {
+  disable?: () => void;
+  dispose?: () => void;
+}
+
 export const getMapFromLayer = (layer: any): L.Map | null => {
   if (!layer) return null;
   
@@ -134,7 +140,21 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
         for (const handler of Object.values(layer.editing._verticesHandlers || {})) {
           try {
             // Type safety check before accessing disable method
-            const typedHandler = handler as { disable?: () => void; dispose?: () => void };
+            const typedHandler = handler as SafeHandler;
+            
+            // First ensure methods exist before calling them
+            if (!typedHandler) continue;
+            
+            // Add missing methods to prevent errors
+            if (!typedHandler.dispose) {
+              typedHandler.dispose = function() {};
+            }
+            
+            if (!typedHandler.disable) {
+              typedHandler.disable = function() {};
+            }
+            
+            // Now safely call methods
             if (typedHandler && typeof typedHandler.disable === 'function') {
               typedHandler.disable();
             }
@@ -144,7 +164,7 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
           
           try {
             // Type safety check before accessing dispose method
-            const typedHandler = handler as { disable?: () => void; dispose?: () => void };
+            const typedHandler = handler as SafeHandler;
             if (typedHandler && typeof typedHandler.dispose === 'function') {
               typedHandler.dispose();
             }
@@ -197,11 +217,13 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
         }
       }
       
-      // Last resort: just replace the editing object altogether
+      // Last resort: just replace the editing object altogether with safe methods
       layer.editing = {
         enable: function() {},
         disable: function() {},
-        dispose: function() {}  // Add dispose method to prevent "reading 'dispose'" error
+        dispose: function() {},  // Add dispose method to prevent "reading 'dispose'" error
+        _verticesHandlers: null, // Clear problematic references
+        _markerGroup: null
       };
       
       return true;
@@ -213,7 +235,9 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
         layer.editing = {
           enable: function() {},
           disable: function() {},
-          dispose: function() {}  // Add dispose method to prevent "reading 'dispose'" error
+          dispose: function() {},  // Add dispose method to prevent "reading 'dispose'" error
+          _verticesHandlers: null,
+          _markerGroup: null
         };
       } catch (e) {
         console.error("Couldn't even replace editing object:", e);
