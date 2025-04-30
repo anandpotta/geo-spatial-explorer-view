@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
@@ -60,44 +59,18 @@ export const createLayerFromDrawing = ({
     options.opacity = 1;
     options.fillOpacity = options.fillOpacity || 0.2;
     
-    // Ensure proper GeoJSON options
-    if (typeof options.renderer === 'undefined') {
-      options.renderer = L.svg();
-    }
-    
     const layer = createDrawingLayer(drawing, options);
     
     if (layer) {
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
-          // Ensure the layer has required properties for edit mode
           (l as any).drawingId = drawing.id;
-          
-          // Ensure the layer has proper editing capabilities
-          if (!(l as any).editing || typeof (l as any).editing === 'undefined') {
-            // Initialize editing capability if missing
-            (l as any).editing = {
-              _enabled: false,
-              enable: () => {
-                if ((l as any)._path) {
-                  (l as any)._path.classList.add('leaflet-edit-enabled');
-                }
-                (l as any).editing._enabled = true;
-              },
-              disable: () => {
-                if ((l as any)._path) {
-                  (l as any)._path.classList.remove('leaflet-edit-enabled');
-                }
-                (l as any).editing._enabled = false;
-              }
-            };
-          }
           
           // Store the layer reference
           layersRef.set(drawing.id, l);
           
           // Add the remove and upload buttons when in edit mode
-          if (activeTool === 'edit' && onRemoveShape && onUploadRequest) {
+          if (onRemoveShape && onUploadRequest) {
             createLayerControls({
               layer: l,
               drawingId: drawing.id,

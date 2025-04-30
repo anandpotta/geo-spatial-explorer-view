@@ -1,12 +1,11 @@
 
 import { useEffect } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
-import { toast } from 'sonner';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
   isInitialized: boolean;
-  activateEditMode: () => boolean;
+  activateEditMode: () => void;
 }
 
 const DrawingEffects: React.FC<DrawingEffectsProps> = ({ 
@@ -36,42 +35,14 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
   // Effect to activate edit mode when activeTool changes to 'edit'
   useEffect(() => {
     if (activeTool === 'edit' && isInitialized) {
-      // Add delay to ensure map and tools are fully initialized
-      const timerId = setTimeout(() => {
+      setTimeout(() => {
         try {
-          console.log("Attempting to activate edit mode from effect");
-          
-          // Make multiple attempts with exponential backoff
-          let attempts = 0;
-          const maxAttempts = 5;
-          const baseDelay = 300;
-          
-          const tryActivate = () => {
-            attempts++;
-            const activated = activateEditMode();
-            
-            if (activated) {
-              console.log("Edit mode successfully activated");
-              toast.success("Edit mode activated");
-            } else if (attempts < maxAttempts) {
-              // Try again with increasing delay
-              const delay = baseDelay * Math.pow(1.5, attempts);
-              console.log(`Attempt ${attempts} failed, trying again in ${delay}ms`);
-              setTimeout(tryActivate, delay);
-            } else {
-              console.log("Failed to activate edit mode after multiple attempts");
-              toast.error("Could not activate edit mode. Try toggling the tool again.");
-            }
-          };
-          
-          tryActivate();
+          console.log("Activating edit mode from effect");
+          activateEditMode();
         } catch (err) {
           console.error('Error activating edit mode:', err);
-          toast.error('Error activating edit mode');
         }
-      }, 500);
-      
-      return () => clearTimeout(timerId);
+      }, 300);
     }
   }, [activeTool, isInitialized, activateEditMode]);
 

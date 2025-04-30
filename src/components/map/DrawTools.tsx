@@ -4,7 +4,7 @@ import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer } from '@/utils/leaflet-type-utils';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -20,7 +20,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useEffect(() => {
     // Instead of trying to modify the read-only property, configure the renderer
     // when creating layers
-    const pathPrototype = L.Path.prototype as any;
+    const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
     const originalUpdatePath = pathPrototype._updatePath;
     
     pathPrototype._updatePath = function() {
@@ -35,37 +35,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       pathPrototype._updatePath = originalUpdatePath;
     };
   }, []);
-
-  // Prepare layers for editing when needed
-  useEffect(() => {
-    if (!featureGroup) return;
-    
-    try {
-      // Add editing capability to all layers in the feature group
-      featureGroup.eachLayer((layer: any) => {
-        if (layer && !layer.editing) {
-          // Add minimal editing interface if not present
-          layer.editing = {
-            _enabled: false,
-            enable: () => {
-              if (layer._path) {
-                layer._path.classList.add('leaflet-edit-enabled');
-              }
-              layer.editing._enabled = true;
-            },
-            disable: () => {
-              if (layer._path) {
-                layer._path.classList.remove('leaflet-edit-enabled');
-              }
-              layer.editing._enabled = false;
-            }
-          };
-        }
-      });
-    } catch (err) {
-      console.error('Error initializing layer editing capabilities:', err);
-    }
-  }, [featureGroup]);
   
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
@@ -74,7 +43,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Find all SVG paths within the map container
       if (featureGroup) {
         const map = getMapFromLayer(featureGroup);
-        if (map && isMapValid(map)) {
+        if (map) {
           const container = map.getContainer();
           if (container) {
             const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
@@ -94,17 +63,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Find all SVG paths within the map container
       if (featureGroup) {
         const map = getMapFromLayer(featureGroup);
-        if (map && isMapValid(map)) {
+        if (map) {
           const container = map.getContainer();
           if (container) {
             const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
             svgElements.forEach(svg => {
               const paths = svg.querySelectorAll('path');
               paths.forEach(path => {
-                const d = path.getAttribute('d');
-                if (d) {
-                  pathData.push(d);
-                }
+                pathData.push(path.getAttribute('d') || '');
               });
             });
           }
@@ -121,25 +87,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       if (!layer) {
         console.error('No layer created');
         return;
-      }
-      
-      // Ensure the layer has editing capability
-      if (!layer.editing) {
-        layer.editing = {
-          _enabled: false,
-          enable: () => {
-            if (layer._path) {
-              layer._path.classList.add('leaflet-edit-enabled');
-            }
-            layer.editing._enabled = true;
-          },
-          disable: () => {
-            if (layer._path) {
-              layer._path.classList.remove('leaflet-edit-enabled');
-            }
-            layer.editing._enabled = false;
-          }
-        };
       }
       
       // Create a properly structured shape object
@@ -191,15 +138,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   };
 
-  // Ensure proper edit configuration
-  const editConfig = {
-    selectedPathOptions: {
-      maintainColor: true,
-      opacity: 0.7,
-      dashArray: '10, 10'
-    }
-  };
-
   return (
     <EditControl
       ref={editControlRef}
@@ -214,11 +152,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
-        featureGroup: featureGroup,
-        edit: editConfig,
         remove: true
       }}
-      featureGroup={featureGroup}
+      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
     />
   );
 });
