@@ -2,7 +2,7 @@
 export type { Location } from './location-utils';
 export type { LocationMarker } from './marker-utils';
 export type { DrawingData } from './drawing-utils';
-export type { FloorPlanData } from './floor-plan-utils';
+export type { FloorPlan, FloorPlanData } from './floor-plan-utils';
 
 export {
   searchLocations,
@@ -25,6 +25,6 @@ export {
 export {
   saveFloorPlan,
   getFloorPlanById,
-  getSavedFloorPlans,
   getDrawingIdsWithFloorPlans,
+  getSavedFloorPlans,
 } from './floor-plan-utils';

@@ -1,16 +1,19 @@
 
 // A simple utility for managing floor plans
 
-interface FloorPlan {
+export interface FloorPlan {
   data: string;  // Base64 data
   fileName: string;
   isPdf: boolean;
   pathData?: string; // SVG path data for clipping
 }
 
-interface FloorPlanStorage {
+export interface FloorPlanStorage {
   [drawingId: string]: FloorPlan;
 }
+
+// Alias for compatibility with existing code
+export type FloorPlanData = FloorPlan;
 
 /**
  * Save a floor plan for a specific drawing
@@ -46,6 +49,18 @@ export function getFloorPlanById(drawingId: string): FloorPlan | null {
   } catch (error) {
     console.error('Error getting floor plan:', error);
     return null;
+  }
+}
+
+/**
+ * Get all saved floor plans
+ */
+export function getSavedFloorPlans(): FloorPlanStorage {
+  try {
+    return JSON.parse(localStorage.getItem('floorPlans') || '{}');
+  } catch (error) {
+    console.error('Error getting saved floor plans:', error);
+    return {};
   }
 }
 
