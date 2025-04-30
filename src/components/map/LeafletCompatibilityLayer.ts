@@ -32,6 +32,69 @@ export const EditControl = forwardRef((props: any, ref: any) => {
         };
       }
     }
+
+    // Initialize stylesheet to ensure drawing elements are visible
+    const ensureStylesLoaded = () => {
+      // Check if styles already exist
+      if (document.getElementById('leaflet-draw-visibility-styles')) return;
+
+      // Create a style element to ensure all Leaflet Draw markers are visible
+      const styleElement = document.createElement('style');
+      styleElement.id = 'leaflet-draw-visibility-styles';
+      styleElement.textContent = `
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow,
+        .leaflet-draw-tooltip,
+        .leaflet-div-icon {
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+        .leaflet-marker-icon {
+          z-index: 1000 !important;
+        }
+        .leaflet-draw-guide-dash {
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+        .leaflet-editing-icon {
+          visibility: visible !important;
+          opacity: 1 !important;
+          z-index: 1000 !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+    };
+
+    ensureStylesLoaded();
+
+    // Create a MutationObserver to ensure marker visibility on DOM changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          // Look for marker elements that might have been added
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              if (element.classList.contains('leaflet-marker-icon') || 
+                  element.classList.contains('leaflet-editing-icon')) {
+                element.setAttribute('style', 'visibility: visible !important; opacity: 1 !important; z-index: 1000 !important;');
+              }
+              if (element.classList.contains('leaflet-marker-shadow')) {
+                element.setAttribute('style', 'visibility: visible !important; opacity: 1 !important; z-index: 999 !important;');
+              }
+            }
+          });
+        }
+      });
+    });
+
+    // Start observing with a specific configuration
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Clean up observer on unmount
+    return () => {
+      observer.disconnect();
+    };
   }, []);
   
   // Make sure we have a valid featureGroup before proceeding
@@ -162,6 +225,25 @@ if (typeof window !== 'undefined' && window.L && window.L.Draw) {
               result.subtext = "Calculate area after completion";
             }
             return result;
+          }
+        };
+      }
+
+      // Ensure that vertices are visible during drawing
+      if ((originalDraw.Polygon.prototype as any)._updateGuide) {
+        const originalUpdateGuide = (originalDraw.Polygon.prototype as any)._updateGuide;
+        (originalDraw.Polygon.prototype as any)._updateGuide = function(latlng: L.LatLng) {
+          originalUpdateGuide.call(this, latlng);
+          
+          // Ensure all markers in the vertex list are visible
+          if (this._markers && this._markers.length) {
+            this._markers.forEach((marker: any) => {
+              if (marker._icon) {
+                marker._icon.style.visibility = 'visible';
+                marker._icon.style.opacity = '1';
+                marker._icon.style.zIndex = '1000';
+              }
+            });
           }
         };
       }

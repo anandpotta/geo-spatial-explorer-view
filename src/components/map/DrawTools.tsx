@@ -38,6 +38,68 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           };
         }
       };
+
+      // Make sure polygon markers are properly styled and visible
+      if ((L.Draw.Polygon.prototype as any)._createMarker) {
+        const originalCreateMarker = (L.Draw.Polygon.prototype as any)._createMarker;
+        
+        (L.Draw.Polygon.prototype as any)._createMarker = function(latlng: L.LatLng, index: number) {
+          const marker = originalCreateMarker.call(this, latlng, index);
+          
+          // Ensure the marker icon is visible with proper styling
+          if (marker && marker._icon) {
+            marker._icon.style.visibility = 'visible';
+            marker._icon.style.opacity = '1';
+            marker._icon.style.zIndex = '1000';
+          }
+          
+          return marker;
+        };
+      }
+    }
+
+    // Ensure vertex markers are visible with proper styling
+    if (L.Draw && L.Draw.Marker && L.Draw.Marker.prototype) {
+      const originalOnAdd = (L.Draw.Marker.prototype as any).onAdd;
+      
+      if (originalOnAdd) {
+        (L.Draw.Marker.prototype as any).onAdd = function(map: L.Map) {
+          const result = originalOnAdd.call(this, map);
+          
+          // Force marker icon to be visible
+          if (this._marker && this._marker._icon) {
+            this._marker._icon.style.visibility = 'visible';
+            this._marker._icon.style.opacity = '1';
+            this._marker._icon.style.zIndex = '1000';
+          }
+          
+          return result;
+        };
+      }
+    }
+    
+    // Ensure the Draw.Polygon's vertex marker styling is correct
+    if (L.Draw && L.Draw.Polygon) {
+      // Add CSS to ensure vertex markers are visible
+      const style = document.createElement('style');
+      style.textContent = `
+        .leaflet-marker-icon.leaflet-div-icon {
+          visibility: visible !important;
+          opacity: 1 !important;
+          z-index: 1000 !important;
+        }
+        .leaflet-marker-shadow {
+          visibility: visible !important;
+          opacity: 1 !important;
+          z-index: 999 !important;
+        }
+        .leaflet-draw-tooltip {
+          visibility: visible !important;
+          opacity: 1 !important;
+          z-index: 1001 !important;
+        }
+      `;
+      document.head.appendChild(style);
     }
   }, []);
   
@@ -119,9 +181,18 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
             fillOpacity: 0.5,
             color: '#3388ff',
             weight: 3,
-            // Explicitly set this to work around the tooltip error
             showArea: true
-          }
+          },
+          // Ensure markers are visible for polygon drawing
+          allowIntersection: false,
+          drawError: {
+            color: '#e1e100',
+            message: '<strong>Error:</strong> Cannot draw intersecting lines!'
+          },
+          guidelineDistance: 20,
+          showLength: true,
+          metric: true,
+          zIndexOffset: 2000 // Make sure markers are on top
         },
         circle: {
           shapeOptions: {
