@@ -8,7 +8,7 @@ import { getMapFromLayer, isMapValid, safelyEnableEditForLayer } from '@/utils/l
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
   getDrawTools: () => any;
-  activateEditMode: () => void;
+  activateEditMode: () => boolean;
   openFileUploadDialog: (drawingId: string) => void;
 }
 
@@ -54,14 +54,14 @@ export function useDrawingControls() {
     }
   }, []);
 
-  const activateEditMode = useCallback(() => {
-    if (!checkMapValidity()) return;
+  const activateEditMode = useCallback((): boolean => {
+    if (!checkMapValidity()) return false;
     
     console.log("Attempting to activate edit mode");
     
     // Retry logic with progressive delay
     const maxAttempts = 5;
-    const attemptActivation = () => {
+    const attemptActivation = (): boolean => {
       // First try to enable edit mode through layers directly in case the toolbar isn't working
       try {
         const group = featureGroupRef.current;

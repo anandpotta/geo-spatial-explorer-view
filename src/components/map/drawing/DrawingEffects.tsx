@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 interface DrawingEffectsProps {
   activeTool: string | null;
   isInitialized: boolean;
-  activateEditMode: () => void;
+  activateEditMode: () => boolean; // Updated type to specify it returns a boolean
 }
 
 const DrawingEffects: React.FC<DrawingEffectsProps> = ({ 

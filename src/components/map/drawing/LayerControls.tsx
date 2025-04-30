@@ -32,9 +32,10 @@ export const createLayerControls = ({
   if (activeTool !== 'edit' || !isMounted) return;
 
   // Check if the map is valid
+  let mapInstance: L.Map | null = null;
   try {
-    const map = getMapFromLayer(featureGroup);
-    if (!isMapValid(map)) {
+    mapInstance = getMapFromLayer(featureGroup);
+    if (!isMapValid(mapInstance)) {
       console.warn("Map container is not valid, skipping layer controls");
       return;
     }
@@ -82,7 +83,7 @@ export const createLayerControls = ({
         
         // If they happen to be too close, adjust position
         if (uploadButtonPosition && buttonPosition) {
-          const distance = map.distance(
+          const distance = mapInstance.distance(
             [buttonPosition.lat, buttonPosition.lng],
             [uploadButtonPosition.lat, uploadButtonPosition.lng]
           );
