@@ -1,11 +1,10 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
 import { saveFloorPlan, getFloorPlanById } from "@/utils/floor-plan-utils";
-import { applyClipPathToImage } from "@/utils/svg-path-utils";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -16,10 +15,6 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPdf, setIsPdf] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("");
-  const [pathData, setPathData] = useState<string>("");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   
   // Check if there's a saved floor plan for this building in localStorage
   useEffect(() => {
@@ -29,31 +24,14 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         setSelectedImage(savedFloorPlan.data);
         setIsPdf(savedFloorPlan.isPdf);
         setFileName(savedFloorPlan.fileName);
-        
-        // Get the path data if available
-        if (savedFloorPlan.pathData) {
-          setPathData(savedFloorPlan.pathData);
-        }
       } else {
         // Reset state if no floor plan is found
         setSelectedImage(null);
         setIsPdf(false);
         setFileName('');
-        setPathData('');
       }
     }
   }, [drawing]);
-
-  // Apply clip path when image and path data are available
-  useEffect(() => {
-    if (selectedImage && pathData && imageRef.current && svgRef.current && !isPdf) {
-      const clipPathId = `clip-path-${drawing?.id || 'default'}`;
-      applyClipPathToImage(imageRef.current, svgRef.current, pathData, clipPathId);
-    }
-  }, [selectedImage, pathData, isPdf, drawing?.id]);
-  
-  // Create a unique ID for the clip path
-  const clipPathId = `clip-path-${drawing?.id || 'default'}`;
   
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -80,8 +58,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           drawing.id,
           dataUrl,
           file.type.includes('pdf'),
-          file.name,
-          pathData // Include the path data for clipping
+          file.name
         );
         
         toast.success('Floor plan uploaded successfully');
@@ -130,7 +107,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           </Button>
         </label>
       </div>
-      <div ref={containerRef} className="w-full h-full flex items-center justify-center bg-black/5">
+      <div className="w-full h-full flex items-center justify-center bg-black/5">
         {selectedImage ? (
           <div className="space-y-4 text-center max-w-[90%]">
             <h2 className="text-xl font-semibold">
@@ -147,63 +124,24 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
                 />
               </div>
             ) : (
-              <div className="relative">
-                {pathData ? (
-                  <div className="relative max-h-[70vh]">
-                    <svg 
-                      ref={svgRef}
-                      className="absolute top-0 left-0 w-full h-full" 
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      <defs>
-                        <clipPath id={clipPathId}>
-                          <path d={pathData} />
-                        </clipPath>
-                      </defs>
-                    </svg>
-                    <img
-                      ref={imageRef}
-                      src={selectedImage}
-                      alt="Floor Plan"
-                      className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
-                      style={{ clipPath: `url(#${clipPathId})` }}
-                      onLoad={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        const container = containerRef.current;
-                        if (container) {
-                          const containerWidth = container.clientWidth * 0.9;
-                          const containerHeight = container.clientHeight * 0.7;
-                          const scale = calculateFitScale(img.naturalWidth, img.naturalHeight, containerWidth, containerHeight);
-                          if (scale < 1) {
-                            img.style.maxWidth = `${img.naturalWidth * scale}px`;
-                            img.style.maxHeight = `${img.naturalHeight * scale}px`;
-                          }
-                        }
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <img
-                    ref={imageRef}
-                    src={selectedImage}
-                    alt="Floor Plan"
-                    className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
-                    onLoad={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      const container = containerRef.current;
-                      if (container) {
-                        const containerWidth = container.clientWidth * 0.9;
-                        const containerHeight = container.clientHeight * 0.7;
-                        const scale = calculateFitScale(img.naturalWidth, img.naturalHeight, containerWidth, containerHeight);
-                        if (scale < 1) {
-                          img.style.maxWidth = `${img.naturalWidth * scale}px`;
-                          img.style.maxHeight = `${img.naturalHeight * scale}px`;
-                        }
-                      }
-                    }}
-                  />
-                )}
-              </div>
+              <img
+                src={selectedImage}
+                alt="Floor Plan"
+                className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
+                onLoad={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  const container = img.parentElement?.parentElement;
+                  if (container) {
+                    const containerWidth = container.clientWidth * 0.9;
+                    const containerHeight = container.clientHeight * 0.7;
+                    const scale = calculateFitScale(img.naturalWidth, img.naturalHeight, containerWidth, containerHeight);
+                    if (scale < 1) {
+                      img.style.maxWidth = `${img.naturalWidth * scale}px`;
+                      img.style.maxHeight = `${img.naturalHeight * scale}px`;
+                    }
+                  }
+                }}
+              />
             )}
           </div>
         ) : (

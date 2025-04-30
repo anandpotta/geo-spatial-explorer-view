@@ -1,7 +1,8 @@
+
 import { toast } from 'sonner';
 import { Location } from '@/utils/geo-utils';
 import L from 'leaflet';
-import { isMapValid } from '@/utils/leaflet';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 
 // Define interface for internal map properties not exposed in TypeScript definitions
 interface LeafletMapInternal extends L.Map {

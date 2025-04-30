@@ -16,9 +16,9 @@ const RemoveButton = ({ onClick, className = '' }: RemoveButtonProps) => {
       }}
       variant="destructive"
       size="icon"
-      className={`h-5 w-5 rounded-full p-0 shadow-md hover:bg-red-600 ${className}`}
+      className={`h-8 w-8 rounded-full p-1 shadow-md hover:bg-red-600 animate-pulse ${className}`}
     >
-      <X className="h-3 w-3" strokeWidth={3} />
+      <X className="h-6 w-6" strokeWidth={3} />
     </Button>
   );
 };

@@ -4,7 +4,7 @@ import { createRoot } from '@/components/map/drawing/ReactDOMUtils';
 import RemoveButton from './RemoveButton';
 import UploadButton from './UploadButton';
 import { toast } from 'sonner';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 interface LayerControlsProps {
   layer: L.Layer;
@@ -32,10 +32,9 @@ export const createLayerControls = ({
   if (activeTool !== 'edit' || !isMounted) return;
 
   // Check if the map is valid
-  let mapInstance: L.Map | null = null;
   try {
-    mapInstance = getMapFromLayer(featureGroup);
-    if (!isMapValid(mapInstance)) {
+    const map = getMapFromLayer(featureGroup);
+    if (!isMapValid(map)) {
       console.warn("Map container is not valid, skipping layer controls");
       return;
     }
@@ -51,50 +50,29 @@ export const createLayerControls = ({
     if ('getLatLng' in layer) {
       // For markers
       buttonPosition = (layer as L.Marker).getLatLng();
-      // Position the upload button slightly to the right of the marker
       uploadButtonPosition = L.latLng(
-        buttonPosition.lat,
-        buttonPosition.lng + 0.0002 // Increase the spacing to avoid overlap
+        buttonPosition.lat + 0.0001,
+        buttonPosition.lng
       );
     } else if ('getBounds' in layer) {
       // For polygons, rectangles, etc.
       const bounds = (layer as any).getBounds();
       if (bounds) {
-        // Position remove button at the northeast corner
         buttonPosition = bounds.getNorthEast();
-        
-        // Position upload button at the northwest corner to create clear separation
         uploadButtonPosition = L.latLng(
-          bounds.getNorthWest().lat,
-          bounds.getNorthWest().lng
+          bounds.getNorthEast().lat,
+          bounds.getNorthEast().lng - 0.0002
         );
       }
     } else if ('getLatLngs' in layer) {
       // For polylines or complex shapes
       const latlngs = (layer as any).getLatLngs();
       if (latlngs && latlngs.length > 0) {
-        // For the remove button, use the first point
         buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
-        
-        // For the upload button, use the last point to ensure separation
-        const lastPoints = Array.isArray(latlngs[0]) ? latlngs[0] : latlngs;
-        const lastPoint = lastPoints[lastPoints.length - 1];
-        uploadButtonPosition = L.latLng(lastPoint.lat, lastPoint.lng);
-        
-        // If they happen to be too close, adjust position
-        if (uploadButtonPosition && buttonPosition) {
-          const distance = mapInstance.distance(
-            [buttonPosition.lat, buttonPosition.lng],
-            [uploadButtonPosition.lat, uploadButtonPosition.lng]
-          );
-          
-          if (distance < 10) { // If less than 10 meters apart
-            uploadButtonPosition = L.latLng(
-              buttonPosition.lat - 0.0002,
-              buttonPosition.lng
-            );
-          }
-        }
+        uploadButtonPosition = L.latLng(
+          buttonPosition.lat + 0.0001,
+          buttonPosition.lng
+        );
       }
     }
   } catch (err) {
@@ -112,8 +90,8 @@ export const createLayerControls = ({
     icon: L.divIcon({
       className: 'remove-button-container',
       html: container,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
     }),
     interactive: true,
     zIndexOffset: 1000
@@ -127,14 +105,10 @@ export const createLayerControls = ({
       removeButtonRoots.set(drawingId, root);
       
       root.render(
-        <RemoveButton 
-          onClick={(e: React.MouseEvent) => {
-            e.stopPropagation();
-            onRemoveShape(drawingId);
-            toast.success('Shape removed');
-          }} 
-          className="animate-pulse"
-        />
+        <RemoveButton onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          onRemoveShape(drawingId);
+        }} />
       );
     } catch (err) {
       console.error('Error rendering remove button:', err);
@@ -150,8 +124,8 @@ export const createLayerControls = ({
       icon: L.divIcon({
         className: 'upload-button-container',
         html: uploadContainer,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
       }),
       interactive: true,
       zIndexOffset: 1000

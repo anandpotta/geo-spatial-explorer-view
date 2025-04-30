@@ -1,93 +1,82 @@
 
-// A simple utility for managing floor plans
+/**
+ * Floor plan utilities for handling storage and retrieval of floor plans
+ */
 
-export interface FloorPlan {
-  data: string;  // Base64 data
-  fileName: string;
+export interface FloorPlanData {
+  data: string;
   isPdf: boolean;
-  pathData?: string; // SVG path data for clipping
-}
-
-export interface FloorPlanStorage {
-  [drawingId: string]: FloorPlan;
-}
-
-// Alias for compatibility with existing code
-export type FloorPlanData = FloorPlan;
-
-/**
- * Save a floor plan for a specific drawing
- */
-export function saveFloorPlan(
-  drawingId: string, 
-  data: string, 
-  isPdf: boolean, 
-  fileName: string,
-  pathData?: string
-): void {
-  try {
-    const floorPlans: FloorPlanStorage = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    floorPlans[drawingId] = {
-      data,
-      fileName,
-      isPdf,
-      pathData
-    };
-    localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
-  } catch (error) {
-    console.error('Error saving floor plan:', error);
-  }
+  fileName: string;
+  timestamp: string;
 }
 
 /**
- * Get a floor plan for a specific drawing
+ * Save a floor plan to local storage
  */
-export function getFloorPlanById(drawingId: string): FloorPlan | null {
-  try {
-    const floorPlans: FloorPlanStorage = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    return floorPlans[drawingId] || null;
-  } catch (error) {
-    console.error('Error getting floor plan:', error);
-    return null;
-  }
+export function saveFloorPlan(drawingId: string, data: string, isPdf: boolean, fileName: string): void {
+  if (!drawingId) return;
+  
+  const savedFloorPlans = getSavedFloorPlans();
+  savedFloorPlans[drawingId] = {
+    data,
+    isPdf,
+    fileName,
+    timestamp: new Date().toISOString()
+  };
+  
+  localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
+  
+  // Dispatch an event to notify components about the floor plan update
+  window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
+    detail: { drawingId }
+  }));
 }
 
 /**
- * Get all saved floor plans
+ * Get all saved floor plans from local storage
  */
-export function getSavedFloorPlans(): FloorPlanStorage {
+export function getSavedFloorPlans(): Record<string, FloorPlanData> {
   try {
-    return JSON.parse(localStorage.getItem('floorPlans') || '{}');
-  } catch (error) {
-    console.error('Error getting saved floor plans:', error);
+    const floorPlansJson = localStorage.getItem('floorPlans');
+    return floorPlansJson ? JSON.parse(floorPlansJson) : {};
+  } catch (e) {
+    console.error('Failed to parse saved floor plans', e);
     return {};
   }
 }
 
 /**
- * Delete a floor plan for a specific drawing
+ * Get a specific floor plan by drawing ID
+ */
+export function getFloorPlanById(drawingId: string): FloorPlanData | null {
+  if (!drawingId) return null;
+  
+  const savedFloorPlans = getSavedFloorPlans();
+  return savedFloorPlans[drawingId] || null;
+}
+
+/**
+ * Delete a floor plan from local storage
  */
 export function deleteFloorPlan(drawingId: string): void {
-  try {
-    const floorPlans: FloorPlanStorage = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    if (floorPlans[drawingId]) {
-      delete floorPlans[drawingId];
-      localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
-    }
-  } catch (error) {
-    console.error('Error deleting floor plan:', error);
+  if (!drawingId) return;
+  
+  const savedFloorPlans = getSavedFloorPlans();
+  if (savedFloorPlans[drawingId]) {
+    delete savedFloorPlans[drawingId];
+    localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
+    
+    // Dispatch an event to notify components about the floor plan update
+    window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
+      detail: { drawingId }
+    }));
   }
 }
 
 /**
- * Get all drawing IDs that have floor plans
+ * Get all drawing IDs that have associated floor plans
  */
 export function getDrawingIdsWithFloorPlans(): string[] {
-  try {
-    const floorPlans: FloorPlanStorage = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    return Object.keys(floorPlans);
-  } catch (error) {
-    console.error('Error getting drawing IDs with floor plans:', error);
-    return [];
-  }
+  const savedFloorPlans = getSavedFloorPlans();
+  return Object.keys(savedFloorPlans);
 }
