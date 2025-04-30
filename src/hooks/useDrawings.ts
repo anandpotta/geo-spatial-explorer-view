@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { DrawingData, getSavedDrawings } from '@/utils/drawing-utils';
+import { getSavedDrawings } from '@/utils/drawing/operations';
+import { DrawingData } from '@/utils/drawing/types';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 
 export function useDrawings() {

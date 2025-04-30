@@ -1,5 +1,5 @@
 
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/drawing/types';
 import L from 'leaflet';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';

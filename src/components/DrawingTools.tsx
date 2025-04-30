@@ -1,8 +1,9 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
-import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
+import { deleteDrawing, getSavedDrawings } from '@/utils/drawing/operations';
 import { toast } from 'sonner';
 import {
   AlertDialog,

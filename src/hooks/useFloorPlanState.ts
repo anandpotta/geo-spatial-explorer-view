@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/drawing/types';
 
 export function useFloorPlanState() {
   const [showFloorPlan, setShowFloorPlan] = useState(false);

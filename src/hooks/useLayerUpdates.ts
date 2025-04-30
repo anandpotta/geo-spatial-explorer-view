@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/drawing/types';
 import L from 'leaflet';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
 

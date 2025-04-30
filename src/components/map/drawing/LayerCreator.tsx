@@ -1,6 +1,6 @@
 
 import L from 'leaflet';
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/drawing/types';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
