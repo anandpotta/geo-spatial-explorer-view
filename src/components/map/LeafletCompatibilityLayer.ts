@@ -27,6 +27,21 @@ export const EditControl = forwardRef((props: any, ref: any) => {
             if (layer instanceof L.Path) {
               // Use type assertion to handle the PolyEdit constructor
               layer.editing = new (L.Handler as any).PolyEdit(layer);
+              
+              // Ensure the editing handler has disable and enable methods
+              if (layer.editing && !layer.editing.disable) {
+                layer.editing.disable = function() {
+                  // No-op function to prevent errors
+                  console.log("Disable called on layer without proper handler");
+                };
+              }
+              
+              if (layer.editing && !layer.editing.enable) {
+                layer.editing.enable = function() {
+                  // No-op function to prevent errors
+                  console.log("Enable called on layer without proper handler");
+                };
+              }
             }
           }
         });
@@ -40,8 +55,11 @@ export const EditControl = forwardRef((props: any, ref: any) => {
       if (featureGroup) {
         try {
           featureGroup.eachLayer((layer: any) => {
-            if (layer && layer.editing && layer.editing.disable) {
-              layer.editing.disable();
+            if (layer && layer.editing) {
+              // Check if disable exists before calling it
+              if (typeof layer.editing.disable === 'function') {
+                layer.editing.disable();
+              }
             }
           });
         } catch (err) {

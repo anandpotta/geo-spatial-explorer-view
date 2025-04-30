@@ -27,6 +27,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
             if (layer instanceof L.Path) {
               // Use type assertion for PolyEdit
               layer.editing = new (L.Handler as any).PolyEdit(layer);
+              
+              // Add fallback methods to prevent errors
+              if (layer.editing && !layer.editing.disable) {
+                layer.editing.disable = function() {
+                  console.log("Disable called on layer without proper handler");
+                };
+              }
+              
+              if (layer.editing && !layer.editing.enable) {
+                layer.editing.enable = function() {
+                  console.log("Enable called on layer without proper handler");
+                };
+              }
             }
           }
         });
@@ -133,6 +146,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       if (layer instanceof L.Path && !layer.editing) {
         // Use type assertion for PolyEdit
         layer.editing = new (L.Handler as any).PolyEdit(layer);
+        
+        // Add fallback methods to prevent errors
+        if (layer.editing && !layer.editing.disable) {
+          layer.editing.disable = function() {
+            console.log("Disable called on layer without proper handler");
+          };
+        }
+        
+        if (layer.editing && !layer.editing.enable) {
+          layer.editing.enable = function() {
+            console.log("Enable called on layer without proper handler");
+          };
+        }
       }
       
       // Create a properly structured shape object

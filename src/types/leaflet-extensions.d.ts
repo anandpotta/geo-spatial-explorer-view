@@ -11,7 +11,10 @@ declare module 'leaflet' {
   }
   
   interface Path {
-    editing?: L.Handler;
+    editing?: L.Handler & {
+      enable?: () => void;
+      disable?: () => void;
+    };
     _path?: SVGElement; // Internal Leaflet property for the SVG element
     _updatePath?: () => void; // Internal method to update SVG path
     _renderer?: any; // Renderer instance
@@ -20,6 +23,8 @@ declare module 'leaflet' {
   namespace Handler {
     class PolyEdit extends L.Handler {
       constructor(poly: L.Path);
+      enable(): void;
+      disable(): void;
     }
   }
 }
