@@ -1,6 +1,7 @@
 
 import { useRef, useEffect } from 'react';
 import L from 'leaflet';
+import { safelyDisableEditForLayer } from '@/utils/leaflet-type-utils';
 
 export function useLayerReferences() {
   const isMountedRef = useRef(true);
@@ -11,6 +12,15 @@ export function useLayerReferences() {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      
+      // Safely disable editing on all layers first
+      layersRef.current.forEach(layer => {
+        try {
+          safelyDisableEditForLayer(layer);
+        } catch (err) {
+          console.error('Error disabling edit for layer during unmount:', err);
+        }
+      });
       
       // Safely unmount React roots with proper error handling
       const safelyUnmountRoot = (root: any) => {

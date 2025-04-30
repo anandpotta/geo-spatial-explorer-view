@@ -1,8 +1,9 @@
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
+import { safelyDisableEditForLayer, safelyCleanupFeatureGroup } from '@/utils/leaflet-type-utils';
 
 interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;
@@ -29,7 +30,7 @@ export function useLayerUpdates({
   onRemoveShape,
   onUploadRequest
 }: LayerUpdatesProps) {
-  const safelyUnmountRoot = (root: any) => {
+  const safelyUnmountRoot = useCallback((root: any) => {
     if (!root) return;
     try {
       if (root.unmount && typeof root.unmount === 'function') {
@@ -38,15 +39,24 @@ export function useLayerUpdates({
     } catch (err) {
       console.error('Error unmounting root:', err);
     }
-  };
+  }, []);
   
-  const updateLayers = () => {
+  const updateLayers = useCallback(() => {
     if (!featureGroup || !isMountedRef.current) return;
     
     try {
+      // Safely disable editing on all layers first
+      try {
+        layersRef.current.forEach(layer => {
+          safelyDisableEditForLayer(layer);
+        });
+      } catch (err) {
+        console.error('Error disabling layer editing before update:', err);
+      }
+      
       // Safely clear existing layers with proper error handling
       try {
-        featureGroup.clearLayers();
+        safelyCleanupFeatureGroup(featureGroup);
       } catch (err) {
         console.error('Error clearing feature group layers:', err);
       }
@@ -67,6 +77,8 @@ export function useLayerUpdates({
       // Create layers for each drawing
       savedDrawings.forEach(drawing => {
         try {
+          if (!isMountedRef.current) return;
+          
           createLayerFromDrawing({
             drawing,
             featureGroup,
@@ -86,7 +98,7 @@ export function useLayerUpdates({
     } catch (err) {
       console.error('Error updating layers:', err);
     }
-  };
+  }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, onRegionClick, onRemoveShape, onUploadRequest, safelyUnmountRoot]);
 
   // Listen for marker updates to ensure drawings stay visible
   useEffect(() => {
@@ -101,7 +113,7 @@ export function useLayerUpdates({
     return () => {
       window.removeEventListener('markersUpdated', handleMarkerUpdated);
     };
-  }, []);
+  }, [updateLayers, isMountedRef]);
 
   useEffect(() => {
     if (!featureGroup || !isMountedRef.current) return;
@@ -126,16 +138,25 @@ export function useLayerUpdates({
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       
+      // Safely disable editing on all layers first
+      try {
+        layersRef.current.forEach(layer => {
+          safelyDisableEditForLayer(layer);
+        });
+      } catch (err) {
+        console.error('Error disabling layer editing on unmount:', err);
+      }
+      
       // Only try to clear layers if the featureGroup is still valid
-      if (featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {
+      if (isMountedRef.current && featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {
         try {
-          featureGroup.clearLayers();
+          safelyCleanupFeatureGroup(featureGroup);
         } catch (err) {
           console.error('Error clearing layers on unmount:', err);
         }
       }
     };
-  }, [savedDrawings, activeTool]);
+  }, [savedDrawings, activeTool, updateLayers, featureGroup, isMountedRef, layersRef]);
 
   return { updateLayers };
 }

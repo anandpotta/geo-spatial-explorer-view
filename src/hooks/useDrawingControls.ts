@@ -1,9 +1,9 @@
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer, isMapValid, safelyEnableEditForLayer } from '@/utils/leaflet-type-utils';
 
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
@@ -20,7 +20,14 @@ export function useDrawingControls() {
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isMapValid = () => {
+  // Ensure we clean up properly when unmounting
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const checkMapValidity = useCallback(() => {
     // Check if the feature group is attached to a valid map
     const featureGroup = featureGroupRef.current;
     try {
@@ -44,23 +51,69 @@ export function useDrawingControls() {
       toast.error("Could not validate map state. Please refresh the page.");
       return false;
     }
-  };
+  }, []);
 
-  const activateEditMode = () => {
-    if (!isMapValid()) return;
+  const activateEditMode = useCallback(() => {
+    if (!checkMapValidity()) return;
+    
+    console.log("Attempting to activate edit mode");
+    
+    // First try to enable edit mode through layers directly in case the toolbar isn't working
+    try {
+      const group = featureGroupRef.current;
+      if (group) {
+        let activatedAny = false;
+        group.eachLayer(layer => {
+          if (safelyEnableEditForLayer(layer)) {
+            activatedAny = true;
+          }
+        });
+        
+        if (activatedAny) {
+          console.log("Activated edit mode on at least one layer directly");
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Error activating edit mode directly on layers:", err);
+    }
 
+    // Try to enable edit mode through edit control
     if (drawToolsRef.current?.getEditControl()) {
       try {
-        console.log("Attempting to activate edit mode");
         const editControl = drawToolsRef.current.getEditControl();
         if (editControl) {
-          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
-          if (editHandler && typeof editHandler.enable === 'function') {
-            editHandler.enable();
-            console.log("Edit mode activated successfully");
-          } else {
-            console.warn("Edit handler not found or not a function");
+          // First make sure the edit toolbar is visible
+          if (editControl._map && typeof editControl._showToolbar === 'function') {
+            try {
+              editControl._showToolbar();
+            } catch (err) {
+              console.warn("Could not show toolbar:", err);
+            }
           }
+          
+          // Then try to activate the edit handler
+          const editHandlers = [
+            // Try multiple paths to find the edit handler
+            editControl._toolbars?.edit?._modes?.edit?.handler,
+            editControl._handler,
+            editControl._modes?.edit?.handler
+          ];
+          
+          for (const handler of editHandlers) {
+            if (handler && typeof handler.enable === 'function') {
+              try {
+                handler.enable();
+                console.log("Edit mode activated successfully");
+                return;
+              } catch (e) {
+                console.warn("Failed to enable this edit handler:", e);
+                // Continue to next handler if this one fails
+              }
+            }
+          }
+          
+          console.warn("None of the edit handlers could be activated");
         }
       } catch (err) {
         console.error('Failed to activate edit mode:', err);
@@ -69,16 +122,16 @@ export function useDrawingControls() {
     } else {
       console.warn("Draw tools ref or edit control not available");
     }
-  };
+  }, [checkMapValidity]);
 
-  const openFileUploadDialog = (drawingId: string) => {
-    if (!isMapValid()) return;
+  const openFileUploadDialog = useCallback((drawingId: string) => {
+    if (!checkMapValidity()) return;
     
     setSelectedDrawing(drawingId);
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-  };
+  }, [checkMapValidity]);
 
   return {
     featureGroupRef,
@@ -90,6 +143,7 @@ export function useDrawingControls() {
     setSelectedDrawing,
     fileInputRef,
     activateEditMode,
-    openFileUploadDialog
+    openFileUploadDialog,
+    checkMapValidity
   };
 }

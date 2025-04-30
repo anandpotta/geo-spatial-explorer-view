@@ -9,59 +9,41 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Format the edit options properly - this is where the fix is needed
-  let editOptions;
-  
-  // Handle different types of edit parameters
-  if (typeof edit === 'boolean') {
-    // If edit is a boolean, create a proper object structure
-    editOptions = {
-      featureGroup: featureGroup,
-      edit: {
-        // Add proper edit options with safe defaults
-        selectedPathOptions: {
-          maintainColor: false,
-          opacity: 0.7
-        },
-        // Apply error handling to edit handlers
-        edit: {
-          noMissingHandlers: true
-        }
-      }
-    };
-  } else if (edit && typeof edit === 'object') {
-    // If edit is an object, merge with featureGroup but don't overwrite featureGroup
-    editOptions = {
-      ...edit,
-      featureGroup: featureGroup,
-      edit: {
-        ...edit.edit,
-        // Ensure edit handlers have proper error handling
-        selectedPathOptions: edit.selectedPathOptions || {
-          maintainColor: false,
-          opacity: 0.7
-        },
-        noMissingHandlers: true
-      }
-    };
-  } else {
-    // Default case if edit is undefined or null
-    editOptions = {
-      featureGroup: featureGroup,
-      edit: {
-        selectedPathOptions: {
-          maintainColor: false,
-          opacity: 0.7
-        },
-        noMissingHandlers: true
-      }
-    };
+  // Make sure we have a valid featureGroup to prevent errors
+  if (!featureGroup) {
+    console.warn('EditControl received null or undefined featureGroup');
+    return null;
   }
   
+  // Setup proper edit options with safe fallbacks
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      featureGroup: featureGroup,
+      edit: true,
+      remove: true,
+      poly: {
+        allowIntersection: false
+      },
+      selectedPathOptions: {
+        maintainColor: false,
+        opacity: 0.7
+      }
+    }
+  };
+  
   // Return the original EditControl with proper prop structure
-  // Important: Do not pass featureGroup at top level as it causes confusion
   return React.createElement(OriginalEditControl, {
     ...otherProps,
+    position: 'topright',
+    draw: {
+      rectangle: true,
+      polygon: true,
+      circle: true,
+      circlemarker: false,
+      marker: true,
+      polyline: false
+    },
     edit: editOptions,
     ref
   });

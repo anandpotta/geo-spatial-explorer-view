@@ -15,7 +15,8 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
-  
+  const isComponentMounted = useRef(true);
+
   // Force SVG renderer but in a safer way
   useEffect(() => {
     // This effect will ensure all layers use SVG renderer
@@ -39,6 +40,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
     
     return () => {
+      // Mark component as unmounted to prevent further operations
+      isComponentMounted.current = false;
+      
       // Restore original function when component unmounts
       try {
         const pathPrototype = L.Path.prototype as any;
@@ -51,16 +55,18 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       }
     };
   }, [featureGroup]);
-  
+
   // Make sure the edit control is properly disposed when component unmounts
   useEffect(() => {
     return () => {
-      if (editControlRef.current && editControlRef.current._toolbars) {
-        try {
-          // Disable any active handlers before unmounting
+      if (!isComponentMounted.current) return;
+
+      try {
+        if (editControlRef.current && editControlRef.current._toolbars) {
+          // Safely disable any active handlers before unmounting
           if (editControlRef.current._toolbars.edit) {
             Object.values(editControlRef.current._toolbars.edit._modes).forEach((mode: any) => {
-              if (mode && mode.handler && mode.handler.disable && typeof mode.handler.disable === 'function') {
+              if (mode && mode.handler && typeof mode.handler.disable === 'function') {
                 try {
                   mode.handler.disable();
                 } catch (err) {
@@ -69,13 +75,27 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
               }
             });
           }
-        } catch (err) {
-          console.error('Error cleaning up edit control:', err);
+          
+          // Manually remove all editing capabilities from layers
+          if (featureGroup) {
+            featureGroup.eachLayer((layer: any) => {
+              safelyDisableEditForLayer(layer);
+              
+              // Clear editing references that might cause issues
+              if (layer.editing) {
+                // Remove problematic properties in a safe way
+                if (layer.editing._poly) layer.editing._poly = null;
+                if (layer.editing._shape) layer.editing._shape = null;
+              }
+            });
+          }
         }
+      } catch (err) {
+        console.error('Error cleaning up edit control:', err);
       }
     };
-  }, []);
-  
+  }, [featureGroup]);
+
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
     getPathElements: () => {
@@ -121,22 +141,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   }));
 
   const handleCreated = (e: any) => {
+    if (!isComponentMounted.current) return;
+    
     try {
       const { layerType, layer } = e;
       
       if (!layer) {
         console.error('No layer created');
         return;
-      }
-      
-      // Ensure the layer has proper edit handlers
-      if (layer.enableEdit && typeof layer.enableEdit === 'function') {
-        // Make sure the layer has proper editing capabilities
-        try {
-          layer._map = getMapFromLayer(featureGroup);
-        } catch (err) {
-          console.error('Error setting layer map reference:', err);
-        }
       }
       
       // Create a properly structured shape object
@@ -175,6 +187,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       
       // Wait for the next tick to ensure DOM is updated
       setTimeout(() => {
+        // Only proceed if the component is still mounted
+        if (!isComponentMounted.current) return;
+        
         // Try to get SVG path data after layer is rendered
         if (!shape.svgPath && layer._path) {
           shape.svgPath = layer._path.getAttribute('d');
@@ -188,35 +203,35 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   };
 
-  // Create edit control options with proper safeguards
-  const editOptions = {
-    position: 'topright',
-    draw: {
-      rectangle: true,
-      polygon: true,
-      circle: true,
-      circlemarker: false,
-      marker: true,
-      polyline: false
-    },
-    edit: {
-      selectedPathOptions: {
-        maintainColor: false,
-        opacity: 0.7
-      },
-      remove: true,
-      edit: {
-        noMissingHandlers: true  // Add this to prevent errors when handlers are missing
-      }
-    }
-  };
+  if (!featureGroup) {
+    console.warn('DrawTools received null or undefined featureGroup');
+    return null;
+  }
 
   return (
     <EditControl
       ref={editControlRef}
-      {...editOptions}
+      position="topright"
+      draw={{
+        rectangle: true,
+        polygon: true,
+        circle: true,
+        circlemarker: false,
+        marker: true,
+        polyline: false
+      }}
+      edit={{
+        featureGroup: featureGroup,
+        edit: {
+          selectedPathOptions: {
+            maintainColor: false,
+            opacity: 0.7
+          }
+        },
+        remove: true
+      }}
       onCreated={handleCreated}
-      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
+      featureGroup={featureGroup}
     />
   );
 });
