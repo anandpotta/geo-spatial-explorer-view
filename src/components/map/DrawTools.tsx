@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -16,6 +15,7 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   const isComponentMounted = useRef(true);
+  const cleanupFunctionsRef = useRef<Array<() => void>>([]);
 
   // Force SVG renderer but in a safer way
   useEffect(() => {
@@ -39,9 +39,23 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       console.error('Error setting up SVG renderer:', err);
     }
     
+    // Initialize the global cleanup timers array if it doesn't exist
+    if (!window._leafletCleanupTimers) {
+      window._leafletCleanupTimers = [];
+    }
+    
     return () => {
       // Mark component as unmounted to prevent further operations
       isComponentMounted.current = false;
+      
+      // Run all registered cleanup functions
+      cleanupFunctionsRef.current.forEach(cleanup => {
+        try {
+          cleanup();
+        } catch (err) {
+          console.error('Error running cleanup function:', err);
+        }
+      });
       
       // Restore original function when component unmounts
       try {
@@ -62,36 +76,77 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       if (!isComponentMounted.current) return;
 
       try {
-        if (editControlRef.current && editControlRef.current._toolbars) {
-          // Safely disable any active handlers before unmounting
-          if (editControlRef.current._toolbars.edit) {
-            Object.values(editControlRef.current._toolbars.edit._modes).forEach((mode: any) => {
-              if (mode && mode.handler && typeof mode.handler.disable === 'function') {
-                try {
-                  mode.handler.disable();
-                } catch (err) {
-                  console.error('Error disabling edit mode:', err);
+        if (editControlRef.current) {
+          // Prepare a cleanup function for all edit handlers
+          const cleanupFunction = () => {
+            try {
+              if (editControlRef.current && editControlRef.current._toolbars) {
+                // Safely disable any active handlers before unmounting
+                if (editControlRef.current._toolbars.edit) {
+                  Object.values(editControlRef.current._toolbars.edit._modes || {}).forEach((mode: any) => {
+                    if (!mode) return;
+                    
+                    if (mode.handler && typeof mode.handler.disable === 'function') {
+                      try {
+                        mode.handler.disable();
+                      } catch (err) {
+                        console.error('Error disabling edit mode handler:', err);
+                      }
+                    }
+                    
+                    // Also check for dispose method
+                    if (mode.handler && typeof mode.handler.dispose === 'function') {
+                      try {
+                        mode.handler.dispose();
+                      } catch (err) {
+                        console.error('Error disposing edit mode handler:', err);
+                      }
+                    }
+                    
+                    // Reset the handler completely to avoid further issues
+                    if (mode.handler) {
+                      Object.keys(mode.handler).forEach(key => {
+                        try {
+                          if (typeof mode.handler[key] === 'object' && mode.handler[key] !== null) {
+                            mode.handler[key] = null;
+                          }
+                        } catch (e) {
+                          // Silent cleanup
+                        }
+                      });
+                    }
+                  });
                 }
               }
-            });
-          }
+            } catch (err) {
+              console.error('Error cleaning up edit control toolbars:', err);
+            }
+          };
           
-          // Manually remove all editing capabilities from layers
-          if (featureGroup) {
-            featureGroup.eachLayer((layer: any) => {
-              safelyDisableEditForLayer(layer);
-              
-              // Clear editing references that might cause issues
-              if (layer.editing) {
-                // Remove problematic properties in a safe way
-                if (layer.editing._poly) layer.editing._poly = null;
-                if (layer.editing._shape) layer.editing._shape = null;
+          // Add to cleanup functions
+          cleanupFunctionsRef.current.push(cleanupFunction);
+          
+          // Schedule cleanup with timeout to ensure it runs after react-leaflet's cleanup
+          const timerId = setTimeout(() => {
+            try {
+              // Manually remove all editing capabilities from layers
+              if (featureGroup) {
+                featureGroup.eachLayer((layer: any) => {
+                  safelyDisableEditForLayer(layer);
+                });
               }
-            });
+            } catch (err) {
+              console.error('Error in delayed cleanup:', err);
+            }
+          }, 0);
+          
+          // Track the timeout so it can be cleared if needed
+          if (window._leafletCleanupTimers) {
+            window._leafletCleanupTimers.push(timerId);
           }
         }
       } catch (err) {
-        console.error('Error cleaning up edit control:', err);
+        console.error('Error setting up edit control cleanup:', err);
       }
     };
   }, [featureGroup]);

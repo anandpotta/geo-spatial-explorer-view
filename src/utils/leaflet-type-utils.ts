@@ -113,7 +113,7 @@ export const safelyEnableEditForLayer = (layer: any): boolean => {
   return false;
 };
 
-// Add a function to safely disable editing
+// Enhanced function to safely disable editing, handling the 'dispose' property issue
 export const safelyDisableEditForLayer = (layer: any): boolean => {
   if (!layer) return false;
   
@@ -129,6 +129,30 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
       if (layer.editing._poly) layer.editing._poly = null;
       if (layer.editing._shape) layer.editing._shape = null;
       if (layer.editing._guides) layer.editing._guides = [];
+      
+      // Handle problematic dispose methods
+      if (layer.editing._verticesHandlers) {
+        for (const handler of Object.values(layer.editing._verticesHandlers || {})) {
+          try {
+            if (handler && typeof handler.disable === 'function') {
+              handler.disable();
+            }
+          } catch (e) {
+            console.warn("Error disabling vertex handler:", e);
+          }
+          
+          try {
+            if (handler && typeof handler.dispose === 'function') {
+              handler.dispose();
+            }
+          } catch (e) {
+            console.warn("Error disposing vertex handler:", e);
+          }
+        }
+        layer.editing._verticesHandlers = null;
+      }
+      
+      // Safely handle marker groups
       if (layer.editing._markerGroup) {
         try {
           // Try to properly remove the marker group
@@ -173,7 +197,8 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
       // Last resort: just replace the editing object altogether
       layer.editing = {
         enable: function() {},
-        disable: function() {}
+        disable: function() {},
+        dispose: function() {}  // Add dispose method to prevent "reading 'dispose'" error
       };
       
       return true;
@@ -184,7 +209,8 @@ export const safelyDisableEditForLayer = (layer: any): boolean => {
       try {
         layer.editing = {
           enable: function() {},
-          disable: function() {}
+          disable: function() {},
+          dispose: function() {}  // Add dispose method to prevent "reading 'dispose'" error
         };
       } catch (e) {
         console.error("Couldn't even replace editing object:", e);

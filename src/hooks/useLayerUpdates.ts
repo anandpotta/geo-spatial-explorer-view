@@ -44,60 +44,65 @@ export function useLayerUpdates({
   const updateLayers = useCallback(() => {
     if (!featureGroup || !isMountedRef.current) return;
     
-    try {
-      // Safely disable editing on all layers first
+    // Use a small delay to ensure the DOM is ready
+    setTimeout(() => {
+      if (!isMountedRef.current) return;
+      
       try {
-        layersRef.current.forEach(layer => {
-          safelyDisableEditForLayer(layer);
-        });
-      } catch (err) {
-        console.error('Error disabling layer editing before update:', err);
-      }
-      
-      // Safely clear existing layers with proper error handling
-      try {
-        safelyCleanupFeatureGroup(featureGroup);
-      } catch (err) {
-        console.error('Error clearing feature group layers:', err);
-      }
-      
-      // Safely unmount all React roots
-      removeButtonRoots.current.forEach(root => {
-        safelyUnmountRoot(root);
-      });
-      removeButtonRoots.current.clear();
-      
-      uploadButtonRoots.current.forEach(root => {
-        safelyUnmountRoot(root);
-      });
-      uploadButtonRoots.current.clear();
-      
-      layersRef.current.clear();
-      
-      // Create layers for each drawing
-      savedDrawings.forEach(drawing => {
+        // Safely disable editing on all layers first
         try {
-          if (!isMountedRef.current) return;
-          
-          createLayerFromDrawing({
-            drawing,
-            featureGroup,
-            activeTool,
-            isMounted: isMountedRef.current,
-            layersRef: layersRef.current,
-            removeButtonRoots: removeButtonRoots.current,
-            uploadButtonRoots: uploadButtonRoots.current,
-            onRegionClick,
-            onRemoveShape,
-            onUploadRequest
+          layersRef.current.forEach(layer => {
+            safelyDisableEditForLayer(layer);
           });
         } catch (err) {
-          console.error(`Error creating layer for drawing ${drawing.id}:`, err);
+          console.error('Error disabling layer editing before update:', err);
         }
-      });
-    } catch (err) {
-      console.error('Error updating layers:', err);
-    }
+        
+        // Safely clear existing layers with proper error handling
+        try {
+          safelyCleanupFeatureGroup(featureGroup);
+        } catch (err) {
+          console.error('Error clearing feature group layers:', err);
+        }
+        
+        // Safely unmount all React roots
+        removeButtonRoots.current.forEach(root => {
+          safelyUnmountRoot(root);
+        });
+        removeButtonRoots.current.clear();
+        
+        uploadButtonRoots.current.forEach(root => {
+          safelyUnmountRoot(root);
+        });
+        uploadButtonRoots.current.clear();
+        
+        layersRef.current.clear();
+        
+        // Create layers for each drawing
+        savedDrawings.forEach(drawing => {
+          try {
+            if (!isMountedRef.current) return;
+            
+            createLayerFromDrawing({
+              drawing,
+              featureGroup,
+              activeTool,
+              isMounted: isMountedRef.current,
+              layersRef: layersRef.current,
+              removeButtonRoots: removeButtonRoots.current,
+              uploadButtonRoots: uploadButtonRoots.current,
+              onRegionClick,
+              onRemoveShape,
+              onUploadRequest
+            });
+          } catch (err) {
+            console.error(`Error creating layer for drawing ${drawing.id}:`, err);
+          }
+        });
+      } catch (err) {
+        console.error('Error updating layers:', err);
+      }
+    }, 0);
   }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, onRegionClick, onRemoveShape, onUploadRequest, safelyUnmountRoot]);
 
   // Listen for marker updates to ensure drawings stay visible
@@ -138,6 +143,9 @@ export function useLayerUpdates({
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       
+      // Only try to clean up if the component is still mounted
+      if (!isMountedRef.current) return;
+      
       // Safely disable editing on all layers first
       try {
         layersRef.current.forEach(layer => {
@@ -148,7 +156,7 @@ export function useLayerUpdates({
       }
       
       // Only try to clear layers if the featureGroup is still valid
-      if (isMountedRef.current && featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {
+      if (featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {
         try {
           safelyCleanupFeatureGroup(featureGroup);
         } catch (err) {
@@ -156,7 +164,7 @@ export function useLayerUpdates({
         }
       }
     };
-  }, [savedDrawings, activeTool, updateLayers, featureGroup, isMountedRef, layersRef]);
+  }, [savedDrawings, activeTool, updateLayers, featureGroup, isMountedRef, layersRef, safelyUnmountRoot]);
 
   return { updateLayers };
 }

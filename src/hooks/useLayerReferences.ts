@@ -13,6 +13,13 @@ export function useLayerReferences() {
     return () => {
       isMountedRef.current = false;
       
+      // Clear any pending timers first
+      const pendingTimers = window._leafletCleanupTimers || [];
+      pendingTimers.forEach((timer: number) => {
+        clearTimeout(timer);
+      });
+      window._leafletCleanupTimers = [];
+      
       // Safely disable editing on all layers first
       layersRef.current.forEach(layer => {
         try {
@@ -71,4 +78,11 @@ export function useLayerReferences() {
     uploadButtonRoots,
     layersRef
   };
+}
+
+// Add a global type for cleanup timers
+declare global {
+  interface Window {
+    _leafletCleanupTimers?: number[];
+  }
 }
