@@ -16,7 +16,7 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
-  // Force SVG renderer but in a safer way
+  // Force SVG renderer for all new shapes
   useEffect(() => {
     // Add editing capability to all existing layers in the feature group
     if (featureGroup) {
@@ -35,20 +35,44 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       }
     }
     
-    // Override some Leaflet methods to ensure SVG rendering
-    const pathPrototype = L.Path.prototype as any;
-    const originalUpdatePath = pathPrototype._updatePath;
+    // Override Leaflet's circle and rectangle rendering to force SVG path creation
+    const originalCircleInitialize = (L.Circle as any).prototype.initialize;
+    const originalCircleRedraw = (L.Circle as any).prototype._updatePath;
     
-    pathPrototype._updatePath = function() {
-      if (this.options && !this.options.renderer) {
-        this.options.renderer = L.svg();
+    // Override Circle initialization to always use SVG renderer
+    (L.Circle as any).prototype.initialize = function(...args: any[]) {
+      if (!args[1]?.renderer) {
+        if (!args[1]) args[1] = {};
+        args[1].renderer = L.svg();
       }
-      originalUpdatePath.call(this);
+      return originalCircleInitialize.apply(this, args);
+    };
+    
+    // Ensure circle redraws properly generate SVG paths
+    (L.Circle as any).prototype._updatePath = function() {
+      originalCircleRedraw.call(this);
+      if (this._path && !this._path.getAttribute('d')) {
+        const d = this._renderer._curvePointsToPath([this._point]);
+        if (d) this._path.setAttribute('d', d);
+      }
+    };
+    
+    // Do the same for Rectangle
+    const originalRectInitialize = (L.Rectangle as any).prototype.initialize;
+    
+    (L.Rectangle as any).prototype.initialize = function(...args: any[]) {
+      if (!args[1]?.renderer) {
+        if (!args[1]) args[1] = {};
+        args[1].renderer = L.svg();
+      }
+      return originalRectInitialize.apply(this, args);
     };
     
     return () => {
-      // Restore original function when component unmounts
-      pathPrototype._updatePath = originalUpdatePath;
+      // Restore original functions when component unmounts
+      (L.Circle as any).prototype.initialize = originalCircleInitialize;
+      (L.Circle as any).prototype._updatePath = originalCircleRedraw;
+      (L.Rectangle as any).prototype.initialize = originalRectInitialize;
     };
   }, [featureGroup]);
   
@@ -114,9 +138,22 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Create a properly structured shape object
       let shape: any = { type: layerType, layer };
       
+      // Force rendering as SVG path
+      if (layer.options) {
+        layer.options.renderer = L.svg();
+      }
+      
       // Extract SVG path data if available
       if (layer._path) {
         shape.svgPath = layer._path.getAttribute('d');
+      } else {
+        // For circle or other shapes, try to regenerate the path
+        setTimeout(() => {
+          if (layer._path) {
+            shape.svgPath = layer._path.getAttribute('d');
+            onCreated(shape);
+          }
+        }, 10);
       }
       
       // For markers, extract position information

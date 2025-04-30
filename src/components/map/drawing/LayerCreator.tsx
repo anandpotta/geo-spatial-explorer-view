@@ -60,8 +60,8 @@ export const createLayerFromDrawing = ({
     options.opacity = 1;
     options.fillOpacity = options.fillOpacity || 0.2;
     
-    // Remove transform property - it's not part of PathOptions
-    // Instead, ensure the layer is prepared for edit mode by other means
+    // Force SVG renderer for all layers
+    options.renderer = L.svg();
     
     const layer = createDrawingLayer(drawing, options);
     
@@ -79,6 +79,11 @@ export const createLayerFromDrawing = ({
           // Ensure the layer has necessary properties for edit mode
           if ((l as any)._path) {
             (l as any)._path.setAttribute('data-drawing-id', drawing.id);
+            
+            // If we have SVG path data but it's not set yet, set it manually
+            if (drawing.svgPath && (l as any)._path.getAttribute('d') !== drawing.svgPath) {
+              (l as any)._path.setAttribute('d', drawing.svgPath);
+            }
           }
           
           // Store the layer reference

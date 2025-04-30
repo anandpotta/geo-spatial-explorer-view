@@ -65,13 +65,25 @@ export function useDrawingControls() {
           return;
         }
         
-        // First, ensure all layers have editing capabilities
+        // First, ensure all layers have editing capabilities and proper SVG paths
         featureGroupRef.current.eachLayer((layer: any) => {
           if (layer && !layer.editing) {
             // Initialize editing capability if missing
             if (layer instanceof L.Path) {
               // Use type assertion for PolyEdit
               layer.editing = new (L.Handler as any).PolyEdit(layer);
+              
+              // Ensure layer uses SVG renderer
+              if (layer.options) {
+                layer.options.renderer = L.svg();
+              }
+              
+              // If layer has _path but not SVG data, try to regenerate it
+              if (layer._path && !layer._path.getAttribute('d')) {
+                if (layer._updatePath) {
+                  layer._updatePath();
+                }
+              }
             }
           }
         });
