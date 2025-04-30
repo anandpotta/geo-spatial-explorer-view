@@ -51,8 +51,8 @@ export const createLayerControls = ({
       // For markers
       buttonPosition = (layer as L.Marker).getLatLng();
       uploadButtonPosition = L.latLng(
-        buttonPosition.lat + 0.0001,
-        buttonPosition.lng
+        buttonPosition.lat + 0.00005, // Position closer to the path
+        buttonPosition.lng + 0.00005
       );
     } else if ('getBounds' in layer) {
       // For polygons, rectangles, etc.
@@ -61,7 +61,7 @@ export const createLayerControls = ({
         buttonPosition = bounds.getNorthEast();
         uploadButtonPosition = L.latLng(
           bounds.getNorthEast().lat,
-          bounds.getNorthEast().lng - 0.0002
+          bounds.getNorthEast().lng - 0.00005 // Position closer to the path
         );
       }
     } else if ('getLatLngs' in layer) {
@@ -70,8 +70,8 @@ export const createLayerControls = ({
       if (latlngs && latlngs.length > 0) {
         buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
         uploadButtonPosition = L.latLng(
-          buttonPosition.lat + 0.0001,
-          buttonPosition.lng
+          buttonPosition.lat + 0.00005, // Position closer to the path
+          buttonPosition.lng + 0.00005
         );
       }
     }
@@ -90,8 +90,8 @@ export const createLayerControls = ({
     icon: L.divIcon({
       className: 'remove-button-container',
       html: container,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
+      iconSize: [20, 20], // Set to 20px x 20px
+      iconAnchor: [10, 10]  // Adjusted anchor to center of the icon
     }),
     interactive: true,
     zIndexOffset: 1000
@@ -128,8 +128,8 @@ export const createLayerControls = ({
       icon: L.divIcon({
         className: 'upload-button-container',
         html: uploadContainer,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        iconSize: [20, 20], // Set to 20px x 20px
+        iconAnchor: [10, 10] // Adjusted anchor to center of the icon
       }),
       interactive: true,
       zIndexOffset: 1000

@@ -22,10 +22,10 @@ const UploadButton = ({ onClick, className = '' }: UploadButtonProps) => {
     <Button 
       onClick={handleClick}
       size="sm"
-      className={`bg-green-600 hover:bg-green-700 rounded-full p-1 h-8 w-8 ${className}`}
+      className={`bg-green-600 hover:bg-green-700 rounded-full p-0 h-5 w-5 ${className}`}
       aria-label="Upload floor plan"
     >
-      <Upload className="h-4 w-4" />
+      <Upload className="h-3 w-3" />
     </Button>
   );
 };

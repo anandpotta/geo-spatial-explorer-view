@@ -5,6 +5,7 @@ import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
 import { saveFloorPlan, getFloorPlanById } from "@/utils/floor-plan-utils";
+import { applyClipPathToImage } from "@/utils/svg-path-utils";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -42,6 +43,14 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       }
     }
   }, [drawing]);
+
+  // Apply clip path when image and path data are available
+  useEffect(() => {
+    if (selectedImage && pathData && imageRef.current && svgRef.current && !isPdf) {
+      const clipPathId = `clip-path-${drawing?.id || 'default'}`;
+      applyClipPathToImage(imageRef.current, svgRef.current, pathData, clipPathId);
+    }
+  }, [selectedImage, pathData, isPdf, drawing?.id]);
   
   // Create a unique ID for the clip path
   const clipPathId = `clip-path-${drawing?.id || 'default'}`;
