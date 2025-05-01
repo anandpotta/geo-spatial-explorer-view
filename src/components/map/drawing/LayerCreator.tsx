@@ -6,7 +6,7 @@ import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
 import { hasFloorPlan, prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
-import { applyClipMaskToDrawing } from './ClipMaskManager';
+import { applyClipMaskToDrawing } from './clip-mask';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
