@@ -34,12 +34,11 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     };
   }
   
-  // Return the original EditControl with proper prop structure
-  // Important: Do not pass featureGroup at top level as it causes confusion
+  // Create the element with React.createElement to properly pass the ref
   return React.createElement(OriginalEditControl, {
     ...otherProps,
     edit: editOptions,
-    ref
+    ref: ref
   });
 });
 
