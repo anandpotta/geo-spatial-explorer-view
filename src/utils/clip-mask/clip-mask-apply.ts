@@ -1,33 +1,10 @@
 
 /**
- * Core operations for SVG clip masks
+ * Core functionality for applying clip masks to SVG elements
  */
 import { toast } from 'sonner';
-
-/**
- * Checks if a path element already has a clip mask applied
- */
-export const hasClipMaskApplied = (svgPath: SVGPathElement | null): boolean => {
-  if (!svgPath) return false;
-  
-  // Check for definitive clip mask attribute
-  if (svgPath.getAttribute('data-has-clip-mask') === 'true') {
-    return true;
-  }
-  
-  // Second check: verify if it has clip-path attribute
-  if (svgPath.hasAttribute('clip-path')) {
-    return true;
-  }
-  
-  // Third check: check if pattern fill is applied
-  const fill = svgPath.getAttribute('fill');
-  if (fill && fill.includes('url(#pattern-')) {
-    return true;
-  }
-  
-  return false;
-};
+import { storeOriginalAttributes } from './clip-mask-attributes';
+import { hasClipMaskApplied } from './clip-mask-checker';
 
 /**
  * Creates and applies an SVG clip mask with an image to a path element
@@ -87,9 +64,7 @@ export const applyImageClipMask = (
     }
     
     // Store original path data and style for potential restoration
-    pathElement.setAttribute('data-original-d', pathData);
-    pathElement.setAttribute('data-original-fill', pathElement.getAttribute('fill') || '');
-    pathElement.setAttribute('data-original-stroke', pathElement.getAttribute('stroke') || '');
+    storeOriginalAttributes(pathElement);
     
     // Create the defs section if it doesn't exist
     let defs = svg.querySelector('defs');
@@ -205,65 +180,6 @@ export const applyImageClipMask = (
   } catch (err) {
     console.error('Error applying image clip mask:', err);
     toast.error('Failed to apply floor plan image');
-    return false;
-  }
-};
-
-/**
- * Removes a clip mask from a path element
- */
-export const removeClipMask = (svgPath: SVGPathElement | null): boolean => {
-  try {
-    if (!svgPath) return false;
-    
-    // Remove clip path and restore original fill and stroke
-    svgPath.removeAttribute('clip-path');
-    
-    const originalFill = svgPath.getAttribute('data-original-fill');
-    if (originalFill) {
-      svgPath.setAttribute('fill', originalFill);
-    } else {
-      svgPath.removeAttribute('fill');
-    }
-    
-    const originalStroke = svgPath.getAttribute('data-original-stroke');
-    if (originalStroke) {
-      svgPath.setAttribute('stroke', originalStroke);
-    } else {
-      svgPath.removeAttribute('stroke');
-    }
-    
-    // Remove the data-has-clip-mask attribute
-    svgPath.removeAttribute('data-has-clip-mask');
-    svgPath.removeAttribute('data-image-url');
-    svgPath.removeAttribute('data-image-rotation');
-    svgPath.removeAttribute('data-image-scale');
-    svgPath.removeAttribute('data-image-offset-x');
-    svgPath.removeAttribute('data-image-offset-y');
-    svgPath.removeAttribute('data-last-updated');
-    
-    // Remove the pattern and clip path elements if they exist
-    const svg = svgPath.closest('svg');
-    if (svg) {
-      const drawingId = svgPath.getAttribute('data-drawing-id');
-      if (drawingId) {
-        const defs = svg.querySelector('defs');
-        if (defs) {
-          const clipId = `clip-${drawingId}`;
-          const patternId = `pattern-${drawingId}`;
-          
-          const clipPath = defs.querySelector(`#${clipId}`);
-          if (clipPath) defs.removeChild(clipPath);
-          
-          const pattern = defs.querySelector(`#${patternId}`);
-          if (pattern) defs.removeChild(pattern);
-        }
-      }
-    }
-    
-    return true;
-  } catch (err) {
-    console.error('Error removing clip mask:', err);
     return false;
   }
 };

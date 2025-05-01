@@ -21,7 +21,7 @@ export {
   hasClipMaskApplied,
   applyImageClipMask,
   removeClipMask
-} from './svg-clip-mask-operations';
+} from './clip-mask/index';
 
 export {
   rotateImageInClipMask,

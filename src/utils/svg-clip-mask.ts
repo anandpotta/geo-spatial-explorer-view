@@ -12,7 +12,7 @@ export {
   hasClipMaskApplied,
   applyImageClipMask,
   removeClipMask 
-} from './svg-clip-mask-operations';
+} from './clip-mask/index';
 
 // Re-export image manipulation functions
 export {

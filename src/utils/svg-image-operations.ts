@@ -1,4 +1,3 @@
-
 /**
  * Utilities for manipulating images in SVG clip masks
  */
@@ -237,6 +236,5 @@ export const resetImageTransform = (pathElement: SVGPathElement | null): boolean
   }
 };
 
-// Import needed functions from clip-mask-operations
-import { applyImageClipMask, removeClipMask } from './svg-clip-mask-operations';
-
+// Import needed functions from clip-mask modules
+import { applyImageClipMask, removeClipMask } from './clip-mask/index';
