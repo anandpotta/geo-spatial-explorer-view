@@ -6,13 +6,15 @@ import L from 'leaflet';
  */
 export function prepareLayerStyle(layer: L.Layer): void {
   if (layer.options) {
-    layer.options.renderer = L.svg();
-    layer.options.fillOpacity = 0.5; // Ensure fill opacity is set
-    layer.options.opacity = 1; // Ensure stroke opacity is set
-    layer.options.weight = 3; // Ensure stroke width is visible
-    layer.options.color = '#3388ff'; // Ensure color is set
+    // Use type assertion to tell TypeScript these properties exist
+    const options = layer.options as L.PathOptions;
+    options.renderer = L.svg();
+    options.fillOpacity = 0.5; // Ensure fill opacity is set
+    options.opacity = 1; // Ensure stroke opacity is set
+    options.weight = 3; // Ensure stroke width is visible
+    options.color = '#3388ff'; // Ensure color is set
     // Ensure interactive is set
-    layer.options.interactive = true;
+    options.interactive = true;
   }
 }
 

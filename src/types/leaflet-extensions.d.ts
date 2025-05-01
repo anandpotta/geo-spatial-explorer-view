@@ -3,6 +3,15 @@
 import L from 'leaflet';
 
 declare module 'leaflet' {
+  interface LayerOptions {
+    renderer?: L.Renderer;
+    fillOpacity?: number;
+    opacity?: number;
+    weight?: number;
+    color?: string;
+    interactive?: boolean;
+  }
+  
   interface PathOptions {
     fillPattern?: {
       url: string;
@@ -24,7 +33,7 @@ declare module 'leaflet' {
     _path?: SVGElement; // Internal Leaflet property for the SVG element
     _updatePath?: () => void; // Internal method to update SVG path
     _renderer?: any; // Renderer instance
-    options?: PathOptions;
+    options?: LayerOptions | PathOptions;
     _map?: L.Map;
     getLatLng?: () => L.LatLng;
     getLatLngs?: () => L.LatLng[] | L.LatLng[][] | L.LatLng[][][];
@@ -36,6 +45,7 @@ declare module 'leaflet' {
     _path?: SVGElement; // Internal Leaflet property for the SVG element
     _updatePath?: () => void; // Internal method to update SVG path
     _renderer?: any; // Renderer instance
+    options?: PathOptions;
   }
   
   namespace Handler {

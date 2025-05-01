@@ -10,13 +10,15 @@ export function forceSvgPathCreation(layer: L.Layer): void {
   try {
     // Ensure layer has SVG renderer
     if (layer.options) {
-      layer.options.renderer = L.svg();
+      // Use type assertion to tell TypeScript these properties exist
+      const options = layer.options as L.PathOptions;
+      options.renderer = L.svg();
       
       // Ensure visibility styles are set
-      if (layer.options) {
-        layer.options.fillOpacity = layer.options.fillOpacity || 0.5;
-        layer.options.opacity = layer.options.opacity || 1;
-        layer.options.weight = layer.options.weight || 3;
+      if (options) {
+        options.fillOpacity = options.fillOpacity || 0.5;
+        options.opacity = options.opacity || 1;
+        options.weight = options.weight || 3;
       }
     }
     
@@ -51,10 +53,11 @@ export function forceSvgPathCreation(layer: L.Layer): void {
     if (typeof (layer as any).eachLayer === 'function') {
       (layer as any).eachLayer((subLayer: any) => {
         if (subLayer.options) {
-          subLayer.options.renderer = L.svg();
-          subLayer.options.fillOpacity = subLayer.options.fillOpacity || 0.5;
-          subLayer.options.opacity = subLayer.options.opacity || 1;
-          subLayer.options.weight = subLayer.options.weight || 3;
+          const subOptions = subLayer.options as L.PathOptions;
+          subOptions.renderer = L.svg();
+          subOptions.fillOpacity = subOptions.fillOpacity || 0.5;
+          subOptions.opacity = subOptions.opacity || 1;
+          subOptions.weight = subOptions.weight || 3;
         }
         
         if (typeof subLayer._updatePath === 'function') {
