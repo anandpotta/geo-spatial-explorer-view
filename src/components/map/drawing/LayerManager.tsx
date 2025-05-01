@@ -25,8 +25,9 @@ const LayerManager = ({
   const removeButtonRoots = useRef<Map<string, any>>(new Map());
   const uploadButtonRoots = useRef<Map<string, any>>(new Map());
   const imageControlRoots = useRef<Map<string, any>>(new Map());
+  const isInitialRenderRef = useRef(true);
 
-  const { updateLayers } = useLayerUpdates({
+  const { updateLayers, debouncedUpdateLayers } = useLayerUpdates({
     featureGroup,
     savedDrawings,
     activeTool,
@@ -73,6 +74,7 @@ const LayerManager = ({
     safelyClearRoots(imageControlRoots.current);
   };
 
+  // Component lifecycle
   useEffect(() => {
     isMountedRef.current = true;
     
@@ -87,20 +89,59 @@ const LayerManager = ({
     };
   }, []);
 
-  // Re-render layers when drawings or activeTool changes
+  // Less aggressive re-rendering on changes
   useEffect(() => {
     if (isMountedRef.current) {
       // First safely unmount any existing roots to prevent conflicts
       safeUnmountRoots();
       
-      // Then update layers with a small delay to ensure unmounting is complete
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          updateLayers();
-        }
-      }, 10);
+      // Use different timing for initial vs. subsequent renders
+      if (isInitialRenderRef.current) {
+        // For initial render, use a short delay
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            updateLayers();
+            isInitialRenderRef.current = false;
+          }
+        }, 50);
+      } else {
+        // For subsequent renders, use the debounced version
+        debouncedUpdateLayers();
+      }
     }
-  }, [savedDrawings, activeTool, updateLayers]);
+  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
+
+  // Listen for resize events which might affect positioning
+  useEffect(() => {
+    const handleResize = () => {
+      if (isMountedRef.current) {
+        debouncedUpdateLayers();
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [debouncedUpdateLayers]);
+
+  // Handle storage events for cross-tab updates
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      if (isMountedRef.current) {
+        debouncedUpdateLayers();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('floorPlanUpdated', handleStorageUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('floorPlanUpdated', handleStorageUpdate);
+    };
+  }, [debouncedUpdateLayers]);
 
   return null; // This is a non-visual component
 };

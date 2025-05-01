@@ -41,18 +41,8 @@ export const applyImageClipMask = (
     // Get the SVG element that contains this path
     const svg = pathElement.closest('svg');
     if (!svg) {
-      // Log error and wait for next render cycle
+      // Log error but don't retry immediately - this will be handled by the caller
       console.error('SVG path is not within an SVG element');
-      
-      // Schedule a retry with a short delay to see if SVG becomes available
-      setTimeout(() => {
-        const retryPath = document.querySelector(`path[data-drawing-id="${id}"]`) as SVGPathElement;
-        if (retryPath && retryPath.closest('svg')) {
-          console.log(`SVG became available for drawing ${id}, retrying clip mask`);
-          applyImageClipMask(retryPath, imageUrl, id);
-        }
-      }, 500);
-      
       return false;
     }
     
@@ -81,7 +71,7 @@ export const applyImageClipMask = (
     if (existingPattern) defs.removeChild(existingPattern);
     
     // Create a clip path element
-    let clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
     clipPath.setAttribute('id', `clip-${id}`);
     defs.appendChild(clipPath);
     
@@ -90,19 +80,45 @@ export const applyImageClipMask = (
     clipPathPath.setAttribute('d', pathData);
     clipPath.appendChild(clipPathPath);
     
-    // Load the image to get its dimensions before creating the pattern
+    // First, mark as having clip mask (prevents race conditions)
+    pathElement.setAttribute('data-has-clip-mask', 'true');
+    pathElement.setAttribute('data-last-updated', Date.now().toString());
+    
+    // Create a pre-loaded image to get dimensions
     const tempImg = new Image();
+    
+    // Set crossorigin attribute to handle CORS correctly
+    tempImg.crossOrigin = "anonymous";
+    
+    // Add timeout to prevent hanging on image load
+    const imageTimeout = setTimeout(() => {
+      console.warn(`Image load timed out for ${id}`);
+      // Apply default dimensions if image load times out
+      applyImageWithDimensions(300, 300);
+    }, 5000);
+    
     tempImg.onload = () => {
+      clearTimeout(imageTimeout);
+      applyImageWithDimensions(tempImg.width, tempImg.height);
+    };
+    
+    tempImg.onerror = () => {
+      clearTimeout(imageTimeout);
+      console.error('Failed to load image for clip mask');
+      // Don't show error toasts for image load errors to reduce spam
+      // Apply default dimensions as fallback
+      applyImageWithDimensions(300, 300);
+    };
+    
+    // Function to apply the image with known dimensions
+    function applyImageWithDimensions(imgWidth: number, imgHeight: number) {
       try {
-        if (!svg || !pathElement) return; // Safety check
+        if (!svg || !pathElement || !document.contains(pathElement)) return; // Safety check
         
         // Get the bounding box to properly size the pattern
         const bbox = pathElement.getBBox();
         
         // Calculate scale to fit the image properly within the shape
-        const imgWidth = tempImg.width;
-        const imgHeight = tempImg.height;
-        
         const scaleX = bbox.width / imgWidth;
         const scaleY = bbox.height / imgHeight;
         const scale = Math.max(scaleX, scaleY); // Use max to ensure image covers the shape
@@ -115,7 +131,7 @@ export const applyImageClipMask = (
         const offsetY = (bbox.height - scaledHeight) / 2 + bbox.y;
         
         // Create a pattern for the image with calculated dimensions
-        let pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+        const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
         pattern.setAttribute('id', `pattern-${id}`);
         pattern.setAttribute('patternUnits', 'userSpaceOnUse');
         pattern.setAttribute('x', String(offsetX));
@@ -140,38 +156,32 @@ export const applyImageClipMask = (
         pathElement.setAttribute('data-image-offset-x', '0');
         pathElement.setAttribute('data-image-offset-y', '0');
         
-        // Apply changes in a single batch using RAF to reduce visual flickering
+        // Apply changes in a single batch to reduce visual flickering
+        // First apply pattern fill
+        pathElement.setAttribute('fill', `url(#pattern-${id})`);
+        
+        // Remove stroke for better appearance
+        pathElement.setAttribute('stroke', 'none');
+        
+        // Apply clip path after a small delay to reduce flicker
         requestAnimationFrame(() => {
-          if (!pathElement) return; // Safety check
-          
-          // Mark as having clip mask first (prevents race conditions)
-          pathElement.setAttribute('data-has-clip-mask', 'true');
-          pathElement.setAttribute('data-last-updated', Date.now().toString());
-          
-          // Apply pattern fill first
-          pathElement.setAttribute('fill', `url(#pattern-${id})`);
-          
-          // Remove stroke for better appearance
-          pathElement.setAttribute('stroke', 'none');
-          
-          // Apply clip path after a small delay to reduce flicker
-          setTimeout(() => {
-            if (pathElement) {
-              pathElement.setAttribute('clip-path', `url(#clip-${id})`);
-              toast.success('Floor plan applied successfully');
+          if (pathElement && document.contains(pathElement)) {
+            pathElement.setAttribute('clip-path', `url(#clip-${id})`);
+            // Show success toast only on the first successful application
+            const isFirstApply = pathElement.getAttribute('data-toast-shown') !== 'true';
+            if (isFirstApply) {
+              pathElement.setAttribute('data-toast-shown', 'true');
+              toast.success('Floor plan applied successfully', { id: `floor-plan-${id}` });
             }
-          }, 20);
+          }
         });
+        
+        return true;
       } catch (err) {
         console.error('Error during image processing:', err);
-        toast.error('Error processing floor plan image');
+        return false;
       }
-    };
-    
-    tempImg.onerror = () => {
-      console.error('Failed to load image for clip mask');
-      toast.error('Failed to load image for floor plan');
-    };
+    }
     
     // Start loading the image
     tempImg.src = imageUrlString;
@@ -179,7 +189,6 @@ export const applyImageClipMask = (
     return true;
   } catch (err) {
     console.error('Error applying image clip mask:', err);
-    toast.error('Failed to apply floor plan image');
     return false;
   }
 };

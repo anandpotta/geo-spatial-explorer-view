@@ -1,49 +1,59 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, RefObject } from 'react';
 
 /**
- * Hook to handle toggling between drawing and editing modes
+ * Hook to manage edit mode activation/deactivation
  */
-export function useEditMode(editControlRef: React.RefObject<any>, activeTool: string | null) {
-  const isEditModeActive = useRef<boolean>(false);
-  
-  // Handle switching between drawing and editing modes
+export function useEditMode(editControlRef: RefObject<any>, activeTool: string | null) {
   useEffect(() => {
-    if (!editControlRef.current) return;
-    
-    // Safely check if edit mode should be activated or deactivated
-    const safelyToggleEditMode = () => {
-      if (!editControlRef.current) return;
+    // Function to activate or deactivate edit mode based on activeTool
+    const updateEditMode = () => {
+      if (!editControlRef.current) {
+        console.log('Edit control not available yet');
+        return;
+      }
       
       try {
         const editControl = editControlRef.current;
-        const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+        const editToolbar = editControl._toolbars?.edit;
         
-        // When activeTool is 'edit', enable edit mode if it's not already active
+        if (!editToolbar) {
+          console.log('Edit toolbar not available');
+          return;
+        }
+        
+        const editHandler = editToolbar._modes?.edit?.handler;
+        const deleteHandler = editToolbar._modes?.remove?.handler;
+        
         if (activeTool === 'edit') {
-          if (editHandler && !isEditModeActive.current && typeof editHandler.enable === 'function') {
+          // Activate edit mode
+          if (editHandler && typeof editHandler.enable === 'function') {
             console.log('Activating edit mode');
             editHandler.enable();
-            isEditModeActive.current = true;
           }
-        } 
-        // When activeTool is not 'edit', disable edit mode if it's active
-        else if (isEditModeActive.current) {
-          if (editHandler && typeof editHandler.disable === 'function') {
+        } else {
+          // Deactivate edit mode
+          if (editHandler && typeof editHandler.disable === 'function' && editHandler.enabled()) {
             console.log('Deactivating edit mode');
             editHandler.disable();
-            isEditModeActive.current = false;
+          }
+          
+          // Deactivate delete mode
+          if (deleteHandler && typeof deleteHandler.disable === 'function' && deleteHandler.enabled()) {
+            console.log('Deactivating delete mode');
+            deleteHandler.disable();
           }
         }
       } catch (err) {
-        console.error('Error toggling edit mode:', err);
+        console.error('Error updating edit mode:', err);
       }
     };
+
+    // Add a delay to ensure edit control is available
+    const timerId = setTimeout(updateEditMode, 500);
     
-    // Use a delay to ensure the map is properly initialized
-    setTimeout(safelyToggleEditMode, 100);
-    
-  }, [activeTool, editControlRef.current]);
-  
-  return { isEditModeActive };
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [editControlRef, activeTool]);
 }

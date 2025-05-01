@@ -10,6 +10,13 @@ interface ApplyClipMaskOptions {
   layer: L.Layer;
 }
 
+// Track application attempts to avoid repeated failures
+const applicationAttempts = new Map<string, number>();
+// Track successful applications to avoid reapplying
+const successfulApplications = new Map<string, boolean>();
+// Track the last time we tried to apply a mask to a drawing
+const lastApplicationTime = new Map<string, number>();
+
 /**
  * Applies a clip mask to a drawing with floor plan
  */
@@ -17,18 +24,40 @@ export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyCli
   if (!drawingId || !isMounted) return;
   
   try {
+    // Check if we've recently tried to apply a mask to this drawing
+    const now = Date.now();
+    const lastTime = lastApplicationTime.get(drawingId) || 0;
+    const timeSinceLastAttempt = now - lastTime;
+    
+    // If we've tried within the last 3 seconds, skip this attempt
+    if (timeSinceLastAttempt < 3000) {
+      console.log(`Skipping clip mask application for ${drawingId}, attempted too recently (${timeSinceLastAttempt}ms ago)`);
+      return;
+    }
+    
+    // Update the timestamp of our attempt
+    lastApplicationTime.set(drawingId, now);
+    
+    // Check if we've already successfully applied a mask to this drawing
+    if (successfulApplications.get(drawingId)) {
+      console.log(`Clip mask already successfully applied to ${drawingId}, skipping`);
+      
+      // Check if the element still exists and has the mask
+      const pathElement = findPathElement(drawingId, layer);
+      if (pathElement && hasClipMaskApplied(pathElement)) {
+        // Everything is good, no need to reapply
+        return;
+      } else {
+        // Path changed or mask was lost, need to reapply
+        console.log(`Path element changed or mask lost for ${drawingId}, will reapply`);
+        successfulApplications.set(drawingId, false);
+      }
+    }
+    
     // Get the floor plan data
     const floorPlanData = getFloorPlanById(drawingId);
     if (!floorPlanData || !floorPlanData.data) {
       console.log(`No floor plan image found for drawing ${drawingId}`);
-      return;
-    }
-    
-    // Skip re-application check - first try to find the path
-    const pathElement = findPathElement(drawingId, layer);
-    if (pathElement && hasClipMaskApplied(pathElement)) {
-      // If we found the path and it already has a clip mask, don't retry
-      console.log(`Drawing ${drawingId} already has clip mask applied, skipping re-application`);
       return;
     }
     
@@ -40,18 +69,15 @@ export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyCli
       imageUrl: floorPlanData.data,
       isMounted,
       attempt: 1,
-      maxAttempts: 5,
-      initialDelay: 250,
+      maxAttempts: 3, // Reduce max attempts to prevent too many failures
+      initialDelay: 150,
       layer
     });
   } catch (err) {
     console.error('Error getting floor plan by ID:', err);
-    toast.error('Failed to retrieve floor plan data');
+    // Don't show toast for errors to reduce notification spam
   }
 };
-
-// Track application attempts to avoid repeated failures
-const applicationAttempts = new Map<string, number>();
 
 interface AttemptApplyClipMaskOptions {
   drawingId: string;
@@ -82,8 +108,7 @@ const attemptApplyClipMask = ({
   const currentTime = Date.now();
   
   // If we've tried too recently, delay longer
-  if (currentTime - lastAttemptTime < 2000) {
-    console.log(`Too many attempts for ${drawingId}, increasing delay`);
+  if (currentTime - lastAttemptTime < 1000) {
     setTimeout(() => {
       if (isMounted) {
         attemptApplyClipMask({
@@ -92,11 +117,11 @@ const attemptApplyClipMask = ({
           isMounted,
           attempt,
           maxAttempts,
-          initialDelay: initialDelay * 2, // Double the delay
+          initialDelay: initialDelay * 1.5, // Increase delay
           layer
         });
       }
-    }, initialDelay * 2);
+    }, initialDelay * 1.5);
     return;
   }
   
@@ -112,66 +137,57 @@ const attemptApplyClipMask = ({
     // Check if element already has clip mask to avoid reapplying
     if (hasClipMaskApplied(pathElement)) {
       console.log(`Path already has clip mask, skipping application for ${drawingId}`);
+      successfulApplications.set(drawingId, true);
       return;
     }
     
     // Apply clip mask with stability optimization
     setTimeout(() => {
-      if (isMounted) {
-        // Final check that the path is still in the document and within an SVG before applying
-        if (document.contains(pathElement) && pathElement.closest('svg')) {
-          applyImageClipMask(pathElement, imageUrl, drawingId);
-        } else {
-          console.log(`Path element for ${drawingId} is no longer in the document or not in an SVG`);
-          
-          // Try to find the path again
-          const newPathElement = findPathElement(drawingId, layer);
-          if (newPathElement && document.contains(newPathElement) && newPathElement.closest('svg')) {
-            applyImageClipMask(newPathElement, imageUrl, drawingId);
+      if (!isMounted) return;
+      
+      // Final check that the path is still in the document and within an SVG before applying
+      if (document.contains(pathElement) && pathElement.closest('svg')) {
+        const success = applyImageClipMask(pathElement, imageUrl, drawingId);
+        if (success) {
+          successfulApplications.set(drawingId, true);
+        }
+      } else {
+        console.log(`Path element for ${drawingId} is no longer in the document or not in an SVG`);
+        
+        // Try to find the path again
+        const newPathElement = findPathElement(drawingId, layer);
+        if (newPathElement && document.contains(newPathElement) && newPathElement.closest('svg')) {
+          const success = applyImageClipMask(newPathElement, imageUrl, drawingId);
+          if (success) {
+            successfulApplications.set(drawingId, true);
           }
         }
       }
     }, 10); // Small delay to ensure DOM is ready
-  } else {
-    // Log but don't show toast for retries
-    console.log(`Path element not found for drawing ${drawingId}`);
-    
+  } else if (attempt < maxAttempts && isMounted) {
     // Calculate exponential backoff delay with a maximum cap
-    const nextDelay = Math.min(initialDelay * Math.pow(1.5, attempt - 1), 3000);
+    const nextDelay = Math.min(initialDelay * Math.pow(1.5, attempt - 1), 1000);
     
-    if (attempt < maxAttempts && isMounted) {
-      console.log(`Retrying to find path element for drawing ${drawingId} (Attempt ${attempt + 1} of ${maxAttempts}) in ${nextDelay}ms`);
-      setTimeout(() => {
-        // Check again before scheduling the next attempt
-        const pathCheck = findPathElement(drawingId, layer);
-        if (pathCheck && hasClipMaskApplied(pathCheck)) {
-          console.log(`Path already has clip mask (discovered before retry), skipping for ${drawingId}`);
-          return;
-        }
-        
-        attemptApplyClipMask({
-          drawingId,
-          imageUrl,
-          isMounted,
-          attempt: attempt + 1,
-          maxAttempts,
-          initialDelay,
-          layer
-        });
-      }, nextDelay);
-    } else if (attempt >= maxAttempts) {
-      // If we've reached max attempts but still want to try later
-      // Add to a queue for retry after a longer delay
-      setTimeout(() => {
-        if (isMounted) {
-          console.log(`Final attempt to find path for drawing ${drawingId}`);
-          const lastPathElement = findPathElement(drawingId, layer);
-          if (lastPathElement && !hasClipMaskApplied(lastPathElement)) {
-            applyImageClipMask(lastPathElement, imageUrl, drawingId);
-          }
-        }
-      }, 5000); // A longer delay for one last try
-    }
+    setTimeout(() => {
+      // Check again before scheduling the next attempt
+      if (!isMounted) return;
+      
+      const pathCheck = findPathElement(drawingId, layer);
+      if (pathCheck && hasClipMaskApplied(pathCheck)) {
+        successfulApplications.set(drawingId, true);
+        return;
+      }
+      
+      attemptApplyClipMask({
+        drawingId,
+        imageUrl,
+        isMounted,
+        attempt: attempt + 1,
+        maxAttempts,
+        initialDelay,
+        layer
+      });
+    }, nextDelay);
   }
 };
 
@@ -213,9 +229,6 @@ const findPathElement = (drawingId: string, layer: L.Layer): SVGPathElement | nu
         
         const pathByAttr = overlayPane.querySelector(`path[data-drawing-id="${drawingId}"]`);
         if (pathByAttr) return pathByAttr as SVGPathElement;
-        
-        const pathByClass = overlayPane.querySelector(`.drawing-path-${drawingId.substring(0, 8)}`);
-        if (pathByClass) return pathByClass as SVGPathElement;
         
         // If we have exactly one path and this is a retry, it might be the one we're looking for
         const allPaths = overlayPane.querySelectorAll('path.leaflet-interactive');

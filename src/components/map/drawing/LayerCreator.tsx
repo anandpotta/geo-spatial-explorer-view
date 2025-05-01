@@ -22,7 +22,9 @@ interface CreateLayerOptions {
   onUploadRequest?: (drawingId: string) => void;
 }
 
-// Keep track of floor plan applications to prevent repeated attempts
+// Keep track of layer creation to prevent repeated attempts
+const layersCreated = new Map<string, number>();
+// Track floor plan applications to prevent repeated attempts
 const floorPlanApplied = new Map<string, number>();
 
 export const createLayerFromDrawing = ({
@@ -39,12 +41,34 @@ export const createLayerFromDrawing = ({
   onUploadRequest
 }: CreateLayerOptions) => {
   if (!drawing.geoJSON || !isMounted) return;
+  
+  // Check if we've already created this layer recently
+  const now = Date.now();
+  const lastCreated = layersCreated.get(drawing.id) || 0;
+  if (now - lastCreated < 1000) { // Debounce layer creation
+    return;
+  }
+  
+  // Update the creation timestamp
+  layersCreated.set(drawing.id, now);
 
   try {
     // Check if the feature group is attached to a valid map
     const map = getMapFromLayer(featureGroup);
     if (!isMapValid(map)) {
-      console.warn("No valid map attached to feature group, skipping layer creation");
+      return;
+    }
+
+    // Check if this layer already exists
+    let existingLayer = false;
+    featureGroup.eachLayer(layer => {
+      if ((layer as any).drawingId === drawing.id) {
+        existingLayer = true;
+      }
+    });
+    
+    if (existingLayer) {
+      console.log(`Layer for drawing ${drawing.id} already exists, skipping creation`);
       return;
     }
 
@@ -54,72 +78,71 @@ export const createLayerFromDrawing = ({
     // Create the layer
     const layer = createGeoJSONLayer(drawing, options);
     
-    if (layer) {
-      // Store the drawing ID at the layer level as well for easier reference
-      (layer as any).drawingId = drawing.id;
+    if (!layer) {
+      return;
+    }
+    
+    // Store the drawing ID at the layer level as well for easier reference
+    (layer as any).drawingId = drawing.id;
+    
+    // Process the layer and add it to the feature group
+    layer.eachLayer((l: L.Layer) => {
+      if (l && isMounted) {
+        // Add the ID at the sublayer level too
+        (l as any).drawingId = drawing.id;
+        
+        // Add drawing ID attribute to the SVG path for identification
+        addDrawingAttributesToLayer(l, drawing.id);
+        
+        // Store the layer reference
+        layersRef.set(drawing.id, l);
+        
+        // Add controls when in edit mode
+        if (onRemoveShape && onUploadRequest) {
+          createLayerControls({
+            layer: l,
+            drawingId: drawing.id,
+            activeTool,
+            featureGroup,
+            removeButtonRoots,
+            uploadButtonRoots,
+            imageControlRoots,
+            isMounted,
+            onRemoveShape,
+            onUploadRequest
+          });
+        }
+        
+        // Setup click handlers
+        setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
+      }
+    });
+    
+    // Add the layer to the feature group
+    if (isMounted && layer) {
+      featureGroup.addLayer(layer);
       
-      layer.eachLayer((l: L.Layer) => {
-        if (l && isMounted) {
-          // Add the ID at the sublayer level too
-          (l as any).drawingId = drawing.id;
-          
-          // Add drawing ID attribute to the SVG path for identification
-          addDrawingAttributesToLayer(l, drawing.id);
-          
-          // Store the layer reference
-          layersRef.set(drawing.id, l);
-          
-          // Add the remove, upload, and image control buttons when in edit mode
-          if (onRemoveShape && onUploadRequest) {
-            createLayerControls({
-              layer: l,
+      // Check if we've recently applied a floor plan to this drawing
+      const lastApplied = floorPlanApplied.get(drawing.id) || 0;
+      const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
+      
+      // Add a small delay before applying clip mask to ensure the path is rendered
+      if (hasFloorPlan(drawing.id) && isMounted && shouldApply) {
+        floorPlanApplied.set(drawing.id, now);
+        
+        setTimeout(() => {
+          // Apply clip mask if a floor plan exists
+          if (isMounted) {
+            applyClipMaskToDrawing({
               drawingId: drawing.id,
-              activeTool,
-              featureGroup,
-              removeButtonRoots,
-              uploadButtonRoots,
-              imageControlRoots,
               isMounted,
-              onRemoveShape,
-              onUploadRequest
+              layer
             });
           }
-          
-          // Make clicking on any shape trigger the click handler
-          setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
-        }
-      });
-      
-      if (isMounted) {
-        try {
-          layer.addTo(featureGroup);
-          
-          // Check if we've recently applied a floor plan to this drawing to avoid repeated attempts
-          const lastApplied = floorPlanApplied.get(drawing.id) || 0;
-          const now = Date.now();
-          const shouldApply = now - lastApplied > 5000; // 5 seconds debounce
-          
-          // Add a small delay before applying clip mask to ensure the path is rendered
-          if (hasFloorPlan(drawing.id) && isMounted && shouldApply) {
-            floorPlanApplied.set(drawing.id, now);
-            
-            setTimeout(() => {
-              // Apply clip mask if a floor plan exists
-              if (isMounted) {
-                applyClipMaskToDrawing({
-                  drawingId: drawing.id,
-                  isMounted,
-                  layer
-                });
-              }
-            }, 250); // Short delay to let the DOM update
-          }
-        } catch (err) {
-          console.error('Error adding layer to featureGroup:', err);
-        }
+        }, 300); // Delay to let the DOM update
       }
     }
   } catch (err) {
-    console.error('Error adding drawing layer:', err);
+    console.error('Error creating layer for drawing:', err);
   }
 };
