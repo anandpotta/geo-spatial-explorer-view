@@ -3,7 +3,8 @@ import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask } from '@/utils/svg-utils';
+import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
+import { debugSvgElement } from '@/utils/svg-debug-utils';
 
 export function useFileUpload({ onUploadToDrawing }: { 
   onUploadToDrawing?: (drawingId: string, file: File) => void 
@@ -23,23 +24,30 @@ export function useFileUpload({ onUploadToDrawing }: {
       const imageUrl = URL.createObjectURL(file);
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
-      // Implement a retry mechanism for finding and applying clip mask
-      const maxRetries = 5;
+      // Implement a more robust retry mechanism for finding and applying clip mask
+      const maxRetries = 10;
       let currentRetry = 0;
       
       const attemptApplyClipMask = () => {
         try {
-          // Find the SVG path element that corresponds to the drawing
-          const svgPathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${selectedDrawingId}"]`);
+          // Use our enhanced finder function
+          const svgPathElement = findSvgPathByDrawingId(selectedDrawingId);
           
           if (svgPathElement) {
             console.log(`Found SVG path element for drawing ID ${selectedDrawingId}:`, svgPathElement);
+            debugSvgElement(svgPathElement, `SVG element before clip mask`);
             
             // Apply the image directly using svg-utils function
-            const result = applyImageClipMask(svgPathElement as SVGPathElement, imageUrl, selectedDrawingId);
+            const result = applyImageClipMask(svgPathElement, imageUrl, selectedDrawingId);
             
             if (result) {
               toast.success(`${file.name} applied to drawing`);
+              debugSvgElement(svgPathElement, `SVG element after clip mask`);
+              
+              // Force redraw by triggering a window resize event
+              setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+              }, 50);
             } else {
               console.error('Failed to apply image as clip mask');
               
@@ -47,7 +55,7 @@ export function useFileUpload({ onUploadToDrawing }: {
               if (currentRetry < maxRetries) {
                 currentRetry++;
                 console.log(`Retrying to apply clip mask for ${selectedDrawingId} (Attempt ${currentRetry} of ${maxRetries})`);
-                setTimeout(attemptApplyClipMask, 500);
+                setTimeout(attemptApplyClipMask, 200 * currentRetry); // Increasing delay with each retry
               } else {
                 toast.error('Could not apply image to drawing');
               }
@@ -59,7 +67,7 @@ export function useFileUpload({ onUploadToDrawing }: {
             if (currentRetry < maxRetries) {
               currentRetry++;
               console.log(`Retrying to find SVG path for ${selectedDrawingId} (Attempt ${currentRetry} of ${maxRetries})`);
-              setTimeout(attemptApplyClipMask, 500);
+              setTimeout(attemptApplyClipMask, 200 * currentRetry); // Increasing delay with each retry
             } else {
               toast.error('Could not find the drawing on the map');
             }
@@ -70,7 +78,7 @@ export function useFileUpload({ onUploadToDrawing }: {
           // Retry on error
           if (currentRetry < maxRetries) {
             currentRetry++;
-            setTimeout(attemptApplyClipMask, 500);
+            setTimeout(attemptApplyClipMask, 200 * currentRetry);
           } else {
             toast.error('Error processing the uploaded file');
           }
@@ -78,7 +86,7 @@ export function useFileUpload({ onUploadToDrawing }: {
       };
       
       // Start the retry process with an initial delay
-      setTimeout(attemptApplyClipMask, 500);
+      setTimeout(attemptApplyClipMask, 100);
       
       e.target.value = ''; // Reset file input
     }

@@ -7,7 +7,7 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask } from '@/utils/svg-utils';
+import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
 import { debugSvgElement } from '@/utils/svg-debug-utils';
 
 interface CreateLayerOptions {
@@ -73,6 +73,9 @@ export const createLayerFromDrawing = ({
           if ((l as any)._path) {
             console.log(`Setting data-drawing-id=${drawing.id} on path element`);
             (l as any)._path.setAttribute('data-drawing-id', drawing.id);
+            
+            // Force browser to recognize the attribute by triggering a reflow
+            (l as any)._path.getBoundingClientRect();
           }
           
           // Store the layer reference
@@ -118,19 +121,19 @@ export const createLayerFromDrawing = ({
             console.log(`Drawing ${drawing.id} has a floor plan, will try to apply clip mask`);
             
             // Use a retry mechanism for applying clip masks
-            const maxRetries = 5;
+            const maxRetries = 15;
             let currentRetry = 0;
             
             const attemptApplyClipMask = () => {
               if (!isMounted) return;
               
               try {
-                // Try to find the path element and restore any previously applied clip mask
-                const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawing.id}"]`);
+                // Try to find the path element using enhanced finder
+                const pathElement = findSvgPathByDrawingId(drawing.id);
                 
                 if (pathElement) {
                   console.log(`Found path element for drawing ${drawing.id}`);
-                  debugSvgElement(pathElement as SVGElement, `Drawing ${drawing.id}`);
+                  debugSvgElement(pathElement, `Drawing ${drawing.id}`);
                   
                   // Get floor plan data from localStorage
                   const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
@@ -141,7 +144,7 @@ export const createLayerFromDrawing = ({
                     
                     // Apply image as clip mask
                     const result = applyImageClipMask(
-                      pathElement as SVGPathElement,
+                      pathElement,
                       floorPlan.data,
                       drawing.id
                     );
@@ -149,14 +152,23 @@ export const createLayerFromDrawing = ({
                     if (result) {
                       console.log(`Successfully applied clip mask for drawing ${drawing.id}`);
                       // Debug the SVG element after applying clip mask
-                      debugSvgElement(pathElement as SVGPathElement, `Drawing ${drawing.id} after clip mask`);
+                      debugSvgElement(pathElement, `Drawing ${drawing.id} after clip mask`);
+                      
+                      // Force redraw after mask applied
+                      setTimeout(() => {
+                        try {
+                          window.dispatchEvent(new Event('resize'));
+                        } catch (e) {
+                          console.error("Error dispatching resize event:", e);
+                        }
+                      }, 100);
                     } else {
                       console.error(`Failed to apply clip mask for drawing ${drawing.id}`);
                       
                       // Try again with a delay if not successful
                       if (currentRetry < maxRetries) {
                         currentRetry++;
-                        setTimeout(attemptApplyClipMask, 500);
+                        setTimeout(attemptApplyClipMask, 300 * Math.min(currentRetry, 3));
                       }
                     }
                   } else {
@@ -169,7 +181,7 @@ export const createLayerFromDrawing = ({
                   if (currentRetry < maxRetries) {
                     currentRetry++;
                     console.log(`Retrying to find path element for drawing ${drawing.id} (Attempt ${currentRetry} of ${maxRetries})`);
-                    setTimeout(attemptApplyClipMask, 500);
+                    setTimeout(attemptApplyClipMask, 300 * Math.min(currentRetry, 3));
                   }
                 }
               } catch (err) {
@@ -178,7 +190,7 @@ export const createLayerFromDrawing = ({
                 // Try again on error
                 if (currentRetry < maxRetries) {
                   currentRetry++;
-                  setTimeout(attemptApplyClipMask, 500);
+                  setTimeout(attemptApplyClipMask, 300 * Math.min(currentRetry, 3));
                 }
               }
             };
@@ -195,4 +207,3 @@ export const createLayerFromDrawing = ({
     console.error('Error adding drawing layer:', err);
   }
 };
-

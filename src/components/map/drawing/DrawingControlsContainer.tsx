@@ -1,9 +1,10 @@
+
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
-import { applyImageClipMask } from '@/utils/svg-clip-mask';
+import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
 import { debugSvgElement } from '@/utils/svg-debug-utils';
 
 interface DrawingControlsContainerProps {
@@ -42,6 +43,33 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
       return drawingControlsRef.current?.getSvgPaths() || [];
     }
   }));
+
+  // Listen for floorPlanUpdated events to attempt reapplying clipmasks
+  useEffect(() => {
+    const handleFloorPlanUpdated = (event: CustomEvent) => {
+      const { drawingId } = event.detail;
+      if (drawingId) {
+        // Wait for DOM to update
+        setTimeout(() => {
+          const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+          const floorPlan = floorPlans[drawingId];
+          
+          if (floorPlan && floorPlan.data) {
+            const pathElement = findSvgPathByDrawingId(drawingId);
+            if (pathElement) {
+              applyImageClipMask(pathElement, floorPlan.data, drawingId);
+            }
+          }
+        }, 500);
+      }
+    };
+
+    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
+    
+    return () => {
+      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
+    };
+  }, []);
   
   const handleUploadToDrawing = (drawingId: string, file: File) => {
     console.log(`Processing upload for drawing ${drawingId}, file: ${file.name}`);
@@ -78,37 +106,61 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
         localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
         console.log(`Saved floor plan to localStorage for drawing ${drawingId}`);
         
-        // Apply the image as a clip mask to the SVG path
-        setTimeout(() => {
+        // Apply the image as a clip mask to the SVG path with multiple attempts
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const tryApplyMask = () => {
           try {
-            const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawingId}"]`);
+            const pathElement = findSvgPathByDrawingId(drawingId);
             if (pathElement) {
-              console.log(`Found path element for drawing ${drawingId}, applying clip mask`);
-              debugSvgElement(pathElement as SVGElement, `Before applying clip mask to ${drawingId}`);
+              console.log(`Found path element for drawing ${drawingId}, applying clip mask (attempt ${attempts + 1})`);
+              debugSvgElement(pathElement, `Before applying clip mask to ${drawingId}`);
               
               const result = applyImageClipMask(
-                pathElement as SVGPathElement, 
+                pathElement, 
                 e.target.result as string, 
                 drawingId
               );
               
               if (result) {
                 console.log(`Successfully applied clip mask for ${file.name}`);
-                debugSvgElement(pathElement as SVGElement, `After applying clip mask to ${drawingId}`);
+                debugSvgElement(pathElement, `After applying clip mask to ${drawingId}`);
                 toast.success(`${file.name} applied to drawing`);
+                
+                // Force redraw
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 50);
+              } else if (attempts < maxAttempts) {
+                attempts++;
+                console.log(`Failed to apply mask, retrying (${attempts}/${maxAttempts})...`);
+                setTimeout(tryApplyMask, 300 * attempts);
               } else {
-                console.error('Could not apply image to drawing');
+                console.error('Could not apply image to drawing after multiple attempts');
                 toast.error('Could not apply image to drawing');
               }
+            } else if (attempts < maxAttempts) {
+              attempts++;
+              console.log(`Path element not found, retrying (${attempts}/${maxAttempts})...`);
+              setTimeout(tryApplyMask, 300 * attempts);
             } else {
-              console.error('Path element not found for ID:', drawingId);
+              console.error('Path element not found for ID after multiple attempts:', drawingId);
               toast.error('Could not find the drawing on the map');
             }
           } catch (err) {
             console.error('Error applying image to path:', err);
-            toast.error('Failed to apply image to drawing');
+            if (attempts < maxAttempts) {
+              attempts++;
+              setTimeout(tryApplyMask, 300 * attempts);
+            } else {
+              toast.error('Failed to apply image to drawing');
+            }
           }
-        }, 500);
+        };
+        
+        // Start the retry process
+        setTimeout(tryApplyMask, 100);
         
         // Trigger a custom event to notify components that a floor plan was uploaded
         window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { drawingId } }));

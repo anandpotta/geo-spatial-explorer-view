@@ -1,4 +1,3 @@
-
 /**
  * Utilities for handling SVG clip masks and images
  */
@@ -87,15 +86,20 @@ export const applyImageClipMask = (
       }
     }
     
-    // Apply to original path - IMPORTANT: First apply fill, then clip-path
+    // Apply pattern fill first
     pathElement.setAttribute('fill', `url(#${patternId})`);
-    pathElement.setAttribute('clip-path', `url(#${clipPathId})`);
     
-    // Mark the path as having a clip mask
-    pathElement.setAttribute('data-has-clip-mask', 'true');
-    pathElement.setAttribute('data-image-url', imageUrl);
+    // Apply clip path after a slight delay to ensure fill is applied first
+    setTimeout(() => {
+      pathElement.setAttribute('clip-path', `url(#${clipPathId})`);
+      
+      // Mark the path as having a clip mask
+      pathElement.setAttribute('data-has-clip-mask', 'true');
+      pathElement.setAttribute('data-image-url', imageUrl);
+      
+      console.log(`Successfully applied clip mask and pattern for drawing ${id}`);
+    }, 10);
     
-    console.log(`Successfully applied clip mask for drawing ${id}`);
     return true;
   } catch (err) {
     console.error('Error applying image clip mask:', err);
@@ -129,4 +133,47 @@ export const removeClipMask = (pathElement: SVGPathElement | null): boolean => {
     console.error('Error removing clip mask:', err);
     return false;
   }
+};
+
+/**
+ * Finds an SVG path element by drawing ID with multiple selector strategies
+ */
+export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null => {
+  // First try the data-drawing-id attribute (primary method)
+  let pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+  
+  if (!pathElement) {
+    // Try looking in all leaflet-pane elements
+    const leafletPanes = document.querySelectorAll('.leaflet-pane');
+    for (const pane of Array.from(leafletPanes)) {
+      const paths = pane.querySelectorAll('path');
+      for (const path of Array.from(paths)) {
+        if (path.getAttribute('data-drawing-id') === drawingId) {
+          pathElement = path as SVGPathElement;
+          break;
+        }
+      }
+      if (pathElement) break;
+    }
+  }
+  
+  // Try alternate leaflet-specific selectors as last resort
+  if (!pathElement) {
+    // Look for path elements in specific overlay pane
+    const overlayPane = document.querySelector('.leaflet-overlay-pane');
+    if (overlayPane) {
+      const paths = overlayPane.querySelectorAll('path.leaflet-interactive');
+      
+      // If we don't have many paths, we can check each one
+      if (paths.length < 10) {
+        console.log(`Found ${paths.length} path elements in overlay pane, checking each...`);
+        // We'll use a simple heuristic - if we have very few paths, it might be the one we want
+        if (paths.length === 1) {
+          pathElement = paths[0] as SVGPathElement;
+        }
+      }
+    }
+  }
+  
+  return pathElement;
 };

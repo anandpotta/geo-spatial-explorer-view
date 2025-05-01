@@ -28,6 +28,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         this.options.renderer = L.svg();
       }
       originalUpdatePath.call(this);
+      
+      // Add drawing ID to path element if available
+      if (this._path && this.drawingId) {
+        this._path.setAttribute('data-drawing-id', this.drawingId);
+      }
     };
     
     return () => {
@@ -46,9 +51,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         if (map) {
           const container = map.getContainer();
           if (container) {
-            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
             svgElements.forEach(svg => {
-              const paths = svg.querySelectorAll('path');
+              const paths = svg.querySelectorAll('path.leaflet-interactive');
               paths.forEach(path => {
                 pathElements.push(path as SVGPathElement);
               });
@@ -66,9 +71,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         if (map) {
           const container = map.getContainer();
           if (container) {
-            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
             svgElements.forEach(svg => {
-              const paths = svg.querySelectorAll('path');
+              const paths = svg.querySelectorAll('path.leaflet-interactive');
               paths.forEach(path => {
                 const d = path.getAttribute('d');
                 if (d) {
@@ -98,6 +103,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Extract SVG path data if available
       if (layer._path) {
         shape.svgPath = layer._path.getAttribute('d');
+        
+        // Ensure any path we create has a unique class for easier finding
+        layer._path.classList.add('leaflet-interactive-created');
       }
       
       // For markers, extract position information
