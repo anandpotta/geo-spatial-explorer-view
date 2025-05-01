@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -22,6 +21,9 @@ interface CreateLayerOptions {
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
 }
+
+// Keep track of floor plan applications to prevent repeated attempts
+const floorPlanApplied = new Map<string, number>();
 
 export const createLayerFromDrawing = ({
   drawing,
@@ -92,17 +94,26 @@ export const createLayerFromDrawing = ({
         try {
           layer.addTo(featureGroup);
           
+          // Check if we've recently applied a floor plan to this drawing to avoid repeated attempts
+          const lastApplied = floorPlanApplied.get(drawing.id) || 0;
+          const now = Date.now();
+          const shouldApply = now - lastApplied > 5000; // 5 seconds debounce
+          
           // Add a small delay before applying clip mask to ensure the path is rendered
-          setTimeout(() => {
-            // Apply clip mask if a floor plan exists
-            if (hasFloorPlan(drawing.id) && isMounted) {
-              applyClipMaskToDrawing({
-                drawingId: drawing.id,
-                isMounted,
-                layer
-              });
-            }
-          }, 250); // Short delay to let the DOM update
+          if (hasFloorPlan(drawing.id) && isMounted && shouldApply) {
+            floorPlanApplied.set(drawing.id, now);
+            
+            setTimeout(() => {
+              // Apply clip mask if a floor plan exists
+              if (isMounted) {
+                applyClipMaskToDrawing({
+                  drawingId: drawing.id,
+                  isMounted,
+                  layer
+                });
+              }
+            }, 250); // Short delay to let the DOM update
+          }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
         }

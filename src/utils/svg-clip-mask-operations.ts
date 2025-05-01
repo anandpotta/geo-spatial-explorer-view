@@ -58,13 +58,20 @@ export const applyImageClipMask = (
     // Get the SVG element that contains this path
     const svg = pathElement.closest('svg');
     if (!svg) {
+      // Log error and wait for next render cycle
       console.error('SVG path is not within an SVG element');
+      
+      // Schedule a retry with a short delay to see if SVG becomes available
+      setTimeout(() => {
+        const retryPath = document.querySelector(`path[data-drawing-id="${id}"]`) as SVGPathElement;
+        if (retryPath && retryPath.closest('svg')) {
+          console.log(`SVG became available for drawing ${id}, retrying clip mask`);
+          applyImageClipMask(retryPath, imageUrl, id);
+        }
+      }, 500);
+      
       return false;
     }
-    
-    // Create unique IDs for the clip path and pattern
-    const clipId = `clip-${id}`;
-    const patternId = `pattern-${id}`;
     
     // Get the path data
     const pathData = pathElement.getAttribute('d');
@@ -86,15 +93,15 @@ export const applyImageClipMask = (
     }
     
     // Clean up any existing elements with the same IDs first
-    const existingClipPath = defs.querySelector(`#${clipId}`);
+    const existingClipPath = defs.querySelector(`#clip-${id}`);
     if (existingClipPath) defs.removeChild(existingClipPath);
     
-    const existingPattern = defs.querySelector(`#${patternId}`);
+    const existingPattern = defs.querySelector(`#pattern-${id}`);
     if (existingPattern) defs.removeChild(existingPattern);
     
     // Create a clip path element
     let clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-    clipPath.setAttribute('id', clipId);
+    clipPath.setAttribute('id', `clip-${id}`);
     defs.appendChild(clipPath);
     
     // Create a path for the clip path
@@ -104,7 +111,7 @@ export const applyImageClipMask = (
     
     // Create a pattern for the image
     let pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-    pattern.setAttribute('id', patternId);
+    pattern.setAttribute('id', `pattern-${id}`);
     pattern.setAttribute('patternUnits', 'userSpaceOnUse');
     pattern.setAttribute('width', '100%');
     pattern.setAttribute('height', '100%');
@@ -136,7 +143,7 @@ export const applyImageClipMask = (
       pathElement.setAttribute('data-last-updated', Date.now().toString());
       
       // Apply pattern fill first
-      pathElement.setAttribute('fill', `url(#${patternId})`);
+      pathElement.setAttribute('fill', `url(#pattern-${id})`);
       
       // Remove stroke for better appearance
       pathElement.setAttribute('stroke', 'none');
@@ -144,7 +151,7 @@ export const applyImageClipMask = (
       // Apply clip path after a small delay to reduce flicker
       setTimeout(() => {
         if (pathElement) {
-          pathElement.setAttribute('clip-path', `url(#${clipId})`);
+          pathElement.setAttribute('clip-path', `url(#clip-${id})`);
         }
       }, 20);
     });

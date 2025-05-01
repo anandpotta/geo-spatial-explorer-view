@@ -38,7 +38,7 @@ export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyCli
     imageUrl: floorPlanData.data,
     isMounted,
     attempt: 1,
-    maxAttempts: 10, // Reduced from 15 to 10 to avoid excessive attempts
+    maxAttempts: 5, // Reduced to 5 attempts since we now have better error handling
     initialDelay: 250,
     layer
   });
@@ -83,7 +83,18 @@ const attemptApplyClipMask = ({
     // Apply clip mask with stability optimization
     setTimeout(() => {
       if (isMounted) {
-        applyImageClipMask(pathElement, imageUrl, drawingId);
+        // Check if the path is still in the document and within an SVG before applying
+        if (document.contains(pathElement) && pathElement.closest('svg')) {
+          applyImageClipMask(pathElement, imageUrl, drawingId);
+        } else {
+          console.log(`Path element for ${drawingId} is no longer in the document or not in an SVG`);
+          
+          // Try to find the path again
+          const newPathElement = findPathElement(drawingId, layer);
+          if (newPathElement && document.contains(newPathElement) && newPathElement.closest('svg')) {
+            applyImageClipMask(newPathElement, imageUrl, drawingId);
+          }
+        }
       }
     }, 10); // Small delay to ensure DOM is ready
   } else {
