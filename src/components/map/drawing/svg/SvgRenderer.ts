@@ -28,8 +28,10 @@ export function setupSvgPathRendering(): () => void {
     originalCircleRedraw.call(this);
     if (this._path && !this._path.getAttribute('d')) {
       try {
-        const d = this._renderer._curvePointsToPath([this._point]);
-        if (d) this._path.setAttribute('d', d);
+        if (this._renderer && typeof this._renderer._curvePointsToPath === 'function') {
+          const d = this._renderer._curvePointsToPath([this._point]);
+          if (d) this._path.setAttribute('d', d);
+        }
       } catch (err) {
         console.error('Error setting path data for circle', err);
       }
@@ -78,7 +80,17 @@ export function setupSvgPathRendering(): () => void {
   // Also override the updatePath method for Polygon and Rectangle
   const originalPolygonUpdatePath = (L.Polygon as any).prototype._updatePath;
   (L.Polygon as any).prototype._updatePath = function() {
-    originalPolygonUpdatePath.call(this);
+    try {
+      if (originalPolygonUpdatePath) {
+        originalPolygonUpdatePath.call(this);
+      } else if (this._renderer && typeof this._renderer._updatePoly === 'function') {
+        // Fallback if original method is not available
+        this._renderer._updatePoly(this, true);
+      }
+    } catch (err) {
+      console.error('Error in polygon _updatePath:', err);
+    }
+    
     // Ensure the path is visible
     if (this._path) {
       this._path.style.display = 'block';

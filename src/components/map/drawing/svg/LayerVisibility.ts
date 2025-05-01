@@ -9,20 +9,33 @@ export function forceSvgPathCreation(layer: L.Layer): void {
   
   try {
     // Ensure layer has SVG renderer
-    if ((layer as any).options) {
-      (layer as any).options.renderer = L.svg();
+    if (layer.options) {
+      layer.options.renderer = L.svg();
       
       // Ensure visibility styles are set
-      if ((layer as any).options) {
-        (layer as any).options.fillOpacity = (layer as any).options.fillOpacity || 0.5;
-        (layer as any).options.opacity = (layer as any).options.opacity || 1;
-        (layer as any).options.weight = (layer as any).options.weight || 3;
+      if (layer.options) {
+        layer.options.fillOpacity = layer.options.fillOpacity || 0.5;
+        layer.options.opacity = layer.options.opacity || 1;
+        layer.options.weight = layer.options.weight || 3;
       }
     }
     
     // Force update path if applicable
     if (typeof (layer as any)._updatePath === 'function') {
-      (layer as any)._updatePath();
+      try {
+        (layer as any)._updatePath();
+      } catch (err) {
+        console.warn('Error in _updatePath, trying alternative approach:', err);
+        
+        // Try alternative approach for polygons
+        if ((layer as any)._renderer && typeof (layer as any)._renderer._updatePoly === 'function' && (layer as any).getLatLngs) {
+          try {
+            (layer as any)._renderer._updatePoly(layer, true);
+          } catch (innerErr) {
+            console.warn('Alternative path update failed:', innerErr);
+          }
+        }
+      }
       
       // Also ensure path is visible after update
       if ((layer as any)._path) {
@@ -45,7 +58,19 @@ export function forceSvgPathCreation(layer: L.Layer): void {
         }
         
         if (typeof subLayer._updatePath === 'function') {
-          subLayer._updatePath();
+          try {
+            subLayer._updatePath();
+          } catch (err) {
+            console.warn('Error updating sublayer path:', err);
+            // Try alternative approach for polygons
+            if (subLayer._renderer && typeof subLayer._renderer._updatePoly === 'function' && subLayer.getLatLngs) {
+              try {
+                subLayer._renderer._updatePoly(subLayer, true);
+              } catch (innerErr) {
+                console.warn('Alternative sublayer path update failed:', innerErr);
+              }
+            }
+          }
           
           // Also ensure path is visible after update
           if (subLayer._path) {

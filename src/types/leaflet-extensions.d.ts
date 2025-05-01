@@ -8,6 +8,12 @@ declare module 'leaflet' {
       url: string;
       pattern: boolean;
     };
+    renderer?: L.Renderer;
+    fillOpacity?: number;
+    opacity?: number;
+    weight?: number;
+    color?: string;
+    interactive?: boolean;
   }
   
   interface Layer {
@@ -15,6 +21,15 @@ declare module 'leaflet' {
       enable?: () => void;
       disable?: () => void;
     };
+    _path?: SVGElement; // Internal Leaflet property for the SVG element
+    _updatePath?: () => void; // Internal method to update SVG path
+    _renderer?: any; // Renderer instance
+    options?: PathOptions;
+    _map?: L.Map;
+    getLatLng?: () => L.LatLng;
+    getLatLngs?: () => L.LatLng[] | L.LatLng[][] | L.LatLng[][][];
+    getRadius?: () => number;
+    toGeoJSON?: () => any;
   }
   
   interface Path {

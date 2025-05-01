@@ -20,12 +20,12 @@ export function prepareLayerStyle(layer: L.Layer): void {
  * Ensure layer visibility by setting appropriate styles on the SVG path element
  */
 export function ensurePathVisibility(layer: L.Layer): void {
-  if (layer._path) {
-    layer._path.style.visibility = 'visible';
-    layer._path.style.display = 'block';
-    layer._path.style.opacity = '1';
-    layer._path.style.fillOpacity = '0.5';
-    layer._path.style.pointerEvents = 'auto';
+  if ((layer as any)._path) {
+    (layer as any)._path.style.visibility = 'visible';
+    (layer as any)._path.style.display = 'block';
+    (layer as any)._path.style.opacity = '1';
+    (layer as any)._path.style.fillOpacity = '0.5';
+    (layer as any)._path.style.pointerEvents = 'auto';
   }
 }
 
@@ -33,7 +33,7 @@ export function ensurePathVisibility(layer: L.Layer): void {
  * Add interactivity class to layer path
  */
 export function addInteractiveClass(layer: L.Layer): void {
-  if (layer._path) {
-    layer._path.classList.add('leaflet-interactive');
+  if ((layer as any)._path) {
+    (layer as any)._path.classList.add('leaflet-interactive');
   }
 }

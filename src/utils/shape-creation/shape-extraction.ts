@@ -29,20 +29,28 @@ export function extractShapeData(layerType: string, layer: L.Layer): {
   
   if (['polygon', 'rectangle', 'circle'].includes(layerType)) {
     // Convert to GeoJSON to have a consistent format
-    result.geoJSON = layer.toGeoJSON();
+    if (layer.toGeoJSON) {
+      result.geoJSON = layer.toGeoJSON();
+    }
     
     // Extract coordinates based on shape type
     if (layerType === 'polygon' || layerType === 'rectangle') {
-      const latLngs = layer.getLatLngs();
-      if (Array.isArray(latLngs) && latLngs.length > 0) {
-        // Handle potentially nested arrays (multi-polygons)
-        const firstRing = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
-        result.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng]);
+      if (layer.getLatLngs) {
+        const latLngs = layer.getLatLngs();
+        if (Array.isArray(latLngs) && latLngs.length > 0) {
+          // Handle potentially nested arrays (multi-polygons)
+          const firstRing = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
+          result.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng]);
+        }
       }
     } else if (layerType === 'circle') {
-      const center = layer.getLatLng();
-      result.coordinates = [[center.lat, center.lng]];
-      result.radius = layer.getRadius();
+      if (layer.getLatLng) {
+        const center = layer.getLatLng();
+        result.coordinates = [[center.lat, center.lng]];
+      }
+      if (layer.getRadius) {
+        result.radius = layer.getRadius();
+      }
     }
   }
   
