@@ -2,47 +2,69 @@
 import L from 'leaflet';
 
 /**
- * Add drawing ID to SVG path element
- */
-export const addDrawingIdToPath = (path: SVGPathElement | null, drawingId: string): void => {
-  if (path && drawingId) {
-    path.setAttribute('data-drawing-id', drawingId);
-    
-    // Remove fill-opacity for elements with clip masks
-    if (path.getAttribute('data-has-clip-mask') === 'true') {
-      path.removeAttribute('fill-opacity');
-    }
-  }
-};
-
-/**
- * Configure SVG renderer for all paths
+ * Configures the SVG renderer for Leaflet drawing tools to prevent flickering
  */
 export const configureSvgRenderer = (): () => void => {
-  // Instead of trying to modify the read-only property, configure the renderer
-  // when creating layers
-  const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
-  const originalUpdatePath = pathPrototype._updatePath;
-  
-  pathPrototype._updatePath = function() {
-    if (this.options && !this.options.renderer) {
-      this.options.renderer = L.svg();
-    }
-    originalUpdatePath.call(this);
-    
-    // Add drawing ID to path element if available
-    if (this._path && this.drawingId) {
-      this._path.setAttribute('data-drawing-id', this.drawingId);
+  // Store original _updateStyle method
+  const originalUpdateStyle = L.SVG.prototype._updateStyle;
+
+  // Override the _updateStyle method to add anti-flickering improvements
+  L.SVG.prototype._updateStyle = function(layer: any) {
+    // Call the original method first
+    originalUpdateStyle.call(this, layer);
+
+    // Apply additional styling to reduce flickering
+    if (layer._path) {
+      // Set rendering optimizations
+      layer._path.setAttribute('shape-rendering', 'geometricPrecision');
       
-      // Also set specific fill-opacity for elements with images
-      if (this._path.getAttribute('data-has-clip-mask') === 'true') {
-        this._path.removeAttribute('fill-opacity');
+      // Add a small transition to smooth any flickering
+      layer._path.style.transition = 'stroke-dashoffset 0.1s';
+      
+      // Force the browser to acknowledge the SVG element to avoid rendering glitches
+      layer._path.getBoundingClientRect();
+      
+      // Add a drawing-specific class for custom CSS if needed
+      if (!layer._path.classList.contains('leaflet-drawing')) {
+        layer._path.classList.add('leaflet-drawing');
       }
     }
   };
-  
+
+  // Return a cleanup function
   return () => {
-    // Restore original function when component unmounts
-    pathPrototype._updatePath = originalUpdatePath;
+    // Restore original method when component unmounts
+    L.SVG.prototype._updateStyle = originalUpdateStyle;
   };
+};
+
+/**
+ * Optimizes polygon rendering during drawing to prevent flickering
+ */
+export const optimizePolygonDrawing = () => {
+  // Check if Edit.Poly.prototype exists and hasn't been modified yet
+  if (L.Edit && L.Edit.Poly && L.Edit.Poly.prototype) {
+    // Store original _onMarkerDrag method
+    const originalOnMarkerDrag = L.Edit.Poly.prototype._onMarkerDrag;
+    
+    // Override the marker drag event to prevent excessive redraws
+    L.Edit.Poly.prototype._onMarkerDrag = function(e: any) {
+      // Call the original method
+      originalOnMarkerDrag.call(this, e);
+      
+      // Apply additional optimizations
+      if (this._poly && this._poly._path) {
+        // Force hardware acceleration to reduce flickering
+        this._poly._path.style.transform = 'translateZ(0)';
+        
+        // Ensure high-quality rendering
+        this._poly._path.style.willChange = 'transform';
+      }
+    };
+    
+    // Return the original method to allow for cleanup
+    return originalOnMarkerDrag;
+  }
+  
+  return null;
 };

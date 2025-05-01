@@ -19,6 +19,12 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
       
       // Extract SVG path data if available
       if (layer._path) {
+        // Apply anti-flickering optimizations to the created path
+        layer._path.style.transform = 'translateZ(0)';
+        layer._path.style.willChange = 'auto'; // Reset willChange after creation
+        layer._path.style.transition = 'none'; // Remove transitions after creation
+        
+        // Store the SVG path data
         shape.svgPath = layer._path.getAttribute('d');
         
         // Ensure any path we create has a unique class for easier finding
@@ -51,15 +57,21 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
         }
       }
       
-      // Wait for the next tick to ensure DOM is updated
+      // Ensure we always get valid SVG path data by checking within a short delay
+      // This helps with timing issues that can cause flickering
       setTimeout(() => {
-        // Try to get SVG path data after layer is rendered
+        // If we didn't get SVG path data initially, try again after rendering
         if (!shape.svgPath && layer._path) {
           shape.svgPath = layer._path.getAttribute('d');
+          
+          // Apply optimizations again to ensure they stick
+          if (layer._path) {
+            layer._path.style.transform = 'translateZ(0)';
+          }
         }
         
         onCreated(shape);
-      }, 50);
+      }, 30);
     } catch (err) {
       console.error('Error handling created shape:', err);
       toast.error('Error creating shape');
