@@ -40,13 +40,20 @@ export function extractShapeData(layerType: string, layer: L.Layer): {
         if (Array.isArray(latLngs) && latLngs.length > 0) {
           // Handle potentially nested arrays (multi-polygons)
           const firstRing = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
-          result.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng] as [number, number]);
+          
+          // Use explicit type assertion for each coordinate pair
+          result.coordinates = firstRing.map((ll: any) => {
+            if (ll && typeof ll.lat === 'number' && typeof ll.lng === 'number') {
+              return [ll.lat, ll.lng] as [number, number];
+            }
+            return [0, 0] as [number, number]; // Provide a fallback
+          });
         }
       }
     } else if (layerType === 'circle') {
       if (layer.getLatLng) {
         const center = layer.getLatLng();
-        result.coordinates = [[center.lat, center.lng]];
+        result.coordinates = [[center.lat, center.lng] as [number, number]];
       }
       if (layer.getRadius) {
         result.radius = layer.getRadius();
