@@ -1,59 +1,86 @@
 
-import { useEffect, RefObject } from 'react';
+import { useEffect, RefObject, useState, useCallback } from 'react';
 
 /**
  * Hook to manage edit mode activation/deactivation
  */
 export function useEditMode(editControlRef: RefObject<any>, activeTool: string | null) {
-  useEffect(() => {
-    // Function to activate or deactivate edit mode based on activeTool
-    const updateEditMode = () => {
-      if (!editControlRef.current) {
-        console.log('Edit control not available yet');
+  const [isEditActive, setIsEditActive] = useState(false);
+  
+  // More reliable way to update edit mode
+  const updateEditMode = useCallback(() => {
+    if (!editControlRef.current) {
+      console.log('Edit control not available yet');
+      return;
+    }
+    
+    try {
+      const editControl = editControlRef.current;
+      const editToolbar = editControl._toolbars?.edit;
+      
+      if (!editToolbar) {
+        console.log('Edit toolbar not available');
         return;
       }
       
-      try {
-        const editControl = editControlRef.current;
-        const editToolbar = editControl._toolbars?.edit;
-        
-        if (!editToolbar) {
-          console.log('Edit toolbar not available');
-          return;
+      const editHandler = editToolbar._modes?.edit?.handler;
+      const deleteHandler = editToolbar._modes?.remove?.handler;
+      
+      const shouldEnableEdit = activeTool === 'edit';
+      
+      if (shouldEnableEdit && editHandler && typeof editHandler.enable === 'function') {
+        const isAlreadyEnabled = editHandler.enabled && editHandler.enabled();
+        if (!isAlreadyEnabled) {
+          console.log('Activating edit mode');
+          editHandler.enable();
+          setIsEditActive(true);
+        }
+      } else if (!shouldEnableEdit) {
+        // Deactivate edit mode
+        if (editHandler && typeof editHandler.disable === 'function' && editHandler.enabled && editHandler.enabled()) {
+          console.log('Deactivating edit mode');
+          editHandler.disable();
+          setIsEditActive(false);
         }
         
-        const editHandler = editToolbar._modes?.edit?.handler;
-        const deleteHandler = editToolbar._modes?.remove?.handler;
-        
-        if (activeTool === 'edit') {
-          // Activate edit mode
-          if (editHandler && typeof editHandler.enable === 'function') {
-            console.log('Activating edit mode');
-            editHandler.enable();
-          }
-        } else {
-          // Deactivate edit mode
-          if (editHandler && typeof editHandler.disable === 'function' && editHandler.enabled()) {
-            console.log('Deactivating edit mode');
-            editHandler.disable();
-          }
-          
-          // Deactivate delete mode
-          if (deleteHandler && typeof deleteHandler.disable === 'function' && deleteHandler.enabled()) {
-            console.log('Deactivating delete mode');
-            deleteHandler.disable();
-          }
+        // Deactivate delete mode
+        if (deleteHandler && typeof deleteHandler.disable === 'function' && deleteHandler.enabled && deleteHandler.enabled()) {
+          console.log('Deactivating delete mode');
+          deleteHandler.disable();
         }
-      } catch (err) {
-        console.error('Error updating edit mode:', err);
       }
+    } catch (err) {
+      console.error('Error updating edit mode:', err);
+    }
+  }, [editControlRef, activeTool]);
+
+  // Retry mechanism for edit mode activation
+  useEffect(() => {
+    // Function to activate or deactivate edit mode based on activeTool
+    const attemptUpdateEditMode = (retry = 0) => {
+      if (!editControlRef.current && retry < 5) {
+        // Retry with increasing delay
+        const delay = Math.pow(2, retry) * 100;
+        setTimeout(() => attemptUpdateEditMode(retry + 1), delay);
+        return;
+      }
+      
+      updateEditMode();
     };
 
-    // Add a delay to ensure edit control is available
-    const timerId = setTimeout(updateEditMode, 500);
+    // Initial update with retry logic
+    attemptUpdateEditMode();
+    
+    // Also set up periodic check to ensure the edit mode stays correctly set
+    const intervalId = setInterval(() => {
+      const shouldBeActive = activeTool === 'edit';
+      if (shouldBeActive !== isEditActive) {
+        updateEditMode();
+      }
+    }, 1000);
     
     return () => {
-      clearTimeout(timerId);
+      clearInterval(intervalId);
     };
-  }, [editControlRef, activeTool]);
+  }, [editControlRef, activeTool, updateEditMode, isEditActive]);
 }

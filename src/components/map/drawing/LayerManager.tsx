@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
+import { useLayerReferences } from '@/hooks/useLayerReferences';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -21,11 +22,15 @@ const LayerManager = ({
   onUploadRequest
 }: LayerManagerProps) => {
   const isMountedRef = useRef<boolean>(true);
-  const layersRef = useRef<Map<string, L.Layer>>(new Map());
-  const removeButtonRoots = useRef<Map<string, any>>(new Map());
-  const uploadButtonRoots = useRef<Map<string, any>>(new Map());
-  const imageControlRoots = useRef<Map<string, any>>(new Map());
   const isInitialRenderRef = useRef(true);
+  const lastDrawingsRef = useRef<DrawingData[]>([]);
+  
+  const {
+    removeButtonRoots,
+    uploadButtonRoots,
+    layersRef,
+    imageControlRoots
+  } = useLayerReferences();
 
   const { updateLayers, debouncedUpdateLayers } = useLayerUpdates({
     featureGroup,
@@ -80,34 +85,44 @@ const LayerManager = ({
     
     return () => {
       isMountedRef.current = false;
-      
-      // Use the safe unmounting function
       safeUnmountRoots();
-      
-      // Clear the layers reference
       layersRef.current.clear();
     };
   }, []);
 
-  // Less aggressive re-rendering on changes
+  // Use a more stable approach for detecting real changes to drawings
   useEffect(() => {
-    if (isMountedRef.current) {
-      // First safely unmount any existing roots to prevent conflicts
-      safeUnmountRoots();
-      
-      // Use different timing for initial vs. subsequent renders
-      if (isInitialRenderRef.current) {
-        // For initial render, use a short delay
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            updateLayers();
-            isInitialRenderRef.current = false;
-          }
-        }, 50);
-      } else {
-        // For subsequent renders, use the debounced version
-        debouncedUpdateLayers();
+    if (!isMountedRef.current) return;
+    
+    // Helper function to check if drawings have actually changed
+    const haveSavedDrawingsChanged = () => {
+      if (savedDrawings.length !== lastDrawingsRef.current.length) {
+        return true;
       }
+      
+      // Check if the IDs match
+      const currentIds = new Set(savedDrawings.map(d => d.id));
+      return lastDrawingsRef.current.some(d => !currentIds.has(d.id));
+    };
+    
+    // First safely unmount any existing roots to prevent conflicts
+    safeUnmountRoots();
+    
+    // Only do a full update if drawings have changed or this is the first render
+    const shouldForceUpdate = isInitialRenderRef.current || haveSavedDrawingsChanged();
+    
+    if (shouldForceUpdate) {
+      // For initial render or when drawings change, use a short delay
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          updateLayers();
+          isInitialRenderRef.current = false;
+          lastDrawingsRef.current = [...savedDrawings];
+        }
+      }, 100);
+    } else if (activeTool === 'edit') {
+      // For edit mode changes, use the debounced version
+      debouncedUpdateLayers();
     }
   }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
 
@@ -137,9 +152,17 @@ const LayerManager = ({
     window.addEventListener('storage', handleStorageUpdate);
     window.addEventListener('floorPlanUpdated', handleStorageUpdate);
     
+    // Also listen for visibility changes to update when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isMountedRef.current) {
+        debouncedUpdateLayers();
+      }
+    });
+    
     return () => {
       window.removeEventListener('storage', handleStorageUpdate);
       window.removeEventListener('floorPlanUpdated', handleStorageUpdate);
+      document.removeEventListener('visibilitychange', handleStorageUpdate);
     };
   }, [debouncedUpdateLayers]);
 

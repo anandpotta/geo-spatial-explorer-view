@@ -6,6 +6,9 @@ import { toast } from 'sonner';
 import { storeOriginalAttributes } from './clip-mask-attributes';
 import { hasClipMaskApplied } from './clip-mask-checker';
 
+// Track which drawings have been displayed with toasts to avoid duplicates
+const toastShown = new Set<string>();
+
 /**
  * Creates and applies an SVG clip mask with an image to a path element
  */
@@ -29,19 +32,14 @@ export const applyImageClipMask = (
       return false;
     }
     
-    // Safe logging that won't cause errors with any imageUrl type
-    console.log(`Applying clip mask for drawing ${id} with image URL type: ${typeof imageUrl}`);
-    
     // Check if already has clip mask (improved check)
     if (hasClipMaskApplied(pathElement)) {
-      console.log(`Path for drawing ${id} already has clip mask, skipping application`);
       return true;
     }
     
     // Get the SVG element that contains this path
     const svg = pathElement.closest('svg');
     if (!svg) {
-      // Log error but don't retry immediately - this will be handled by the caller
       console.error('SVG path is not within an SVG element');
       return false;
     }
@@ -83,6 +81,7 @@ export const applyImageClipMask = (
     // First, mark as having clip mask (prevents race conditions)
     pathElement.setAttribute('data-has-clip-mask', 'true');
     pathElement.setAttribute('data-last-updated', Date.now().toString());
+    pathElement.setAttribute('data-drawing-id', id);
     
     // Create a pre-loaded image to get dimensions
     const tempImg = new Image();
@@ -156,23 +155,27 @@ export const applyImageClipMask = (
         pathElement.setAttribute('data-image-offset-x', '0');
         pathElement.setAttribute('data-image-offset-y', '0');
         
-        // Apply changes in a single batch to reduce visual flickering
-        // First apply pattern fill
-        pathElement.setAttribute('fill', `url(#pattern-${id})`);
-        
-        // Remove stroke for better appearance
-        pathElement.setAttribute('stroke', 'none');
-        
-        // Apply clip path after a small delay to reduce flicker
+        // Use requestAnimationFrame for smoother visual updates
         requestAnimationFrame(() => {
-          if (pathElement && document.contains(pathElement)) {
-            pathElement.setAttribute('clip-path', `url(#clip-${id})`);
-            // Show success toast only on the first successful application
-            const isFirstApply = pathElement.getAttribute('data-toast-shown') !== 'true';
-            if (isFirstApply) {
-              pathElement.setAttribute('data-toast-shown', 'true');
-              toast.success('Floor plan applied successfully', { id: `floor-plan-${id}` });
-            }
+          if (!pathElement || !document.contains(pathElement)) return;
+          
+          // Apply all changes in a single batch to reduce visual flickering
+          const fill = `url(#pattern-${id})`;
+          const clipPathUrl = `url(#clip-${id})`;
+          
+          pathElement.style.fill = fill;
+          pathElement.style.stroke = 'none';
+          pathElement.style.clipPath = clipPathUrl;
+          
+          // Also set attributes as backup in case styles are reset
+          pathElement.setAttribute('fill', fill);
+          pathElement.setAttribute('stroke', 'none');
+          pathElement.setAttribute('clip-path', clipPathUrl);
+          
+          // Only show toast for first time applications to reduce notification spam
+          if (!toastShown.has(id)) {
+            toastShown.add(id);
+            toast.success('Floor plan applied successfully', { id: `floor-plan-${id}` });
           }
         });
         
@@ -192,3 +195,12 @@ export const applyImageClipMask = (
     return false;
   }
 };
+
+/**
+ * Reset the toast tracking when the page reloads
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    toastShown.clear();
+  });
+}

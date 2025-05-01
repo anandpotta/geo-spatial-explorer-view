@@ -31,9 +31,11 @@ export function useLayerUpdates({
   onRemoveShape,
   onUploadRequest
 }: LayerUpdatesProps) {
-  // Use a ref for debouncing
+  // Use refs for debouncing and tracking updates
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUpdatingRef = useRef<boolean>(false);
+  const lastUpdateTimeRef = useRef<number>(0);
+  const updateCountRef = useRef<number>(0);
   
   // Use useCallback to ensure stable reference for the updateLayers function
   const updateLayers = useCallback(() => {
@@ -51,14 +53,50 @@ export function useLayerUpdates({
         if (isMountedRef.current) {
           updateLayers();
         }
-      }, 100);
+      }, 200);
+      return;
+    }
+    
+    // Throttle updates to prevent too frequent redrawing
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+    if (timeSinceLastUpdate < 1000 && updateCountRef.current > 2) {
+      // If we've updated too many times recently, delay more aggressively
+      const delay = Math.min(1000, 200 * Math.pow(1.5, updateCountRef.current - 2));
+      updateTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          updateLayers();
+        }
+      }, delay);
       return;
     }
     
     // Set updating flag
     isUpdatingRef.current = true;
+    updateCountRef.current++;
+    lastUpdateTimeRef.current = now;
     
     try {
+      // Check for existing layers first to avoid unnecessary redraws
+      const existingLayerIds = new Set<string>();
+      featureGroup.eachLayer(layer => {
+        const drawingId = (layer as any).drawingId;
+        if (drawingId) {
+          existingLayerIds.add(drawingId);
+        }
+      });
+      
+      // Only process drawings that are not already represented
+      const drawingsToProcess = savedDrawings.filter(drawing => 
+        !existingLayerIds.has(drawing.id) || !layersRef.current.has(drawing.id)
+      );
+      
+      // If no new drawings to process and we have all existing ones, skip the update
+      if (drawingsToProcess.length === 0 && existingLayerIds.size === savedDrawings.length) {
+        isUpdatingRef.current = false;
+        return;
+      }
+      
       // Clear existing layers without triggering too many redraws
       featureGroup.eachLayer(layer => {
         // Don't remove editing handlers
@@ -96,7 +134,7 @@ export function useLayerUpdates({
       // Reset updating flag with a short delay to prevent immediate re-entry
       setTimeout(() => {
         isUpdatingRef.current = false;
-      }, 50);
+      }, 250);
     }
   }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
 
@@ -106,11 +144,14 @@ export function useLayerUpdates({
       clearTimeout(updateTimeoutRef.current);
     }
     
+    // Use progressive backoff based on update frequency
+    const delay = updateCountRef.current > 5 ? 500 : 250;
+    
     updateTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
         updateLayers();
       }
-    }, 100);
+    }, delay);
   }, [updateLayers, isMountedRef]);
 
   return { updateLayers, debouncedUpdateLayers };
