@@ -36,4 +36,6 @@ export {
   simplifyPoints,
   pointsToPathData,
   getAllSvgPaths,
+  applyImageClipMask,
+  removeClipMask,
 } from './svg-utils';

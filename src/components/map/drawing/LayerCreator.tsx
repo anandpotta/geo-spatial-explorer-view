@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
@@ -66,6 +67,11 @@ export const createLayerFromDrawing = ({
         if (l && isMounted) {
           (l as any).drawingId = drawing.id;
           
+          // Add drawing ID attribute to the SVG path for identification
+          if ((l as any)._path) {
+            (l as any)._path.setAttribute('data-drawing-id', drawing.id);
+          }
+          
           // Store the layer reference
           layersRef.set(drawing.id, l);
           
@@ -103,6 +109,25 @@ export const createLayerFromDrawing = ({
       if (isMounted) {
         try {
           layer.addTo(featureGroup);
+          
+          // Apply clip mask if a floor plan exists
+          if (hasFloorPlan) {
+            setTimeout(() => {
+              try {
+                // Try to find the path element and restore any previously applied clip mask
+                const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawing.id}"]`);
+                if (pathElement && pathElement.getAttribute('data-has-clip-mask') === 'true') {
+                  const imageUrl = pathElement.getAttribute('data-image-url');
+                  if (imageUrl) {
+                    // We need to reapply the clip mask as the layer might have been recreated
+                    // This will be handled by the floor plan loading mechanism
+                  }
+                }
+              } catch (err) {
+                console.error('Error restoring clip mask:', err);
+              }
+            }, 100);
+          }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
         }
