@@ -1,5 +1,5 @@
 
-export { EditControl } from './EditControl';
+export { EditControl } from './editing/EditControl';
 export { 
   setupSvgPathRendering, 
   getPathElements, 

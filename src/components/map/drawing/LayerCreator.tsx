@@ -1,11 +1,10 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing/types';
 import { createLayerFromDrawingData, prepareLayerForDrawing, setupSvgPathAttributes } from '@/utils/layer-creator-utils';
 import { createLayerControls } from './LayerControls';
 import { setupLayerClickHandler } from './LayerInteractionHandler';
 import { addRotationControls } from './RotationControlsCreator';
-import { ensureLayerVisibility, forceSvgPathCreation } from './PathUtils';
+import { ensureLayerVisibility, forceSvgPathCreation } from './svg';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
