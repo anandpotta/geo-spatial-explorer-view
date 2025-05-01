@@ -1,14 +1,13 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
-import { debugSvgElement } from '@/utils/svg-debug-utils';
+import { hasFloorPlan, prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
+import { setupLayerClickHandlers } from './LayerEventHandlers';
+import { applyClipMaskToDrawing } from './ClipMaskManager';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -47,26 +46,11 @@ export const createLayerFromDrawing = ({
       return;
     }
 
-    const markers = getSavedMarkers();
-    const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
+    // Prepare layer options
+    const options = prepareLayerOptions(drawing);
     
-    const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
-    const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
-    
-    const options = getDefaultDrawingOptions(drawing.properties.color);
-    if (hasFloorPlan) {
-      options.fillColor = '#3b82f6';
-      options.fillOpacity = 1; // Always use full opacity for images
-      options.color = '#1d4ed8';
-    }
-    
-    // Always ensure opacity is set to visible values
-    options.opacity = 1;
-    if (!hasFloorPlan) {
-      options.fillOpacity = options.fillOpacity || 0.2;
-    }
-    
-    const layer = createDrawingLayer(drawing, options);
+    // Create the layer
+    const layer = createGeoJSONLayer(drawing, options);
     
     if (layer) {
       layer.eachLayer((l: L.Layer) => {
@@ -74,13 +58,7 @@ export const createLayerFromDrawing = ({
           (l as any).drawingId = drawing.id;
           
           // Add drawing ID attribute to the SVG path for identification
-          if ((l as any)._path) {
-            console.log(`Setting data-drawing-id=${drawing.id} on path element`);
-            (l as any)._path.setAttribute('data-drawing-id', drawing.id);
-            
-            // Force browser to recognize the attribute by triggering a reflow
-            (l as any)._path.getBoundingClientRect();
-          }
+          addDrawingAttributesToLayer(l, drawing.id);
           
           // Store the layer reference
           layersRef.set(drawing.id, l);
@@ -102,18 +80,7 @@ export const createLayerFromDrawing = ({
           }
           
           // Make clicking on any shape trigger the click handler
-          if (onRegionClick && isMounted) {
-            l.on('click', (e) => {
-              // Stop event propagation to prevent map click
-              if (e.originalEvent) {
-                L.DomEvent.stopPropagation(e.originalEvent);
-              }
-              
-              if (isMounted) {
-                onRegionClick(drawing);
-              }
-            });
-          }
+          setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
         }
       });
       
@@ -122,92 +89,12 @@ export const createLayerFromDrawing = ({
           layer.addTo(featureGroup);
           
           // Apply clip mask if a floor plan exists
-          if (hasFloorPlan) {
-            console.log(`Drawing ${drawing.id} has a floor plan, will try to apply clip mask`);
-            
-            // Use a retry mechanism with exponential backoff
-            const maxRetries = 15;
-            let currentRetry = 0;
-            
-            const attemptApplyClipMask = () => {
-              if (!isMounted) return;
-              
-              try {
-                // Try to find the path element using enhanced finder
-                const pathElement = findSvgPathByDrawingId(drawing.id);
-                
-                if (pathElement) {
-                  console.log(`Found path element for drawing ${drawing.id}`);
-                  
-                  // Get floor plan data from localStorage
-                  const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-                  const floorPlan = floorPlans[drawing.id];
-                  
-                  if (floorPlan && floorPlan.data) {
-                    console.log(`Found floor plan data for drawing ${drawing.id}`);
-                    
-                    // Apply image as clip mask
-                    const result = applyImageClipMask(
-                      pathElement,
-                      floorPlan.data,
-                      drawing.id
-                    );
-                    
-                    if (result) {
-                      console.log(`Successfully applied clip mask for drawing ${drawing.id}`);
-                      
-                      // Force redraw after mask applied
-                      setTimeout(() => {
-                        try {
-                          // Force update of the layer's visual appearance
-                          if (layer && typeof layer.redraw === 'function') {
-                            layer.redraw();
-                          }
-                          
-                          // Trigger window resize as a fallback
-                          window.dispatchEvent(new Event('resize'));
-                        } catch (e) {
-                          console.error("Error redrawing after applying clip mask:", e);
-                        }
-                      }, 50);
-                    } else {
-                      console.error(`Failed to apply clip mask for drawing ${drawing.id}`);
-                      
-                      // Try again with exponential backoff
-                      if (currentRetry < maxRetries) {
-                        currentRetry++;
-                        const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
-                        setTimeout(attemptApplyClipMask, delay);
-                      }
-                    }
-                  } else {
-                    console.log(`No floor plan data found for drawing ${drawing.id}`);
-                  }
-                } else {
-                  console.error(`Path element not found for drawing ${drawing.id}`);
-                  
-                  // Try again with exponential backoff
-                  if (currentRetry < maxRetries) {
-                    currentRetry++;
-                    const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
-                    console.log(`Retrying to find path element for drawing ${drawing.id} (Attempt ${currentRetry} of ${maxRetries}) in ${delay}ms`);
-                    setTimeout(attemptApplyClipMask, delay);
-                  }
-                }
-              } catch (err) {
-                console.error('Error restoring clip mask:', err);
-                
-                // Try again on error with exponential backoff
-                if (currentRetry < maxRetries) {
-                  currentRetry++;
-                  const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
-                  setTimeout(attemptApplyClipMask, delay);
-                }
-              }
-            };
-            
-            // Start the retry process with an initial delay
-            setTimeout(attemptApplyClipMask, 100);
+          if (hasFloorPlan(drawing.id)) {
+            applyClipMaskToDrawing({
+              drawingId: drawing.id,
+              isMounted,
+              layer
+            });
           }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);

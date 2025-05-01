@@ -15,5 +15,9 @@ export {
 
 export {
   applyImageClipMask,
-  removeClipMask
+  removeClipMask,
+  findSvgPathByDrawingId,
+  rotateImageInClipMask,
+  scaleImageInClipMask
 } from './svg-clip-mask';
+
