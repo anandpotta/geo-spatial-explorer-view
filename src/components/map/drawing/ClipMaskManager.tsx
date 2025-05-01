@@ -1,6 +1,6 @@
 
 import { findSvgPathByDrawingId, applyImageClipMask, hasClipMaskApplied } from '@/utils/svg-clip-mask';
-import { getFloorPlanImageUrl } from '@/utils/floor-plan-utils';
+import { getFloorPlanById } from '@/utils/floor-plan-utils';
 import L from 'leaflet';
 
 interface ApplyClipMaskOptions {
@@ -15,9 +15,9 @@ interface ApplyClipMaskOptions {
 export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyClipMaskOptions): void => {
   if (!drawingId || !isMounted) return;
   
-  // Get the floor plan image URL
-  const imageUrl = getFloorPlanImageUrl(drawingId);
-  if (!imageUrl) {
+  // Get the floor plan data
+  const floorPlanData = getFloorPlanById(drawingId);
+  if (!floorPlanData || !floorPlanData.data) {
     console.log(`No floor plan image found for drawing ${drawingId}`);
     return;
   }
@@ -35,7 +35,7 @@ export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyCli
   // Find the SVG path element with more reliable retries
   attemptApplyClipMask({
     drawingId,
-    imageUrl,
+    imageUrl: floorPlanData.data,
     isMounted,
     attempt: 1,
     maxAttempts: 10, // Reduced from 15 to 10 to avoid excessive attempts

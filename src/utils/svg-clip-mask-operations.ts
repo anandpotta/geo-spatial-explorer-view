@@ -34,7 +34,7 @@ export const hasClipMaskApplied = (svgPath: SVGPathElement | null): boolean => {
  */
 export const applyImageClipMask = (
   pathElement: SVGPathElement | null, 
-  imageUrl: string, 
+  imageUrl: string | object | null | undefined, 
   id: string
 ): boolean => {
   if (!pathElement || !imageUrl) {
@@ -43,7 +43,11 @@ export const applyImageClipMask = (
   }
   
   try {
-    console.log(`Applying clip mask for drawing ${id} with image URL: ${imageUrl.substring(0, 50)}...`);
+    // Ensure imageUrl is a string before attempting to use string methods
+    const imageUrlString = typeof imageUrl === 'string' ? imageUrl : JSON.stringify(imageUrl);
+    
+    // Safe logging that won't cause errors with any imageUrl type
+    console.log(`Applying clip mask for drawing ${id} with image URL type: ${typeof imageUrl}`);
     
     // Check if already has clip mask (improved check)
     if (hasClipMaskApplied(pathElement)) {
@@ -115,7 +119,7 @@ export const applyImageClipMask = (
     
     // Create an image element for the pattern
     const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-    image.setAttribute('href', imageUrl);
+    image.setAttribute('href', imageUrlString);
     image.setAttribute('width', '100%');
     image.setAttribute('height', '100%');
     image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
