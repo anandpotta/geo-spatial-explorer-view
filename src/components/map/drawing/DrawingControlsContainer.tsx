@@ -1,10 +1,9 @@
-
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
-import { applyImageClipMask } from '@/utils/svg-utils';
+import { applyImageClipMask } from '@/utils/svg-clip-mask';
 import { debugSvgElement } from '@/utils/svg-debug-utils';
 
 interface DrawingControlsContainerProps {

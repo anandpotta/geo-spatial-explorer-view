@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask } from '@/utils/svg-utils';
+import { applyImageClipMask } from '@/utils/svg-clip-mask';
 
 export function useFileUpload({ onUploadToDrawing }: { 
   onUploadToDrawing?: (drawingId: string, file: File) => void 

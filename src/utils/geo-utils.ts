@@ -29,6 +29,7 @@ export {
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
 
+// Export from our refactored SVG utilities
 export {
   getSvgPathFromElement,
   simplifyPath,
