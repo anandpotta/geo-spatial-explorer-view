@@ -51,15 +51,39 @@ export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null
         // Debug how many paths were found
         console.log(`Found ${paths.length} path elements in overlay pane`);
         
-        // Check each path for the drawing ID
+        // New approach: check direct DOM elements and also paths that might be related
+        // Sometimes Leaflet creates elements without the attribute but with specific IDs in the internal structure
         for (const path of Array.from(paths)) {
+          // First check if this path has the attribute
           const id = path.getAttribute('data-drawing-id');
           if (id === drawingId) {
             pathElement = path as SVGPathElement;
             break;
           }
+          
+          // If not, try to check if this path might be the one we're looking for based on other properties
+          // This is a new approach to better match paths without direct ID attributes
+          const pathData = path.getAttribute('d');
+          if (pathData && !id) {
+            // Set the attribute on the path for future lookups
+            path.setAttribute('data-drawing-id', drawingId);
+            console.log(`Applied data-drawing-id=${drawingId} to previously untagged path`);
+            pathElement = path as SVGPathElement;
+            break;
+          }
         }
       }
+    }
+  }
+  
+  // Last resort: if there's only one path in the document and we can't find our specific one,
+  // assume it's the one we want (only if we have exactly one path)
+  if (!pathElement) {
+    const allPaths = document.querySelectorAll('path.leaflet-interactive');
+    if (allPaths.length === 1) {
+      pathElement = allPaths[0] as SVGPathElement;
+      pathElement.setAttribute('data-drawing-id', drawingId);
+      console.log(`Applied data-drawing-id=${drawingId} to the only path available`);
     }
   }
   

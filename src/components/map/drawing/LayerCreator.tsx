@@ -53,8 +53,12 @@ export const createLayerFromDrawing = ({
     const layer = createGeoJSONLayer(drawing, options);
     
     if (layer) {
+      // Store the drawing ID at the layer level as well for easier reference
+      (layer as any).drawingId = drawing.id;
+      
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
+          // Add the ID at the sublayer level too
           (l as any).drawingId = drawing.id;
           
           // Add drawing ID attribute to the SVG path for identification
@@ -88,14 +92,17 @@ export const createLayerFromDrawing = ({
         try {
           layer.addTo(featureGroup);
           
-          // Apply clip mask if a floor plan exists
-          if (hasFloorPlan(drawing.id)) {
-            applyClipMaskToDrawing({
-              drawingId: drawing.id,
-              isMounted,
-              layer
-            });
-          }
+          // Add a small delay before applying clip mask to ensure the path is rendered
+          setTimeout(() => {
+            // Apply clip mask if a floor plan exists
+            if (hasFloorPlan(drawing.id) && isMounted) {
+              applyClipMaskToDrawing({
+                drawingId: drawing.id,
+                isMounted,
+                layer
+              });
+            }
+          }, 250); // Short delay to let the DOM update
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
         }
