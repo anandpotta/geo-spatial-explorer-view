@@ -3,6 +3,7 @@
  * Utilities for handling SVG clip masks
  */
 import { toast } from 'sonner';
+import { rotateImageInClipMask, scaleImageInClipMask } from './svg-image-operations';
 
 /**
  * Finds an SVG path element by its drawing ID
@@ -66,6 +67,12 @@ export const applyImageClipMask = (
       return false;
     }
     
+    // Don't reapply if already has clip mask
+    if (svgPath.getAttribute('data-has-clip-mask') === 'true') {
+      console.log('Path already has clip mask, skipping application');
+      return true;
+    }
+    
     // Get the SVG element that contains this path
     const svg = svgPath.closest('svg');
     if (!svg) {
@@ -96,16 +103,17 @@ export const applyImageClipMask = (
       svg.appendChild(defs);
     }
     
+    // Clean up any existing elements with the same IDs first
+    const existingClipPath = defs.querySelector(`#${clipId}`);
+    if (existingClipPath) defs.removeChild(existingClipPath);
+    
+    const existingPattern = defs.querySelector(`#${patternId}`);
+    if (existingPattern) defs.removeChild(existingPattern);
+    
     // Create a clip path element
-    let clipPath = defs.querySelector(`#${clipId}`) as SVGClipPathElement;
-    if (!clipPath) {
-      clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-      clipPath.setAttribute('id', clipId);
-      defs.appendChild(clipPath);
-    } else {
-      // Clear existing content
-      clipPath.innerHTML = '';
-    }
+    let clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    clipPath.setAttribute('id', clipId);
+    defs.appendChild(clipPath);
     
     // Create a path for the clip path
     const clipPathPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -113,18 +121,19 @@ export const applyImageClipMask = (
     clipPath.appendChild(clipPathPath);
     
     // Create a pattern for the image
-    let pattern = defs.querySelector(`#${patternId}`) as SVGPatternElement;
-    if (!pattern) {
-      pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-      pattern.setAttribute('id', patternId);
-      pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-      pattern.setAttribute('width', '100%');
-      pattern.setAttribute('height', '100%');
-      defs.appendChild(pattern);
-    } else {
-      // Clear existing content
-      pattern.innerHTML = '';
-    }
+    let pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    pattern.setAttribute('id', patternId);
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('width', '100%');
+    pattern.setAttribute('height', '100%');
+    defs.appendChild(pattern);
+    
+    // Get the bounding box to properly size the pattern
+    const bbox = svgPath.getBBox();
+    pattern.setAttribute('x', String(bbox.x));
+    pattern.setAttribute('y', String(bbox.y));
+    pattern.setAttribute('width', String(bbox.width));
+    pattern.setAttribute('height', String(bbox.height));
     
     // Create an image element for the pattern
     const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
@@ -134,16 +143,24 @@ export const applyImageClipMask = (
     image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     pattern.appendChild(image);
     
-    // Apply the clip path and pattern to the path
-    svgPath.setAttribute('clip-path', `url(#${clipId})`);
-    svgPath.setAttribute('fill', `url(#${patternId})`);
-    svgPath.setAttribute('data-has-clip-mask', 'true');
+    // Set default values for rotation and scale
+    svgPath.setAttribute('data-image-rotation', '0');
+    svgPath.setAttribute('data-image-scale', '1');
     
-    // Remove stroke for better appearance
-    svgPath.setAttribute('stroke', 'none');
-    
-    // Force the browser to acknowledge the changes
-    svgPath.getBoundingClientRect();
+    // Apply the clip path and pattern to the path in one batch
+    requestAnimationFrame(() => {
+      // Apply pattern fill first
+      svgPath.setAttribute('fill', `url(#${patternId})`);
+      svgPath.setAttribute('data-has-clip-mask', 'true');
+      
+      // Remove stroke for better appearance
+      svgPath.setAttribute('stroke', 'none');
+      
+      // Apply clip path after a small delay to reduce flicker
+      setTimeout(() => {
+        svgPath.setAttribute('clip-path', `url(#${clipId})`);
+      }, 20);
+    });
     
     return true;
   } catch (err) {
@@ -199,12 +216,12 @@ export const removeClipMask = (svgPath: SVGPathElement): boolean => {
       }
     }
     
-    // Force the browser to acknowledge the changes
-    svgPath.getBoundingClientRect();
-    
     return true;
   } catch (err) {
     console.error('Error removing clip mask:', err);
     return false;
   }
 };
+
+// Re-export functions from svg-image-operations
+export { rotateImageInClipMask, scaleImageInClipMask };

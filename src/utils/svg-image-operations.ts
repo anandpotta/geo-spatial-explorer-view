@@ -35,8 +35,18 @@ export const rotateImageInClipMask = (pathElement: SVGPathElement | null, degree
     // Get current scale
     const scale = pathElement.getAttribute('data-image-scale') || '1';
     
-    // Apply the new rotation
-    image.setAttribute('transform', `rotate(${newRotation} ${centerX} ${centerY}) scale(${scale})`);
+    // Apply the new rotation without causing reflow
+    requestAnimationFrame(() => {
+      image.setAttribute('transform', `rotate(${newRotation} ${centerX} ${centerY}) scale(${scale})`);
+      
+      // Force repaint of just this element to avoid flickering
+      if (pathElement.parentElement) {
+        pathElement.parentElement.style.opacity = '0.99';
+        setTimeout(() => {
+          pathElement.parentElement.style.opacity = '1';
+        }, 10);
+      }
+    });
     
     return true;
   } catch (err) {
@@ -78,8 +88,18 @@ export const scaleImageInClipMask = (pathElement: SVGPathElement | null, scaleFa
     const centerY = bbox.height / 2 + bbox.y;
     const rotation = pathElement.getAttribute('data-image-rotation') || '0';
     
-    // Apply the new scale with existing rotation
-    image.setAttribute('transform', `rotate(${rotation} ${centerX} ${centerY}) scale(${newScale})`);
+    // Apply the new scale without causing reflow
+    requestAnimationFrame(() => {
+      image.setAttribute('transform', `rotate(${rotation} ${centerX} ${centerY}) scale(${newScale})`);
+      
+      // Force repaint of just this element to avoid flickering
+      if (pathElement.parentElement) {
+        pathElement.parentElement.style.opacity = '0.99';
+        setTimeout(() => {
+          pathElement.parentElement.style.opacity = '1';
+        }, 10);
+      }
+    });
     
     return true;
   } catch (err) {

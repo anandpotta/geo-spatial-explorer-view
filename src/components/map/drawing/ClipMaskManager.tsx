@@ -65,7 +65,20 @@ const attemptApplyClipMask = ({
   
   if (pathElement) {
     console.log(`Found path element for drawing ${drawingId} on attempt ${attempt}`);
-    applyImageClipMask(pathElement, imageUrl, drawingId);
+    
+    // Track if element already has clip mask to avoid reapplying
+    const hasClipMask = pathElement.getAttribute('data-has-clip-mask') === 'true';
+    if (hasClipMask) {
+      console.log(`Path already has clip mask, skipping application for ${drawingId}`);
+      return;
+    }
+    
+    // Apply clip mask with stability optimization
+    setTimeout(() => {
+      if (isMounted) {
+        applyImageClipMask(pathElement, imageUrl, drawingId);
+      }
+    }, 10); // Small delay to ensure DOM is ready
   } else {
     // Log but don't show toast for retries
     console.log(`Path element not found for drawing ${drawingId}`);
