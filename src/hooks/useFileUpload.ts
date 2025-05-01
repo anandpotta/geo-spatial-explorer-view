@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask } from '@/utils/svg-clip-mask';
+import { applyImageClipMask } from '@/utils/svg-utils';
 
 export function useFileUpload({ onUploadToDrawing }: { 
   onUploadToDrawing?: (drawingId: string, file: File) => void 
@@ -23,8 +23,11 @@ export function useFileUpload({ onUploadToDrawing }: {
       const imageUrl = URL.createObjectURL(file);
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
-      // Delay to ensure DOM is updated
-      setTimeout(() => {
+      // Implement a retry mechanism for finding and applying clip mask
+      const maxRetries = 5;
+      let currentRetry = 0;
+      
+      const attemptApplyClipMask = () => {
         try {
           // Find the SVG path element that corresponds to the drawing
           const svgPathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${selectedDrawingId}"]`);
@@ -39,17 +42,43 @@ export function useFileUpload({ onUploadToDrawing }: {
               toast.success(`${file.name} applied to drawing`);
             } else {
               console.error('Failed to apply image as clip mask');
-              toast.error('Could not apply image to drawing');
+              
+              // Retry if unsuccessful
+              if (currentRetry < maxRetries) {
+                currentRetry++;
+                console.log(`Retrying to apply clip mask for ${selectedDrawingId} (Attempt ${currentRetry} of ${maxRetries})`);
+                setTimeout(attemptApplyClipMask, 500);
+              } else {
+                toast.error('Could not apply image to drawing');
+              }
             }
           } else {
             console.error('SVG path element not found for drawing ID:', selectedDrawingId);
-            toast.error('Could not find the drawing on the map');
+            
+            // Retry if path not found
+            if (currentRetry < maxRetries) {
+              currentRetry++;
+              console.log(`Retrying to find SVG path for ${selectedDrawingId} (Attempt ${currentRetry} of ${maxRetries})`);
+              setTimeout(attemptApplyClipMask, 500);
+            } else {
+              toast.error('Could not find the drawing on the map');
+            }
           }
         } catch (err) {
           console.error('Error in handleFileChange:', err);
-          toast.error('Error processing the uploaded file');
+          
+          // Retry on error
+          if (currentRetry < maxRetries) {
+            currentRetry++;
+            setTimeout(attemptApplyClipMask, 500);
+          } else {
+            toast.error('Error processing the uploaded file');
+          }
         }
-      }, 300); // Increased timeout to ensure path is available
+      };
+      
+      // Start the retry process with an initial delay
+      setTimeout(attemptApplyClipMask, 500);
       
       e.target.value = ''; // Reset file input
     }

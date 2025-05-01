@@ -7,7 +7,7 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask } from '@/utils/svg-clip-mask';
+import { applyImageClipMask } from '@/utils/svg-utils';
 import { debugSvgElement } from '@/utils/svg-debug-utils';
 
 interface CreateLayerOptions {
@@ -116,10 +116,18 @@ export const createLayerFromDrawing = ({
           // Apply clip mask if a floor plan exists
           if (hasFloorPlan) {
             console.log(`Drawing ${drawing.id} has a floor plan, will try to apply clip mask`);
-            setTimeout(() => {
+            
+            // Use a retry mechanism for applying clip masks
+            const maxRetries = 5;
+            let currentRetry = 0;
+            
+            const attemptApplyClipMask = () => {
+              if (!isMounted) return;
+              
               try {
                 // Try to find the path element and restore any previously applied clip mask
                 const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawing.id}"]`);
+                
                 if (pathElement) {
                   console.log(`Found path element for drawing ${drawing.id}`);
                   debugSvgElement(pathElement as SVGElement, `Drawing ${drawing.id}`);
@@ -144,17 +152,39 @@ export const createLayerFromDrawing = ({
                       debugSvgElement(pathElement as SVGPathElement, `Drawing ${drawing.id} after clip mask`);
                     } else {
                       console.error(`Failed to apply clip mask for drawing ${drawing.id}`);
+                      
+                      // Try again with a delay if not successful
+                      if (currentRetry < maxRetries) {
+                        currentRetry++;
+                        setTimeout(attemptApplyClipMask, 500);
+                      }
                     }
                   } else {
                     console.log(`No floor plan data found for drawing ${drawing.id}`);
                   }
                 } else {
                   console.error(`Path element not found for drawing ${drawing.id}`);
+                  
+                  // Try again with a delay if path element not found
+                  if (currentRetry < maxRetries) {
+                    currentRetry++;
+                    console.log(`Retrying to find path element for drawing ${drawing.id} (Attempt ${currentRetry} of ${maxRetries})`);
+                    setTimeout(attemptApplyClipMask, 500);
+                  }
                 }
               } catch (err) {
                 console.error('Error restoring clip mask:', err);
+                
+                // Try again on error
+                if (currentRetry < maxRetries) {
+                  currentRetry++;
+                  setTimeout(attemptApplyClipMask, 500);
+                }
               }
-            }, 1000); // Increased timeout to ensure SVG elements are fully loaded
+            };
+            
+            // Start the retry process with an initial delay
+            setTimeout(attemptApplyClipMask, 300);
           }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
@@ -165,3 +195,4 @@ export const createLayerFromDrawing = ({
     console.error('Error adding drawing layer:', err);
   }
 };
+
