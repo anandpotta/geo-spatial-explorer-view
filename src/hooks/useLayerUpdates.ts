@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
@@ -31,44 +31,21 @@ export function useLayerUpdates({
   onRemoveShape,
   onUploadRequest
 }: LayerUpdatesProps) {
-  const updateLayers = () => {
+  // Use useCallback to ensure stable reference for the updateLayers function
+  const updateLayers = useCallback(() => {
     if (!featureGroup || !isMountedRef.current) return;
     
     try {
-      // Clear existing layers and React roots
+      // Clear existing layers
       featureGroup.clearLayers();
       
-      removeButtonRoots.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting root:', err);
-        }
-      });
-      removeButtonRoots.clear();
-      
-      uploadButtonRoots.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting upload button root:', err);
-        }
-      });
-      uploadButtonRoots.clear();
-      
-      imageControlRoots.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting image control root:', err);
-        }
-      });
-      imageControlRoots.clear();
-      
+      // Clear existing layer references
       layersRef.current.clear();
       
       // Create layers for each drawing
       savedDrawings.forEach(drawing => {
+        if (!isMountedRef.current) return;
+        
         createLayerFromDrawing({
           drawing,
           featureGroup,
@@ -86,47 +63,7 @@ export function useLayerUpdates({
     } catch (err) {
       console.error('Error updating layers:', err);
     }
-  };
-
-  // Listen for marker updates to ensure drawings stay visible
-  useEffect(() => {
-    const handleMarkerUpdated = () => {
-      if (isMountedRef.current) {
-        // Small delay to ensure storage is updated first
-        setTimeout(updateLayers, 50);
-      }
-    };
-    
-    window.addEventListener('markersUpdated', handleMarkerUpdated);
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkerUpdated);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!featureGroup || !isMountedRef.current) return;
-    updateLayers();
-    
-    // Also update layers when storage changes
-    const handleStorageChange = () => {
-      if (isMountedRef.current) {
-        updateLayers();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      if (featureGroup && featureGroup.clearLayers) {
-        try {
-          featureGroup.clearLayers();
-        } catch (err) {
-          console.error('Error clearing layers on unmount:', err);
-        }
-      }
-    };
-  }, [savedDrawings, activeTool]);
+  }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
 
   return { updateLayers };
 }

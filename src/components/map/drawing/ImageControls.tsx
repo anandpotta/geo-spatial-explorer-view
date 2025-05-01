@@ -21,6 +21,12 @@ const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
       if (pathElement) {
         rotateImageInClipMask(pathElement, -15);
         toast.success('Image rotated left');
+        
+        // Force redraw
+        window.dispatchEvent(new Event('resize'));
+      } else {
+        console.error('Path element not found for rotation');
+        toast.error('Could not find image to rotate');
       }
     } catch (err) {
       console.error('Error rotating image left:', err);
@@ -34,6 +40,12 @@ const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
       if (pathElement) {
         rotateImageInClipMask(pathElement, 15);
         toast.success('Image rotated right');
+        
+        // Force redraw
+        window.dispatchEvent(new Event('resize'));
+      } else {
+        console.error('Path element not found for rotation');
+        toast.error('Could not find image to rotate');
       }
     } catch (err) {
       console.error('Error rotating image right:', err);
@@ -47,6 +59,12 @@ const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
       if (pathElement) {
         scaleImageInClipMask(pathElement, 0.8);
         toast.success('Image scaled down');
+        
+        // Force redraw
+        window.dispatchEvent(new Event('resize'));
+      } else {
+        console.error('Path element not found for scaling');
+        toast.error('Could not find image to scale');
       }
     } catch (err) {
       console.error('Error scaling image:', err);
@@ -68,10 +86,16 @@ const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
           localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
         }
         
+        // Force redraw
+        window.dispatchEvent(new Event('resize'));
+        
         // Call the parent remove handler if provided
         if (onRemoveShape) {
           onRemoveShape(drawingId);
         }
+      } else {
+        console.error('Path element not found for removal');
+        toast.error('Could not find image to remove');
       }
     } catch (err) {
       console.error('Error removing image:', err);
@@ -80,7 +104,7 @@ const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
   };
 
   return (
-    <div className="image-controls-container flex flex-col gap-1">
+    <div className="image-controls-container flex flex-col gap-1 bg-white/75 backdrop-blur-sm p-1 rounded-md shadow-md">
       <button 
         onClick={rotateLeft}
         className="p-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"

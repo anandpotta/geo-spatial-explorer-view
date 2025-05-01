@@ -21,7 +21,7 @@ export function useDrawingControls() {
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isMapValid = () => {
+  const isMapValidCheck = () => {
     // Check if the feature group is attached to a valid map
     const featureGroup = featureGroupRef.current;
     try {
@@ -48,12 +48,23 @@ export function useDrawingControls() {
   };
 
   const activateEditMode = (): boolean => {
-    if (!isMapValid()) return false;
+    if (!isMapValidCheck()) return false;
 
-    if (drawToolsRef.current?.getEditControl()) {
+    if (drawToolsRef.current) {
       try {
         console.log("Attempting to activate edit mode");
-        const editControl = drawToolsRef.current.getEditControl();
+        
+        // Use the new activateEditMode method if available
+        if (typeof drawToolsRef.current.activateEditMode === 'function') {
+          const result = drawToolsRef.current.activateEditMode();
+          if (result) {
+            console.log("Edit mode activated successfully using new method");
+            return true;
+          }
+        }
+        
+        // Fall back to direct access if method not available
+        const editControl = drawToolsRef.current.getEditControl?.();
         if (editControl) {
           const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
           if (editHandler && typeof editHandler.enable === 'function') {
@@ -61,22 +72,24 @@ export function useDrawingControls() {
             console.log("Edit mode activated successfully");
             return true;
           } else {
-            console.warn("Edit handler not found or not a function");
+            console.warn("Edit handler not found or not a function", editHandler);
           }
+        } else {
+          console.warn("Edit control not available", drawToolsRef.current);
         }
       } catch (err) {
         console.error('Failed to activate edit mode:', err);
         toast.error('Could not enable edit mode');
       }
     } else {
-      console.warn("Draw tools ref or edit control not available");
+      console.warn("Draw tools ref not available");
     }
     
     return false;
   };
 
   const openFileUploadDialog = (drawingId: string) => {
-    if (!isMapValid()) return;
+    if (!isMapValidCheck()) return;
     
     setSelectedDrawing(drawingId);
     if (fileInputRef.current) {

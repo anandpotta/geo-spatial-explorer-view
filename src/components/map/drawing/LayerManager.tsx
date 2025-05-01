@@ -40,45 +40,67 @@ const LayerManager = ({
     onUploadRequest
   });
 
+  // Safe unmounting of React roots
+  const safeUnmountRoots = () => {
+    // Unmount all React roots in a safe way
+    const unmountRoot = (root: any) => {
+      if (!root) return;
+      try {
+        // Check if the unmount method exists before calling it
+        if (root && typeof root.unmount === 'function') {
+          root.unmount();
+        }
+      } catch (err) {
+        console.error('Error unmounting root:', err);
+      }
+    };
+    
+    // Safely clear all roots
+    const safelyClearRoots = (rootsMap: Map<string, any>) => {
+      if (!rootsMap) return;
+      
+      // Create array of entries to avoid modification during iteration
+      const entries = Array.from(rootsMap.entries());
+      entries.forEach(([key, root]) => {
+        unmountRoot(root);
+        rootsMap.delete(key);
+      });
+    };
+    
+    // Clear all types of roots
+    safelyClearRoots(removeButtonRoots.current);
+    safelyClearRoots(uploadButtonRoots.current);
+    safelyClearRoots(imageControlRoots.current);
+  };
+
   useEffect(() => {
     isMountedRef.current = true;
     
     return () => {
       isMountedRef.current = false;
       
-      // Unmount all React roots
-      removeButtonRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting root:', err);
-        }
-      });
+      // Use the safe unmounting function
+      safeUnmountRoots();
       
-      uploadButtonRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting upload button root:', err);
-        }
-      });
-      
-      imageControlRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting image control root:', err);
-        }
-      });
+      // Clear the layers reference
+      layersRef.current.clear();
     };
   }, []);
 
   // Re-render layers when drawings or activeTool changes
   useEffect(() => {
     if (isMountedRef.current) {
-      updateLayers();
+      // First safely unmount any existing roots to prevent conflicts
+      safeUnmountRoots();
+      
+      // Then update layers with a small delay to ensure unmounting is complete
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          updateLayers();
+        }
+      }, 10);
     }
-  }, [savedDrawings, activeTool]);
+  }, [savedDrawings, activeTool, updateLayers]);
 
   return null; // This is a non-visual component
 };

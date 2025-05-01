@@ -15,6 +15,7 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
+  const isEditModeActive = useRef<boolean>(false);
   
   // Force SVG renderer but in a safer way
   useEffect(() => {
@@ -32,6 +33,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Add drawing ID to path element if available
       if (this._path && this.drawingId) {
         this._path.setAttribute('data-drawing-id', this.drawingId);
+        
+        // Also set specific fill-opacity for elements with images
+        if (this._path.getAttribute('data-has-clip-mask') === 'true') {
+          this._path.removeAttribute('fill-opacity');
+        }
       }
     };
     
@@ -40,6 +46,44 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       pathPrototype._updatePath = originalUpdatePath;
     };
   }, []);
+  
+  // Handle switching between drawing and editing modes
+  useEffect(() => {
+    if (!editControlRef.current) return;
+    
+    // Safely check if edit mode should be activated or deactivated
+    const safelyToggleEditMode = () => {
+      if (!editControlRef.current) return;
+      
+      try {
+        const editControl = editControlRef.current;
+        const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+        
+        // When activeTool is 'edit', enable edit mode if it's not already active
+        if (activeTool === 'edit') {
+          if (editHandler && !isEditModeActive.current && typeof editHandler.enable === 'function') {
+            console.log('Activating edit mode');
+            editHandler.enable();
+            isEditModeActive.current = true;
+          }
+        } 
+        // When activeTool is not 'edit', disable edit mode if it's active
+        else if (isEditModeActive.current) {
+          if (editHandler && typeof editHandler.disable === 'function') {
+            console.log('Deactivating edit mode');
+            editHandler.disable();
+            isEditModeActive.current = false;
+          }
+        }
+      } catch (err) {
+        console.error('Error toggling edit mode:', err);
+      }
+    };
+    
+    // Use a delay to ensure the map is properly initialized
+    setTimeout(safelyToggleEditMode, 100);
+    
+  }, [activeTool, editControlRef.current]);
   
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
@@ -85,6 +129,25 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         }
       }
       return pathData;
+    },
+    activateEditMode: () => {
+      try {
+        if (editControlRef.current) {
+          const editControl = editControlRef.current;
+          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+          
+          if (editHandler && typeof editHandler.enable === 'function') {
+            console.log('Manually activating edit mode');
+            editHandler.enable();
+            isEditModeActive.current = true;
+            return true;
+          }
+        }
+        return false;
+      } catch (err) {
+        console.error('Error manually activating edit mode:', err);
+        return false;
+      }
     }
   }));
 
@@ -163,9 +226,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
-        remove: true
+        remove: true,
+        edit: true
       }}
-      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
+      featureGroup={featureGroup}
     />
   );
 });

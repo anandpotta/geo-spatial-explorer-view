@@ -56,7 +56,7 @@ export const createLayerFromDrawing = ({
     const options = getDefaultDrawingOptions(drawing.properties.color);
     if (hasFloorPlan) {
       options.fillColor = '#3b82f6';
-      options.fillOpacity = 1; // Set to 1 for full opacity on images
+      options.fillOpacity = 1; // Always use full opacity for images
       options.color = '#1d4ed8';
     }
     
@@ -125,7 +125,7 @@ export const createLayerFromDrawing = ({
           if (hasFloorPlan) {
             console.log(`Drawing ${drawing.id} has a floor plan, will try to apply clip mask`);
             
-            // Use a retry mechanism for applying clip masks
+            // Use a retry mechanism with exponential backoff
             const maxRetries = 15;
             let currentRetry = 0;
             
@@ -138,7 +138,6 @@ export const createLayerFromDrawing = ({
                 
                 if (pathElement) {
                   console.log(`Found path element for drawing ${drawing.id}`);
-                  debugSvgElement(pathElement, `Drawing ${drawing.id}`);
                   
                   // Get floor plan data from localStorage
                   const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
@@ -156,24 +155,29 @@ export const createLayerFromDrawing = ({
                     
                     if (result) {
                       console.log(`Successfully applied clip mask for drawing ${drawing.id}`);
-                      // Debug the SVG element after applying clip mask
-                      debugSvgElement(pathElement, `Drawing ${drawing.id} after clip mask`);
                       
                       // Force redraw after mask applied
                       setTimeout(() => {
                         try {
+                          // Force update of the layer's visual appearance
+                          if (layer && typeof layer.redraw === 'function') {
+                            layer.redraw();
+                          }
+                          
+                          // Trigger window resize as a fallback
                           window.dispatchEvent(new Event('resize'));
                         } catch (e) {
-                          console.error("Error dispatching resize event:", e);
+                          console.error("Error redrawing after applying clip mask:", e);
                         }
-                      }, 100);
+                      }, 50);
                     } else {
                       console.error(`Failed to apply clip mask for drawing ${drawing.id}`);
                       
-                      // Try again with a delay if not successful
+                      // Try again with exponential backoff
                       if (currentRetry < maxRetries) {
                         currentRetry++;
-                        setTimeout(attemptApplyClipMask, 300 * Math.min(currentRetry, 3));
+                        const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
+                        setTimeout(attemptApplyClipMask, delay);
                       }
                     }
                   } else {
@@ -182,26 +186,28 @@ export const createLayerFromDrawing = ({
                 } else {
                   console.error(`Path element not found for drawing ${drawing.id}`);
                   
-                  // Try again with a delay if path element not found
+                  // Try again with exponential backoff
                   if (currentRetry < maxRetries) {
                     currentRetry++;
-                    console.log(`Retrying to find path element for drawing ${drawing.id} (Attempt ${currentRetry} of ${maxRetries})`);
-                    setTimeout(attemptApplyClipMask, 300 * Math.min(currentRetry, 3));
+                    const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
+                    console.log(`Retrying to find path element for drawing ${drawing.id} (Attempt ${currentRetry} of ${maxRetries}) in ${delay}ms`);
+                    setTimeout(attemptApplyClipMask, delay);
                   }
                 }
               } catch (err) {
                 console.error('Error restoring clip mask:', err);
                 
-                // Try again on error
+                // Try again on error with exponential backoff
                 if (currentRetry < maxRetries) {
                   currentRetry++;
-                  setTimeout(attemptApplyClipMask, 300 * Math.min(currentRetry, 3));
+                  const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
+                  setTimeout(attemptApplyClipMask, delay);
                 }
               }
             };
             
             // Start the retry process with an initial delay
-            setTimeout(attemptApplyClipMask, 300);
+            setTimeout(attemptApplyClipMask, 100);
           }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
