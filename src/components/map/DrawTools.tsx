@@ -1,11 +1,12 @@
 
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { EditControl } from "./LeafletCompatibilityLayer";
+import { EditControl } from "./editing/EditControl";
 import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { initializeLayerEditing, createEditOptions } from './drawing/LayerEditingUtils';
 import { setupSvgPathRendering, getPathElements, getSVGPathData, forceSvgPathCreation } from './drawing/PathUtils';
 import { handleShapeCreated } from './drawing/ShapeCreationHandler';
+import { applyPolygonDrawPatches } from '@/utils/leaflet-patches/polygon-draw-patch';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -19,119 +20,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   
   // Apply patch for the type reference error
   useEffect(() => {
-    // Patch Leaflet.Draw to fix the "type is not defined" error
-    if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
-      // Store the original method
-      const originalGetTooltipText = (L.Draw.Polygon.prototype as any)._getTooltipText;
-      
-      // Override the method to handle the error
-      (L.Draw.Polygon.prototype as any)._getTooltipText = function() {
-        try {
-          // Try to call the original method
-          return originalGetTooltipText.apply(this);
-        } catch (err) {
-          // If we catch the "type is not defined" error, return a fallback object
-          console.log("Caught error in tooltip generation, providing fallback");
-          return {
-            text: this._endLabelText || 'Click first point to close this shape',
-            subtext: 'Area will be calculated when complete'
-          };
-        }
-      };
-
-      // Make sure polygon markers are properly styled and visible
-      if ((L.Draw.Polygon.prototype as any)._createMarker) {
-        const originalCreateMarker = (L.Draw.Polygon.prototype as any)._createMarker;
-        
-        (L.Draw.Polygon.prototype as any)._createMarker = function(latlng: L.LatLng, index: number) {
-          const marker = originalCreateMarker.call(this, latlng, index);
-          
-          // Ensure the marker icon is visible with proper styling
-          if (marker && marker._icon) {
-            marker._icon.style.visibility = 'visible';
-            marker._icon.style.opacity = '1';
-            marker._icon.style.zIndex = '1000';
-          }
-          
-          return marker;
-        };
-      }
-      
-      // Override the vertex marker creation to ensure they're visible
-      if ((L.Draw.Polygon.prototype as any)._updateGuide) {
-        const originalUpdateGuide = (L.Draw.Polygon.prototype as any)._updateGuide;
-        
-        (L.Draw.Polygon.prototype as any)._updateGuide = function(latlng: L.LatLng) {
-          originalUpdateGuide.call(this, latlng);
-          
-          // Make sure all vertex markers are visible
-          if (this._markers) {
-            this._markers.forEach((marker: any) => {
-              if (marker && marker._icon) {
-                marker._icon.style.visibility = 'visible';
-                marker._icon.style.opacity = '1';
-                marker._icon.style.zIndex = '1000';
-              }
-            });
-          }
-        };
-      }
-    }
-
-    // Ensure vertex markers are visible with proper styling
-    if (L.Draw && L.Draw.Marker && L.Draw.Marker.prototype) {
-      const originalOnAdd = (L.Draw.Marker.prototype as any).onAdd;
-      
-      if (originalOnAdd) {
-        (L.Draw.Marker.prototype as any).onAdd = function(map: L.Map) {
-          const result = originalOnAdd.call(this, map);
-          
-          // Force marker icon to be visible
-          if (this._marker && this._marker._icon) {
-            this._marker._icon.style.visibility = 'visible';
-            this._marker._icon.style.opacity = '1';
-            this._marker._icon.style.zIndex = '1000';
-          }
-          
-          return result;
-        };
-      }
-    }
-    
-    // Ensure the Draw.Polygon's vertex marker styling is correct
-    if (L.Draw && L.Draw.Polygon) {
-      // Add CSS to ensure vertex markers are visible
-      const style = document.createElement('style');
-      style.textContent = `
-        .leaflet-marker-icon.leaflet-div-icon {
-          visibility: visible !important;
-          opacity: 1 !important;
-          z-index: 1000 !important;
-          pointer-events: auto !important;
-        }
-        .leaflet-marker-shadow {
-          visibility: visible !important;
-          opacity: 1 !important;
-          z-index: 999 !important;
-        }
-        .leaflet-draw-tooltip {
-          visibility: visible !important;
-          opacity: 1 !important;
-          z-index: 1001 !important;
-        }
-        .leaflet-editing-icon {
-          visibility: visible !important;
-          opacity: 1 !important;
-          z-index: 1000 !important;
-          pointer-events: auto !important;
-        }
-        .leaflet-draw-guide-dash {
-          visibility: visible !important;
-          opacity: 1 !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
+    // Apply polygon drawing patches
+    applyPolygonDrawPatches();
   }, []);
   
   // Setup SVG rendering for all shapes

@@ -10,15 +10,15 @@ export function addEditingCapability(layer: L.Path): void {
       // Try to use the appropriate edit handler based on layer type
       let editHandler;
       
-      if (L.Edit && L.Edit.Poly && layer.getLatLngs) {
+      if (L.Edit && L.Edit.Poly && layer instanceof L.Polyline) {
         // For polygons and polylines
-        editHandler = new L.Edit.Poly(layer);
-      } else if (L.Edit && L.Edit.Rectangle && layer.getBounds) {
+        editHandler = new L.Edit.Poly(layer as any);
+      } else if (L.Edit && L.Edit.Rectangle && layer instanceof L.Rectangle) {
         // For rectangles
-        editHandler = new L.Edit.Rectangle(layer);
-      } else if (L.Edit && L.Edit.Circle && layer.getRadius) {
+        editHandler = new L.Edit.Rectangle(layer as any);
+      } else if (L.Edit && L.Edit.Circle && layer instanceof L.Circle) {
         // For circles
-        editHandler = new L.Edit.Circle(layer);
+        editHandler = new L.Edit.Circle(layer as any);
       } else {
         // Fallback to generic handler
         editHandler = new (L.Handler as any).PolyEdit(layer);

@@ -4,6 +4,7 @@ import L from 'leaflet';
 import { toast } from 'sonner';
 import { getMapFromLayer } from '@/utils/leaflet-type-utils';
 import { useMapValidation } from './useMapValidation';
+import { createEditHandler } from '@/components/map/editing/LayerEditHandler';
 
 export function useEditMode() {
   const { checkMapValidity } = useMapValidation();
@@ -37,20 +38,8 @@ export function useEditMode() {
             // Initialize editing capability if missing
             if (layer instanceof L.Path) {
               try {
-                // Try to use the appropriate edit handler based on layer type
-                if (L.Edit && L.Edit.Poly && layer.getLatLngs) {
-                  // For polygons and polylines
-                  layer.editing = new L.Edit.Poly(layer);
-                } else if (L.Edit && L.Edit.Rectangle && layer.getBounds) {
-                  // For rectangles
-                  layer.editing = new L.Edit.Rectangle(layer);
-                } else if (L.Edit && L.Edit.Circle && layer.getRadius) {
-                  // For circles
-                  layer.editing = new L.Edit.Circle(layer);
-                } else {
-                  // Fallback to generic handler
-                  layer.editing = new (L.Handler as any).PolyEdit(layer);
-                }
+                // Create the appropriate edit handler
+                layer.editing = createEditHandler(layer);
               } catch (err) {
                 console.error("Error creating edit handler:", err);
                 // Create a fallback handler with required methods
