@@ -1,8 +1,7 @@
-
 import L from 'leaflet';
 import { toast } from 'sonner';
 import { addEditingCapability } from './LayerEditingUtils';
-import { ensureLayerVisibility, forceSvgPathCreation } from './PathUtils';
+import { ensureLayerVisibility, forceSvgPathCreation } from './svg';
 
 interface Shape {
   type: string;

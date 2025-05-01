@@ -32,11 +32,11 @@ export function createEditHandler(layer: L.Path): L.Handler & {
     return editHandler;
   } catch (err) {
     console.error("Error creating edit handler:", err);
-    // Create a basic object with required methods as fallback
+    // Create a basic handler object with required methods as fallback
     return {
       enable: function() { console.log("Fallback enable called"); },
       disable: function() { console.log("Fallback disable called"); }
-    };
+    } as L.Handler & { enable: () => void; disable: () => void };
   }
 }
 
@@ -44,17 +44,19 @@ export function createEditHandler(layer: L.Path): L.Handler & {
  * Ensures a layer's editing object has required methods
  */
 export function ensureEditMethods(layer: L.Layer): void {
-  if (!layer || !layer.editing) return;
+  if (!layer || !(layer as any).editing) return;
+  
+  const editingHandler = (layer as any).editing;
   
   // Ensure the editing handler has all required methods
-  if (!layer.editing.disable) {
-    layer.editing.disable = function(): void {
+  if (!editingHandler.disable) {
+    editingHandler.disable = function(): void {
       console.log("Disable called on layer with incomplete handler");
     };
   }
   
-  if (!layer.editing.enable) {
-    layer.editing.enable = function(): void {
+  if (!editingHandler.enable) {
+    editingHandler.enable = function(): void {
       console.log("Enable called on layer with incomplete handler");
     };
   }
@@ -69,13 +71,13 @@ export function initializeFeatureGroupEditing(featureGroup: L.FeatureGroup): voi
   try {
     // Ensure each layer has the necessary edit properties
     featureGroup.eachLayer((layer: L.Layer) => {
-      if (layer && !layer.editing) {
+      if (layer && !(layer as any).editing) {
         // Initialize editing capability if not present
         if (layer instanceof L.Path) {
           // Create a properly typed handler
-          layer.editing = createEditHandler(layer);
+          (layer as any).editing = createEditHandler(layer);
         }
-      } else if (layer && layer.editing) {
+      } else if (layer && (layer as any).editing) {
         // Ensure existing handlers have required methods
         ensureEditMethods(layer);
       }

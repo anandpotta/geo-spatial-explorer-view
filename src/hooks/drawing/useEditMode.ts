@@ -46,7 +46,7 @@ export function useEditMode() {
                 layer.editing = {
                   enable: function() { console.log("Fallback enable called"); },
                   disable: function() { console.log("Fallback disable called"); }
-                };
+                } as L.Handler & { enable: () => void; disable: () => void };
               }
               
               // Ensure layer uses SVG renderer

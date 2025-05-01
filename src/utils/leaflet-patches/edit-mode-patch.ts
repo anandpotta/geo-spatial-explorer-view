@@ -59,16 +59,16 @@ export function applyEditModePatch(): void {
       L.EditToolbar.Edit.prototype._enableLayerEdit = function(e: {layer: L.Layer}) {
         try {
           // First check if layer has valid editing capability
-          if (!e.layer || !e.layer.editing) {
+          if (!e.layer || !(e.layer as any).editing) {
             console.warn("Layer missing editing capability");
             return;
           }
           
           // Check if enable method exists
-          if (typeof e.layer.editing.enable !== 'function') {
+          if (typeof (e.layer as any).editing.enable !== 'function') {
             console.warn("Layer editing.enable is not a function");
             // Create a dummy enable function to prevent errors
-            e.layer.editing.enable = function() { 
+            (e.layer as any).editing.enable = function() { 
               console.log("Dummy enable called on layer without proper edit capability");
             };
           }

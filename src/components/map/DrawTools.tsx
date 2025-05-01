@@ -4,7 +4,12 @@ import { EditControl } from "./editing/EditControl";
 import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { initializeLayerEditing, createEditOptions } from './drawing/LayerEditingUtils';
-import { setupSvgPathRendering, getPathElements, getSVGPathData, forceSvgPathCreation } from './drawing/PathUtils';
+import { 
+  setupSvgPathRendering, 
+  getPathElements, 
+  getSVGPathData, 
+  forceSvgPathCreation 
+} from './drawing/svg';
 import { handleShapeCreated } from './drawing/ShapeCreationHandler';
 import { applyPolygonDrawPatches } from '@/utils/leaflet-patches/polygon-draw-patch';
 

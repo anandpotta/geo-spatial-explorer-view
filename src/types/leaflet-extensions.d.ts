@@ -10,11 +10,14 @@ declare module 'leaflet' {
     };
   }
   
-  interface Path {
+  interface Layer {
     editing?: L.Handler & {
       enable?: () => void;
       disable?: () => void;
     };
+  }
+  
+  interface Path {
     _path?: SVGElement; // Internal Leaflet property for the SVG element
     _updatePath?: () => void; // Internal method to update SVG path
     _renderer?: any; // Renderer instance
