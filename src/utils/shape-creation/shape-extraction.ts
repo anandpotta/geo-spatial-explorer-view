@@ -40,7 +40,7 @@ export function extractShapeData(layerType: string, layer: L.Layer): {
         if (Array.isArray(latLngs) && latLngs.length > 0) {
           // Handle potentially nested arrays (multi-polygons)
           const firstRing = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
-          result.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng]);
+          result.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng] as [number, number]);
         }
       }
     } else if (layerType === 'circle') {
