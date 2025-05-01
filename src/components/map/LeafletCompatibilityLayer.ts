@@ -9,14 +9,18 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Format the edit options properly - this is where the fix is needed
+  // Format the edit options properly based on what was passed
   let editOptions;
   
   // Handle different types of edit parameters
   if (edit === true) {
     // If edit is boolean true, create a proper object structure
-    editOptions = {
-      featureGroup: featureGroup
+    editOptions = { 
+      featureGroup: featureGroup,
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
     };
   } else if (edit === false) {
     // If edit is boolean false, pass it as false
@@ -27,10 +31,22 @@ export const EditControl = forwardRef((props: any, ref: any) => {
       ...edit,
       featureGroup: featureGroup
     };
+    
+    // Ensure selectedPathOptions is properly defined if not already
+    if (!editOptions.selectedPathOptions) {
+      editOptions.selectedPathOptions = {
+        maintainColor: true,
+        opacity: 0.7
+      };
+    }
   } else {
     // Default case if edit is undefined or null
     editOptions = {
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
     };
   }
   

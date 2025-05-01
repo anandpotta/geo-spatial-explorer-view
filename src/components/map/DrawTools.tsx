@@ -58,6 +58,18 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   }));
 
+  // Create a properly structured edit object
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
+    },
+    remove: true
+  };
+
   return (
     <EditControl
       ref={editControlRef}
@@ -71,11 +83,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         marker: true,
         polyline: false
       }}
-      edit={{
-        remove: true,
-        edit: true,
-        featureGroup: featureGroup
-      }}
+      edit={editOptions}
       featureGroup={featureGroup}
     />
   );
