@@ -73,7 +73,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       }}
       edit={{
         remove: true,
-        edit: true
+        edit: true,
+        featureGroup: featureGroup
       }}
       featureGroup={featureGroup}
     />

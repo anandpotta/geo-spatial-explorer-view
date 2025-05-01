@@ -13,11 +13,14 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   let editOptions;
   
   // Handle different types of edit parameters
-  if (typeof edit === 'boolean') {
-    // If edit is a boolean, create a proper object structure
+  if (edit === true) {
+    // If edit is boolean true, create a proper object structure
     editOptions = {
       featureGroup: featureGroup
     };
+  } else if (edit === false) {
+    // If edit is boolean false, pass it as false
+    editOptions = false;
   } else if (edit && typeof edit === 'object') {
     // If edit is an object, merge with featureGroup but don't overwrite featureGroup
     editOptions = {
