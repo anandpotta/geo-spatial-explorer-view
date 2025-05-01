@@ -109,7 +109,7 @@ export const getAllSvgPaths = (container: HTMLElement | null): SVGPathElement[] 
  * Creates and applies an SVG clip mask with an image to a path element
  */
 export const applyImageClipMask = (
-  pathElement: SVGElement | null, 
+  pathElement: SVGPathElement | null, 
   imageUrl: string, 
   id: string
 ): boolean => {
@@ -203,7 +203,7 @@ export const applyImageClipMask = (
 /**
  * Removes a clip mask from a path element
  */
-export const removeClipMask = (pathElement: SVGElement | null): boolean => {
+export const removeClipMask = (pathElement: SVGPathElement | null): boolean => {
   if (!pathElement) return false;
   
   try {

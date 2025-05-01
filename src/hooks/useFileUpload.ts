@@ -25,7 +25,7 @@ export function useFileUpload({ onUploadToDrawing }: {
         
         if (svgPathElement) {
           // Apply the image as a clip mask
-          applyClipMask(svgPathElement as SVGElement, imageUrl, selectedDrawingId);
+          applyClipMask(svgPathElement as SVGPathElement, imageUrl, selectedDrawingId);
         } else {
           console.error('SVG path element not found for drawing ID:', selectedDrawingId);
         }
@@ -40,7 +40,7 @@ export function useFileUpload({ onUploadToDrawing }: {
   };
   
   // Function to apply image clip mask to an SVG path
-  const applyClipMask = (pathElement: SVGElement, imageUrl: string, drawingId: string) => {
+  const applyClipMask = (pathElement: SVGPathElement, imageUrl: string, drawingId: string) => {
     try {
       // Get the bounding box of the path
       const bbox = pathElement.getBBox();

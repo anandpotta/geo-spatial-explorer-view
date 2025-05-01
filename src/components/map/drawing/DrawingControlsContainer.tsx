@@ -79,7 +79,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
             const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawingId}"]`);
             if (pathElement) {
               applyImageClipMask(
-                pathElement as SVGElement, 
+                pathElement as SVGPathElement, 
                 e.target.result as string, 
                 drawingId
               );
