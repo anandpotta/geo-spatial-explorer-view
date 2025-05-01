@@ -136,35 +136,27 @@ export const applyImageClipMask = (
       svg.appendChild(defs);
     }
     
-    // Create or update clip path
-    let clipPath = svg.getElementById(clipPathId) as SVGClipPathElement;
-    if (!clipPath) {
-      clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-      clipPath.id = clipPathId;
-      defs.appendChild(clipPath);
-    } else {
-      // Clear existing content
-      while (clipPath.firstChild) {
-        clipPath.removeChild(clipPath.firstChild);
-      }
-    }
+    // Remove any existing elements with these IDs
+    const existingClipPath = document.getElementById(clipPathId);
+    if (existingClipPath) existingClipPath.remove();
+    
+    const existingPattern = document.getElementById(patternId);
+    if (existingPattern) existingPattern.remove();
+    
+    // Create clip path
+    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    clipPath.id = clipPathId;
     
     // Clone the path for the clip path
     const pathClone = pathElement.cloneNode(true) as SVGPathElement;
+    // Remove any existing clip-path or fill attributes from the clone
+    pathClone.removeAttribute('clip-path');
+    pathClone.removeAttribute('fill');
     clipPath.appendChild(pathClone);
     
-    // Create or update pattern
-    let pattern = svg.getElementById(patternId) as SVGPatternElement;
-    if (!pattern) {
-      pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-      pattern.id = patternId;
-      defs.appendChild(pattern);
-    } else {
-      // Clear existing content
-      while (pattern.firstChild) {
-        pattern.removeChild(pattern.firstChild);
-      }
-    }
+    // Create pattern
+    const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    pattern.id = patternId;
     
     // Set pattern attributes
     pattern.setAttribute('patternUnits', 'userSpaceOnUse');
@@ -182,8 +174,18 @@ export const applyImageClipMask = (
     image.setAttribute('y', '0');
     image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     
-    // Append image to pattern
+    // Append to defs
     pattern.appendChild(image);
+    defs.appendChild(clipPath);
+    defs.appendChild(pattern);
+    
+    // Store original fill if not already stored
+    if (!pathElement.hasAttribute('data-original-fill')) {
+      const originalFill = pathElement.getAttribute('fill');
+      if (originalFill) {
+        pathElement.setAttribute('data-original-fill', originalFill);
+      }
+    }
     
     // Apply to original path
     pathElement.setAttribute('clip-path', `url(#${clipPathId})`);
@@ -227,3 +229,4 @@ export const removeClipMask = (pathElement: SVGPathElement | null): boolean => {
     return false;
   }
 };
+

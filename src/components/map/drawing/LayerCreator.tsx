@@ -7,6 +7,8 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { applyImageClipMask } from '@/utils/svg-utils';
+import { debugSvgElement } from '@/utils/svg-debug-utils';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -116,17 +118,40 @@ export const createLayerFromDrawing = ({
               try {
                 // Try to find the path element and restore any previously applied clip mask
                 const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawing.id}"]`);
-                if (pathElement && pathElement.getAttribute('data-has-clip-mask') === 'true') {
-                  const imageUrl = pathElement.getAttribute('data-image-url');
-                  if (imageUrl) {
-                    // We need to reapply the clip mask as the layer might have been recreated
-                    // This will be handled by the floor plan loading mechanism
+                if (pathElement) {
+                  console.log(`Found path element for drawing ${drawing.id}`);
+                  
+                  // Get floor plan data from localStorage
+                  const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+                  const floorPlan = floorPlans[drawing.id];
+                  
+                  if (floorPlan && floorPlan.data) {
+                    console.log(`Found floor plan data for drawing ${drawing.id}`);
+                    
+                    // Apply image as clip mask
+                    const result = applyImageClipMask(
+                      pathElement as SVGPathElement,
+                      floorPlan.data,
+                      drawing.id
+                    );
+                    
+                    if (result) {
+                      console.log(`Successfully applied clip mask for drawing ${drawing.id}`);
+                      // Debug the SVG element after applying clip mask
+                      debugSvgElement(pathElement as SVGPathElement, `Drawing ${drawing.id}`);
+                    } else {
+                      console.error(`Failed to apply clip mask for drawing ${drawing.id}`);
+                    }
+                  } else {
+                    console.log(`No floor plan data found for drawing ${drawing.id}`);
                   }
+                } else {
+                  console.error(`Path element not found for drawing ${drawing.id}`);
                 }
               } catch (err) {
                 console.error('Error restoring clip mask:', err);
               }
-            }, 100);
+            }, 500); // Increased timeout to ensure SVG elements are fully loaded
           }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);

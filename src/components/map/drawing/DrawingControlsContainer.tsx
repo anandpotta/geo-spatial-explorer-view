@@ -78,14 +78,20 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
           try {
             const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawingId}"]`);
             if (pathElement) {
-              applyImageClipMask(
+              const result = applyImageClipMask(
                 pathElement as SVGPathElement, 
                 e.target.result as string, 
                 drawingId
               );
-              toast.success(`${file.name} applied to drawing`);
+              
+              if (result) {
+                toast.success(`${file.name} applied to drawing`);
+              } else {
+                toast.error('Could not apply image to drawing');
+              }
             } else {
               toast.error('Could not find the drawing on the map');
+              console.error('Path element not found for ID:', drawingId);
             }
           } catch (err) {
             console.error('Error applying image to path:', err);
