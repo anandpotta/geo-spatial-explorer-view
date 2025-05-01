@@ -5,11 +5,11 @@ import L from 'leaflet';
  * Configures the SVG renderer for Leaflet drawing tools to prevent flickering
  */
 export const configureSvgRenderer = (): () => void => {
-  // Store original _updateStyle method
-  const originalUpdateStyle = L.SVG.prototype._updateStyle;
+  // Store original _updateStyle method if it exists
+  const originalUpdateStyle = (L.SVG.prototype as any)._updateStyle;
 
   // Override the _updateStyle method to add anti-flickering improvements
-  L.SVG.prototype._updateStyle = function(layer: any) {
+  (L.SVG.prototype as any)._updateStyle = function(layer: any) {
     // Call the original method first
     originalUpdateStyle.call(this, layer);
 
@@ -24,6 +24,10 @@ export const configureSvgRenderer = (): () => void => {
       // Force the browser to acknowledge the SVG element to avoid rendering glitches
       layer._path.getBoundingClientRect();
       
+      // Enhance rendering with additional properties
+      layer._path.style.willChange = 'transform';
+      layer._path.style.transform = 'translateZ(0)';
+      
       // Add a drawing-specific class for custom CSS if needed
       if (!layer._path.classList.contains('leaflet-drawing')) {
         layer._path.classList.add('leaflet-drawing');
@@ -34,7 +38,7 @@ export const configureSvgRenderer = (): () => void => {
   // Return a cleanup function
   return () => {
     // Restore original method when component unmounts
-    L.SVG.prototype._updateStyle = originalUpdateStyle;
+    (L.SVG.prototype as any)._updateStyle = originalUpdateStyle;
   };
 };
 
@@ -43,12 +47,12 @@ export const configureSvgRenderer = (): () => void => {
  */
 export const optimizePolygonDrawing = () => {
   // Check if Edit.Poly.prototype exists and hasn't been modified yet
-  if (L.Edit && L.Edit.Poly && L.Edit.Poly.prototype) {
+  if (L.Edit && (L.Edit as any).Poly && (L.Edit as any).Poly.prototype) {
     // Store original _onMarkerDrag method
-    const originalOnMarkerDrag = L.Edit.Poly.prototype._onMarkerDrag;
+    const originalOnMarkerDrag = (L.Edit as any).Poly.prototype._onMarkerDrag;
     
     // Override the marker drag event to prevent excessive redraws
-    L.Edit.Poly.prototype._onMarkerDrag = function(e: any) {
+    (L.Edit as any).Poly.prototype._onMarkerDrag = function(e: any) {
       // Call the original method
       originalOnMarkerDrag.call(this, e);
       
@@ -59,6 +63,10 @@ export const optimizePolygonDrawing = () => {
         
         // Ensure high-quality rendering
         this._poly._path.style.willChange = 'transform';
+        
+        // Add additional anti-flicker properties
+        this._poly._path.style.backfaceVisibility = 'hidden';
+        this._poly._path.style.perspective = '1000px';
       }
     };
     
@@ -67,4 +75,50 @@ export const optimizePolygonDrawing = () => {
   }
   
   return null;
+};
+
+/**
+ * Enhances path elements to preserve SVG data during drawing
+ */
+export const enhancePathPreservation = (map: L.Map): () => void => {
+  if (!map) return () => {};
+  
+  // Create a mutation observer to watch for newly added SVG paths
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.addedNodes.length > 0) {
+        mutation.addedNodes.forEach((node) => {
+          // Check if the added node contains SVG paths
+          if (node instanceof Element) {
+            const paths = node.querySelectorAll('path.leaflet-interactive');
+            paths.forEach((path) => {
+              // Store the original path data for retrieval
+              const pathData = path.getAttribute('d');
+              if (pathData) {
+                path.setAttribute('data-original-path', pathData);
+                
+                // Apply performance optimizations
+                path.setAttribute('shape-rendering', 'geometricPrecision');
+                (path as HTMLElement).style.transform = 'translateZ(0)';
+              }
+            });
+          }
+        });
+      }
+    });
+  });
+  
+  // Start observing the map container for SVG changes
+  const container = map.getContainer();
+  if (container) {
+    observer.observe(container, { 
+      childList: true, 
+      subtree: true 
+    });
+  }
+  
+  // Return cleanup function
+  return () => {
+    observer.disconnect();
+  };
 };

@@ -66,7 +66,14 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
       // Store SVG path data if available
       if (drawing.svgPath && l._path) {
         try {
+          console.log(`Setting SVG path data for drawing ${drawing.id}`);
           l._path.setAttribute('d', drawing.svgPath);
+          
+          // Store the path data as a backup
+          l._path.setAttribute('data-original-path', drawing.svgPath);
+          
+          // Force the browser to acknowledge the path by triggering a reflow
+          l._path.getBoundingClientRect();
         } catch (err) {
           console.error('Error setting path data:', err);
         }
@@ -89,16 +96,21 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
   try {
     // Check for SVG path element in the layer
     if ((layer as any)._path) {
+      const path = (layer as any)._path;
       console.log(`Setting data-drawing-id=${drawingId} on path element`);
-      (layer as any)._path.setAttribute('data-drawing-id', drawingId);
-      (layer as any)._path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+      
+      // Add multiple ways to identify this path
+      path.setAttribute('data-drawing-id', drawingId);
+      path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+      path.id = `drawing-path-${drawingId}`;
       
       // Force browser to recognize the attribute by triggering a reflow
-      (layer as any)._path.getBoundingClientRect();
+      path.getBoundingClientRect();
       
       // Make sure we also add ID on the parent element if it exists
-      if ((layer as any)._path.parentElement) {
-        (layer as any)._path.parentElement.setAttribute('data-drawing-container', drawingId);
+      if (path.parentElement) {
+        path.parentElement.setAttribute('data-drawing-container', drawingId);
+        path.parentElement.id = `drawing-container-${drawingId}`;
       }
     }
 
@@ -106,14 +118,20 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
     if (typeof (layer as any).eachLayer === 'function') {
       (layer as any).eachLayer((subLayer: L.Layer) => {
         if ((subLayer as any)._path) {
+          const path = (subLayer as any)._path;
           console.log(`Setting data-drawing-id=${drawingId} on sub-path element`);
-          (subLayer as any)._path.setAttribute('data-drawing-id', drawingId);
-          (subLayer as any)._path.classList.add('drawing-path-' + drawingId.substring(0, 8));
-          (subLayer as any)._path.getBoundingClientRect();
+          
+          // Add multiple ways to identify this path
+          path.setAttribute('data-drawing-id', drawingId);
+          path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+          path.id = `drawing-path-${drawingId}`;
+          
+          path.getBoundingClientRect();
           
           // Make sure we also add ID on the parent element if it exists
-          if ((subLayer as any)._path.parentElement) {
-            (subLayer as any)._path.parentElement.setAttribute('data-drawing-container', drawingId);
+          if (path.parentElement) {
+            path.parentElement.setAttribute('data-drawing-container', drawingId);
+            path.parentElement.id = `drawing-container-${drawingId}`;
           }
         }
       });

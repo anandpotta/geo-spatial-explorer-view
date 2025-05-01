@@ -1,142 +1,141 @@
 
-import { toast } from 'sonner';
-import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
+import { findSvgPathByDrawingId, applyImageClipMask } from '@/utils/svg-clip-mask';
+import { getFloorPlanImageUrl } from '@/utils/floor-plan-utils';
+import L from 'leaflet';
 
-interface ClipMaskOptions {
+interface ApplyClipMaskOptions {
   drawingId: string;
   isMounted: boolean;
-  layer: any;
+  layer: L.Layer;
 }
 
 /**
- * Applies a clip mask to an SVG path for a drawing with a floor plan
+ * Applies a clip mask to a drawing with floor plan
  */
-export const applyClipMaskToDrawing = ({ 
-  drawingId, 
-  isMounted,
-  layer
-}: ClipMaskOptions) => {
-  if (!isMounted) return;
+export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyClipMaskOptions): void => {
+  if (!drawingId || !isMounted) return;
+  
+  // Get the floor plan image URL
+  const imageUrl = getFloorPlanImageUrl(drawingId);
+  if (!imageUrl) {
+    console.log(`No floor plan image found for drawing ${drawingId}`);
+    return;
+  }
   
   console.log(`Drawing ${drawingId} has a floor plan, will try to apply clip mask`);
   
-  // Use a retry mechanism with exponential backoff
-  const maxRetries = 15;
-  let currentRetry = 0;
+  // Find the SVG path element with more reliable retries
+  attemptApplyClipMask({
+    drawingId,
+    imageUrl,
+    isMounted,
+    attempt: 1,
+    maxAttempts: 15,
+    initialDelay: 250,
+    layer
+  });
+};
+
+interface AttemptApplyClipMaskOptions {
+  drawingId: string;
+  imageUrl: string;
+  isMounted: boolean;
+  attempt: number;
+  maxAttempts: number;
+  initialDelay: number;
+  layer: L.Layer;
+}
+
+/**
+ * Attempts to apply a clip mask with retry logic
+ */
+const attemptApplyClipMask = ({ 
+  drawingId, 
+  imageUrl, 
+  isMounted, 
+  attempt, 
+  maxAttempts, 
+  initialDelay,
+  layer
+}: AttemptApplyClipMaskOptions): void => {
+  if (!isMounted) return;
   
-  const attemptApplyClipMask = () => {
-    if (!isMounted) return;
+  // Try multiple methods to find the path
+  let pathElement = findPathElement(drawingId, layer);
+  
+  if (pathElement) {
+    console.log(`Found path element for drawing ${drawingId} on attempt ${attempt}`);
+    applyImageClipMask(pathElement, imageUrl, drawingId);
+  } else {
+    // Log but don't show toast for retries
+    console.log(`Path element not found for drawing ${drawingId}`);
     
-    try {
-      // Try to find the path element using enhanced finder
-      const pathElement = findSvgPathByDrawingId(drawingId);
-      
-      // Check for the layer's direct path element if no path found yet
-      if (!pathElement && layer && layer._path) {
-        // If layer has a direct path element, use that and make sure it has the ID
-        layer._path.setAttribute('data-drawing-id', drawingId);
-        console.log(`Found path directly from layer for drawing ${drawingId}`);
-        attemptApplyClipMaskWithPath(layer._path);
-        return;
-      }
-      
-      // Check each layer if it's a feature group
-      if (!pathElement && layer && typeof layer.eachLayer === 'function') {
-        layer.eachLayer((subLayer: any) => {
-          if (subLayer && subLayer._path) {
-            subLayer._path.setAttribute('data-drawing-id', drawingId);
-            console.log(`Found path from sublayer for drawing ${drawingId}`);
-            attemptApplyClipMaskWithPath(subLayer._path);
-            return;
-          }
+    // Calculate exponential backoff delay with a maximum cap
+    const nextDelay = Math.min(initialDelay * Math.pow(1.5, attempt - 1), 3000);
+    
+    if (attempt < maxAttempts && isMounted) {
+      console.log(`Retrying to find path element for drawing ${drawingId} (Attempt ${attempt + 1} of ${maxAttempts}) in ${nextDelay}ms`);
+      setTimeout(() => {
+        attemptApplyClipMask({
+          drawingId,
+          imageUrl,
+          isMounted,
+          attempt: attempt + 1,
+          maxAttempts,
+          initialDelay,
+          layer
         });
+      }, nextDelay);
+    }
+  }
+};
+
+/**
+ * Try multiple methods to find the path element
+ */
+const findPathElement = (drawingId: string, layer: L.Layer): SVGPathElement | null => {
+  // First, try direct access via Leaflet layer reference
+  if (layer && (layer as any)._path) {
+    return (layer as any)._path as SVGPathElement;
+  }
+  
+  // Check each sublayer for the path element
+  if (typeof (layer as any).eachLayer === 'function') {
+    let foundPath: SVGPathElement | null = null;
+    (layer as any).eachLayer((subLayer: L.Layer) => {
+      if (!foundPath && (subLayer as any)._path) {
+        foundPath = (subLayer as any)._path as SVGPathElement;
       }
+    });
+    if (foundPath) return foundPath;
+  }
+
+  // Use our utility function to search in the document
+  const pathViaSelector = findSvgPathByDrawingId(drawingId);
+  if (pathViaSelector) return pathViaSelector;
+  
+  // Search in the overlay pane for paths
+  const map = (layer as any)._map;
+  if (map) {
+    const container = map.getContainer();
+    const overlayPane = container?.querySelector('.leaflet-overlay-pane');
+    if (overlayPane) {
+      const paths = overlayPane.querySelectorAll('path.leaflet-interactive');
+      console.log(`Found ${paths.length} path elements in overlay pane`);
       
-      if (pathElement) {
-        console.log(`Found path element for drawing ${drawingId}`);
-        attemptApplyClipMaskWithPath(pathElement);
-      } else {
-        console.error(`Path element not found for drawing ${drawingId}`);
-        
-        // Try again with exponential backoff
-        if (currentRetry < maxRetries) {
-          currentRetry++;
-          const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
-          console.log(`Retrying to find path element for drawing ${drawingId} (Attempt ${currentRetry} of ${maxRetries}) in ${delay}ms`);
-          setTimeout(attemptApplyClipMask, delay);
-        } else {
-          console.error(`Failed to find path element for drawing ${drawingId} after ${maxRetries} attempts`);
-          toast.error(`Could not apply floor plan to drawing. Please try refreshing the page.`);
-        }
-      }
-    } catch (err) {
-      console.error('Error restoring clip mask:', err);
+      // Try to find by ID or class first
+      const pathById = overlayPane.querySelector(`#drawing-path-${drawingId}`);
+      if (pathById) return pathById as SVGPathElement;
       
-      // Try again on error with exponential backoff
-      if (currentRetry < maxRetries) {
-        currentRetry++;
-        const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
-        setTimeout(attemptApplyClipMask, delay);
+      const pathByClass = overlayPane.querySelector(`.drawing-path-${drawingId.substring(0, 8)}`);
+      if (pathByClass) return pathByClass as SVGPathElement;
+      
+      // If we have exactly one path, it might be the one we're looking for
+      if (paths.length === 1) {
+        return paths[0] as SVGPathElement;
       }
     }
-  };
+  }
   
-  const attemptApplyClipMaskWithPath = (pathElement: SVGPathElement) => {
-    // Get floor plan data from localStorage
-    const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-    const floorPlan = floorPlans[drawingId];
-    
-    if (floorPlan && floorPlan.data) {
-      console.log(`Found floor plan data for drawing ${drawingId}`);
-      
-      // Apply image as clip mask
-      const result = applyImageClipMask(
-        pathElement,
-        floorPlan.data,
-        drawingId
-      );
-      
-      if (result) {
-        console.log(`Successfully applied clip mask for drawing ${drawingId}`);
-        
-        // Force redraw after mask applied
-        setTimeout(() => {
-          try {
-            // Force update of the layer's visual appearance
-            if (layer && typeof layer.redraw === 'function') {
-              layer.redraw();
-            }
-            
-            // For GeoJSON layers which may not have a direct redraw method
-            if (layer && layer.eachLayer) {
-              layer.eachLayer((subLayer: any) => {
-                if (subLayer && typeof subLayer.redraw === 'function') {
-                  subLayer.redraw();
-                }
-              });
-            }
-            
-            // Trigger window resize as a fallback
-            window.dispatchEvent(new Event('resize'));
-          } catch (e) {
-            console.error("Error redrawing after applying clip mask:", e);
-          }
-        }, 50);
-      } else {
-        console.error(`Failed to apply clip mask for drawing ${drawingId}`);
-        
-        // Try again with exponential backoff
-        if (currentRetry < maxRetries) {
-          currentRetry++;
-          const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
-          setTimeout(attemptApplyClipMask, delay);
-        }
-      }
-    } else {
-      console.log(`No floor plan data found for drawing ${drawingId}`);
-    }
-  };
-  
-  // Start the retry process with an initial delay
-  setTimeout(attemptApplyClipMask, 100);
+  return null;
 };
