@@ -28,8 +28,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useEffect(() => {
     if (!featureGroup) return;
     
-    // Use an accessor function to get the map from the featureGroup instead of directly accessing _map
-    const map = featureGroup.getMap ? featureGroup.getMap() : (featureGroup as any)._map;
+    // Fix: Don't use getMap as it doesn't exist on FeatureGroup
+    // Use type assertion to access _map internally without TypeScript errors
+    const map = (featureGroup as any)._map;
     if (!map) return;
     
     // Set up SVG renderer configuration to reduce flickering
