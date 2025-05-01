@@ -17,7 +17,8 @@ interface ImageControlsProps {
  * Container component for image manipulation controls
  */
 const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
-  const [expanded, setExpanded] = useState(false);
+  // Start with expanded state true to show all controls by default
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className="image-controls-container flex flex-col gap-1 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md border border-gray-200">

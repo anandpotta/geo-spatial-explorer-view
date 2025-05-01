@@ -1,5 +1,6 @@
 
 import { useEffect, RefObject, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 
 /**
  * Hook to manage edit mode activation/deactivation
@@ -34,6 +35,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
           console.log('Activating edit mode');
           editHandler.enable();
           setIsEditActive(true);
+          toast.success('Edit mode activated. Select a shape to modify it.');
         }
       } else if (!shouldEnableEdit) {
         // Deactivate edit mode
@@ -83,4 +85,6 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       clearInterval(intervalId);
     };
   }, [editControlRef, activeTool, updateEditMode, isEditActive]);
+  
+  return isEditActive;
 }

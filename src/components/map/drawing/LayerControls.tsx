@@ -69,11 +69,9 @@ export const createLayerControls = ({
     });
   }
   
-  // Check if this drawing has a floor plan
-  const hasExistingFloorPlan = hasFloorPlan(drawingId);
-  
-  // Create image controls if there's a floor plan
-  if (hasExistingFloorPlan && imageControlsPosition) {
+  // Create image controls for all drawings in edit mode, not just ones with floor plans
+  // This ensures the controls are always available in edit mode
+  if (imageControlsPosition) {
     createImageControlsLayer({
       drawingId,
       imageControlsPosition,
