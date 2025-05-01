@@ -116,14 +116,18 @@ export const applyImageClipMask = (
   if (!pathElement || !imageUrl) return false;
   
   try {
-    // Get the bounding box of the path
-    const bbox = pathElement.getBBox();
-    const svg = pathElement.ownerSVGElement;
+    console.log(`Applying clip mask for drawing ${id} with image URL: ${imageUrl.substring(0, 50)}...`);
     
+    // Get the SVG root element
+    const svg = pathElement.ownerSVGElement;
     if (!svg) {
-      console.error('SVG element not found');
+      console.error('SVG element not found for path');
       return false;
     }
+    
+    // Get the bounding box of the path
+    const bbox = pathElement.getBBox();
+    console.log(`Path bounding box:`, bbox);
     
     // Generate unique IDs
     const clipPathId = `clip-path-${id}`;
@@ -146,10 +150,10 @@ export const applyImageClipMask = (
     // Create clip path
     const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
     clipPath.id = clipPathId;
+    clipPath.setAttribute('clipPathUnits', 'userSpaceOnUse');
     
     // Clone the path for the clip path
     const pathClone = pathElement.cloneNode(true) as SVGPathElement;
-    // Remove any existing clip-path or fill attributes from the clone
     pathClone.removeAttribute('clip-path');
     pathClone.removeAttribute('fill');
     clipPath.appendChild(pathClone);
@@ -157,8 +161,6 @@ export const applyImageClipMask = (
     // Create pattern
     const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
     pattern.id = patternId;
-    
-    // Set pattern attributes
     pattern.setAttribute('patternUnits', 'userSpaceOnUse');
     pattern.setAttribute('width', bbox.width.toString());
     pattern.setAttribute('height', bbox.height.toString());
@@ -187,14 +189,15 @@ export const applyImageClipMask = (
       }
     }
     
-    // Apply to original path
-    pathElement.setAttribute('clip-path', `url(#${clipPathId})`);
+    // Apply to original path - IMPORTANT: First apply fill, then clip-path
     pathElement.setAttribute('fill', `url(#${patternId})`);
+    pathElement.setAttribute('clip-path', `url(#${clipPathId})`);
     
     // Mark the path as having a clip mask
     pathElement.setAttribute('data-has-clip-mask', 'true');
     pathElement.setAttribute('data-image-url', imageUrl);
     
+    console.log(`Successfully applied clip mask for drawing ${id}`);
     return true;
   } catch (err) {
     console.error('Error applying image clip mask:', err);
@@ -229,4 +232,3 @@ export const removeClipMask = (pathElement: SVGPathElement | null): boolean => {
     return false;
   }
 };
-

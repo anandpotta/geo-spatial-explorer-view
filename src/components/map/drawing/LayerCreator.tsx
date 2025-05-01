@@ -71,6 +71,7 @@ export const createLayerFromDrawing = ({
           
           // Add drawing ID attribute to the SVG path for identification
           if ((l as any)._path) {
+            console.log(`Setting data-drawing-id=${drawing.id} on path element`);
             (l as any)._path.setAttribute('data-drawing-id', drawing.id);
           }
           
@@ -114,12 +115,14 @@ export const createLayerFromDrawing = ({
           
           // Apply clip mask if a floor plan exists
           if (hasFloorPlan) {
+            console.log(`Drawing ${drawing.id} has a floor plan, will try to apply clip mask`);
             setTimeout(() => {
               try {
                 // Try to find the path element and restore any previously applied clip mask
                 const pathElement = document.querySelector(`.leaflet-interactive[data-drawing-id="${drawing.id}"]`);
                 if (pathElement) {
                   console.log(`Found path element for drawing ${drawing.id}`);
+                  debugSvgElement(pathElement as SVGElement, `Drawing ${drawing.id}`);
                   
                   // Get floor plan data from localStorage
                   const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
@@ -138,7 +141,7 @@ export const createLayerFromDrawing = ({
                     if (result) {
                       console.log(`Successfully applied clip mask for drawing ${drawing.id}`);
                       // Debug the SVG element after applying clip mask
-                      debugSvgElement(pathElement as SVGPathElement, `Drawing ${drawing.id}`);
+                      debugSvgElement(pathElement as SVGPathElement, `Drawing ${drawing.id} after clip mask`);
                     } else {
                       console.error(`Failed to apply clip mask for drawing ${drawing.id}`);
                     }
@@ -151,7 +154,7 @@ export const createLayerFromDrawing = ({
               } catch (err) {
                 console.error('Error restoring clip mask:', err);
               }
-            }, 500); // Increased timeout to ensure SVG elements are fully loaded
+            }, 1000); // Increased timeout to ensure SVG elements are fully loaded
           }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
