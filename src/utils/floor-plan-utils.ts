@@ -116,9 +116,11 @@ export const getFloorPlanById = (drawingId: string): FloorPlanData | null => {
     // Fall back to the older format if needed
     const imageUrl = getFloorPlanImageUrl(drawingId);
     if (imageUrl) {
+      // Fix: Check that imageUrl is a string before using includes
+      const isPdf = typeof imageUrl === 'string' && imageUrl.includes('application/pdf');
       return {
         data: imageUrl,
-        isPdf: imageUrl.includes('application/pdf'),
+        isPdf: isPdf,
         fileName: '',
         uploadDate: 0
       };
@@ -150,9 +152,11 @@ export const getSavedFloorPlans = (): Record<string, FloorPlanData> => {
       
       // Convert old format to new format
       Object.entries(oldFloorPlans).forEach(([id, url]) => {
+        // Fix: Check that url is a string before using includes
+        const isPdf = typeof url === 'string' && url.includes('application/pdf');
         converted[id] = {
           data: url as string,
-          isPdf: (url as string).includes('application/pdf'),
+          isPdf: isPdf,
           fileName: '',
           uploadDate: 0
         };
