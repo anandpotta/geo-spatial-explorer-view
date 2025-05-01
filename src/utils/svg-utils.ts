@@ -25,5 +25,8 @@ export {
 
 export {
   rotateImageInClipMask,
-  scaleImageInClipMask
+  scaleImageInClipMask,
+  moveImageInClipMask,
+  resetImageTransform
 } from './svg-image-operations';
+
