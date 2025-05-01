@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { DrawingData } from '@/utils/drawing/types';
+import { DrawingData } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
 
@@ -12,11 +12,9 @@ interface LayerUpdatesProps {
   layersRef: React.MutableRefObject<Map<string, L.Layer>>;
   removeButtonRoots: React.MutableRefObject<Map<string, any>>;
   uploadButtonRoots: React.MutableRefObject<Map<string, any>>;
-  rotationControlRoots: React.MutableRefObject<Map<string, any>>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
-  onRotateImage?: (drawingId: string, degrees: number) => void;
 }
 
 export function useLayerUpdates({
@@ -27,11 +25,9 @@ export function useLayerUpdates({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
-  rotationControlRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest,
-  onRotateImage
+  onUploadRequest
 }: LayerUpdatesProps) {
   const updateLayers = () => {
     if (!featureGroup || !isMountedRef.current) return;
@@ -58,15 +54,6 @@ export function useLayerUpdates({
       });
       uploadButtonRoots.current.clear();
       
-      rotationControlRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting rotation control root:', err);
-        }
-      });
-      rotationControlRoots.current.clear();
-      
       layersRef.current.clear();
       
       // Create layers for each drawing
@@ -79,11 +66,9 @@ export function useLayerUpdates({
           layersRef: layersRef.current,
           removeButtonRoots: removeButtonRoots.current,
           uploadButtonRoots: uploadButtonRoots.current,
-          rotationControlRoots: rotationControlRoots.current,
           onRegionClick,
           onRemoveShape,
-          onUploadRequest,
-          onRotateImage
+          onUploadRequest
         });
       });
     } catch (err) {

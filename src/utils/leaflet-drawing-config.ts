@@ -70,7 +70,7 @@ export const getSVGPathFromLayer = (layer: any): string | null => {
   if (!layer) return null;
   
   try {
-    // Try to access the SVG path element directly
+    // Try to access the SVG path element
     if (layer._path) {
       return layer._path.getAttribute('d') || null;
     }

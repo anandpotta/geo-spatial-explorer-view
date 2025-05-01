@@ -1,7 +1,7 @@
 
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 
@@ -21,6 +21,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   onRemoveShape
 }: DrawingControlsContainerProps, ref) => {
   const drawingControlsRef = useRef<DrawingControlsRef>(null);
+  const [svgPaths, setSvgPaths] = useState<string[]>([]);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => {
@@ -30,10 +31,14 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
       return drawingControlsRef.current?.getDrawTools();
     },
     activateEditMode: () => {
-      drawingControlsRef.current?.activateEditMode();
+      // Make sure we return a boolean
+      return drawingControlsRef.current?.activateEditMode() || false;
     },
     openFileUploadDialog: (drawingId: string) => {
       drawingControlsRef.current?.openFileUploadDialog(drawingId);
+    },
+    getSvgPaths: () => {
+      return drawingControlsRef.current?.getSvgPaths() || [];
     }
   }));
   
@@ -81,6 +86,11 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
     reader.readAsDataURL(file);
   };
   
+  const handlePathsUpdated = (paths: string[]) => {
+    setSvgPaths(paths);
+    console.log('SVG Paths updated:', paths);
+  };
+  
   return (
     <DrawingControls 
       ref={drawingControlsRef}
@@ -90,6 +100,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
       onClearAll={onClearAll}
       onRemoveShape={onRemoveShape}
       onUploadToDrawing={handleUploadToDrawing}
+      onPathsUpdated={handlePathsUpdated}
     />
   );
 });

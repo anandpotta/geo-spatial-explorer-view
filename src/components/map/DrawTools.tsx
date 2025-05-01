@@ -1,17 +1,10 @@
 
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { EditControl } from "./editing/EditControl";
+import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
+import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { initializeLayerEditing, createEditOptions } from './drawing/LayerEditingUtils';
-import { 
-  setupSvgPathRendering, 
-  getPathElements, 
-  getSVGPathData, 
-  forceSvgPathCreation 
-} from './drawing/svg';
-import { handleShapeCreated } from './drawing/ShapeCreationHandler';
-import { applyPolygonDrawPatches } from '@/utils/leaflet-patches/polygon-draw-patch';
+import { getMapFromLayer } from '@/utils/leaflet-type-utils';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -23,85 +16,129 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
-  // Apply patch for the type reference error
+  // Force SVG renderer but in a safer way
   useEffect(() => {
-    // Apply polygon drawing patches
-    applyPolygonDrawPatches();
-  }, []);
-  
-  // Setup SVG rendering for all shapes
-  useEffect(() => {
-    // Initialize editing for existing layers
-    if (featureGroup) {
-      initializeLayerEditing(featureGroup);
-      
-      // Apply SVG renderer to all existing layers
-      featureGroup.eachLayer((layer: L.Layer) => {
-        forceSvgPathCreation(layer);
-      });
-    }
+    // Instead of trying to modify the read-only property, configure the renderer
+    // when creating layers
+    const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
+    const originalUpdatePath = pathPrototype._updatePath;
     
-    // Override Leaflet's circle and rectangle rendering to force SVG path creation
-    const cleanup = setupSvgPathRendering();
-    
-    // Periodically check for and force SVG path creation on layers
-    const intervalId = setInterval(() => {
-      if (featureGroup) {
-        featureGroup.eachLayer((layer: L.Layer) => {
-          forceSvgPathCreation(layer);
-        });
+    pathPrototype._updatePath = function() {
+      if (this.options && !this.options.renderer) {
+        this.options.renderer = L.svg();
       }
-    }, 1000);
-    
-    // Add an event listener to ensure SVG elements are created when the map is first loaded
-    const map = (featureGroup as any)._map;
-    if (map) {
-      map.on('load moveend zoomend', () => {
-        setTimeout(() => {
-          if (featureGroup) {
-            featureGroup.eachLayer((layer: L.Layer) => {
-              forceSvgPathCreation(layer);
-            });
-          }
-        }, 100);
-      });
-    }
+      originalUpdatePath.call(this);
+    };
     
     return () => {
-      cleanup();
-      clearInterval(intervalId);
-      if (map) {
-        map.off('load moveend zoomend');
-      }
+      // Restore original function when component unmounts
+      pathPrototype._updatePath = originalUpdatePath;
     };
-  }, [featureGroup]);
+  }, []);
   
-  // Expose methods via ref
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
-    getPathElements: () => getPathElements(featureGroup),
-    getSVGPathData: () => {
-      // Force SVG path creation before getting path data
+    getPathElements: () => {
+      const pathElements: SVGPathElement[] = [];
+      // Find all SVG paths within the map container
       if (featureGroup) {
-        featureGroup.eachLayer((layer: L.Layer) => {
-          forceSvgPathCreation(layer);
-        });
+        const map = getMapFromLayer(featureGroup);
+        if (map) {
+          const container = map.getContainer();
+          if (container) {
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            svgElements.forEach(svg => {
+              const paths = svg.querySelectorAll('path');
+              paths.forEach(path => {
+                pathElements.push(path as SVGPathElement);
+              });
+            });
+          }
+        }
       }
-      
-      return getSVGPathData(featureGroup);
+      return pathElements;
+    },
+    getSVGPathData: () => {
+      const pathData: string[] = [];
+      // Find all SVG paths within the map container
+      if (featureGroup) {
+        const map = getMapFromLayer(featureGroup);
+        if (map) {
+          const container = map.getContainer();
+          if (container) {
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            svgElements.forEach(svg => {
+              const paths = svg.querySelectorAll('path');
+              paths.forEach(path => {
+                const d = path.getAttribute('d');
+                if (d) {
+                  pathData.push(d);
+                }
+              });
+            });
+          }
+        }
+      }
+      return pathData;
     }
   }));
 
-  // Create edit options for the control with proper structure
-  const editOptions = createEditOptions(featureGroup);
-  
-  // Custom handler for created shapes
   const handleCreated = (e: any) => {
-    console.log('Shape created:', e.layerType);
-    handleShapeCreated(e, (shape) => {
-      console.log('Shape processed with SVG path:', shape.svgPath);
-      onCreated(shape);
-    });
+    try {
+      const { layerType, layer } = e;
+      
+      if (!layer) {
+        console.error('No layer created');
+        return;
+      }
+      
+      // Create a properly structured shape object
+      let shape: any = { type: layerType, layer };
+      
+      // Extract SVG path data if available
+      if (layer._path) {
+        shape.svgPath = layer._path.getAttribute('d');
+      }
+      
+      // For markers, extract position information
+      if (layerType === 'marker' && layer.getLatLng) {
+        const position = layer.getLatLng();
+        shape.position = [position.lat, position.lng];
+      }
+      
+      // For polygons, rectangles, and circles
+      else if (['polygon', 'rectangle', 'circle'].includes(layerType)) {
+        // Convert to GeoJSON to have a consistent format
+        shape.geoJSON = layer.toGeoJSON();
+        
+        // Extract coordinates based on shape type
+        if (layerType === 'polygon' || layerType === 'rectangle') {
+          const latLngs = layer.getLatLngs();
+          if (Array.isArray(latLngs) && latLngs.length > 0) {
+            // Handle potentially nested arrays (multi-polygons)
+            const firstRing = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
+            shape.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng]);
+          }
+        } else if (layerType === 'circle') {
+          const center = layer.getLatLng();
+          shape.coordinates = [[center.lat, center.lng]];
+          shape.radius = layer.getRadius();
+        }
+      }
+      
+      // Wait for the next tick to ensure DOM is updated
+      setTimeout(() => {
+        // Try to get SVG path data after layer is rendered
+        if (!shape.svgPath && layer._path) {
+          shape.svgPath = layer._path.getAttribute('d');
+        }
+        
+        onCreated(shape);
+      }, 50);
+    } catch (err) {
+      console.error('Error handling created shape:', err);
+      toast.error('Error creating shape');
+    }
   };
 
   return (
@@ -110,47 +147,17 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       position="topright"
       onCreated={handleCreated}
       draw={{
-        rectangle: {
-          shapeOptions: {
-            renderer: L.svg(),
-            fillOpacity: 0.5,
-            color: '#3388ff',
-            weight: 3
-          }
-        },
-        polygon: {
-          shapeOptions: {
-            renderer: L.svg(),
-            fillOpacity: 0.5,
-            color: '#3388ff',
-            weight: 3,
-            showArea: true
-          },
-          // Ensure markers are visible for polygon drawing
-          allowIntersection: false,
-          drawError: {
-            color: '#e1e100',
-            message: '<strong>Error:</strong> Cannot draw intersecting lines!'
-          },
-          guidelineDistance: 20,
-          showLength: true,
-          metric: true,
-          zIndexOffset: 2000 // Make sure markers are on top
-        },
-        circle: {
-          shapeOptions: {
-            renderer: L.svg(),
-            fillOpacity: 0.5,
-            color: '#3388ff',
-            weight: 3
-          }
-        },
+        rectangle: true,
+        polygon: true,
+        circle: true,
         circlemarker: false,
         marker: true,
         polyline: false
       }}
-      edit={editOptions}
-      featureGroup={featureGroup}
+      edit={{
+        remove: true
+      }}
+      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
     />
   );
 });

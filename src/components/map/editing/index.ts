@@ -1,2 +1,0 @@
-
-export { EditControl } from './EditControl';

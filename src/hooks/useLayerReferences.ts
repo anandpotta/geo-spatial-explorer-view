@@ -6,7 +6,6 @@ export function useLayerReferences() {
   const isMountedRef = useRef(true);
   const removeButtonRoots = useRef<Map<string, any>>(new Map());
   const uploadButtonRoots = useRef<Map<string, any>>(new Map());
-  const rotationControlRoots = useRef<Map<string, any>>(new Map());
   const layersRef = useRef<Map<string, L.Layer>>(new Map());
 
   useEffect(() => {
@@ -31,15 +30,6 @@ export function useLayerReferences() {
       });
       uploadButtonRoots.current.clear();
       
-      rotationControlRoots.current.forEach(root => {
-        try {
-          root.unmount();
-        } catch (err) {
-          console.error('Error unmounting rotation control root:', err);
-        }
-      });
-      rotationControlRoots.current.clear();
-      
       layersRef.current.clear();
     };
   }, []);
@@ -48,7 +38,6 @@ export function useLayerReferences() {
     isMountedRef,
     removeButtonRoots,
     uploadButtonRoots,
-    rotationControlRoots,
     layersRef
   };
 }

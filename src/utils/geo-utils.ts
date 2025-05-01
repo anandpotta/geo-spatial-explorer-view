@@ -1,7 +1,7 @@
 
 export type { Location } from './location-utils';
 export type { LocationMarker } from './marker-utils';
-export type { DrawingData } from './drawing/types';
+export type { DrawingData } from './drawing-utils';
 export type { FloorPlanData } from './floor-plan-utils';
 
 export {
@@ -20,7 +20,7 @@ export {
   saveDrawing,
   getSavedDrawings,
   deleteDrawing,
-} from './drawing/operations';
+} from './drawing-utils';
 
 export {
   saveFloorPlan,
@@ -28,3 +28,12 @@ export {
   getSavedFloorPlans,
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
+
+export {
+  getSvgPathFromElement,
+  simplifyPath,
+  extractPointsFromPath,
+  simplifyPoints,
+  pointsToPathData,
+  getAllSvgPaths,
+} from './svg-utils';

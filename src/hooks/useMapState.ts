@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
-import { saveDrawing, getSavedDrawings } from '@/utils/drawing/operations';
-import { DrawingData } from '@/utils/drawing/types';
+import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
