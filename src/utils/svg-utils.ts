@@ -14,10 +14,14 @@ export {
 } from './svg-path-manipulation';
 
 export {
-  applyImageClipMask,
-  removeClipMask,
   findSvgPathByDrawingId
-} from './svg-clip-mask';
+} from './svg-path-finder';
+
+export {
+  hasClipMaskApplied,
+  applyImageClipMask,
+  removeClipMask
+} from './svg-clip-mask-operations';
 
 export {
   rotateImageInClipMask,

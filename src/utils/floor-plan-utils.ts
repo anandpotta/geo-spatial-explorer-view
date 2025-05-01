@@ -1,5 +1,16 @@
 
 /**
+ * Utilities for managing floor plans
+ */
+
+export interface FloorPlanData {
+  data: string;
+  isPdf: boolean;
+  fileName: string;
+  uploadDate: number;
+}
+
+/**
  * Gets the URL for a floor plan image associated with a drawing ID
  */
 export const getFloorPlanImageUrl = (drawingId: string): string | null => {
@@ -53,5 +64,130 @@ export const removeFloorPlanImageUrl = (drawingId: string): void => {
     }
   } catch (err) {
     console.error('Error removing floor plan URL:', err);
+  }
+};
+
+/**
+ * Saves a complete floor plan data object
+ */
+export const saveFloorPlan = (
+  drawingId: string, 
+  dataUrl: string, 
+  isPdf: boolean = false,
+  fileName: string = ''
+): void => {
+  try {
+    // Get existing floor plans (as objects with metadata)
+    const floorPlansStorage = localStorage.getItem('floorPlansData');
+    const floorPlans = floorPlansStorage ? JSON.parse(floorPlansStorage) : {};
+    
+    // Add or update the floor plan data
+    floorPlans[drawingId] = {
+      data: dataUrl,
+      isPdf,
+      fileName,
+      uploadDate: Date.now()
+    };
+    
+    // Also update the simple URL storage for backward compatibility
+    saveFloorPlanImageUrl(drawingId, dataUrl);
+    
+    // Save back to localStorage
+    localStorage.setItem('floorPlansData', JSON.stringify(floorPlans));
+  } catch (err) {
+    console.error('Error saving floor plan data:', err);
+  }
+};
+
+/**
+ * Gets floor plan data for a drawing ID
+ */
+export const getFloorPlanById = (drawingId: string): FloorPlanData | null => {
+  try {
+    // First check the newer format
+    const floorPlansStorage = localStorage.getItem('floorPlansData');
+    if (floorPlansStorage) {
+      const floorPlans = JSON.parse(floorPlansStorage);
+      if (floorPlans[drawingId]) {
+        return floorPlans[drawingId];
+      }
+    }
+    
+    // Fall back to the older format if needed
+    const imageUrl = getFloorPlanImageUrl(drawingId);
+    if (imageUrl) {
+      return {
+        data: imageUrl,
+        isPdf: imageUrl.includes('application/pdf'),
+        fileName: '',
+        uploadDate: 0
+      };
+    }
+    
+    return null;
+  } catch (err) {
+    console.error('Error getting floor plan by ID:', err);
+    return null;
+  }
+};
+
+/**
+ * Gets all saved floor plans
+ */
+export const getSavedFloorPlans = (): Record<string, FloorPlanData> => {
+  try {
+    // First try the newer format
+    const floorPlansStorage = localStorage.getItem('floorPlansData');
+    if (floorPlansStorage) {
+      return JSON.parse(floorPlansStorage);
+    }
+    
+    // Fall back to the older format if needed
+    const oldFormatStorage = localStorage.getItem('floorPlans');
+    if (oldFormatStorage) {
+      const oldFloorPlans = JSON.parse(oldFormatStorage);
+      const converted: Record<string, FloorPlanData> = {};
+      
+      // Convert old format to new format
+      Object.entries(oldFloorPlans).forEach(([id, url]) => {
+        converted[id] = {
+          data: url as string,
+          isPdf: (url as string).includes('application/pdf'),
+          fileName: '',
+          uploadDate: 0
+        };
+      });
+      
+      return converted;
+    }
+    
+    return {};
+  } catch (err) {
+    console.error('Error getting saved floor plans:', err);
+    return {};
+  }
+};
+
+/**
+ * Gets IDs of drawings that have associated floor plans
+ */
+export const getDrawingIdsWithFloorPlans = (): string[] => {
+  try {
+    // First check newer format
+    const floorPlansStorage = localStorage.getItem('floorPlansData');
+    if (floorPlansStorage) {
+      return Object.keys(JSON.parse(floorPlansStorage));
+    }
+    
+    // Fall back to older format
+    const oldFormatStorage = localStorage.getItem('floorPlans');
+    if (oldFormatStorage) {
+      return Object.keys(JSON.parse(oldFormatStorage));
+    }
+    
+    return [];
+  } catch (err) {
+    console.error('Error getting drawing IDs with floor plans:', err);
+    return [];
   }
 };
