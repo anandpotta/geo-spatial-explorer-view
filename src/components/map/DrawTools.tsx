@@ -28,7 +28,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useEffect(() => {
     if (!featureGroup) return;
     
-    const map = featureGroup._map as L.Map;
+    // Use an accessor function to get the map from the featureGroup instead of directly accessing _map
+    const map = featureGroup.getMap ? featureGroup.getMap() : (featureGroup as any)._map;
     if (!map) return;
     
     // Set up SVG renderer configuration to reduce flickering
@@ -142,8 +143,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         color: '#3388ff',
         weight: 4,
         opacity: 0.7,
-        fillOpacity: 0.2,
-        renderer: L.svg({ renderer: L.svg() }) // Make sure we use SVG renderer
+        fillOpacity: 0.2
       },
       showArea: false,
       metric: true,

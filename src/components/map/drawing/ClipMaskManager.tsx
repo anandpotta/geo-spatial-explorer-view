@@ -115,7 +115,7 @@ const findPathElement = (drawingId: string, layer: L.Layer): SVGPathElement | nu
   if (pathViaSelector) return pathViaSelector;
   
   // Search in the overlay pane for paths
-  const map = (layer as any)._map;
+  const map = (layer as any).getMap ? (layer as any).getMap() : (layer as any)._map;
   if (map) {
     const container = map.getContainer();
     const overlayPane = container?.querySelector('.leaflet-overlay-pane');

@@ -56,6 +56,14 @@ export function getFloorPlanById(drawingId: string): FloorPlanData | null {
 }
 
 /**
+ * Get the image URL for a floor plan by drawing ID
+ */
+export function getFloorPlanImageUrl(drawingId: string): string | null {
+  const floorPlan = getFloorPlanById(drawingId);
+  return floorPlan ? floorPlan.data : null;
+}
+
+/**
  * Delete a floor plan from local storage
  */
 export function deleteFloorPlan(drawingId: string): void {

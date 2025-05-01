@@ -3,11 +3,13 @@ import React from 'react';
 import { RotateCw, RotateCcw, Shrink, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
-  rotateImageInClipMask, 
-  scaleImageInClipMask, 
   removeClipMask, 
   findSvgPathByDrawingId 
 } from '@/utils/svg-clip-mask';
+import {
+  rotateImageInClipMask,
+  scaleImageInClipMask
+} from '@/utils/svg-image-operations';
 
 interface ImageControlsProps {
   drawingId: string;
