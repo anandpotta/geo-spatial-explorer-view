@@ -1,3 +1,4 @@
+
 /**
  * Utilities for handling SVG clip masks and images
  */
@@ -73,6 +74,15 @@ export const applyImageClipMask = (
     image.setAttribute('y', '0');
     image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     
+    // Set initial rotation
+    const rotation = pathElement.getAttribute('data-image-rotation') || '0';
+    const scale = pathElement.getAttribute('data-image-scale') || '1';
+    
+    // Apply transformation to the image
+    const centerX = bbox.width / 2;
+    const centerY = bbox.height / 2;
+    image.setAttribute('transform', `rotate(${rotation} ${centerX} ${centerY}) scale(${scale})`);
+    
     // Append to defs
     pattern.appendChild(image);
     defs.appendChild(clipPath);
@@ -86,17 +96,19 @@ export const applyImageClipMask = (
       }
     }
     
-    // Apply pattern fill first
+    // Apply pattern fill first and remove fill-opacity for images
     pathElement.setAttribute('fill', `url(#${patternId})`);
+    pathElement.setAttribute('fill-opacity', '1');
+    
+    // Store image metadata
+    pathElement.setAttribute('data-has-clip-mask', 'true');
+    pathElement.setAttribute('data-image-url', imageUrl);
+    pathElement.setAttribute('data-image-rotation', rotation);
+    pathElement.setAttribute('data-image-scale', scale);
     
     // Apply clip path after a slight delay to ensure fill is applied first
     setTimeout(() => {
       pathElement.setAttribute('clip-path', `url(#${clipPathId})`);
-      
-      // Mark the path as having a clip mask
-      pathElement.setAttribute('data-has-clip-mask', 'true');
-      pathElement.setAttribute('data-image-url', imageUrl);
-      
       console.log(`Successfully applied clip mask and pattern for drawing ${id}`);
     }, 10);
     
@@ -117,6 +129,8 @@ export const removeClipMask = (pathElement: SVGPathElement | null): boolean => {
     pathElement.removeAttribute('clip-path');
     pathElement.removeAttribute('data-has-clip-mask');
     pathElement.removeAttribute('data-image-url');
+    pathElement.removeAttribute('data-image-rotation');
+    pathElement.removeAttribute('data-image-scale');
     
     // Restore original fill if needed
     if (pathElement.hasAttribute('data-original-fill')) {
@@ -131,6 +145,91 @@ export const removeClipMask = (pathElement: SVGPathElement | null): boolean => {
     return true;
   } catch (err) {
     console.error('Error removing clip mask:', err);
+    return false;
+  }
+};
+
+/**
+ * Rotates an image in a clip mask
+ */
+export const rotateImageInClipMask = (pathElement: SVGPathElement | null, degrees: number): boolean => {
+  if (!pathElement) return false;
+  
+  try {
+    // Get the current rotation or default to 0
+    const currentRotation = parseInt(pathElement.getAttribute('data-image-rotation') || '0');
+    const newRotation = (currentRotation + degrees) % 360;
+    
+    // Update the rotation attribute
+    pathElement.setAttribute('data-image-rotation', newRotation.toString());
+    
+    // Find the pattern and image
+    const patternId = pathElement.getAttribute('fill')?.replace('url(#', '').replace(')', '');
+    if (!patternId) return false;
+    
+    const pattern = document.getElementById(patternId);
+    if (!pattern) return false;
+    
+    const image = pattern.querySelector('image');
+    if (!image) return false;
+    
+    // Get the bounding box
+    const bbox = pathElement.getBBox();
+    const centerX = bbox.width / 2;
+    const centerY = bbox.height / 2;
+    
+    // Get current scale
+    const scale = pathElement.getAttribute('data-image-scale') || '1';
+    
+    // Apply the new rotation
+    image.setAttribute('transform', `rotate(${newRotation} ${centerX} ${centerY}) scale(${scale})`);
+    
+    return true;
+  } catch (err) {
+    console.error('Error rotating image in clip mask:', err);
+    return false;
+  }
+};
+
+/**
+ * Scales an image in a clip mask
+ */
+export const scaleImageInClipMask = (pathElement: SVGPathElement | null, scaleFactor: number): boolean => {
+  if (!pathElement) return false;
+  
+  try {
+    // Get current scale or default to 1
+    const currentScale = parseFloat(pathElement.getAttribute('data-image-scale') || '1');
+    let newScale = currentScale * scaleFactor;
+    
+    // Limit the scale to reasonable bounds
+    newScale = Math.max(0.2, Math.min(3, newScale));
+    
+    // Update the scale attribute
+    pathElement.setAttribute('data-image-scale', newScale.toString());
+    
+    // Find the pattern and image
+    const patternId = pathElement.getAttribute('fill')?.replace('url(#', '').replace(')', '');
+    if (!patternId) return false;
+    
+    const pattern = document.getElementById(patternId);
+    if (!pattern) return false;
+    
+    const image = pattern.querySelector('image');
+    if (!image) return false;
+    
+    // Get the bounding box and rotation
+    const bbox = pathElement.getBBox();
+    const centerX = bbox.width / 2;
+    const centerY = bbox.height / 2;
+    const rotation = pathElement.getAttribute('data-image-rotation') || '0';
+    
+    // Apply the new scale with existing rotation
+    image.setAttribute('transform', `rotate(${rotation} ${centerX} ${centerY}) scale(${newScale})`);
+    
+    return true;
+  } catch (err) {
+    console.error('Error scaling image in clip mask:', err);
     return false;
   }
 };
@@ -177,3 +276,4 @@ export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null
   
   return pathElement;
 };
+

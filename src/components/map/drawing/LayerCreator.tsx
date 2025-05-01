@@ -18,6 +18,7 @@ interface CreateLayerOptions {
   layersRef: Map<string, L.Layer>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
+  imageControlRoots: Map<string, any>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
@@ -31,6 +32,7 @@ export const createLayerFromDrawing = ({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
+  imageControlRoots,
   onRegionClick,
   onRemoveShape,
   onUploadRequest
@@ -54,13 +56,15 @@ export const createLayerFromDrawing = ({
     const options = getDefaultDrawingOptions(drawing.properties.color);
     if (hasFloorPlan) {
       options.fillColor = '#3b82f6';
-      options.fillOpacity = 0.4;
+      options.fillOpacity = 1; // Set to 1 for full opacity on images
       options.color = '#1d4ed8';
     }
     
     // Always ensure opacity is set to visible values
     options.opacity = 1;
-    options.fillOpacity = options.fillOpacity || 0.2;
+    if (!hasFloorPlan) {
+      options.fillOpacity = options.fillOpacity || 0.2;
+    }
     
     const layer = createDrawingLayer(drawing, options);
     
@@ -81,7 +85,7 @@ export const createLayerFromDrawing = ({
           // Store the layer reference
           layersRef.set(drawing.id, l);
           
-          // Add the remove and upload buttons when in edit mode
+          // Add the remove, upload, and image control buttons when in edit mode
           if (onRemoveShape && onUploadRequest) {
             createLayerControls({
               layer: l,
@@ -90,6 +94,7 @@ export const createLayerFromDrawing = ({
               featureGroup,
               removeButtonRoots,
               uploadButtonRoots,
+              imageControlRoots,
               isMounted,
               onRemoveShape,
               onUploadRequest

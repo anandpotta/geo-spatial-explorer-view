@@ -10,8 +10,9 @@ interface LayerUpdatesProps {
   activeTool: string | null;
   isMountedRef: React.MutableRefObject<boolean>;
   layersRef: React.MutableRefObject<Map<string, L.Layer>>;
-  removeButtonRoots: React.MutableRefObject<Map<string, any>>;
-  uploadButtonRoots: React.MutableRefObject<Map<string, any>>;
+  removeButtonRoots: Map<string, any>;
+  uploadButtonRoots: Map<string, any>;
+  imageControlRoots: Map<string, any>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
@@ -25,6 +26,7 @@ export function useLayerUpdates({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
+  imageControlRoots,
   onRegionClick,
   onRemoveShape,
   onUploadRequest
@@ -36,23 +38,32 @@ export function useLayerUpdates({
       // Clear existing layers and React roots
       featureGroup.clearLayers();
       
-      removeButtonRoots.current.forEach(root => {
+      removeButtonRoots.forEach(root => {
         try {
           root.unmount();
         } catch (err) {
           console.error('Error unmounting root:', err);
         }
       });
-      removeButtonRoots.current.clear();
+      removeButtonRoots.clear();
       
-      uploadButtonRoots.current.forEach(root => {
+      uploadButtonRoots.forEach(root => {
         try {
           root.unmount();
         } catch (err) {
           console.error('Error unmounting upload button root:', err);
         }
       });
-      uploadButtonRoots.current.clear();
+      uploadButtonRoots.clear();
+      
+      imageControlRoots.forEach(root => {
+        try {
+          root.unmount();
+        } catch (err) {
+          console.error('Error unmounting image control root:', err);
+        }
+      });
+      imageControlRoots.clear();
       
       layersRef.current.clear();
       
@@ -64,8 +75,9 @@ export function useLayerUpdates({
           activeTool,
           isMounted: isMountedRef.current,
           layersRef: layersRef.current,
-          removeButtonRoots: removeButtonRoots.current,
-          uploadButtonRoots: uploadButtonRoots.current,
+          removeButtonRoots,
+          uploadButtonRoots,
+          imageControlRoots,
           onRegionClick,
           onRemoveShape,
           onUploadRequest
