@@ -1,4 +1,3 @@
-
 // This file provides compatibility with newer versions of react-leaflet-draw
 // by ensuring that we can still pass certain props like featureGroup to EditControl
 import { EditControl as OriginalEditControl } from "react-leaflet-draw";
@@ -165,20 +164,31 @@ export const EditControl = forwardRef((props: any, ref: any) => {
             // Initialize editing capability if not present
             if (layer instanceof L.Path) {
               // Create a properly typed handler
-              const editHandler = new (L.Handler as any).PolyEdit(layer);
+              let editHandler;
               
-              // Add fallback methods with proper type annotations
-              if (!editHandler.disable) {
-                editHandler.disable = function(): void {
-                  // No-op function to prevent errors
-                  console.log("Disable called on layer without proper handler");
-                };
-              }
-              
-              if (!editHandler.enable) {
-                editHandler.enable = function(): void {
-                  // No-op function to prevent errors
-                  console.log("Enable called on layer without proper handler");
+              try {
+                if (L.Edit && L.Edit.Poly && layer.getLatLngs) {
+                  // For polygons and polylines
+                  editHandler = new (L.Edit.Poly)(layer);
+                } else if (L.Edit && L.Edit.Rectangle && layer.getBounds) {
+                  // For rectangles
+                  editHandler = new (L.Edit.Rectangle)(layer);
+                } else if (L.Edit && L.Edit.Circle && layer.getRadius) {
+                  // For circles
+                  editHandler = new (L.Edit.Circle)(layer);
+                } else if (L.Edit && L.Edit.SimpleShape) {
+                  // Fallback for other shapes
+                  editHandler = new (L.Edit.SimpleShape)(layer);
+                } else {
+                  // Last resort fallback to PolyEdit
+                  editHandler = new (L.Handler as any).PolyEdit(layer);
+                }
+              } catch (err) {
+                console.warn("Error creating edit handler:", err);
+                // Create a basic object with required methods as fallback
+                editHandler = {
+                  enable: function() { console.log("Fallback enable called"); },
+                  disable: function() { console.log("Fallback disable called"); }
                 };
               }
               
@@ -303,5 +313,82 @@ if (typeof window !== 'undefined' && window.L && window.L.Draw) {
     }
   } catch (err) {
     console.error("Error patching Leaflet Draw:", err);
+  }
+}
+
+// Patch Leaflet's Edit.Poly to prevent errors when enable is called
+if (L.Edit && L.Edit.Poly && L.Edit.Poly.prototype) {
+  const originalEnable = L.Edit.Poly.prototype.enable;
+  L.Edit.Poly.prototype.enable = function() {
+    try {
+      // Make sure this._poly exists before enabling
+      if (!this._poly) {
+        console.warn("Attempted to enable edit on null _poly object");
+        return;
+      }
+      
+      // Make sure vertices exist before trying to access them
+      if (!this._poly._map) {
+        console.warn("Cannot enable editing for layer not on map");
+        return;
+      }
+      
+      // Call the original enable with proper safeguards
+      return originalEnable.apply(this);
+    } catch (err) {
+      console.error("Error in Edit.Poly.enable:", err);
+    }
+  };
+  
+  // Also patch the addHooks to be more resilient
+  const originalAddHooks = L.Edit.Poly.prototype.addHooks;
+  L.Edit.Poly.prototype.addHooks = function() {
+    try {
+      if (!this._poly || !this._poly._map) {
+        console.warn("Cannot add hooks for edit poly - invalid state");
+        return;
+      }
+      
+      // Ensure this._markerGroup exists
+      if (!this._markerGroup) {
+        this._initMarkers();
+      }
+      
+      return originalAddHooks.apply(this);
+    } catch (err) {
+      console.error("Error in Edit.Poly.addHooks:", err);
+    }
+  };
+  
+  // Add a safe _enableLayerEdit method if it doesn't exist
+  if (!L.EditToolbar || !L.EditToolbar.Edit || !L.EditToolbar.Edit.prototype) {
+    console.warn("L.EditToolbar.Edit not found");
+  } else {
+    const originalEnableLayerEdit = L.EditToolbar.Edit.prototype._enableLayerEdit;
+    
+    if (originalEnableLayerEdit) {
+      L.EditToolbar.Edit.prototype._enableLayerEdit = function(e: any) {
+        try {
+          // First check if layer has valid editing capability
+          if (!e.layer || !e.layer.editing) {
+            console.warn("Layer missing editing capability");
+            return;
+          }
+          
+          // Check if enable method exists
+          if (typeof e.layer.editing.enable !== 'function') {
+            console.warn("Layer editing.enable is not a function");
+            // Create a dummy enable function to prevent errors
+            e.layer.editing.enable = function() { 
+              console.log("Dummy enable called on layer without proper edit capability");
+            };
+          }
+          
+          return originalEnableLayerEdit.apply(this, arguments);
+        } catch (err) {
+          console.error("Error in _enableLayerEdit:", err);
+        }
+      };
+    }
   }
 }

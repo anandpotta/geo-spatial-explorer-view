@@ -7,26 +7,46 @@ import L from 'leaflet';
 export function addEditingCapability(layer: L.Path): void {
   if (!layer.editing) {
     try {
-      // Create a properly typed handler
-      const editHandler = new (L.Handler as any).PolyEdit(layer);
+      // Try to use the appropriate edit handler based on layer type
+      let editHandler;
+      
+      if (L.Edit && L.Edit.Poly && layer.getLatLngs) {
+        // For polygons and polylines
+        editHandler = new L.Edit.Poly(layer);
+      } else if (L.Edit && L.Edit.Rectangle && layer.getBounds) {
+        // For rectangles
+        editHandler = new L.Edit.Rectangle(layer);
+      } else if (L.Edit && L.Edit.Circle && layer.getRadius) {
+        // For circles
+        editHandler = new L.Edit.Circle(layer);
+      } else {
+        // Fallback to generic handler
+        editHandler = new (L.Handler as any).PolyEdit(layer);
+      }
       
       // Add fallback methods with proper typing
-      if (!editHandler.disable) {
+      if (editHandler && !editHandler.disable) {
         editHandler.disable = function(): void {
           console.log("Disable called on layer without proper handler");
         };
       }
       
-      if (!editHandler.enable) {
+      if (editHandler && !editHandler.enable) {
         editHandler.enable = function(): void {
           console.log("Enable called on layer without proper handler");
         };
       }
       
-      // Assign the properly typed handler
+      // Assign the handler
       layer.editing = editHandler;
     } catch (err) {
       console.error('Error adding editing capability to layer:', err);
+      
+      // Create a fallback object with required methods
+      layer.editing = {
+        enable: function() { console.log("Fallback enable called"); },
+        disable: function() { console.log("Fallback disable called"); }
+      } as any;
     }
   } else {
     // Ensure existing handlers have the required methods
@@ -54,6 +74,26 @@ export function initializeLayerEditing(featureGroup: L.FeatureGroup): void {
     featureGroup.eachLayer((layer: any) => {
       if (layer instanceof L.Path) {
         addEditingCapability(layer);
+      } else if (layer) {
+        // If it's not a Path but still needs editing capability
+        if (!layer.editing) {
+          layer.editing = {
+            enable: function() { console.log("Fallback enable called for non-Path layer"); },
+            disable: function() { console.log("Fallback disable called for non-Path layer"); }
+          };
+        } else if (layer.editing) {
+          // Ensure methods exist
+          if (typeof layer.editing.enable !== 'function') {
+            layer.editing.enable = function() { 
+              console.log("Fallback enable added to existing editing object");
+            };
+          }
+          if (typeof layer.editing.disable !== 'function') {
+            layer.editing.disable = function() {
+              console.log("Fallback disable added to existing editing object");
+            };
+          }
+        }
       }
     });
   } catch (err) {

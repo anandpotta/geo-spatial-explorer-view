@@ -36,20 +36,48 @@ export function useEditMode() {
           if (layer && !layer.editing) {
             // Initialize editing capability if missing
             if (layer instanceof L.Path) {
-              // Use type assertion for PolyEdit
-              layer.editing = new (L.Handler as any).PolyEdit(layer);
+              try {
+                // Try to use the appropriate edit handler based on layer type
+                if (L.Edit && L.Edit.Poly && layer.getLatLngs) {
+                  // For polygons and polylines
+                  layer.editing = new L.Edit.Poly(layer);
+                } else if (L.Edit && L.Edit.Rectangle && layer.getBounds) {
+                  // For rectangles
+                  layer.editing = new L.Edit.Rectangle(layer);
+                } else if (L.Edit && L.Edit.Circle && layer.getRadius) {
+                  // For circles
+                  layer.editing = new L.Edit.Circle(layer);
+                } else {
+                  // Fallback to generic handler
+                  layer.editing = new (L.Handler as any).PolyEdit(layer);
+                }
+              } catch (err) {
+                console.error("Error creating edit handler:", err);
+                // Create a fallback handler with required methods
+                layer.editing = {
+                  enable: function() { console.log("Fallback enable called"); },
+                  disable: function() { console.log("Fallback disable called"); }
+                };
+              }
               
               // Ensure layer uses SVG renderer
               if (layer.options) {
                 layer.options.renderer = L.svg();
               }
-              
-              // If layer has SVG element but not path data, try to regenerate it
-              if (layer._path && !layer._path.getAttribute('d')) {
-                if (layer._updatePath) {
-                  layer._updatePath();
-                }
-              }
+            }
+          }
+          
+          // Ensure editing handlers have required methods
+          if (layer && layer.editing) {
+            if (typeof layer.editing.enable !== 'function') {
+              layer.editing.enable = function() {
+                console.log("Fallback enable called on layer");
+              };
+            }
+            if (typeof layer.editing.disable !== 'function') {
+              layer.editing.disable = function() {
+                console.log("Fallback disable called on layer");
+              };
             }
           }
         });
@@ -83,12 +111,24 @@ export function useEditMode() {
                   if (!editHandler._layers.has(L.Util.stamp(layer))) {
                     editHandler._layers.set(L.Util.stamp(layer), layer);
                   }
+                  
+                  // Double-check that layer.editing.enable exists
+                  if (layer.editing && typeof layer.editing.enable !== 'function') {
+                    layer.editing.enable = function() {
+                      console.log("Fallback enable called during edit mode activation");
+                    };
+                  }
                 }
               });
               
-              // Enable the edit mode
-              editHandler.enable();
-              console.log("Edit mode activated successfully");
+              try {
+                // Enable the edit mode
+                editHandler.enable();
+                console.log("Edit mode activated successfully");
+              } catch (err) {
+                console.error("Error enabling edit handler:", err);
+                toast.error("Error activating edit mode");
+              }
             } else {
               console.warn("Edit handler enable method not found");
               toast.error("Could not enable edit mode");
