@@ -54,10 +54,35 @@ export const findSvgPathByDrawingId = (
 };
 
 /**
+ * Checks if a path element already has a clip mask applied
+ */
+export const hasClipMaskApplied = (svgPath: SVGPathElement | null): boolean => {
+  if (!svgPath) return false;
+  
+  // Check for definitive clip mask attribute
+  if (svgPath.getAttribute('data-has-clip-mask') === 'true') {
+    return true;
+  }
+  
+  // Second check: verify if it has clip-path attribute
+  if (svgPath.hasAttribute('clip-path')) {
+    return true;
+  }
+  
+  // Third check: check if pattern fill is applied
+  const fill = svgPath.getAttribute('fill');
+  if (fill && fill.includes('url(#pattern-')) {
+    return true;
+  }
+  
+  return false;
+};
+
+/**
  * Applies an image clip mask to an SVG path
  */
 export const applyImageClipMask = (
-  svgPath: SVGPathElement, 
+  svgPath: SVGPathElement | null, 
   imageUrl: string, 
   drawingId: string
 ): boolean => {
@@ -67,9 +92,9 @@ export const applyImageClipMask = (
       return false;
     }
     
-    // Don't reapply if already has clip mask
-    if (svgPath.getAttribute('data-has-clip-mask') === 'true') {
-      console.log('Path already has clip mask, skipping application');
+    // Check if already has clip mask (improved check)
+    if (hasClipMaskApplied(svgPath)) {
+      console.log(`Path for drawing ${drawingId} already has clip mask, skipping application`);
       return true;
     }
     
@@ -147,18 +172,23 @@ export const applyImageClipMask = (
     svgPath.setAttribute('data-image-rotation', '0');
     svgPath.setAttribute('data-image-scale', '1');
     
-    // Apply the clip path and pattern to the path in one batch
+    // Apply changes in a single batch using RAF to reduce visual flickering
     requestAnimationFrame(() => {
+      // Mark as having clip mask first (prevents race conditions)
+      svgPath.setAttribute('data-has-clip-mask', 'true');
+      svgPath.setAttribute('data-last-updated', Date.now().toString());
+      
       // Apply pattern fill first
       svgPath.setAttribute('fill', `url(#${patternId})`);
-      svgPath.setAttribute('data-has-clip-mask', 'true');
       
       // Remove stroke for better appearance
       svgPath.setAttribute('stroke', 'none');
       
       // Apply clip path after a small delay to reduce flicker
       setTimeout(() => {
-        svgPath.setAttribute('clip-path', `url(#${clipId})`);
+        if (svgPath) {
+          svgPath.setAttribute('clip-path', `url(#${clipId})`);
+        }
       }, 20);
     });
     
@@ -173,7 +203,7 @@ export const applyImageClipMask = (
 /**
  * Removes a clip mask from an SVG path
  */
-export const removeClipMask = (svgPath: SVGPathElement): boolean => {
+export const removeClipMask = (svgPath: SVGPathElement | null): boolean => {
   try {
     if (!svgPath) return false;
     
@@ -196,6 +226,10 @@ export const removeClipMask = (svgPath: SVGPathElement): boolean => {
     
     // Remove the data-has-clip-mask attribute
     svgPath.removeAttribute('data-has-clip-mask');
+    svgPath.removeAttribute('data-image-url');
+    svgPath.removeAttribute('data-image-rotation');
+    svgPath.removeAttribute('data-image-scale');
+    svgPath.removeAttribute('data-last-updated');
     
     // Remove the pattern and clip path elements if they exist
     const svg = svgPath.closest('svg');

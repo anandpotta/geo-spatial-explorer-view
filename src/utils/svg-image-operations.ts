@@ -38,12 +38,15 @@ export const rotateImageInClipMask = (pathElement: SVGPathElement | null, degree
     // Apply the new rotation without causing reflow
     requestAnimationFrame(() => {
       image.setAttribute('transform', `rotate(${newRotation} ${centerX} ${centerY}) scale(${scale})`);
+      pathElement.setAttribute('data-last-updated', Date.now().toString());
       
       // Force repaint of just this element to avoid flickering
       if (pathElement.parentElement) {
-        pathElement.parentElement.style.opacity = '0.99';
+        // Use a technique that doesn't cause layout thrashing
+        const currentTransform = pathElement.parentElement.style.transform || '';
+        pathElement.parentElement.style.transform = 'translateZ(0)';
         setTimeout(() => {
-          pathElement.parentElement.style.opacity = '1';
+          pathElement.parentElement.style.transform = currentTransform;
         }, 10);
       }
     });
@@ -91,12 +94,15 @@ export const scaleImageInClipMask = (pathElement: SVGPathElement | null, scaleFa
     // Apply the new scale without causing reflow
     requestAnimationFrame(() => {
       image.setAttribute('transform', `rotate(${rotation} ${centerX} ${centerY}) scale(${newScale})`);
+      pathElement.setAttribute('data-last-updated', Date.now().toString());
       
       // Force repaint of just this element to avoid flickering
       if (pathElement.parentElement) {
-        pathElement.parentElement.style.opacity = '0.99';
+        // Use a technique that doesn't cause layout thrashing
+        const currentTransform = pathElement.parentElement.style.transform || '';
+        pathElement.parentElement.style.transform = 'translateZ(0)';
         setTimeout(() => {
-          pathElement.parentElement.style.opacity = '1';
+          pathElement.parentElement.style.transform = currentTransform;
         }, 10);
       }
     });

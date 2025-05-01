@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
+import { applyImageClipMask, findSvgPathByDrawingId, hasClipMaskApplied } from '@/utils/svg-clip-mask';
 import { debugSvgElement } from '@/utils/svg-debug-utils';
 
 export function useFileUpload({ onUploadToDrawing }: { 
@@ -12,37 +12,50 @@ export function useFileUpload({ onUploadToDrawing }: {
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [imageOverlay, setImageOverlay] = useState<L.ImageOverlay | null>(null);
   const imageAppliedRef = useRef<Set<string>>(new Set());
+  const processingRef = useRef<Set<string>>(new Set());
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && selectedDrawingId) {
       const file = e.target.files[0];
       
-      if (onUploadToDrawing) {
-        onUploadToDrawing(selectedDrawingId, file);
-      }
-      
-      // Skip if we've already applied an image to this drawing in this session
-      // to avoid duplicate processing which can cause flickering
-      if (imageAppliedRef.current.has(selectedDrawingId)) {
-        console.log(`Image already applied to drawing ${selectedDrawingId}, refreshing view`);
-        // Force redraw without triggering a resize event
-        setTimeout(() => {
-          const pathElement = findSvgPathByDrawingId(selectedDrawingId);
-          if (pathElement) {
-            // Just touch an attribute to force a repaint without causing flickering
-            pathElement.setAttribute('data-last-updated', Date.now().toString());
-          }
-        }, 100);
+      // Skip if currently processing this drawing ID
+      if (processingRef.current.has(selectedDrawingId)) {
+        console.log(`Already processing drawing ${selectedDrawingId}, skipping duplicate request`);
         e.target.value = ''; // Reset file input
         return;
+      }
+      
+      processingRef.current.add(selectedDrawingId);
+      
+      if (onUploadToDrawing) {
+        onUploadToDrawing(selectedDrawingId, file);
       }
       
       // Create a URL for the image
       const imageUrl = URL.createObjectURL(file);
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
-      // Implement a more robust retry mechanism for finding and applying clip mask
-      const maxRetries = 8; // Reduced number of retries to avoid too many DOM operations
+      // First check if path already has clip mask
+      const svgPathElement = findSvgPathByDrawingId(selectedDrawingId);
+      if (svgPathElement && hasClipMaskApplied(svgPathElement)) {
+        console.log(`Drawing ${selectedDrawingId} already has clip mask, refreshing view`);
+        // Just update the last-updated timestamp to trigger a repaint
+        requestAnimationFrame(() => {
+          if (svgPathElement) {
+            svgPathElement.setAttribute('data-last-updated', Date.now().toString());
+            
+            // Only show toast if we found the element
+            toast.success(`${file.name} applied to drawing`);
+            imageAppliedRef.current.add(selectedDrawingId);
+          }
+        });
+        processingRef.current.delete(selectedDrawingId);
+        e.target.value = ''; // Reset file input
+        return;
+      }
+      
+      // Implement a more focused application approach with fewer retries
+      const maxRetries = 5; 
       let currentRetry = 0;
       
       const attemptApplyClipMask = () => {
@@ -53,24 +66,21 @@ export function useFileUpload({ onUploadToDrawing }: {
           if (svgPathElement) {
             console.log(`Found SVG path element for drawing ID ${selectedDrawingId}`);
             
+            // Double check if element already has clip mask
+            if (hasClipMaskApplied(svgPathElement)) {
+              console.log(`Drawing ${selectedDrawingId} already has clip mask, skipping application`);
+              processingRef.current.delete(selectedDrawingId);
+              toast.success(`${file.name} applied to drawing`);
+              return;
+            }
+            
             // Apply the image directly using svg-utils function
             const result = applyImageClipMask(svgPathElement, imageUrl, selectedDrawingId);
             
             if (result) {
               toast.success(`${file.name} applied to drawing`);
               imageAppliedRef.current.add(selectedDrawingId);
-              
-              // Don't force window resize as it can cause flickering
-              // Just repaint the specific element instead
-              requestAnimationFrame(() => {
-                if (svgPathElement.parentElement) {
-                  // Force repaint by touching the SVG
-                  svgPathElement.parentElement.style.transform = 'translateZ(0)';
-                  setTimeout(() => {
-                    svgPathElement.parentElement.style.removeProperty('transform');
-                  }, 10);
-                }
-              });
+              processingRef.current.delete(selectedDrawingId);
             } else {
               console.error('Failed to apply image as clip mask');
               
@@ -80,6 +90,7 @@ export function useFileUpload({ onUploadToDrawing }: {
                 console.log(`Retrying to apply clip mask for ${selectedDrawingId} (Attempt ${currentRetry} of ${maxRetries})`);
                 setTimeout(attemptApplyClipMask, 250 * currentRetry); // Increasing delay with each retry
               } else {
+                processingRef.current.delete(selectedDrawingId);
                 toast.error('Could not apply image to drawing');
               }
             }
@@ -92,6 +103,7 @@ export function useFileUpload({ onUploadToDrawing }: {
               console.log(`Retrying to find SVG path for ${selectedDrawingId} (Attempt ${currentRetry} of ${maxRetries})`);
               setTimeout(attemptApplyClipMask, 250 * currentRetry); // Increasing delay with each retry
             } else {
+              processingRef.current.delete(selectedDrawingId);
               toast.error('Could not find the drawing on the map');
             }
           }
@@ -103,13 +115,14 @@ export function useFileUpload({ onUploadToDrawing }: {
             currentRetry++;
             setTimeout(attemptApplyClipMask, 250 * currentRetry);
           } else {
+            processingRef.current.delete(selectedDrawingId);
             toast.error('Error processing the uploaded file');
           }
         }
       };
       
       // Start the retry process with an initial delay
-      setTimeout(attemptApplyClipMask, 150);
+      setTimeout(attemptApplyClipMask, 100);
       
       e.target.value = ''; // Reset file input
     }
