@@ -44,7 +44,13 @@ export const applyImageClipMask = (
   
   try {
     // Ensure imageUrl is a string before attempting to use string methods
-    const imageUrlString = typeof imageUrl === 'string' ? imageUrl : JSON.stringify(imageUrl);
+    const imageUrlString = typeof imageUrl === 'string' ? imageUrl : 
+      (typeof imageUrl === 'object' && imageUrl !== null ? JSON.stringify(imageUrl) : '');
+    
+    if (!imageUrlString) {
+      console.error('Invalid image URL format');
+      return false;
+    }
     
     // Safe logging that won't cause errors with any imageUrl type
     console.log(`Applying clip mask for drawing ${id} with image URL type: ${typeof imageUrl}`);
@@ -109,52 +115,91 @@ export const applyImageClipMask = (
     clipPathPath.setAttribute('d', pathData);
     clipPath.appendChild(clipPathPath);
     
-    // Create a pattern for the image
-    let pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-    pattern.setAttribute('id', `pattern-${id}`);
-    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-    pattern.setAttribute('width', '100%');
-    pattern.setAttribute('height', '100%');
-    defs.appendChild(pattern);
+    // Load the image to get its dimensions before creating the pattern
+    const tempImg = new Image();
+    tempImg.onload = () => {
+      try {
+        if (!svg || !pathElement) return; // Safety check
+        
+        // Get the bounding box to properly size the pattern
+        const bbox = pathElement.getBBox();
+        
+        // Calculate scale to fit the image properly within the shape
+        const imgWidth = tempImg.width;
+        const imgHeight = tempImg.height;
+        
+        const scaleX = bbox.width / imgWidth;
+        const scaleY = bbox.height / imgHeight;
+        const scale = Math.max(scaleX, scaleY); // Use max to ensure image covers the shape
+        
+        const scaledWidth = imgWidth * scale;
+        const scaledHeight = imgHeight * scale;
+        
+        // Calculate position to center the image
+        const offsetX = (bbox.width - scaledWidth) / 2 + bbox.x;
+        const offsetY = (bbox.height - scaledHeight) / 2 + bbox.y;
+        
+        // Create a pattern for the image with calculated dimensions
+        let pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+        pattern.setAttribute('id', `pattern-${id}`);
+        pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+        pattern.setAttribute('x', String(offsetX));
+        pattern.setAttribute('y', String(offsetY));
+        pattern.setAttribute('width', String(scaledWidth));
+        pattern.setAttribute('height', String(scaledHeight));
+        defs.appendChild(pattern);
+        
+        // Create an image element for the pattern
+        const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        image.setAttribute('href', imageUrlString);
+        image.setAttribute('width', String(scaledWidth));
+        image.setAttribute('height', String(scaledHeight));
+        image.setAttribute('x', '0');
+        image.setAttribute('y', '0');
+        image.setAttribute('preserveAspectRatio', 'none'); // Don't preserve aspect ratio for better fitting
+        pattern.appendChild(image);
+        
+        // Set default values for transformation
+        pathElement.setAttribute('data-image-rotation', '0');
+        pathElement.setAttribute('data-image-scale', '1');
+        pathElement.setAttribute('data-image-offset-x', '0');
+        pathElement.setAttribute('data-image-offset-y', '0');
+        
+        // Apply changes in a single batch using RAF to reduce visual flickering
+        requestAnimationFrame(() => {
+          if (!pathElement) return; // Safety check
+          
+          // Mark as having clip mask first (prevents race conditions)
+          pathElement.setAttribute('data-has-clip-mask', 'true');
+          pathElement.setAttribute('data-last-updated', Date.now().toString());
+          
+          // Apply pattern fill first
+          pathElement.setAttribute('fill', `url(#pattern-${id})`);
+          
+          // Remove stroke for better appearance
+          pathElement.setAttribute('stroke', 'none');
+          
+          // Apply clip path after a small delay to reduce flicker
+          setTimeout(() => {
+            if (pathElement) {
+              pathElement.setAttribute('clip-path', `url(#clip-${id})`);
+              toast.success('Floor plan applied successfully');
+            }
+          }, 20);
+        });
+      } catch (err) {
+        console.error('Error during image processing:', err);
+        toast.error('Error processing floor plan image');
+      }
+    };
     
-    // Get the bounding box to properly size the pattern
-    const bbox = pathElement.getBBox();
-    pattern.setAttribute('x', String(bbox.x));
-    pattern.setAttribute('y', String(bbox.y));
-    pattern.setAttribute('width', String(bbox.width));
-    pattern.setAttribute('height', String(bbox.height));
+    tempImg.onerror = () => {
+      console.error('Failed to load image for clip mask');
+      toast.error('Failed to load image for floor plan');
+    };
     
-    // Create an image element for the pattern
-    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-    image.setAttribute('href', imageUrlString);
-    image.setAttribute('width', '100%');
-    image.setAttribute('height', '100%');
-    image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    pattern.appendChild(image);
-    
-    // Set default values for rotation and scale
-    pathElement.setAttribute('data-image-rotation', '0');
-    pathElement.setAttribute('data-image-scale', '1');
-    
-    // Apply changes in a single batch using RAF to reduce visual flickering
-    requestAnimationFrame(() => {
-      // Mark as having clip mask first (prevents race conditions)
-      pathElement.setAttribute('data-has-clip-mask', 'true');
-      pathElement.setAttribute('data-last-updated', Date.now().toString());
-      
-      // Apply pattern fill first
-      pathElement.setAttribute('fill', `url(#pattern-${id})`);
-      
-      // Remove stroke for better appearance
-      pathElement.setAttribute('stroke', 'none');
-      
-      // Apply clip path after a small delay to reduce flicker
-      setTimeout(() => {
-        if (pathElement) {
-          pathElement.setAttribute('clip-path', `url(#clip-${id})`);
-        }
-      }, 20);
-    });
+    // Start loading the image
+    tempImg.src = imageUrlString;
     
     return true;
   } catch (err) {
@@ -193,6 +238,8 @@ export const removeClipMask = (svgPath: SVGPathElement | null): boolean => {
     svgPath.removeAttribute('data-image-url');
     svgPath.removeAttribute('data-image-rotation');
     svgPath.removeAttribute('data-image-scale');
+    svgPath.removeAttribute('data-image-offset-x');
+    svgPath.removeAttribute('data-image-offset-y');
     svgPath.removeAttribute('data-last-updated');
     
     // Remove the pattern and clip path elements if they exist

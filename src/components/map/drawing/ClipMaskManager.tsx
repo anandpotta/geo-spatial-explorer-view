@@ -2,6 +2,7 @@
 import { findSvgPathByDrawingId, applyImageClipMask, hasClipMaskApplied } from '@/utils/svg-clip-mask';
 import { getFloorPlanById } from '@/utils/floor-plan-utils';
 import L from 'leaflet';
+import { toast } from 'sonner';
 
 interface ApplyClipMaskOptions {
   drawingId: string;
@@ -15,34 +16,42 @@ interface ApplyClipMaskOptions {
 export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyClipMaskOptions): void => {
   if (!drawingId || !isMounted) return;
   
-  // Get the floor plan data
-  const floorPlanData = getFloorPlanById(drawingId);
-  if (!floorPlanData || !floorPlanData.data) {
-    console.log(`No floor plan image found for drawing ${drawingId}`);
-    return;
+  try {
+    // Get the floor plan data
+    const floorPlanData = getFloorPlanById(drawingId);
+    if (!floorPlanData || !floorPlanData.data) {
+      console.log(`No floor plan image found for drawing ${drawingId}`);
+      return;
+    }
+    
+    // Skip re-application check - first try to find the path
+    const pathElement = findPathElement(drawingId, layer);
+    if (pathElement && hasClipMaskApplied(pathElement)) {
+      // If we found the path and it already has a clip mask, don't retry
+      console.log(`Drawing ${drawingId} already has clip mask applied, skipping re-application`);
+      return;
+    }
+    
+    console.log(`Drawing ${drawingId} has a floor plan, will try to apply clip mask`);
+    
+    // Find the SVG path element with more reliable retries
+    attemptApplyClipMask({
+      drawingId,
+      imageUrl: floorPlanData.data,
+      isMounted,
+      attempt: 1,
+      maxAttempts: 5,
+      initialDelay: 250,
+      layer
+    });
+  } catch (err) {
+    console.error('Error getting floor plan by ID:', err);
+    toast.error('Failed to retrieve floor plan data');
   }
-  
-  // Skip re-application check - first try to find the path
-  const pathElement = findPathElement(drawingId, layer);
-  if (pathElement && hasClipMaskApplied(pathElement)) {
-    // If we found the path and it already has a clip mask, don't retry
-    console.log(`Drawing ${drawingId} already has clip mask applied, skipping re-application`);
-    return;
-  }
-  
-  console.log(`Drawing ${drawingId} has a floor plan, will try to apply clip mask`);
-  
-  // Find the SVG path element with more reliable retries
-  attemptApplyClipMask({
-    drawingId,
-    imageUrl: floorPlanData.data,
-    isMounted,
-    attempt: 1,
-    maxAttempts: 5, // Reduced to 5 attempts since we now have better error handling
-    initialDelay: 250,
-    layer
-  });
 };
+
+// Track application attempts to avoid repeated failures
+const applicationAttempts = new Map<string, number>();
 
 interface AttemptApplyClipMaskOptions {
   drawingId: string;
@@ -68,6 +77,32 @@ const attemptApplyClipMask = ({
 }: AttemptApplyClipMaskOptions): void => {
   if (!isMounted) return;
   
+  // Check if we've had too many attempts recently
+  const lastAttemptTime = applicationAttempts.get(drawingId) || 0;
+  const currentTime = Date.now();
+  
+  // If we've tried too recently, delay longer
+  if (currentTime - lastAttemptTime < 2000) {
+    console.log(`Too many attempts for ${drawingId}, increasing delay`);
+    setTimeout(() => {
+      if (isMounted) {
+        attemptApplyClipMask({
+          drawingId,
+          imageUrl,
+          isMounted,
+          attempt,
+          maxAttempts,
+          initialDelay: initialDelay * 2, // Double the delay
+          layer
+        });
+      }
+    }, initialDelay * 2);
+    return;
+  }
+  
+  // Update attempt tracking
+  applicationAttempts.set(drawingId, currentTime);
+  
   // Try multiple methods to find the path
   let pathElement = findPathElement(drawingId, layer);
   
@@ -83,7 +118,7 @@ const attemptApplyClipMask = ({
     // Apply clip mask with stability optimization
     setTimeout(() => {
       if (isMounted) {
-        // Check if the path is still in the document and within an SVG before applying
+        // Final check that the path is still in the document and within an SVG before applying
         if (document.contains(pathElement) && pathElement.closest('svg')) {
           applyImageClipMask(pathElement, imageUrl, drawingId);
         } else {
@@ -124,6 +159,18 @@ const attemptApplyClipMask = ({
           layer
         });
       }, nextDelay);
+    } else if (attempt >= maxAttempts) {
+      // If we've reached max attempts but still want to try later
+      // Add to a queue for retry after a longer delay
+      setTimeout(() => {
+        if (isMounted) {
+          console.log(`Final attempt to find path for drawing ${drawingId}`);
+          const lastPathElement = findPathElement(drawingId, layer);
+          if (lastPathElement && !hasClipMaskApplied(lastPathElement)) {
+            applyImageClipMask(lastPathElement, imageUrl, drawingId);
+          }
+        }
+      }, 5000); // A longer delay for one last try
     }
   }
 };
@@ -152,27 +199,33 @@ const findPathElement = (drawingId: string, layer: L.Layer): SVGPathElement | nu
   const pathViaSelector = findSvgPathByDrawingId(drawingId);
   if (pathViaSelector) return pathViaSelector;
   
-  // Search in the overlay pane for paths
-  // Fix: Only use _map property with type assertion
-  const map = (layer as any)._map;
-  if (map) {
-    const container = map.getContainer();
-    const overlayPane = container?.querySelector('.leaflet-overlay-pane');
-    if (overlayPane) {
-      const paths = overlayPane.querySelectorAll('path.leaflet-interactive');
-      
-      // Try to find by ID or class first
-      const pathById = overlayPane.querySelector(`#drawing-path-${drawingId}`);
-      if (pathById) return pathById as SVGPathElement;
-      
-      const pathByClass = overlayPane.querySelector(`.drawing-path-${drawingId.substring(0, 8)}`);
-      if (pathByClass) return pathByClass as SVGPathElement;
-      
-      // If we have exactly one path, it might be the one we're looking for
-      if (paths.length === 1) {
-        return paths[0] as SVGPathElement;
+  // Search in the overlay pane for paths with attributes or classes matching our drawing ID
+  try {
+    // Try to find the map container
+    const map = (layer as any)._map;
+    if (map) {
+      const container = map.getContainer();
+      const overlayPane = container?.querySelector('.leaflet-overlay-pane');
+      if (overlayPane) {
+        // Try to find the specific path by its attributes
+        const pathById = overlayPane.querySelector(`#drawing-path-${drawingId}`);
+        if (pathById) return pathById as SVGPathElement;
+        
+        const pathByAttr = overlayPane.querySelector(`path[data-drawing-id="${drawingId}"]`);
+        if (pathByAttr) return pathByAttr as SVGPathElement;
+        
+        const pathByClass = overlayPane.querySelector(`.drawing-path-${drawingId.substring(0, 8)}`);
+        if (pathByClass) return pathByClass as SVGPathElement;
+        
+        // If we have exactly one path and this is a retry, it might be the one we're looking for
+        const allPaths = overlayPane.querySelectorAll('path.leaflet-interactive');
+        if (allPaths.length === 1) {
+          return allPaths[0] as SVGPathElement;
+        }
       }
     }
+  } catch (err) {
+    console.error('Error finding path element:', err);
   }
   
   return null;
