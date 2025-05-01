@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import RotationControls from './image-controls/RotationControls';
 import ScalingControls from './image-controls/ScalingControls';
 import MovementControls from './image-controls/MovementControls';
@@ -19,6 +19,21 @@ interface ImageControlsProps {
 const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
   // Start with expanded state true to show all controls by default
   const [expanded, setExpanded] = useState(true);
+  
+  // Use effect to ensure controls remain visible
+  useEffect(() => {
+    // Make sure controls are visible after a short delay
+    const timer = setTimeout(() => {
+      const wrapper = document.querySelector(`.image-controls-wrapper`);
+      if (wrapper) {
+        (wrapper as HTMLElement).style.opacity = '1';
+        (wrapper as HTMLElement).style.visibility = 'visible';
+        (wrapper as HTMLElement).style.display = 'block';
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="image-controls-container flex flex-col gap-1 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md border border-gray-200">

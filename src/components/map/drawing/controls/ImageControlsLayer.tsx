@@ -10,6 +10,7 @@ interface ImageControlsLayerProps {
   imageControlRoots: Map<string, any>;
   isMounted: boolean;
   onRemoveShape: (drawingId: string) => void;
+  isPersistent?: boolean;
 }
 
 export const createImageControlsLayer = ({
@@ -18,12 +19,24 @@ export const createImageControlsLayer = ({
   featureGroup,
   imageControlRoots,
   isMounted,
-  onRemoveShape
+  onRemoveShape,
+  isPersistent = false
 }: ImageControlsLayerProps): void => {
   if (!imageControlsPosition) return;
   
+  // Check if we already have a control for this drawing
+  const existingControlId = `${drawingId}-image-controls`;
+  const existingControl = imageControlRoots.has(existingControlId);
+  
+  // Don't recreate if already exists
+  if (existingControl) return;
+  
   const imageControlContainer = document.createElement('div');
   imageControlContainer.className = 'image-controls-wrapper';
+  
+  if (isPersistent) {
+    imageControlContainer.classList.add('persistent-control');
+  }
   
   const imageControlLayer = L.marker(imageControlsPosition, {
     icon: L.divIcon({
@@ -36,18 +49,30 @@ export const createImageControlsLayer = ({
     zIndexOffset: 1000
   });
   
+  // Store the layer reference so we can access it later
+  if (isPersistent) {
+    (imageControlLayer as any)._isPersistent = true;
+  }
+  
   if (isMounted) {
     try {
       imageControlLayer.addTo(featureGroup);
       
       const imageControlRoot = createRoot(imageControlContainer);
-      imageControlRoots.set(`${drawingId}-image-controls`, imageControlRoot);
+      imageControlRoots.set(existingControlId, imageControlRoot);
       imageControlRoot.render(
         <ImageControls 
           drawingId={drawingId} 
           onRemoveShape={onRemoveShape} 
         />
       );
+      
+      // Force a small delay to ensure visibility
+      setTimeout(() => {
+        if (imageControlContainer.style) {
+          imageControlContainer.style.opacity = '1';
+        }
+      }, 50);
     } catch (err) {
       console.error('Error rendering image controls:', err);
     }

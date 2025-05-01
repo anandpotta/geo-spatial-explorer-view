@@ -20,7 +20,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const editControlRef = useRef<any>(null);
   
   // Use hooks for separated functionality
-  useEditMode(editControlRef, activeTool);
+  const isEditActive = useEditMode(editControlRef, activeTool);
   const { getPathElements, getSVGPathData } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
   
@@ -64,6 +64,17 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           transform: translateZ(0);
           backface-visibility: hidden;
         }
+        .image-controls-wrapper {
+          opacity: 1 !important;
+          transition: opacity 0.2s ease-in-out;
+          z-index: 1000 !important;
+          pointer-events: auto !important;
+        }
+        .persistent-control {
+          visibility: visible !important;
+          display: block !important;
+          opacity: 1 !important;
+        }
       `;
       document.head.appendChild(styleEl);
       
@@ -95,6 +106,27 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       }
     };
   }, [featureGroup]);
+  
+  // Effect to handle edit mode activation
+  useEffect(() => {
+    if (activeTool === 'edit' && editControlRef.current) {
+      try {
+        console.log('Attempting to activate edit mode from effect');
+        const editControl = editControlRef.current;
+        const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+        
+        if (editHandler && typeof editHandler.enable === 'function') {
+          // Add a small delay to avoid race conditions
+          setTimeout(() => {
+            editHandler.enable();
+            console.log('Edit mode activated from effect');
+          }, 150);
+        }
+      } catch (err) {
+        console.error('Error activating edit mode from effect:', err);
+      }
+    }
+  }, [activeTool]);
   
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,

@@ -33,9 +33,31 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         const isAlreadyEnabled = editHandler.enabled && editHandler.enabled();
         if (!isAlreadyEnabled) {
           console.log('Activating edit mode');
+          
+          // First ensure all layers are selected to make them eligible for editing
+          if (editHandler._featureGroup) {
+            editHandler._featureGroup.eachLayer((layer: any) => {
+              if (typeof layer._path !== 'undefined') {
+                editHandler._selectableLayers.addLayer(layer);
+              }
+            });
+          }
+          
+          // Then enable edit mode
           editHandler.enable();
+          
+          // Update state and show notification
           setIsEditActive(true);
           toast.success('Edit mode activated. Select a shape to modify it.');
+          
+          // Make sure any image controls are visible
+          setTimeout(() => {
+            document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
+              (el as HTMLElement).style.opacity = '1';
+              (el as HTMLElement).style.visibility = 'visible';
+              (el as HTMLElement).style.display = 'block';
+            });
+          }, 200);
         }
       } else if (!shouldEnableEdit) {
         // Deactivate edit mode
@@ -56,7 +78,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     }
   }, [editControlRef, activeTool]);
 
-  // Retry mechanism for edit mode activation
+  // Retry mechanism for edit mode activation with increased persistence
   useEffect(() => {
     // Function to activate or deactivate edit mode based on activeTool
     const attemptUpdateEditMode = (retry = 0) => {
@@ -79,12 +101,40 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       if (shouldBeActive !== isEditActive) {
         updateEditMode();
       }
-    }, 1000);
+    }, 500); // Check more frequently (was 1000)
     
     return () => {
       clearInterval(intervalId);
     };
   }, [editControlRef, activeTool, updateEditMode, isEditActive]);
+  
+  // Add a special effect to handle DOM cleanup and preserve image controls
+  useEffect(() => {
+    if (activeTool === 'edit') {
+      // Monitor for DOM changes that might remove our controls
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
+            // Re-show any image controls that might have been hidden
+            setTimeout(() => {
+              document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
+                (el as HTMLElement).style.opacity = '1';
+                (el as HTMLElement).style.visibility = 'visible';
+                (el as HTMLElement).style.display = 'block';
+              });
+            }, 10);
+          }
+        });
+      });
+      
+      // Start observing the document with the configured parameters
+      observer.observe(document.body, { childList: true, subtree: true });
+      
+      return () => {
+        observer.disconnect();
+      };
+    }
+  }, [activeTool]);
   
   return isEditActive;
 }

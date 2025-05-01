@@ -32,6 +32,7 @@ export const createLayerControls = ({
   onRemoveShape,
   onUploadRequest
 }: LayerControlsProps) => {
+  // Only proceed if we're in edit mode and component is mounted
   if (activeTool !== 'edit' || !isMounted) return;
 
   // Check if the map is valid
@@ -69,16 +70,22 @@ export const createLayerControls = ({
     });
   }
   
-  // Create image controls for all drawings in edit mode, not just ones with floor plans
+  // Create image controls for all drawings in edit mode
   // This ensures the controls are always available in edit mode
   if (imageControlsPosition) {
-    createImageControlsLayer({
-      drawingId,
-      imageControlsPosition,
-      featureGroup,
-      imageControlRoots,
-      isMounted,
-      onRemoveShape
-    });
+    // Add a small delay to ensure image controls are created after edit mode is activated
+    setTimeout(() => {
+      if (isMounted && activeTool === 'edit') {
+        createImageControlsLayer({
+          drawingId,
+          imageControlsPosition,
+          featureGroup,
+          imageControlRoots,
+          isMounted,
+          onRemoveShape,
+          isPersistent: true  // Mark as persistent to prevent removal
+        });
+      }
+    }, 100);
   }
 };
