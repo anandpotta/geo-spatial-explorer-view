@@ -9,7 +9,7 @@ interface UpdateLayersProps {
   featureGroup: L.FeatureGroup;
   savedDrawings: DrawingData[];
   activeTool: string | null;
-  isMountedRef: React.MutableRefObject<boolean>;
+  isMountedRef: boolean;
   layersRef: Map<string, L.Layer>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
@@ -39,7 +39,7 @@ export const updateLayers = ({
   onUploadRequest,
   onImageTransform
 }: UpdateLayersProps) => {
-  if (!featureGroup || !isMountedRef.current) return;
+  if (!featureGroup || !isMountedRef) return;
   
   try {
     // Safely clear existing layers and unmount React roots
@@ -58,7 +58,7 @@ export const updateLayers = ({
           drawing,
           featureGroup,
           activeTool,
-          isMounted: isMountedRef.current,
+          isMounted: isMountedRef,
           layersRef,
           removeButtonRoots,
           uploadButtonRoots,
