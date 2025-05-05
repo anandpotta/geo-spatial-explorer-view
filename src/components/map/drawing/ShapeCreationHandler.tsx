@@ -5,6 +5,11 @@ interface ShapeCreationHandlerProps {
   svgPaths: string[];
 }
 
+// Helper function to check if a path already exists in the array
+const pathExists = (path: string, paths: string[]): boolean => {
+  return paths.includes(path);
+};
+
 export function createShapeCreationHandler({ 
   onCreated, 
   onPathsUpdated,
@@ -13,10 +18,12 @@ export function createShapeCreationHandler({
   const handleCreatedWrapper = (shape: any) => {
     // Process the shape and check for SVG path data
     if (shape.svgPath) {
-      // Add path to state
-      const updatedPaths = [...svgPaths, shape.svgPath];
-      if (onPathsUpdated) {
-        onPathsUpdated(updatedPaths);
+      // Only add path to state if it doesn't already exist
+      if (!pathExists(shape.svgPath, svgPaths)) {
+        const updatedPaths = [...svgPaths, shape.svgPath];
+        if (onPathsUpdated) {
+          onPathsUpdated(updatedPaths);
+        }
       }
     }
     onCreated(shape);

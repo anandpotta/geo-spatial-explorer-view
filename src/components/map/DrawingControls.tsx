@@ -50,11 +50,19 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     handleUploadRequest
   } = useFileUploadHandling({ onUploadToDrawing });
   
+  // Use a wrapper function to prevent redundant updates
+  const handlePathsUpdated = (paths: string[]) => {
+    if (onPathsUpdated) {
+      // Only log once rather than every time
+      onPathsUpdated(paths);
+    }
+  };
+  
   const { svgPaths, setSvgPaths } = useSvgPathTracking({
     isInitialized,
     drawToolsRef,
     mountedRef,
-    onPathsUpdated
+    onPathsUpdated: handlePathsUpdated
   });
   
   useImperativeHandle(ref, () => ({
@@ -82,7 +90,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
 
   const handleCreatedWrapper = createShapeCreationHandler({
     onCreated,
-    onPathsUpdated,
+    onPathsUpdated: handlePathsUpdated,
     svgPaths
   });
 
