@@ -19,20 +19,60 @@
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.110.0/Build/Cesium/Widgets/widgets.css" />
     
-    <!-- Block analytics tracking -->
+    <!-- Block analytics tracking - More robust version -->
     <meta name="robots" content="noindex,nofollow" />
     <script>
-      // Prevent external analytics
-      window.addEventListener('error', function(e) {
-        if (e.target && (e.target.src || e.target.href)) {
-          const url = e.target.src || e.target.href;
-          if (url.includes('facebook.com/tr') || url.includes('lovable.dev/ingest')) {
-            e.preventDefault();
-            console.log('Blocked external tracking request:', url);
-            return true;
+      // Early analytics blocking before main script loads
+      (function() {
+        // Block known analytics URLs
+        const blockedPatterns = [
+          'facebook.com/tr', 
+          'lovable.dev/ingest',
+          'lovable.dev/i/',
+          'fb.com',
+          'posthog',
+          'segment'
+        ];
+        
+        // Override fetch
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+          const urlStr = url.toString();
+          if (blockedPatterns.some(pattern => urlStr.includes(pattern))) {
+            console.log('Early blocked fetch:', urlStr);
+            return Promise.resolve(new Response('{"success":true}', {status: 200}));
           }
-        }
-      }, true);
+          return originalFetch.apply(this, arguments);
+        };
+        
+        // Block script error events that might trigger analytics
+        window.addEventListener('error', function(e) {
+          if (e.target && (e.target.src || e.target.href)) {
+            const url = e.target.src || e.target.href;
+            if (blockedPatterns.some(pattern => url.includes(pattern))) {
+              e.preventDefault();
+              console.log('Blocked external tracking request:', url);
+              return true;
+            }
+          }
+        }, true);
+        
+        // Block XMLHttpRequest
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url) {
+          const urlStr = url.toString();
+          if (blockedPatterns.some(pattern => urlStr.includes(pattern))) {
+            console.log('Early blocked XHR:', urlStr);
+            this.abort();
+            // Return a fake implementation
+            this.send = function(){};
+            return;
+          }
+          return originalOpen.apply(this, arguments);
+        };
+        
+        console.log('Early analytics blocking initialized');
+      })();
     </script>
   </head>
 
@@ -41,5 +81,21 @@
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Additional analytics blocker for dynamic content -->
+    <script>
+      // This runs after page load to catch any analytics scripts added dynamically
+      document.addEventListener('DOMContentLoaded', function() {
+        // Remove any analytics-related elements
+        const elementsToCheck = document.querySelectorAll('script, img, iframe');
+        elementsToCheck.forEach(el => {
+          const src = el.src || el.getAttribute('src') || '';
+          if (['lovable.dev/ingest', 'analytics', 'facebook.com/tr'].some(term => src.includes(term))) {
+            console.log('Removed analytics element:', src);
+            el.remove();
+          }
+        });
+      });
+    </script>
   </body>
 </html>
