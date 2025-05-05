@@ -1,8 +1,13 @@
+
 import L from 'leaflet';
 
-// Extend the PathOptions interface to include our custom svgPath property
+// Extend the PathOptions and GeoJSONOptions interfaces to include our custom svgPath property
 declare module 'leaflet' {
   interface PathOptions {
+    svgPath?: string;
+  }
+  
+  interface GeoJSONOptions<P = any, G = L.Geometry> {
     svgPath?: string;
   }
 }
