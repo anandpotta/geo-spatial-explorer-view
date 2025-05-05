@@ -83,6 +83,10 @@ export const applyImageClipMask = (
     pathElement.setAttribute('data-last-updated', Date.now().toString());
     pathElement.setAttribute('data-drawing-id', id);
     
+    // Ensure path is fully opaque for clearer image display
+    pathElement.setAttribute('fill-opacity', '1');
+    pathElement.setAttribute('opacity', '1');
+    
     // Create a pre-loaded image to get dimensions
     const tempImg = new Image();
     
@@ -163,14 +167,26 @@ export const applyImageClipMask = (
           const fill = `url(#pattern-${id})`;
           const clipPathUrl = `url(#clip-${id})`;
           
+          // Apply as both style and attribute for maximum compatibility
           pathElement.style.fill = fill;
-          pathElement.style.stroke = 'none';
+          pathElement.style.stroke = '#333';
+          pathElement.style.strokeWidth = '2px';
+          pathElement.style.strokeOpacity = '0.7';
+          pathElement.style.fillOpacity = '1';
+          pathElement.style.opacity = '1';
           pathElement.style.clipPath = clipPathUrl;
           
           // Also set attributes as backup in case styles are reset
           pathElement.setAttribute('fill', fill);
-          pathElement.setAttribute('stroke', 'none');
+          pathElement.setAttribute('stroke', '#333');
+          pathElement.setAttribute('stroke-width', '2px');
+          pathElement.setAttribute('stroke-opacity', '0.7');
+          pathElement.setAttribute('fill-opacity', '1');
+          pathElement.setAttribute('opacity', '1');
           pathElement.setAttribute('clip-path', clipPathUrl);
+          
+          // Also remove any classes that might affect opacity
+          pathElement.classList.add('high-visibility-path');
           
           // Only show toast for first time applications to reduce notification spam
           if (!toastShown.has(id)) {
