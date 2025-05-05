@@ -71,12 +71,12 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
-    openFileUploadDialog: () => {
+    openFileUploadDialog: (drawingId: string) => {
       if (!isAuthenticated) {
         toast.error('Please log in to upload files');
         return;
       }
-      openFileUploadDialog();
+      openFileUploadDialog(drawingId); // Pass drawingId here to fix the parameter count issue
     },
     getSvgPaths: () => {
       if (drawToolsRef.current) {

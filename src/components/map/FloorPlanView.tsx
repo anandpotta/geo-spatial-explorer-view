@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
-import { saveFloorPlan, getFloorPlanById } from "@/utils/floor-plan-utils";
+import { storeFloorPlan, getFloorPlan } from "@/utils/floor-plan-utils";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -19,11 +19,13 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   // Check if there's a saved floor plan for this building in localStorage
   useEffect(() => {
     if (drawing?.id) {
-      const savedFloorPlan = getFloorPlanById(drawing.id);
+      const savedFloorPlan = getFloorPlan(drawing.id);
       if (savedFloorPlan) {
-        setSelectedImage(savedFloorPlan.data);
-        setIsPdf(savedFloorPlan.isPdf);
-        setFileName(savedFloorPlan.fileName);
+        setSelectedImage(savedFloorPlan);
+        // Detect if it's a PDF by checking data URL
+        setIsPdf(savedFloorPlan.startsWith('data:application/pdf'));
+        // We don't have filename in getFloorPlan, so we can't set it here
+        setFileName('Floor Plan');
       } else {
         // Reset state if no floor plan is found
         setSelectedImage(null);
@@ -54,11 +56,9 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         setSelectedImage(dataUrl);
         
         // Save to utils for this specific building
-        saveFloorPlan(
+        storeFloorPlan(
           drawing.id,
-          dataUrl,
-          file.type.includes('pdf'),
-          file.name
+          dataUrl
         );
         
         toast.success('Floor plan uploaded successfully');

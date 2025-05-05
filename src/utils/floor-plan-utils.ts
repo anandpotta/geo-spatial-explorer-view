@@ -1,4 +1,13 @@
+
 import { getCurrentUser } from '@/services/auth-service';
+
+// Define FloorPlanData type that was missing
+export interface FloorPlanData {
+  imageData: string;
+  drawingId: string;
+  userId: string;
+  timestamp: number;
+}
 
 // Key for storing floor plans in localStorage
 const FLOOR_PLAN_STORAGE_KEY = 'floorPlans';
@@ -92,3 +101,14 @@ export function getDrawingIdsWithFloorPlans(): string[] {
     .filter(key => key.startsWith(`${currentUser.id}-`))
     .map(key => key.split('-')[1]);
 }
+
+// For compatibility with older code that might expect these functions
+export const saveFloorPlan = storeFloorPlan;
+export const getFloorPlanById = getFloorPlan;
+export const getSavedFloorPlans = () => {
+  const drawings = getDrawingIdsWithFloorPlans();
+  return drawings.map(id => ({
+    id,
+    data: getFloorPlan(id)
+  }));
+};
