@@ -2,6 +2,7 @@
 /**
  * Utilities for handling image URLs in clip masks
  */
+import { retrieveFloorPlanImageUrl } from './image-loading';
 
 /**
  * Resolves image URL from various inputs
@@ -19,7 +20,7 @@ export const resolveImageUrl = (
     if (imageUrl === drawingId || 
         (!imageUrl.startsWith('blob:') && !imageUrl.startsWith('data:') && !imageUrl.startsWith('http'))) {
       console.log(`Looking up stored image URL for drawing ID: ${drawingId}`);
-      const storedUrl = getStoredImageUrl(drawingId);
+      const storedUrl = retrieveFloorPlanImageUrl(drawingId);
       if (storedUrl) {
         imageUrlString = storedUrl;
         console.log(`Found stored image URL: ${imageUrlString}`);
@@ -39,20 +40,14 @@ export const resolveImageUrl = (
       return getDefaultImageUrl(drawingId);
     }
   } else {
-    // If no valid imageUrl, try to get the stored URL from localStorage
+    // If no valid imageUrl, try to get the stored URL from the new function
     console.log(`No valid imageUrl provided, trying to get stored URL for ${drawingId}`);
-    const storedUrl = getStoredImageUrl(drawingId);
+    const storedUrl = retrieveFloorPlanImageUrl(drawingId);
     if (storedUrl) {
       imageUrlString = storedUrl;
       console.log(`Using stored image URL: ${imageUrlString}`);
     } else {
-      // Check all possible storage locations for this drawing's image
-      const fallbackUrl = getFallbackImageUrl(drawingId);
-      if (fallbackUrl) {
-        console.log(`Found fallback image URL for ${drawingId}: ${fallbackUrl}`);
-        return fallbackUrl;
-      }
-      
+      // No need to check fallback as retrieveFloorPlanImageUrl already does this
       console.error(`No valid imageUrl and no stored URL found for ${drawingId}`);
       return getDefaultImageUrl(drawingId);
     }
@@ -63,30 +58,10 @@ export const resolveImageUrl = (
 
 /**
  * Gets a fallback image URL by checking multiple storage locations
+ * This function is kept for backward compatibility but delegates to retrieveFloorPlanImageUrl
  */
 export const getFallbackImageUrl = (drawingId: string): string | null => {
-  // Try different storage keys that might contain the image
-  const possibleKeys = [
-    `floorplan-${drawingId}`,
-    `image-${drawingId}`,
-    `clip-mask-${drawingId}`
-  ];
-  
-  for (const key of possibleKeys) {
-    try {
-      const data = localStorage.getItem(key);
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (parsed && parsed.imageUrl) {
-          return parsed.imageUrl;
-        }
-      }
-    } catch (e) {
-      console.warn(`Error checking storage key ${key}:`, e);
-    }
-  }
-  
-  return null;
+  return retrieveFloorPlanImageUrl(drawingId);
 };
 
 /**
@@ -104,6 +79,3 @@ export const getDefaultImageUrl = (drawingId: string): string | null => {
     <text x="10" y="50" font-family="sans-serif" font-size="10" fill="%23000">ID: ${drawingId.substring(0, 8)}</text>
   </svg>`;
 };
-
-// Import from image-loading.ts
-import { getStoredImageUrl } from './image-loading';

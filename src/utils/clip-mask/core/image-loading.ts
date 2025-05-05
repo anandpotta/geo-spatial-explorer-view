@@ -14,33 +14,37 @@ export const toastShown = new Set<string>();
 const imageUrlCache = new Map<string, string>();
 
 /**
- * Gets the stored image URL for a drawing from localStorage
- * Uses a cache to prevent excessive localStorage reads
+ * Comprehensive function to retrieve a floor plan image URL from all possible sources
+ * Consolidates URL retrieval logic in one place for better maintainability
  */
-export const getStoredImageUrl = (drawingId: string): string | null => {
-  // First check the cache
+export const retrieveFloorPlanImageUrl = (drawingId: string): string | null => {
+  // First check the in-memory cache for best performance
   if (imageUrlCache.has(drawingId)) {
     console.log(`Using cached image URL for ${drawingId}`);
     return imageUrlCache.get(drawingId) || null;
   }
   
   try {
-    // Check multiple storage keys that might contain the image URL
-    const keys = [
+    // Check multiple possible storage keys that might contain the image URL
+    const storageKeys = [
       `floorplan-${drawingId}`,
       `image-${drawingId}`,
-      `clip-mask-${drawingId}`
+      `clip-mask-${drawingId}`,
+      `floor-plan-${drawingId}`
     ];
     
-    for (const key of keys) {
+    // Try each storage key
+    for (const key of storageKeys) {
       const storedData = localStorage.getItem(key);
       if (storedData) {
         try {
-          const floorPlanData = JSON.parse(storedData);
-          if (floorPlanData && floorPlanData.imageUrl) {
-            // Store in cache for future use
-            imageUrlCache.set(drawingId, floorPlanData.imageUrl);
-            return floorPlanData.imageUrl;
+          const parsedData = JSON.parse(storedData);
+          if (parsedData && parsedData.imageUrl) {
+            // Found a valid URL, store in cache and return
+            const imageUrl = parsedData.imageUrl;
+            imageUrlCache.set(drawingId, imageUrl);
+            console.log(`Retrieved image URL from ${key}: ${imageUrl}`);
+            return imageUrl;
           }
         } catch (e) {
           console.warn(`Error parsing stored data for key ${key}:`, e);
@@ -48,12 +52,50 @@ export const getStoredImageUrl = (drawingId: string): string | null => {
       }
     }
     
-    // If we reach here, no valid image URL was found
+    // If we reach here, also check for direct URL storage without JSON structure
+    for (const key of storageKeys) {
+      const directUrl = localStorage.getItem(`${key}-url`);
+      if (directUrl && (directUrl.startsWith('http') || directUrl.startsWith('blob:') || directUrl.startsWith('data:'))) {
+        // Found a direct URL
+        imageUrlCache.set(drawingId, directUrl);
+        console.log(`Retrieved direct image URL from ${key}-url: ${directUrl}`);
+        return directUrl;
+      }
+    }
+    
+    // Also check sessionStorage as a fallback
+    for (const key of storageKeys) {
+      const sessionData = sessionStorage.getItem(key);
+      if (sessionData) {
+        try {
+          const parsedData = JSON.parse(sessionData);
+          if (parsedData && parsedData.imageUrl) {
+            const imageUrl = parsedData.imageUrl;
+            imageUrlCache.set(drawingId, imageUrl);
+            console.log(`Retrieved image URL from sessionStorage ${key}: ${imageUrl}`);
+            return imageUrl;
+          }
+        } catch (e) {
+          console.warn(`Error parsing session data for key ${key}:`, e);
+        }
+      }
+    }
+    
+    console.log(`No floor plan image URL found for ${drawingId} in any storage location`);
     return null;
   } catch (err) {
-    console.error('Error retrieving stored image URL:', err);
+    console.error('Error retrieving floor plan image URL:', err);
     return null;
   }
+};
+
+/**
+ * Gets the stored image URL for a drawing from localStorage
+ * Uses a cache to prevent excessive localStorage reads
+ */
+export const getStoredImageUrl = (drawingId: string): string | null => {
+  // Use the new comprehensive function for retrieving the URL
+  return retrieveFloorPlanImageUrl(drawingId);
 };
 
 /**
