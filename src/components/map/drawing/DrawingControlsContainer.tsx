@@ -1,9 +1,11 @@
 
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
+import { ImageTransformOptions, getDefaultTransformOptions } from '@/utils/image-transform-utils';
+import { updateDrawingImage, updateDrawingImageTransform } from '@/utils/drawing-utils';
 
 interface DrawingControlsContainerProps {
   onShapeCreated: (shape: any) => void;
@@ -21,6 +23,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   onRemoveShape
 }: DrawingControlsContainerProps, ref) => {
   const drawingControlsRef = useRef<DrawingControlsRef>(null);
+  const [currentImageTransform, setCurrentImageTransform] = useState<ImageTransformOptions>(getDefaultTransformOptions());
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => {
@@ -37,13 +40,13 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
     }
   }));
   
-  const handleUploadToDrawing = (drawingId: string, file: File) => {
+  const handleUploadToDrawing = (drawingId: string, file: File, transformOptions?: ImageTransformOptions) => {
     // Handle file upload logic here
     const fileType = file.type;
     
     // Check file type and size
     if (!fileType.startsWith('image/') && fileType !== 'application/pdf') {
-      toast.error('Please upload an image or PDF file');
+      toast.error('Please select an image or PDF file');
       return;
     }
     
@@ -55,20 +58,23 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
     // Convert the file to base64 string
     const reader = new FileReader();
     reader.onload = (e) => {
-      if (e.target && e.target.result) {
-        // Save the file data to localStorage
-        const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-        floorPlans[drawingId] = {
-          data: e.target.result,
-          name: file.name,
-          type: file.type,
-          uploaded: new Date().toISOString()
-        };
+      if (e.target && e.target.result && typeof e.target.result === 'string') {
+        // Save image data to the drawing
+        updateDrawingImage(drawingId, e.target.result);
         
-        localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
+        // Save transform data if provided
+        if (transformOptions) {
+          updateDrawingImageTransform(drawingId, transformOptions);
+          setCurrentImageTransform(transformOptions);
+        } else {
+          updateDrawingImageTransform(drawingId, getDefaultTransformOptions());
+          setCurrentImageTransform(getDefaultTransformOptions());
+        }
         
-        // Trigger a custom event to notify components that a floor plan was uploaded
-        window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { drawingId } }));
+        // Trigger a custom event to notify components that a file was uploaded
+        window.dispatchEvent(new CustomEvent('image-uploaded', { 
+          detail: { drawingId, file, imageData: e.target.result }
+        }));
         
         toast.success(`${file.name} uploaded successfully`);
       }
@@ -80,6 +86,16 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
     
     reader.readAsDataURL(file);
   };
+
+  const handleImageTransform = (drawingId: string, options: Partial<ImageTransformOptions>) => {
+    const newTransform = {
+      ...currentImageTransform,
+      ...options
+    };
+    
+    setCurrentImageTransform(newTransform);
+    updateDrawingImageTransform(drawingId, newTransform);
+  };
   
   return (
     <DrawingControls 
@@ -90,6 +106,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
       onClearAll={onClearAll}
       onRemoveShape={onRemoveShape}
       onUploadToDrawing={handleUploadToDrawing}
+      onImageTransform={handleImageTransform}
     />
   );
 });

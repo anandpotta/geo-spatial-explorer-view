@@ -6,6 +6,15 @@ import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { createRoot } from '@/components/map/drawing/ReactDOMUtils';
+import ImageEditControls from './ImageEditControls';
+import { 
+  createImageElement, 
+  getDefaultTransformOptions, 
+  transformImage,
+  ImageTransformOptions 
+} from '@/utils/image-transform-utils';
+import './DrawingImage.css';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -15,9 +24,11 @@ interface CreateLayerOptions {
   layersRef: Map<string, L.Layer>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
+  imageControlsRoots: Map<string, any>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void;
 }
 
 export const createLayerFromDrawing = ({
@@ -28,9 +39,11 @@ export const createLayerFromDrawing = ({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
+  imageControlsRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
+  onUploadRequest,
+  onImageTransform
 }: CreateLayerOptions) => {
   if (!drawing.geoJSON || !isMounted) return;
 
@@ -68,6 +81,18 @@ export const createLayerFromDrawing = ({
           
           // Store the layer reference
           layersRef.set(drawing.id, l);
+          
+          // Add the image if available
+          if (drawing.imageData) {
+            addImageToLayer(
+              l, 
+              drawing.id, 
+              drawing.imageData, 
+              drawing.imageTransform || getDefaultTransformOptions(),
+              imageControlsRoots,
+              onImageTransform
+            );
+          }
           
           // Add the remove and upload buttons when in edit mode
           if (onRemoveShape && onUploadRequest) {
@@ -110,5 +135,127 @@ export const createLayerFromDrawing = ({
     }
   } catch (err) {
     console.error('Error adding drawing layer:', err);
+  }
+};
+
+// Add an image to a Leaflet layer
+const addImageToLayer = (
+  layer: L.Layer,
+  drawingId: string,
+  imageData: string,
+  transformOptions: ImageTransformOptions,
+  imageControlsRoots: Map<string, any>,
+  onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void
+) => {
+  try {
+    // Skip if layer doesn't have _path property (SVG element)
+    if (!(layer as any)._path) return;
+    
+    // Get path element and its parent SVG
+    const pathElement = (layer as any)._path as SVGElement;
+    const svgElement = pathElement.closest('svg');
+    
+    if (!svgElement || !pathElement.parentElement) return;
+    
+    // Create container for the image
+    const containerDiv = document.createElement('div');
+    containerDiv.className = 'leaflet-drawing-image-container';
+    containerDiv.dataset.drawingId = drawingId;
+    
+    // Create overlay div to position relative to the map
+    const overlayPane = (layer as any)._map.getPanes().overlayPane;
+    if (!overlayPane) return;
+    
+    // Append container to the overlay pane
+    overlayPane.appendChild(containerDiv);
+    
+    // Create and add image element
+    const imgElement = createImageElement(imageData, (img) => {
+      // Calculate position and size based on path bounds
+      const pathRect = pathElement.getBoundingClientRect();
+      const svgRect = svgElement.getBoundingClientRect();
+      
+      // Set container position
+      containerDiv.style.left = `${pathRect.left - svgRect.left}px`;
+      containerDiv.style.top = `${pathRect.top - svgRect.top}px`;
+      containerDiv.style.width = `${pathRect.width}px`;
+      containerDiv.style.height = `${pathRect.height}px`;
+      
+      // Center image in the container
+      img.style.position = 'absolute';
+      img.style.left = '50%';
+      img.style.top = '50%';
+      img.style.transform = 'translate(-50%, -50%)';
+      
+      // Apply transformation
+      transformImage(img, transformOptions);
+    });
+    
+    containerDiv.appendChild(imgElement);
+    
+    // Create image edit controls
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'leaflet-drawing-image-controls';
+    containerDiv.appendChild(controlsContainer);
+    
+    // Create React root for image controls
+    try {
+      const controlsRoot = createRoot(controlsContainer);
+      imageControlsRoots.set(`${drawingId}-image-controls`, controlsRoot);
+      
+      controlsRoot.render(
+        <ImageEditControls
+          drawingId={drawingId}
+          initialTransform={transformOptions}
+          onTransformChange={(options) => {
+            if (onImageTransform) {
+              onImageTransform(drawingId, options);
+              
+              // Also update the display immediately
+              transformImage(imgElement, {
+                ...transformOptions,
+                ...options
+              });
+            }
+          }}
+        />
+      );
+    } catch (err) {
+      console.error('Error rendering image controls:', err);
+    }
+    
+    // Listen for image transform updates
+    const handleTransformUpdate = (e: CustomEvent) => {
+      const detail = e.detail as { drawingId: string, transformOptions: ImageTransformOptions };
+      if (detail.drawingId === drawingId) {
+        transformImage(imgElement, detail.transformOptions);
+      }
+    };
+    
+    window.addEventListener('image-transform-updated', handleTransformUpdate as EventListener);
+    
+    // Return a cleanup function
+    return () => {
+      window.removeEventListener('image-transform-updated', handleTransformUpdate as EventListener);
+      
+      // Remove the container
+      if (containerDiv.parentElement) {
+        containerDiv.parentElement.removeChild(containerDiv);
+      }
+      
+      // Clean up React root
+      const controlsRoot = imageControlsRoots.get(`${drawingId}-image-controls`);
+      if (controlsRoot) {
+        try {
+          controlsRoot.unmount();
+        } catch (err) {
+          console.error('Error unmounting image controls root:', err);
+        }
+        imageControlsRoots.delete(`${drawingId}-image-controls`);
+      }
+    };
+  } catch (err) {
+    console.error('Error adding image to layer:', err);
+    return undefined;
   }
 };

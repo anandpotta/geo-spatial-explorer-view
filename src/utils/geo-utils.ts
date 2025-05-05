@@ -3,6 +3,7 @@ export type { Location } from './location-utils';
 export type { LocationMarker } from './marker-utils';
 export type { DrawingData } from './drawing-utils';
 export type { FloorPlanData } from './floor-plan-utils';
+export type { ImageTransformOptions } from './image-transform-utils';
 
 export {
   searchLocations,
@@ -20,6 +21,8 @@ export {
   saveDrawing,
   getSavedDrawings,
   deleteDrawing,
+  updateDrawingImage,
+  updateDrawingImageTransform,
 } from './drawing-utils';
 
 export {
@@ -28,3 +31,9 @@ export {
   getSavedFloorPlans,
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
+
+export {
+  transformImage,
+  getDefaultTransformOptions,
+  calculateFitDimensions,
+} from './image-transform-utils';

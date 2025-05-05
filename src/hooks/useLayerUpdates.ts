@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
+import { ImageTransformOptions } from '@/utils/image-transform-utils';
 
 interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;
@@ -12,9 +13,11 @@ interface LayerUpdatesProps {
   layersRef: React.MutableRefObject<Map<string, L.Layer>>;
   removeButtonRoots: React.MutableRefObject<Map<string, any>>;
   uploadButtonRoots: React.MutableRefObject<Map<string, any>>;
+  imageControlsRoots: React.MutableRefObject<Map<string, any>>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void;
 }
 
 export function useLayerUpdates({
@@ -25,9 +28,11 @@ export function useLayerUpdates({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
+  imageControlsRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
+  onUploadRequest,
+  onImageTransform
 }: LayerUpdatesProps) {
   const safelyUnmountRoot = (root: any) => {
     if (!root) return;
@@ -62,6 +67,11 @@ export function useLayerUpdates({
       });
       uploadButtonRoots.current.clear();
       
+      imageControlsRoots.current.forEach(root => {
+        safelyUnmountRoot(root);
+      });
+      imageControlsRoots.current.clear();
+      
       layersRef.current.clear();
       
       // Create layers for each drawing
@@ -75,9 +85,11 @@ export function useLayerUpdates({
             layersRef: layersRef.current,
             removeButtonRoots: removeButtonRoots.current,
             uploadButtonRoots: uploadButtonRoots.current,
+            imageControlsRoots: imageControlsRoots.current,
             onRegionClick,
             onRemoveShape,
-            onUploadRequest
+            onUploadRequest,
+            onImageTransform
           });
         } catch (err) {
           console.error(`Error creating layer for drawing ${drawing.id}:`, err);
@@ -97,9 +109,19 @@ export function useLayerUpdates({
       }
     };
     
+    const handleImageUpdated = () => {
+      if (isMountedRef.current) {
+        // Update layers when an image is uploaded or changed
+        setTimeout(updateLayers, 50);
+      }
+    };
+    
     window.addEventListener('markersUpdated', handleMarkerUpdated);
+    window.addEventListener('image-uploaded', handleImageUpdated as EventListener);
+    
     return () => {
       window.removeEventListener('markersUpdated', handleMarkerUpdated);
+      window.removeEventListener('image-uploaded', handleImageUpdated as EventListener);
     };
   }, []);
 

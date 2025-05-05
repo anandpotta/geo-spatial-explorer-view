@@ -1,0 +1,37 @@
+
+.leaflet-drawing-image-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none; /* Allow map interactions to pass through */
+  z-index: 650; /* Above shapes but below controls */
+}
+
+.leaflet-drawing-image {
+  max-width: 100%;
+  max-height: 100%;
+  pointer-events: auto; /* Make the image interactive */
+  transition: transform 0.1s ease-out;
+}
+
+.leaflet-drawing-image-controls {
+  position: absolute;
+  top: -45px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  pointer-events: auto;
+  display: flex;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure controls are always visible */
+.leaflet-drawing-image-controls.hidden {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}

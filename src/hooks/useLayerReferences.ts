@@ -6,6 +6,7 @@ export function useLayerReferences() {
   const isMountedRef = useRef(true);
   const removeButtonRoots = useRef<Map<string, any>>(new Map());
   const uploadButtonRoots = useRef<Map<string, any>>(new Map());
+  const imageControlsRoots = useRef<Map<string, any>>(new Map());
   const layersRef = useRef<Map<string, L.Layer>>(new Map());
 
   useEffect(() => {
@@ -51,6 +52,16 @@ export function useLayerReferences() {
       }
       
       uploadButtonRoots.current.clear();
+      
+      try {
+        imageControlsRoots.current.forEach(root => {
+          safelyUnmountRoot(root);
+        });
+      } catch (err) {
+        console.error('Error cleaning up image controls roots:', err);
+      }
+      
+      imageControlsRoots.current.clear();
       layersRef.current.clear();
     };
   }, []);
@@ -59,6 +70,7 @@ export function useLayerReferences() {
     isMountedRef,
     removeButtonRoots,
     uploadButtonRoots,
+    imageControlsRoots,
     layersRef
   };
 }

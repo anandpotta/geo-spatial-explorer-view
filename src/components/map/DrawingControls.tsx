@@ -11,6 +11,8 @@ import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingContro
 import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { updateDrawingImageTransform, updateDrawingImage } from '@/utils/drawing-utils';
+import { ImageTransformOptions } from '@/utils/image-transform-utils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -18,7 +20,7 @@ interface DrawingControlsProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
-  onUploadToDrawing?: (drawingId: string, file: File) => void;
+  onUploadToDrawing?: (drawingId: string, file: File, transformOptions?: ImageTransformOptions) => void;
   onPathsUpdated?: (paths: string[]) => void;
 }
 
@@ -47,8 +49,37 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   
   const {
     handleFileChange,
-    handleUploadRequest
-  } = useFileUpload({ onUploadToDrawing });
+    handleUploadRequest,
+    imageTransformOptions,
+    updateImageTransform
+  } = useFileUpload({ 
+    onUploadToDrawing: (drawingId, file, transform) => {
+      // Convert the file to base64 string
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target && e.target.result && typeof e.target.result === 'string') {
+          // Update the drawing with the image data
+          updateDrawingImage(drawingId, e.target.result);
+          
+          // Update transform if provided
+          if (transform) {
+            updateDrawingImageTransform(drawingId, transform);
+          }
+          
+          // Notify parent component if provided
+          if (onUploadToDrawing) {
+            onUploadToDrawing(drawingId, file, transform);
+          }
+          
+          toast.success('Image added to shape');
+        }
+      };
+      reader.onerror = () => {
+        toast.error('Error reading file');
+      };
+      reader.readAsDataURL(file);
+    } 
+  });
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
@@ -134,6 +165,14 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     }
   };
 
+  const handleImageTransform = (drawingId: string, options: Partial<ImageTransformOptions>) => {
+    updateImageTransform(options);
+    updateDrawingImageTransform(drawingId, {
+      ...imageTransformOptions,
+      ...options
+    });
+  };
+
   const handleCreatedWrapper = (shape: any) => {
     // Process the shape and check for SVG path data
     if (shape.svgPath) {
@@ -163,6 +202,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
             onRegionClick={handleDrawingClick}
             onRemoveShape={handleRemoveShape}
             onUploadRequest={handleUploadRequest}
+            onImageTransform={handleImageTransform}
           />
         )}
         <DrawTools 
