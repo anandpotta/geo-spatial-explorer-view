@@ -84,6 +84,37 @@ export const addImageToLayer = (
     
     containerDiv.appendChild(imgElement);
     
+    // Apply clipping mask using SVG path data
+    if (pathElement && pathElement.getAttribute('d')) {
+      const pathData = pathElement.getAttribute('d') || '';
+      
+      // Create a SVG clipPath
+      const clipPathId = `clip-path-${drawingId}`;
+      let clipPathEl = svgElement.querySelector(`#${clipPathId}`);
+      
+      // Remove existing clip path if present
+      if (clipPathEl) {
+        clipPathEl.remove();
+      }
+      
+      // Create new clip path
+      const defs = svgElement.querySelector('defs') || document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      if (!svgElement.querySelector('defs')) {
+        svgElement.appendChild(defs);
+      }
+      
+      clipPathEl = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+      clipPathEl.setAttribute('id', clipPathId);
+      
+      const clipPathShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      clipPathShape.setAttribute('d', pathData);
+      clipPathEl.appendChild(clipPathShape);
+      defs.appendChild(clipPathEl);
+      
+      // Apply clip path to image container
+      containerDiv.style.clipPath = `url(#${clipPathId})`;
+    }
+    
     // Create image edit controls - always visible
     const controlsContainer = document.createElement('div');
     controlsContainer.className = 'leaflet-drawing-image-controls';
@@ -156,6 +187,15 @@ export const addImageToLayer = (
       // Remove map event listeners
       if (map) {
         map.off('zoom move moveend', updatePosition);
+      }
+      
+      // Remove clip path if exists
+      const clipPathId = `clip-path-${drawingId}`;
+      if (svgElement) {
+        const clipPath = svgElement.querySelector(`#${clipPathId}`);
+        if (clipPath && clipPath.parentElement) {
+          clipPath.parentElement.removeChild(clipPath);
+        }
       }
     };
   } catch (err) {

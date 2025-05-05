@@ -8,6 +8,9 @@
   overflow: visible;
   pointer-events: none;
   z-index: 650;
+  /* Ensure the container respects clipping paths */
+  clip-path: inherit;
+  -webkit-clip-path: inherit;
 }
 
 .leaflet-drawing-image {
@@ -52,4 +55,15 @@
 .leaflet-drawing-image-controls .leaflet-control-button {
   background-color: white;
   box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+/* Add styles for floor plan displays */
+.leaflet-svg-overlay {
+  position: absolute;
+  pointer-events: none;
+}
+
+.floor-plan-clipped {
+  clip-path: url(#floor-plan-clip);
+  -webkit-clip-path: url(#floor-plan-clip);
 }

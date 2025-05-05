@@ -116,12 +116,22 @@ export function useLayerUpdates({
       }
     };
     
+    const handleFloorPlanUpdated = (event: CustomEvent) => {
+      if (isMountedRef.current) {
+        // Update layers when a floor plan is uploaded or changed
+        console.log('Floor plan updated for drawing:', event.detail?.drawingId);
+        setTimeout(updateLayers, 50);
+      }
+    };
+    
     window.addEventListener('markersUpdated', handleMarkerUpdated);
     window.addEventListener('image-uploaded', handleImageUpdated as EventListener);
+    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkerUpdated);
       window.removeEventListener('image-uploaded', handleImageUpdated as EventListener);
+      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     };
   }, []);
 

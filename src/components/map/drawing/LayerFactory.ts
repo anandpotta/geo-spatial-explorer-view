@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
@@ -6,7 +5,7 @@ import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 import { getDefaultTransformOptions, ImageTransformOptions } from '@/utils/image-transform-utils';
 import { addImageToLayer } from '@/utils/layer-image-utils';
 import { createLayerControls } from './LayerControls';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { getDrawingIdsWithFloorPlans, getFloorPlanById } from '@/utils/floor-plan-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 
 export interface LayerFactoryOptions {
@@ -87,8 +86,9 @@ function setupDrawingOptions(drawing: DrawingData): L.PathOptions {
   const options = getDefaultDrawingOptions(drawing.properties.color);
   if (hasFloorPlan) {
     options.fillColor = '#3b82f6';
-    options.fillOpacity = 0.4;
+    options.fillOpacity = 0.1; // Make it more transparent to see floor plan better
     options.color = '#1d4ed8';
+    options.weight = 2;
   }
   
   // Always ensure opacity is set to visible values
@@ -120,8 +120,23 @@ function attachLayerHandlers({
       // Store the layer reference
       layersRef.set(drawing.id, l);
       
-      // Add the image if available
-      if (drawing.imageData) {
+      // Check for floor plan first
+      const floorPlan = getFloorPlanById(drawing.id);
+      
+      // If we have a floor plan, add it as the primary image
+      if (floorPlan && floorPlan.data) {
+        console.log('Adding floor plan to layer for drawing:', drawing.id);
+        addImageToLayer(
+          l, 
+          drawing.id, 
+          floorPlan.data,
+          drawing.imageTransform || getDefaultTransformOptions(),
+          imageControlsRoots,
+          onImageTransform
+        );
+      }
+      // Otherwise fall back to any image data on the drawing itself
+      else if (drawing.imageData) {
         console.log('Adding image to layer for drawing:', drawing.id);
         addImageToLayer(
           l, 
