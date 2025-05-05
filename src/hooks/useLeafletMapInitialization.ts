@@ -20,11 +20,13 @@ export const useLeafletMapInitialization = ({
   
   // Map reference initialization function with proper cleanup
   const handleSetMapRef = useCallback((map: L.Map) => {
-    console.log('Map reference provided, container ID:', map._container?.id);
+    // Get container ID using the proper getContainer method
+    const container = map.getContainer();
+    console.log('Map reference provided, container ID:', container?.id);
     
     // Store the container ID to track it
-    if (map._container?.id) {
-      containerRefHistory.current.add(map._container.id);
+    if (container?.id) {
+      containerRefHistory.current.add(container.id);
     }
     
     // Cleanup any existing map before setting the new one
