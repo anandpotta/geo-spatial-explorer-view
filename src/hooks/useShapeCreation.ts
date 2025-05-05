@@ -26,12 +26,6 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
         
         // Force a reflow to ensure the browser renders the path
         pathElement.getBoundingClientRect();
-        
-        // Set style attributes directly to ensure visibility
-        pathElement.setAttribute('stroke', '#33C3F0');
-        pathElement.setAttribute('stroke-width', '4px');
-        pathElement.setAttribute('stroke-opacity', '1');
-        pathElement.setAttribute('fill-opacity', '0.3');
       }
       
       // Enhanced path finding for polygon layers
@@ -48,17 +42,11 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
               // Apply visible-path-stroke class to ensure path visibility
               pathElement.classList.add('visible-path-stroke');
               
-              // Set style attributes directly to ensure visibility
-              pathElement.setAttribute('stroke', '#33C3F0');
-              pathElement.setAttribute('stroke-width', '4px');
-              pathElement.setAttribute('stroke-opacity', '1');
-              pathElement.setAttribute('fill-opacity', '0.3');
-              
               // Force a reflow to ensure the path is displayed
               pathElement.getBoundingClientRect();
             }
           }
-        }, 100);
+        }, 50);
       }
       
       // Create a shape object with additional properties
@@ -73,17 +61,6 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
       // Call the provided callback with the shape
       if (onCreated) {
         onCreated(shape);
-        
-        // Apply a backup visibility check after a short delay
-        setTimeout(() => {
-          if (layer._path) {
-            const pathElement = layer._path as SVGPathElement;
-            if (!pathElement.classList.contains('visible-path-stroke')) {
-              pathElement.classList.add('visible-path-stroke');
-              console.log('Visibility restored to path element');
-            }
-          }
-        }, 500);
       }
     } catch (err) {
       console.error('Error creating shape:', err);
