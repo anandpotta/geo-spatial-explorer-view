@@ -2,11 +2,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
-import LeafletMap from '../map/LeafletMap'; // Update the import path
+import LeafletMap from '../map/LeafletMap'; 
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
 import { toast } from 'sonner';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
@@ -45,7 +46,18 @@ const MapContent = ({
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       zoomIn(cesiumViewerRef.current);
     } else if (currentView === 'leaflet' && leafletMapRef.current) {
-      leafletMapRef.current.zoomIn();
+      try {
+        // Validate the map instance before using it
+        if (isMapValid(leafletMapRef.current)) {
+          leafletMapRef.current.zoomIn();
+        } else {
+          console.warn('Leaflet map instance is not valid for zoom in operation');
+          toast.error('Map control error. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error during zoom in operation:', err);
+        toast.error('Failed to zoom in. Please try again.');
+      }
     }
   };
 
@@ -53,7 +65,18 @@ const MapContent = ({
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       zoomOut(cesiumViewerRef.current);
     } else if (currentView === 'leaflet' && leafletMapRef.current) {
-      leafletMapRef.current.zoomOut();
+      try {
+        // Validate the map instance before using it
+        if (isMapValid(leafletMapRef.current)) {
+          leafletMapRef.current.zoomOut();
+        } else {
+          console.warn('Leaflet map instance is not valid for zoom out operation');
+          toast.error('Map control error. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error during zoom out operation:', err);
+        toast.error('Failed to zoom out. Please try again.');
+      }
     }
   };
 
@@ -62,8 +85,19 @@ const MapContent = ({
       resetCamera(cesiumViewerRef.current);
       toast.info('View reset');
     } else if (currentView === 'leaflet' && leafletMapRef.current) {
-      leafletMapRef.current.setView([51.505, -0.09], 13);
-      toast.info('View reset');
+      try {
+        // Validate the map instance before using it
+        if (isMapValid(leafletMapRef.current)) {
+          leafletMapRef.current.setView([51.505, -0.09], 13);
+          toast.info('View reset');
+        } else {
+          console.warn('Leaflet map instance is not valid for reset operation');
+          toast.error('Map control error. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error during reset operation:', err);
+        toast.error('Failed to reset view. Please try again.');
+      }
     }
   };
 
@@ -77,15 +111,26 @@ const MapContent = ({
       }
     } else if (currentView === 'leaflet') {
       if (tool === 'clear' && leafletMapRef.current) {
-        const layers = leafletMapRef.current._layers;
-        if (layers) {
-          Object.keys(layers).forEach(layerId => {
-            const layer = layers[layerId];
-            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-              leafletMapRef.current.removeLayer(layer);
+        try {
+          // Validate the map instance before using it
+          if (isMapValid(leafletMapRef.current)) {
+            const layers = leafletMapRef.current._layers;
+            if (layers) {
+              Object.keys(layers).forEach(layerId => {
+                const layer = layers[layerId];
+                if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+                  leafletMapRef.current.removeLayer(layer);
+                }
+              });
+              toast.info('All shapes cleared');
             }
-          });
-          toast.info('All shapes cleared');
+          } else {
+            console.warn('Leaflet map instance is not valid for clear operation');
+            toast.error('Map control error. Please try again.');
+          }
+        } catch (err) {
+          console.error('Error during clear operation:', err);
+          toast.error('Failed to clear shapes. Please try again.');
         }
       }
     }
@@ -93,16 +138,27 @@ const MapContent = ({
 
   const handleClearAll = () => {
     if (currentView === 'leaflet' && leafletMapRef.current) {
-      // Clear all layers in Leaflet map
-      const layers = leafletMapRef.current._layers;
-      if (layers) {
-        Object.keys(layers).forEach(layerId => {
-          const layer = layers[layerId];
-          if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-            leafletMapRef.current.removeLayer(layer);
+      try {
+        // Validate the map instance before using it
+        if (isMapValid(leafletMapRef.current)) {
+          // Clear all layers in Leaflet map
+          const layers = leafletMapRef.current._layers;
+          if (layers) {
+            Object.keys(layers).forEach(layerId => {
+              const layer = layers[layerId];
+              if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+                leafletMapRef.current.removeLayer(layer);
+              }
+            });
+            toast.info('All shapes cleared');
           }
-        });
-        toast.info('All shapes cleared');
+        } else {
+          console.warn('Leaflet map instance is not valid for clear all operation');
+          toast.error('Map control error. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error during clear all operation:', err);
+        toast.error('Failed to clear shapes. Please try again.');
       }
     }
   };
