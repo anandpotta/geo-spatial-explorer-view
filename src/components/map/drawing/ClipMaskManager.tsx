@@ -21,13 +21,29 @@ export const applyClipMaskToDrawing = ({
   console.log(`Drawing ${drawingId} has a floor plan, will try to apply clip mask`);
   
   // Use a retry mechanism with exponential backoff
-  const maxRetries = 15;
+  const maxRetries = 5; // Reduced from 15 to 5 to avoid excessive retries
   let currentRetry = 0;
   
   const attemptApplyClipMask = () => {
     if (!isMounted) return;
     
     try {
+      if (layer && layer.feature) {
+        // Try to add the drawing ID directly to the layer as a Leaflet property
+        if (layer.feature && !layer.feature.properties) {
+          layer.feature.properties = {};
+        }
+        if (layer.feature && layer.feature.properties) {
+          layer.feature.properties.drawingId = drawingId;
+        }
+        
+        // Try to find the SVG element directly from the layer
+        if (layer._path && !layer._path.getAttribute('data-drawing-id')) {
+          layer._path.setAttribute('data-drawing-id', drawingId);
+          console.log('Added data-drawing-id directly to layer._path');
+        }
+      }
+      
       // Try to find the path element using enhanced finder
       const pathElement = findSvgPathByDrawingId(drawingId);
       
@@ -82,6 +98,8 @@ export const applyClipMaskToDrawing = ({
               currentRetry++;
               const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
               setTimeout(attemptApplyClipMask, delay);
+            } else {
+              console.warn(`Giving up on applying clip mask for drawing ${drawingId} after ${maxRetries} attempts`);
             }
           }
         } else {
@@ -96,6 +114,8 @@ export const applyClipMaskToDrawing = ({
           const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
           console.log(`Retrying to find path element for drawing ${drawingId} (Attempt ${currentRetry} of ${maxRetries}) in ${delay}ms`);
           setTimeout(attemptApplyClipMask, delay);
+        } else {
+          console.warn(`Giving up on finding path element for drawing ${drawingId} after ${maxRetries} attempts`);
         }
       }
     } catch (err) {
@@ -106,6 +126,8 @@ export const applyClipMaskToDrawing = ({
         currentRetry++;
         const delay = Math.min(300 * Math.pow(1.5, currentRetry), 3000);
         setTimeout(attemptApplyClipMask, delay);
+      } else {
+        console.warn(`Giving up after ${maxRetries} attempts due to errors`);
       }
     }
   };

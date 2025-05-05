@@ -17,48 +17,63 @@ export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null
   }
   
   if (!pathElement) {
-    // Look for path elements in all SVG elements on the page
-    const allSvgs = document.querySelectorAll('svg');
-    for (const svg of Array.from(allSvgs)) {
-      const paths = svg.querySelectorAll('path');
-      for (const path of Array.from(paths)) {
-        if (path.getAttribute('data-drawing-id') === drawingId) {
-          pathElement = path as SVGPathElement;
-          break;
+    // Try every path element to find one with the right drawing ID attribute or class
+    const allPaths = document.querySelectorAll('path.leaflet-interactive');
+    console.log(`Checking ${allPaths.length} interactive paths for drawing ID ${drawingId}`);
+    
+    for (const path of Array.from(allPaths)) {
+      // Check for the data-drawing-id attribute
+      const id = path.getAttribute('data-drawing-id');
+      console.log(`Path element data-drawing-id: ${id}`);
+      
+      // Also check for class that might contain the ID
+      const classes = path.classList;
+      let foundInClass = false;
+      
+      if (classes) {
+        for (let i = 0; i < classes.length; i++) {
+          if (classes[i].includes(drawingId)) {
+            console.log(`Found drawing ID in class: ${classes[i]}`);
+            foundInClass = true;
+          }
         }
       }
-      if (pathElement) break;
+      
+      if (id === drawingId || foundInClass) {
+        console.log(`Found path element for drawing ${drawingId} by direct examination`);
+        pathElement = path as SVGPathElement;
+        
+        // Add the data-drawing-id attribute if it doesn't exist
+        if (!id) {
+          path.setAttribute('data-drawing-id', drawingId);
+        }
+        break;
+      }
     }
   }
   
-  // Try leaflet-specific panes as a fallback
   if (!pathElement) {
-    // Look in all leaflet panes
-    const panes = document.querySelectorAll('.leaflet-pane');
-    for (const pane of Array.from(panes)) {
-      // Try direct path selector
-      const directPath = pane.querySelector(`path[data-drawing-id="${drawingId}"]`);
-      if (directPath) {
-        pathElement = directPath as SVGPathElement;
-        break;
-      }
+    // As a fallback, try to find it in the leaflet overlay pane
+    const overlayPane = document.querySelector('.leaflet-overlay-pane');
+    if (overlayPane) {
+      const paths = overlayPane.querySelectorAll('path');
+      console.log(`Checking ${paths.length} paths in overlay pane for drawing ID ${drawingId}`);
       
-      // Try to find any path in the overlay pane
-      const overlayPane = document.querySelector('.leaflet-overlay-pane');
-      if (overlayPane) {
-        const paths = overlayPane.querySelectorAll('path.leaflet-interactive');
-        
-        // Debug how many paths were found
-        console.log(`Found ${paths.length} path elements in overlay pane`);
-        
-        // Check each path for the drawing ID
-        for (const path of Array.from(paths)) {
-          const id = path.getAttribute('data-drawing-id');
-          if (id === drawingId) {
+      if (paths.length === 1 && !paths[0].getAttribute('data-drawing-id')) {
+        // If there's only one path and it doesn't have an ID, let's assume it's the one we want
+        console.log('Single path without ID found, using it as fallback');
+        pathElement = paths[0] as SVGPathElement;
+        pathElement.setAttribute('data-drawing-id', drawingId);
+      } else {
+        // Try to match by path data or other attributes
+        paths.forEach((path, index) => {
+          const pathId = path.getAttribute('data-drawing-id');
+          console.log(`Path ${index} ID: ${pathId}`);
+          
+          if (pathId === drawingId) {
             pathElement = path as SVGPathElement;
-            break;
           }
-        }
+        });
       }
     }
   }

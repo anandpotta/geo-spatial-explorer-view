@@ -49,16 +49,44 @@ export const createLayerFromDrawing = ({
     // Prepare layer options
     const options = prepareLayerOptions(drawing);
     
+    // Add drawing ID to options to ensure it's available
+    options.drawingId = drawing.id;
+    
     // Create the layer
     const layer = createGeoJSONLayer(drawing, options);
     
     if (layer) {
+      // Store the drawing ID at the layer level
+      (layer as any).drawingId = drawing.id;
+      
+      // Add feature properties with drawing ID
+      if (layer.feature && !layer.feature.properties) {
+        layer.feature.properties = {};
+      }
+      if (layer.feature && layer.feature.properties) {
+        layer.feature.properties.drawingId = drawing.id;
+      }
+      
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
+          // Store the drawing ID on each sublayer
           (l as any).drawingId = drawing.id;
+          
+          // Store feature properties with drawing ID
+          if ((l as any).feature && !(l as any).feature.properties) {
+            (l as any).feature.properties = {};
+          }
+          if ((l as any).feature && (l as any).feature.properties) {
+            (l as any).feature.properties.drawingId = drawing.id;
+          }
           
           // Add drawing ID attribute to the SVG path for identification
           addDrawingAttributesToLayer(l, drawing.id);
+          
+          // Set the id on the SVG element itself if possible
+          if ((l as any)._path) {
+            (l as any)._path.setAttribute('data-drawing-id', drawing.id);
+          }
           
           // Store the layer reference
           layersRef.set(drawing.id, l);
@@ -86,16 +114,31 @@ export const createLayerFromDrawing = ({
       
       if (isMounted) {
         try {
+          // Add to feature group
           layer.addTo(featureGroup);
           
-          // Apply clip mask if a floor plan exists
-          if (hasFloorPlan(drawing.id)) {
-            applyClipMaskToDrawing({
-              drawingId: drawing.id,
-              isMounted,
-              layer
+          // Get all the SVG paths after adding to the feature group
+          setTimeout(() => {
+            const paths = document.querySelectorAll('path.leaflet-interactive');
+            console.log(`Found ${paths.length} path elements after adding layer to feature group`);
+            
+            // Set drawing ID on all paths that might be related to this drawing
+            paths.forEach((path) => {
+              if (!path.hasAttribute('data-drawing-id')) {
+                path.setAttribute('data-drawing-id', drawing.id);
+                console.log(`Set data-drawing-id attribute on a path element`);
+              }
             });
-          }
+            
+            // Apply clip mask if a floor plan exists
+            if (hasFloorPlan(drawing.id)) {
+              applyClipMaskToDrawing({
+                drawingId: drawing.id,
+                isMounted,
+                layer
+              });
+            }
+          }, 50);
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
         }
