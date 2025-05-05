@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
@@ -19,11 +20,13 @@ export function useMapState(selectedLocation?: Location) {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const prevMarkersRef = useRef<LocationMarker[]>([]);
 
   // Load existing markers on mount
   useEffect(() => {
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
+    prevMarkersRef.current = savedMarkers;
     
     // Listen for marker updates
     const handleMarkersUpdated = () => {
@@ -42,16 +45,17 @@ export function useMapState(selectedLocation?: Location) {
       }
       
       // Only update state if the marker set has actually changed
-      const currentIds = new Set(markers.map(m => m.id));
+      const currentIds = new Set(prevMarkersRef.current.map(m => m.id));
       const newIds = new Set(uniqueMarkers.map(m => m.id));
       
       const hasChanges = 
-        uniqueMarkers.length !== markers.length || 
+        uniqueMarkers.length !== prevMarkersRef.current.length || 
         [...newIds].some(id => !currentIds.has(id));
       
       if (hasChanges) {
         console.log(`Updating markers state with ${uniqueMarkers.length} unique markers`);
         setMarkers(uniqueMarkers);
+        prevMarkersRef.current = uniqueMarkers;
       }
     };
     
@@ -62,7 +66,7 @@ export function useMapState(selectedLocation?: Location) {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('storage', handleMarkersUpdated);
     };
-  }, [markers]);
+  }, []); // Empty dependency array - only run on mount
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -73,7 +77,7 @@ export function useMapState(selectedLocation?: Location) {
     };
   }, []);
 
-  const handleSaveMarker = () => {
+  const handleSaveMarker = useCallback(() => {
     if (!tempMarker || !markerName.trim()) return;
     
     const newMarker: LocationMarker = {
@@ -119,19 +123,19 @@ export function useMapState(selectedLocation?: Location) {
     console.log("Marker saved, waiting for markersUpdated event");
     
     toast.success("Location saved successfully");
-  };
+  }, [tempMarker, markerName, markerType, currentDrawing]);
 
-  const handleDeleteMarker = (id: string) => {
+  const handleDeleteMarker = useCallback((id: string) => {
     deleteMarker(id);
     // Update the markers state
-    setMarkers(markers.filter(marker => marker.id !== id));
+    setMarkers(prev => prev.filter(marker => marker.id !== id));
     toast.success("Location removed");
-  };
+  }, []);
 
-  const handleRegionClick = (drawing: DrawingData) => {
+  const handleRegionClick = useCallback((drawing: DrawingData) => {
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
-  };
+  }, []);
 
   return {
     position,

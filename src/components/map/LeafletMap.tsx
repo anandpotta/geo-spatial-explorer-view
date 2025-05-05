@@ -23,30 +23,17 @@ interface LeafletMapProps {
 
 const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect, onClearAll }: LeafletMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
-  const loadedMarkersRef = useRef(false);
-  const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const [isMapReady, setIsMapReady] = useState(false);
-  const mapContainerRef = useRef<string>(`map-container-${Date.now()}`);
+  const [mapInstanceKey, setMapInstanceKey] = useState<string>(`map-container-${Date.now()}`);
   
   const mapState = useMapState(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   
-  // Setup Leaflet icons and load markers
+  // Setup Leaflet icons
   useEffect(() => {
     setupLeafletIcons();
     
-    if (!document.querySelector('link[href*="leaflet.css"]')) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-      link.crossOrigin = '';
-      document.head.appendChild(link);
-    }
-    
-    const savedMarkers = getSavedMarkers();
-    mapState.setMarkers(savedMarkers);
-    
+    // Clean up function
     return () => {
       // Proper cleanup when component unmounts
       if (mapRef.current) {
@@ -58,20 +45,10 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     };
   }, []);
 
-  // Listen for marker updates
+  // Load markers once on mount, not on every render
   useEffect(() => {
-    const handleMarkersUpdated = () => {
-      const savedMarkers = getSavedMarkers();
-      mapState.setMarkers(savedMarkers);
-    };
-    
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
-    window.addEventListener('storage', handleMarkersUpdated);
-    
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
-      window.removeEventListener('storage', handleMarkersUpdated);
-    };
+    const savedMarkers = getSavedMarkers();
+    mapState.setMarkers(savedMarkers);
   }, []);
 
   // Handle selectedLocation changes
@@ -85,9 +62,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
         });
       } catch (err) {
         console.error('Error flying to location:', err);
-        // Regenerate map instance if there's an error
+        // Reset map instance if there's an error
         mapRef.current = null;
-        setMapInstanceKey(Date.now());
+        setMapInstanceKey(`map-container-${Date.now()}`);
       }
     }
   }, [selectedLocation, isMapReady]);
@@ -128,7 +105,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     }, 300);
   }, [selectedLocation, onMapReady]);
 
-  const handleLocationSelect = (position: [number, number]) => {
+  const handleLocationSelect = useCallback((position: [number, number]) => {
     console.log("Location selected in LeafletMap:", position);
     if (!mapRef.current || !isMapReady) {
       console.warn("Map is not ready yet, cannot navigate");
@@ -155,9 +132,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       console.error('Error flying to location:', err);
       toast.error("Could not navigate to location. Please try again.");
     }
-  };
+  }, [isMapReady, onLocationSelect]);
 
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
     mapState.setMarkerType('building');
@@ -168,7 +145,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     if (onClearAll) {
       onClearAll();
     }
-  };
+  }, [mapState, onClearAll]);
 
   if (mapState.showFloorPlan) {
     return (
@@ -200,7 +177,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAll}
       isMapReady={isMapReady}
-      containerKey={mapContainerRef.current}
+      containerKey={mapInstanceKey}
     />
   );
 };
