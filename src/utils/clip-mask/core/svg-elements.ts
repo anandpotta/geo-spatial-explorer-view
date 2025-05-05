@@ -48,6 +48,10 @@ export const createClipMaskSvgElements = (
     pattern.setAttribute('id', `pattern-${drawingId}`);
     pattern.setAttribute('patternUnits', 'userSpaceOnUse');
     pattern.setAttribute('preserveAspectRatio', 'none');
+    // Add additional attributes for visibility
+    pattern.setAttribute('width', '100%');
+    pattern.setAttribute('height', '100%');
+    
     defs.appendChild(pattern);
     
     return { clipPath, pattern };
@@ -76,23 +80,29 @@ export const applyPatternAndClipPath = (
       console.log(`Setting fill to: ${fill}`);
       console.log(`Setting clip-path to: ${clipPathUrl}`);
       
-      // Remove any existing fill and clip path
-      pathElement.removeAttribute('fill');
-      pathElement.removeAttribute('clip-path');
-      
-      // Set fill first
+      // Set attributes directly to ensure they take effect
       pathElement.style.fill = fill;
       pathElement.setAttribute('fill', fill);
-      
-      // Then apply clip path
       pathElement.style.clipPath = clipPathUrl;
       pathElement.setAttribute('clip-path', clipPathUrl);
       
       // Add extra visibility classes
       pathElement.classList.add('has-image-fill');
       
-      // Force a repaint to ensure changes are rendered
-      pathElement.getBoundingClientRect();
+      // Force a repaint
+      window.dispatchEvent(new Event('resize'));
+      
+      // Check again after a short delay to ensure attributes haven't been overridden
+      setTimeout(() => {
+        if (!pathElement || !document.contains(pathElement)) return;
+        
+        // Re-apply if the fill was lost
+        if (!pathElement.style.fill || !pathElement.style.fill.includes(patternId)) {
+          console.log(`Fill lost for ${patternId}, reapplying`);
+          pathElement.style.fill = fill;
+          pathElement.setAttribute('fill', fill);
+        }
+      }, 300);
     });
     
     return true;

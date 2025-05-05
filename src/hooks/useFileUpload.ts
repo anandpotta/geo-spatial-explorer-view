@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
 import { storeImageUrl } from '@/utils/clip-mask/core/image-loading';
+import { saveFloorPlan } from '@/utils/floor-plan-utils';
 
 export function useFileUpload({ onUploadToDrawing }: { 
   onUploadToDrawing?: (drawingId: string, file: File) => void 
@@ -47,6 +48,13 @@ export function useFileUpload({ onUploadToDrawing }: {
       // Store the image URL in localStorage for future use
       storeImageUrl(selectedDrawingId, imageUrl, file.name);
       
+      // Also save as a floor plan for consistent storage
+      saveFloorPlan(selectedDrawingId, {
+        data: imageUrl,
+        isPdf: false,
+        fileName: file.name
+      });
+      
       // Show loading toast
       toast.loading('Applying image to drawing...', { id: `uploading-${selectedDrawingId}` });
       
@@ -62,9 +70,6 @@ export function useFileUpload({ onUploadToDrawing }: {
       }
       
       console.log(`Found SVG path element:`, svgPathElement);
-      
-      // Even if it already has a clip mask, we'll reapply it with the new image
-      // This handles both updating existing masks and applying new ones
       
       // Implement a more focused application approach with fewer retries
       const maxRetries = 5; 
@@ -91,11 +96,11 @@ export function useFileUpload({ onUploadToDrawing }: {
               svgPathElement.setAttribute('data-has-clip-mask', 'true');
               svgPathElement.setAttribute('data-image-url', imageUrl);
               
-              // Force the browser to recognize changes
+              // Trigger a floor plan updated event to notify components
               setTimeout(() => {
                 window.dispatchEvent(new Event('resize'));
                 window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-                  detail: { drawingId: selectedDrawingId } 
+                  detail: { drawingId: selectedDrawingId, freshlyUploaded: true } 
                 }));
               }, 200);
             } else {

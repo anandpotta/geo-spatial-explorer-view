@@ -32,19 +32,26 @@ if (typeof document !== 'undefined') {
       fill-opacity: 1 !important;
     }
     
+    /* Make sure pattern fills are visible with stronger enforcement */
     path[fill^="url(#pattern-"] {
-      fill-opacity: 1 !important;
-    }
-    
-    /* Make sure pattern fills are visible */
-    svg path[fill^="url(#pattern-"] {
       fill-opacity: 1 !important;
       opacity: 1 !important;
     }
     
-    /* Ensure SVG patterns render correctly */
-    svg pattern {
+    /* Force SVG patterns to be visible */
+    svg defs pattern {
       patternUnits: userSpaceOnUse !important;
+    }
+    
+    /* Ensure SVG pattern images are fully visible */
+    svg defs pattern image {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    
+    /* Ensure SVG patterns render correctly */
+    svg path {
+      fill-opacity: 1 !important;
     }
     
     @keyframes dash {

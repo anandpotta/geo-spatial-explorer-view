@@ -81,6 +81,22 @@ export const retrieveFloorPlanImageUrl = (drawingId: string): string | null => {
       }
     }
     
+    // Now also check the floorPlans object in localStorage which is used by FloorPlanView
+    const floorPlansJson = localStorage.getItem('floorPlans');
+    if (floorPlansJson) {
+      try {
+        const floorPlans = JSON.parse(floorPlansJson);
+        if (floorPlans && floorPlans[drawingId] && floorPlans[drawingId].data) {
+          const imageUrl = floorPlans[drawingId].data;
+          imageUrlCache.set(drawingId, imageUrl);
+          console.log(`Retrieved floor plan image from floorPlans: ${imageUrl.substring(0, 50)}...`);
+          return imageUrl;
+        }
+      } catch (e) {
+        console.warn('Error parsing floorPlans data:', e);
+      }
+    }
+    
     console.log(`No floor plan image URL found for ${drawingId} in any storage location`);
     return null;
   } catch (err) {
@@ -113,8 +129,54 @@ export const storeImageUrl = (drawingId: string, imageUrl: string, fileName?: st
     // Store in localStorage
     localStorage.setItem(floorPlanKey, JSON.stringify(floorPlanData));
     
+    // Also store in a direct URL format for easier retrieval
+    localStorage.setItem(`${floorPlanKey}-url`, imageUrl);
+    
     // Update cache
     imageUrlCache.set(drawingId, imageUrl);
+    
+    // Also store in the floorPlans object used by FloorPlanView for proper integration
+    try {
+      const floorPlansJson = localStorage.getItem('floorPlans');
+      const floorPlans = floorPlansJson ? JSON.parse(floorPlansJson) : {};
+      
+      // Add the user ID 
+      const userData = localStorage.getItem('userData');
+      let userId = 'anonymous';
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user && user.id) {
+            userId = user.id;
+          }
+        } catch (e) {
+          console.warn('Error parsing user data:', e);
+        }
+      }
+      
+      // Create the floor plan entry
+      floorPlans[drawingId] = {
+        data: imageUrl,
+        name: fileName || 'uploaded-image',
+        type: imageUrl.startsWith('data:image') ? 'image/png' : 'application/octet-stream',
+        uploaded: new Date().toISOString(),
+        userId: userId,
+        isPdf: false,
+        fileName: fileName || 'uploaded-image'
+      };
+      
+      // Store the updated floorPlans
+      localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
+      
+      console.log(`Stored image URL in floorPlans for ${drawingId}`);
+      
+      // Trigger a floor plan update event
+      window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+        detail: { drawingId, freshlyUploaded: true } 
+      }));
+    } catch (e) {
+      console.warn('Error updating floorPlans object:', e);
+    }
     
     console.log(`Stored image URL in localStorage with key: ${floorPlanKey}`);
   } catch (err) {

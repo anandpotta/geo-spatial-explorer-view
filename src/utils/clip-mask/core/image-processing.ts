@@ -4,7 +4,6 @@
  */
 import { toast } from 'sonner';
 import { loadingImages, toastShown } from './image-loading';
-import { applyPatternAndClipPath } from './svg-elements';
 
 /**
  * Calculates dimensions and positions for an image to fit within an SVG shape
@@ -46,10 +45,16 @@ export const processImageForClipMask = (
   onSuccess: () => void,
   onError: () => void
 ): void => {
+  // Clear any existing images in the pattern first
+  while (pattern.firstChild) {
+    pattern.removeChild(pattern.firstChild);
+  }
+  
   // Create an image element for the pattern
   const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
   image.setAttribute('href', imageUrl);
   image.setAttribute('preserveAspectRatio', 'none'); // Don't preserve aspect ratio for better fitting
+  image.setAttribute('opacity', '1'); // Ensure full opacity
   
   // Add loading handler to ensure image is rendered properly
   image.onload = () => {
@@ -65,6 +70,11 @@ export const processImageForClipMask = (
     pathElement.setAttribute('data-image-loaded', 'true');
     
     onSuccess();
+    
+    // Trigger a floor plan update event
+    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+      detail: { drawingId: drawingId, refreshed: true }
+    }));
   };
   
   // Add error handler
@@ -175,6 +185,9 @@ export const processImageForClipMask = (
               console.log(`Fill lost for ${drawingId}, reapplying`);
               pathElement.style.fill = `url(#pattern-${drawingId})`;
               pathElement.setAttribute('fill', `url(#pattern-${drawingId})`);
+              
+              // Trigger another repaint
+              window.dispatchEvent(new Event('resize'));
             }
           }
         }, 500);
