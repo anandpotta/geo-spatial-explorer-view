@@ -10,11 +10,6 @@
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 9999 !important;
-  transform: translateZ(0) !important; /* Force hardware acceleration */
-  backface-visibility: hidden !important; /* Reduce flickering */
-  will-change: transform !important; /* Hint for browser optimization */
-  transition: none !important; /* Disable transitions that might cause flickering */
-  animation: none !important; /* Disable animations that might cause flickering */
 }
 
 /* Ensure edit and delete buttons are visible */
@@ -28,9 +23,6 @@
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
 }
 
 /* Image controls always visible */
@@ -41,9 +33,6 @@
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 9999 !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
 }
 
 /* Ensure buttons in the image controls are clickable */
@@ -51,8 +40,6 @@
   pointer-events: auto !important;
   visibility: visible !important;
   opacity: 1 !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
 }
 
 /* Fix for SVG paths to ensure they're properly rendered with clearer images inside */
@@ -62,17 +49,12 @@ svg path.leaflet-interactive {
   stroke-opacity: 0.7; /* Increased from 0.5 for better boundary visibility */
   stroke: #333; /* Darker stroke color for better contrast */
   opacity: 1 !important; /* Ensure full opacity */
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
 }
 
 /* Make path clearer when selected */
 svg path.leaflet-interactive.leaflet-editing-icon {
   fill-opacity: 1 !important;
   opacity: 1 !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
 }
 
 /* Make handle points more visible during edit mode */
@@ -80,10 +62,6 @@ svg path.leaflet-interactive.leaflet-editing-icon {
 .leaflet-marker-draggable,
 .leaflet-marker-icon {
   z-index: 10000 !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-  filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5)) !important;
 }
 
 /* Make edit vertices more visible */
@@ -93,32 +71,4 @@ svg path.leaflet-interactive.leaflet-editing-icon {
 .leaflet-vertex-icon,
 .leaflet-middle-icon {
   z-index: 10000 !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-  filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.5)) !important;
-}
-
-/* Ensure toolbar container is stable */
-.leaflet-draw-section {
-  position: relative !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-}
-
-/* Ensure all leaflet UI elements are stable */
-.leaflet-control {
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-  box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
-}
-
-/* Prevent flickering of the toolbar itself */
-.leaflet-bar {
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-  box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
 }
