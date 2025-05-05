@@ -1,7 +1,7 @@
 
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
-import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
+import { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';

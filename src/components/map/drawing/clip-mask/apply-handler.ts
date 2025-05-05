@@ -2,7 +2,7 @@
 import L from 'leaflet';
 import { toast } from 'sonner';
 import { findSvgPathByDrawingId } from '@/utils/svg-path-finder';
-import { applyImageClipMask } from '@/utils/svg-clip-mask';
+import { applyImageClipMask } from '@/utils/clip-mask';
 import { getFloorPlan } from '@/utils/floor-plan-utils';
 
 interface ApplyClipMaskProps {

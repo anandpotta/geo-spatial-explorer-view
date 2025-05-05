@@ -9,3 +9,4 @@ export { hasClipMaskApplied } from './clip-mask-checker';
 export { applyImageClipMask } from './clip-mask-apply';
 export { removeClipMask } from './clip-mask-remove';
 export { showClipMaskSuccessToast, showClipMaskErrorToast } from './clip-mask-toast';
+

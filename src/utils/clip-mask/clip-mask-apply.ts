@@ -33,6 +33,8 @@ export const applyImageClipMask = (
     
     // Check if already has clip mask (improved check)
     if (hasClipMaskApplied(pathElement)) {
+      console.log('Path already has clip mask, updating timestamp');
+      pathElement.setAttribute('data-last-updated', Date.now().toString());
       return true;
     }
     
@@ -138,12 +140,14 @@ export const applyImageClipMask = (
       }
     }
     
+    console.log(`Starting image load for ${imageUrlString.substring(0, 50)}...`);
     // Start loading the image
     tempImg.src = imageUrlString;
     
     return true;
   } catch (err) {
     console.error('Error applying image clip mask:', err);
+    showClipMaskErrorToast('Failed to apply floor plan to drawing');
     return false;
   }
 };
