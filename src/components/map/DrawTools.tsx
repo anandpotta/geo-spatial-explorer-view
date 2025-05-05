@@ -1,11 +1,15 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+
+import { useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
 import { usePathElements } from '@/hooks/usePathElements';
 import { useShapeCreation } from '@/hooks/useShapeCreation';
-import { getCurrentUser } from '@/services/auth-service';
+import { useDrawToolsConfiguration } from '@/hooks/useDrawToolsConfiguration';
+import { useDrawToolsEventHandlers } from '@/hooks/useDrawToolsEventHandlers';
+import { useSavedPathsRestoration } from '@/hooks/useSavedPathsRestoration';
+import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
+import { getDrawOptions } from './drawing/DrawOptionsConfiguration';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -14,23 +18,6 @@ interface DrawToolsProps {
   featureGroup: L.FeatureGroup;
 }
 
-// Load SVG paths for current user
-const loadSvgPaths = (): string[] => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) return [];
-  
-  try {
-    const pathsData = localStorage.getItem('svgPaths');
-    if (!pathsData) return [];
-    
-    const parsedData = JSON.parse(pathsData);
-    return parsedData[currentUser.id] || [];
-  } catch (err) {
-    console.error('Error loading SVG paths:', err);
-    return [];
-  }
-};
-
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
@@ -38,160 +25,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
   
-  // Listen for clear all events
-  useEffect(() => {
-    const handleClearAllEvent = () => {
-      if (clearPathElements) {
-        clearPathElements();
-      }
-    };
-    
-    window.addEventListener('clearAllSvgPaths', handleClearAllEvent);
-    
-    return () => {
-      window.removeEventListener('clearAllSvgPaths', handleClearAllEvent);
-    };
-  }, [clearPathElements]);
-
-  // Restore saved paths when the component mounts
-  useEffect(() => {
-    if (!featureGroup) return;
-    
-    // Get the map from the feature group
-    const map = (featureGroup as any)._map;
-    if (!map) return;
-    
-    // Load saved paths
-    const savedPaths = loadSvgPaths();
-    if (savedPaths && savedPaths.length > 0) {
-      // We need to attempt to restore the paths
-      console.log('Restoring saved paths:', savedPaths.length);
-      
-      // This would need to be implemented with proper path restoration logic
-      // For now, we'll dispatch an event to signal that paths should be restored
-      window.dispatchEvent(new CustomEvent('restoreSavedPaths', { 
-        detail: { paths: savedPaths }
-      }));
-    }
-  }, [featureGroup]);
-  
-  // Configure SVG renderer and optimize polygon drawing
-  useEffect(() => {
-    if (!featureGroup) return;
-    
-    // Fix: Don't use getMap as it doesn't exist on FeatureGroup
-    // Use type assertion to access _map internally without TypeScript errors
-    const map = (featureGroup as any)._map;
-    if (!map) return;
-    
-    // Set up SVG renderer configuration to reduce flickering
-    const cleanupSvgRenderer = configureSvgRenderer();
-    
-    // Optimize polygon drawing specifically
-    const originalOnMarkerDrag = optimizePolygonDrawing();
-    
-    // Set up path preservation
-    const cleanupPathPreservation = enhancePathPreservation(map);
-    
-    // Apply additional anti-flickering CSS to the map container
-    const mapContainer = map.getContainer();
-    if (mapContainer) {
-      mapContainer.classList.add('optimize-svg-rendering');
-      
-      // Add a style element with our anti-flicker CSS
-      const styleEl = document.createElement('style');
-      styleEl.innerHTML = `
-        .optimize-svg-rendering .leaflet-overlay-pane svg {
-          transform: translateZ(0);
-          backface-visibility: hidden;
-          perspective: 1000px;
-        }
-        .leaflet-drawing {
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          vector-effect: non-scaling-stroke;
-        }
-        .leaflet-interactive {
-          transform: translateZ(0);
-          backface-visibility: hidden;
-          pointer-events: auto !important;
-        }
-        .image-controls-wrapper {
-          opacity: 1 !important;
-          transition: opacity 0.2s ease-in-out;
-          z-index: 1000 !important;
-          pointer-events: auto !important;
-        }
-        .persistent-control {
-          visibility: visible !important;
-          display: block !important;
-          opacity: 1 !important;
-        }
-        .visible-path-stroke {
-          stroke-width: 4px !important;
-          stroke: #33C3F0 !important;
-          stroke-opacity: 1 !important;
-          stroke-linecap: round !important;
-          stroke-linejoin: round !important;
-          fill-opacity: 0.7 !important;
-          vector-effect: non-scaling-stroke;
-        }
-        .leaflet-overlay-pane path.leaflet-interactive {
-          stroke-width: 4px !important;
-          stroke-opacity: 1 !important;
-          pointer-events: auto !important;
-          cursor: pointer !important;
-        }
-      `;
-      document.head.appendChild(styleEl);
-      
-      // Force the browser to acknowledge these changes
-      mapContainer.getBoundingClientRect();
-    }
-    
-    // Add event listener to check for clip mask application
-    const handleFloorPlanUpdate = (e: Event) => {
-      const drawingId = (e as CustomEvent)?.detail?.drawingId;
-      if (drawingId) {
-        console.log(`Floor plan updated for drawing ${drawingId}, triggering refresh`);
-        // Force refresh all SVG paths to ensure clip masks are correctly applied
-        const paths = getPathElements();
-        if (paths.length > 0) {
-          // Force a redraw
-          setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-          }, 100);
-        }
-      }
-    };
-    
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdate);
-    
-    // Cleanup function
-    return () => {
-      cleanupSvgRenderer();
-      cleanupPathPreservation();
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdate);
-      
-      // Restore original marker drag handler if it was modified
-      if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
-        (L.Edit as any).Poly.prototype._onMarkerDrag = originalOnMarkerDrag;
-      }
-      
-      // Remove the style element
-      const styles = document.querySelectorAll('style');
-      styles.forEach(style => {
-        if (style.innerHTML.includes('optimize-svg-rendering')) {
-          document.head.removeChild(style);
-        }
-      });
-      
-      // Remove the class from map container
-      if (mapContainer) {
-        mapContainer.classList.remove('optimize-svg-rendering');
-      }
-    };
-  }, [featureGroup, getPathElements]);
+  // Initialize configuration and event handlers using custom hooks
+  useDrawToolsConfiguration(featureGroup);
+  useDrawToolsEventHandlers(getPathElements);
+  useSavedPathsRestoration(featureGroup);
+  usePathElementsCleaner(clearPathElements);
   
   useImperativeHandle(ref, () => ({
     getPathElements,
@@ -199,49 +37,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
-  // Create draw-only options with edit/remove disabled
-  const drawOptions = {
-    rectangle: {
-      shapeOptions: {
-        color: '#33C3F0',
-        weight: 4,
-        opacity: 1,
-        fillOpacity: 0.3,
-        stroke: true
-      }
-    },
-    polygon: {
-      allowIntersection: false,
-      drawError: {
-        color: '#e1e100',
-        message: '<strong>Cannot draw that shape!</strong>'
-      },
-      shapeOptions: {
-        color: '#33C3F0',
-        weight: 4,
-        opacity: 1,
-        fillOpacity: 0.3,
-        stroke: true,
-        lineCap: 'round',
-        lineJoin: 'round'
-      },
-      showArea: false,
-      metric: true,
-      smoothFactor: 1 // Lower value for less smoothing (more accurate paths)
-    },
-    circle: {
-      shapeOptions: {
-        color: '#33C3F0',
-        weight: 4,
-        opacity: 1,
-        fillOpacity: 0.3,
-        stroke: true
-      }
-    },
-    circlemarker: false,
-    marker: true,
-    polyline: false
-  };
+  // Get draw options from configuration
+  const drawOptions = getDrawOptions();
 
   return (
     <EditControl
