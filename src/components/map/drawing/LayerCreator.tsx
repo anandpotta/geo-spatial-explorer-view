@@ -60,15 +60,13 @@ export const createLayerFromDrawing = ({
       (layer as any).drawingId = drawing.id;
       
       // Add feature properties with drawing ID
-      // We need to check if feature and feature.properties exist before using them
-      if (layer.feature) {
-        if (!layer.feature.properties) {
-          // Initialize properties safely
-          layer.feature.properties = {};
+      // We need to check if feature exists and is a Feature type with properties
+      if (layer.feature && typeof (layer.feature as any).properties !== 'undefined') {
+        // Safe to access and modify properties now
+        if (!(layer.feature as any).properties) {
+          (layer.feature as any).properties = {};
         }
-        if (layer.feature.properties) {
-          layer.feature.properties.drawingId = drawing.id;
-        }
+        (layer.feature as any).properties.drawingId = drawing.id;
       }
       
       layer.eachLayer((l: L.Layer) => {
@@ -77,10 +75,12 @@ export const createLayerFromDrawing = ({
           (l as any).drawingId = drawing.id;
           
           // Store feature properties with drawing ID - check types first
-          if ((l as any).feature) {
-            if (!(l as any).feature.properties) {
+          if ((l as any).feature && typeof (l as any).feature === 'object') {
+            // Initialize properties if needed
+            if (typeof (l as any).feature.properties === 'undefined') {
               (l as any).feature.properties = {};
             }
+            // Set drawing ID on properties object
             if ((l as any).feature.properties) {
               (l as any).feature.properties.drawingId = drawing.id;
             }
