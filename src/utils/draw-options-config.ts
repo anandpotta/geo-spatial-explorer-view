@@ -11,7 +11,8 @@ export const getDrawOptions = () => {
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
-        stroke: true
+        stroke: true,
+        className: 'visible-path-stroke'
       }
     },
     polygon: {
@@ -27,7 +28,8 @@ export const getDrawOptions = () => {
         fillOpacity: 0.3,
         stroke: true,
         lineCap: 'round',
-        lineJoin: 'round'
+        lineJoin: 'round',
+        className: 'visible-path-stroke'
       },
       showArea: false,
       metric: true,
@@ -39,7 +41,8 @@ export const getDrawOptions = () => {
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
-        stroke: true
+        stroke: true,
+        className: 'visible-path-stroke'
       }
     },
     circlemarker: false,
