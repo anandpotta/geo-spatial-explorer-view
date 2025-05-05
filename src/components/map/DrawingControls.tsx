@@ -1,12 +1,17 @@
 
-import { forwardRef } from 'react';
+import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
+import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
-import { DrawingControlsRef } from '@/hooks/useDrawingControls';
+import DrawTools from './DrawTools';
+import LayerManager from './drawing/LayerManager';
+import { handleClearAll } from './drawing/ClearAllHandler';
+import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
 import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
+import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
+import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
 import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
-import DrawingControlsCore from './drawing/DrawingControlsCore';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -29,31 +34,109 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
   
-  // Setup file upload handling
+  const {
+    featureGroupRef,
+    drawToolsRef,
+    mountedRef,
+    isInitialized,
+    setIsInitialized,
+    fileInputRef,
+    openFileUploadDialog
+  } = useDrawingControls();
+  
   const {
     handleFileChange,
-    handleUploadRequest,
-    selectedDrawingForUpload,
-    fileInputRef
+    handleUploadRequest
   } = useFileUploadHandling({ onUploadToDrawing });
   
+  // Use a wrapper function to prevent redundant updates
+  const handlePathsUpdated = (paths: string[]) => {
+    if (onPathsUpdated) {
+      // Only log once rather than every time
+      onPathsUpdated(paths);
+    }
+  };
+  
+  const { svgPaths, setSvgPaths } = useSvgPathTracking({
+    isInitialized,
+    drawToolsRef,
+    mountedRef,
+    onPathsUpdated: handlePathsUpdated
+  });
+  
+  useImperativeHandle(ref, () => ({
+    getFeatureGroup: () => featureGroupRef.current,
+    getDrawTools: () => drawToolsRef.current,
+    openFileUploadDialog,
+    getSvgPaths: () => {
+      if (drawToolsRef.current) {
+        return drawToolsRef.current.getSVGPathData();
+      }
+      return [];
+    }
+  }));
+  
+  useEffect(() => {
+    if (featureGroupRef.current) {
+      setIsInitialized(true);
+    }
+    
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const handleCreatedWrapper = createShapeCreationHandler({
+    onCreated,
+    onPathsUpdated: handlePathsUpdated,
+    svgPaths
+  });
+
+  const handleClearAllWrapper = () => {
+    handleClearAll({
+      featureGroup: featureGroupRef.current,
+      onClearAll
+    });
+  };
+
+  const handleRemoveShape = (drawingId: string) => {
+    if (onRemoveShape) {
+      onRemoveShape(drawingId);
+    }
+  };
+
+  const handleDrawingClick = (drawing: DrawingData) => {
+    if (onRegionClick) {
+      onRegionClick(drawing);
+    }
+  };
+
   return (
     <>
       <FileUploadInput ref={fileInputRef} onChange={handleFileChange} />
       <DrawingEffects 
         activeTool={activeTool} 
-        isInitialized={true}
+        isInitialized={isInitialized}
       />
-      <DrawingControlsCore 
-        ref={ref}
-        onCreated={onCreated}
-        activeTool={activeTool}
-        onRegionClick={onRegionClick}
-        onClearAll={onClearAll}
-        onRemoveShape={onRemoveShape}
-        onUploadRequest={handleUploadRequest}
-        onPathsUpdated={onPathsUpdated}
-      />
+      <FeatureGroup ref={featureGroupRef}>
+        {featureGroupRef.current && isInitialized && (
+          <LayerManager 
+            featureGroup={featureGroupRef.current}
+            savedDrawings={savedDrawings}
+            activeTool={activeTool}
+            onRegionClick={handleDrawingClick}
+            onRemoveShape={handleRemoveShape}
+            onUploadRequest={handleUploadRequest}
+          />
+        )}
+        <DrawTools 
+          ref={drawToolsRef}
+          onCreated={handleCreatedWrapper} 
+          activeTool={activeTool} 
+          onClearAll={handleClearAllWrapper}
+          featureGroup={featureGroupRef.current}
+        />
+      </FeatureGroup>
     </>
   );
 });

@@ -1,5 +1,5 @@
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 interface FileUploadHandlingProps {
@@ -8,7 +8,6 @@ interface FileUploadHandlingProps {
 
 export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingProps) {
   const [selectedDrawingForUpload, setSelectedDrawingForUpload] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -27,15 +26,11 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
 
   const handleUploadRequest = (drawingId: string) => {
     setSelectedDrawingForUpload(drawingId);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
   };
 
   return {
     handleFileChange,
     handleUploadRequest,
-    selectedDrawingForUpload,
-    fileInputRef
+    selectedDrawingForUpload
   };
 }
