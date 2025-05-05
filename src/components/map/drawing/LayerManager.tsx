@@ -1,8 +1,10 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
-import { useLayerUpdates } from '@/hooks/useLayerUpdates';
+import L from 'leaflet';
+import { createLayerControls } from './LayerControls';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
+import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -11,6 +13,7 @@ interface LayerManagerProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  onClearAll?: () => void;
 }
 
 const LayerManager = ({
@@ -19,20 +22,18 @@ const LayerManager = ({
   activeTool,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
+  onUploadRequest,
+  onClearAll
 }: LayerManagerProps) => {
-  const isMountedRef = useRef<boolean>(true);
-  const isInitialRenderRef = useRef(true);
-  const lastDrawingsRef = useRef<DrawingData[]>([]);
-  
   const {
+    isMountedRef,
     removeButtonRoots,
     uploadButtonRoots,
-    layersRef,
-    imageControlRoots
+    imageControlRoots,
+    layersRef
   } = useLayerReferences();
 
-  const { updateLayers, debouncedUpdateLayers } = useLayerUpdates({
+  const { updateLayers } = useLayerUpdates({
     featureGroup,
     savedDrawings,
     activeTool,
@@ -43,130 +44,56 @@ const LayerManager = ({
     imageControlRoots: imageControlRoots.current,
     onRegionClick,
     onRemoveShape,
-    onUploadRequest
+    onUploadRequest,
+    onClearAll
   });
 
-  // Safe unmounting of React roots
-  const safeUnmountRoots = () => {
-    // Unmount all React roots in a safe way
-    const unmountRoot = (root: any) => {
-      if (!root) return;
-      try {
-        // Check if the unmount method exists before calling it
-        if (root && typeof root.unmount === 'function') {
-          root.unmount();
-        }
-      } catch (err) {
-        console.error('Error unmounting root:', err);
-      }
-    };
-    
-    // Safely clear all roots
-    const safelyClearRoots = (rootsMap: Map<string, any>) => {
-      if (!rootsMap) return;
-      
-      // Create array of entries to avoid modification during iteration
-      const entries = Array.from(rootsMap.entries());
-      entries.forEach(([key, root]) => {
-        unmountRoot(root);
-        rootsMap.delete(key);
-      });
-    };
-    
-    // Clear all types of roots
-    safelyClearRoots(removeButtonRoots.current);
-    safelyClearRoots(uploadButtonRoots.current);
-    safelyClearRoots(imageControlRoots.current);
-  };
-
-  // Component lifecycle
+  // Call updateLayers when dependencies change
   useEffect(() => {
-    isMountedRef.current = true;
-    
-    return () => {
-      isMountedRef.current = false;
-      safeUnmountRoots();
-      layersRef.current.clear();
-    };
-  }, []);
-
-  // Use a more stable approach for detecting real changes to drawings
-  useEffect(() => {
-    if (!isMountedRef.current) return;
-    
-    // Helper function to check if drawings have actually changed
-    const haveSavedDrawingsChanged = () => {
-      if (savedDrawings.length !== lastDrawingsRef.current.length) {
-        return true;
-      }
-      
-      // Check if the IDs match
-      const currentIds = new Set(savedDrawings.map(d => d.id));
-      return lastDrawingsRef.current.some(d => !currentIds.has(d.id));
-    };
-    
-    // First safely unmount any existing roots to prevent conflicts
-    safeUnmountRoots();
-    
-    // Only do a full update if drawings have changed or this is the first render
-    const shouldForceUpdate = isInitialRenderRef.current || haveSavedDrawingsChanged();
-    
-    if (shouldForceUpdate) {
-      // For initial render or when drawings change, use a short delay
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          updateLayers();
-          isInitialRenderRef.current = false;
-          lastDrawingsRef.current = [...savedDrawings];
-        }
-      }, 100);
-    } else if (activeTool === 'edit') {
-      // For edit mode changes, use the debounced version
-      debouncedUpdateLayers();
+    if (featureGroup && isMountedRef.current) {
+      updateLayers();
     }
-  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
+  }, [featureGroup, savedDrawings, activeTool, updateLayers]);
 
-  // Listen for resize events which might affect positioning
+  // Configure layer controls
   useEffect(() => {
-    const handleResize = () => {
-      if (isMountedRef.current) {
-        debouncedUpdateLayers();
+    const handleAddLayer = (e: any) => {
+      const layer = e.layer;
+      const drawingId = layer.drawingId;
+      
+      if (drawingId && isMountedRef.current) {
+        createLayerControls({
+          layer,
+          drawingId,
+          activeTool,
+          featureGroup,
+          uploadButtonRoots: uploadButtonRoots.current,
+          removeButtonRoots: removeButtonRoots.current,
+          imageControlRoots: imageControlRoots.current,
+          isMounted: isMountedRef.current,
+          onUploadRequest: (id) => {
+            if (onUploadRequest) onUploadRequest(id);
+          },
+          onRemoveShape: (id) => {
+            if (onRemoveShape) onRemoveShape(id);
+          },
+          onClearAll
+        });
       }
     };
-    
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [debouncedUpdateLayers]);
 
-  // Handle storage events for cross-tab updates
-  useEffect(() => {
-    const handleStorageUpdate = () => {
-      if (isMountedRef.current) {
-        debouncedUpdateLayers();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('floorPlanUpdated', handleStorageUpdate);
-    
-    // Also listen for visibility changes to update when tab becomes visible
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && isMountedRef.current) {
-        debouncedUpdateLayers();
-      }
-    });
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('floorPlanUpdated', handleStorageUpdate);
-      document.removeEventListener('visibilitychange', handleStorageUpdate);
-    };
-  }, [debouncedUpdateLayers]);
+    if (featureGroup) {
+      featureGroup.on('layeradd', handleAddLayer);
+    }
 
-  return null; // This is a non-visual component
+    return () => {
+      if (featureGroup) {
+        featureGroup.off('layeradd', handleAddLayer);
+      }
+    };
+  }, [featureGroup, activeTool, onUploadRequest, onRemoveShape, onClearAll, isMountedRef, removeButtonRoots, uploadButtonRoots, imageControlRoots]);
+
+  return null;
 };
 
 export default LayerManager;

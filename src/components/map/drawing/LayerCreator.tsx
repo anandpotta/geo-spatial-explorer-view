@@ -1,14 +1,9 @@
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
-import { toast } from 'sonner';
-import { hasFloorPlan, prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
-import { setupLayerClickHandlers } from './LayerEventHandlers';
-import { applyClipMaskToDrawing } from './clip-mask';
+import { setupLayerEvents } from './LayerEventHandlers';
 
-interface CreateLayerOptions {
+interface LayerCreatorProps {
   drawing: DrawingData;
   featureGroup: L.FeatureGroup;
   activeTool: string | null;
@@ -20,12 +15,8 @@ interface CreateLayerOptions {
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  onClearAll?: () => void;
 }
-
-// Keep track of layer creation to prevent repeated attempts
-const layersCreated = new Map<string, number>();
-// Track floor plan applications to prevent repeated attempts
-const floorPlanApplied = new Map<string, number>();
 
 export const createLayerFromDrawing = ({
   drawing,
@@ -38,111 +29,98 @@ export const createLayerFromDrawing = ({
   imageControlRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
-}: CreateLayerOptions) => {
-  if (!drawing.geoJSON || !isMounted) return;
-  
-  // Check if we've already created this layer recently
-  const now = Date.now();
-  const lastCreated = layersCreated.get(drawing.id) || 0;
-  if (now - lastCreated < 1000) { // Debounce layer creation
-    return;
-  }
-  
-  // Update the creation timestamp
-  layersCreated.set(drawing.id, now);
-
+  onUploadRequest,
+  onClearAll
+}: LayerCreatorProps) => {
   try {
-    // Check if the feature group is attached to a valid map
-    const map = getMapFromLayer(featureGroup);
-    if (!isMapValid(map)) {
-      return;
-    }
-
-    // Check if this layer already exists
-    let existingLayer = false;
-    featureGroup.eachLayer(layer => {
-      if ((layer as any).drawingId === drawing.id) {
-        existingLayer = true;
+    const getLayerFromDrawing = (drawing: DrawingData): L.Layer | null => {
+      if (!drawing || !drawing.shapeType || !drawing.data) {
+        console.warn("Invalid drawing data, cannot create layer");
+        return null;
       }
-    });
-    
-    if (existingLayer) {
-      console.log(`Layer for drawing ${drawing.id} already exists, skipping creation`);
-      return;
-    }
-
-    // Prepare layer options
-    const options = prepareLayerOptions(drawing);
-    
-    // Create the layer
-    const layer = createGeoJSONLayer(drawing, options);
-    
-    if (!layer) {
-      return;
-    }
-    
-    // Store the drawing ID at the layer level as well for easier reference
-    (layer as any).drawingId = drawing.id;
-    
-    // Process the layer and add it to the feature group
-    layer.eachLayer((l: L.Layer) => {
-      if (l && isMounted) {
-        // Add the ID at the sublayer level too
-        (l as any).drawingId = drawing.id;
-        
-        // Add drawing ID attribute to the SVG path for identification
-        addDrawingAttributesToLayer(l, drawing.id);
-        
-        // Store the layer reference
-        layersRef.set(drawing.id, l);
-        
-        // Add controls when in edit mode
-        if (onRemoveShape && onUploadRequest) {
-          createLayerControls({
-            layer: l,
-            drawingId: drawing.id,
-            activeTool,
-            featureGroup,
-            removeButtonRoots,
-            uploadButtonRoots,
-            imageControlRoots,
-            isMounted,
-            onRemoveShape,
-            onUploadRequest
-          });
+      
+      try {
+        const geoJson = JSON.parse(drawing.data);
+        if (!geoJson || typeof geoJson !== 'object') {
+          console.warn("Invalid GeoJSON data, cannot create layer");
+          return null;
         }
         
-        // Setup click handlers
-        setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
+        let layer: L.Layer | null = null;
+        
+        switch (drawing.shapeType) {
+          case 'rectangle':
+            layer = L.rectangle(geoJson.geometry.coordinates, geoJson.properties);
+            break;
+          case 'polygon':
+            layer = L.polygon(geoJson.geometry.coordinates, geoJson.properties);
+            break;
+          case 'circle':
+            layer = L.circle([geoJson.geometry.coordinates[1], geoJson.geometry.coordinates[0]], geoJson.geometry.radius, geoJson.properties);
+            break;
+          case 'marker':
+            layer = L.marker([geoJson.geometry.coordinates[1], geoJson.geometry.coordinates[0]], geoJson.properties);
+            break;
+          default:
+            console.warn(`Unsupported shape type: ${drawing.shapeType}`);
+            return null;
+        }
+        
+        return layer;
+      } catch (error) {
+        console.error("Error parsing GeoJSON or creating layer:", error);
+        return null;
       }
-    });
+    };
     
-    // Add the layer to the feature group
-    if (isMounted && layer) {
+    // Create the layer
+    let layer;
+    
+    layer = getLayerFromDrawing(drawing);
+    
+    if (layer) {
+      // Attach the drawing ID to the layer
+      (layer as any).drawingId = drawing.id;
+      
+      // Add the layer to the feature group
       featureGroup.addLayer(layer);
       
-      // Check if we've recently applied a floor plan to this drawing
-      const lastApplied = floorPlanApplied.get(drawing.id) || 0;
-      const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
+      // Store the layer in the layers reference map
+      layersRef.set(drawing.id, layer);
       
-      // Add a small delay before applying clip mask to ensure the path is rendered
-      if (hasFloorPlan(drawing.id) && isMounted && shouldApply) {
-        floorPlanApplied.set(drawing.id, now);
+      // Set up layer events
+      setupLayerEvents(layer, drawing, onRegionClick);
+      
+      // Create layer controls
+      createLayerControls({
+        layer,
+        drawingId: drawing.id,
+        activeTool,
+        featureGroup,
+        uploadButtonRoots,
+        removeButtonRoots,
+        imageControlRoots,
+        isMounted,
+        onUploadRequest: (id) => {
+          if (onUploadRequest) onUploadRequest(id);
+        },
+        onRemoveShape: (id) => {
+          if (onRemoveShape) onRemoveShape(id);
+        },
+        onClearAll
+      });
+      
+      // Apply any clip masks or other post-processing
+      setTimeout(() => {
+        const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+        const floorPlan = floorPlans[drawing.id];
         
-        setTimeout(() => {
-          // Apply clip mask if a floor plan exists
-          if (isMounted) {
-            applyClipMaskToDrawing({
-              drawingId: drawing.id,
-              isMounted,
-              layer
-            });
-          }
-        }, 300); // Delay to let the DOM update
-      }
+        if (floorPlan && floorPlan.data) {
+          window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { drawingId: drawing.id } }));
+        }
+      }, 100);
     }
-  } catch (err) {
-    console.error('Error creating layer for drawing:', err);
+  } catch (error) {
+    console.error('Error creating layer from drawing:', error);
   }
 };
