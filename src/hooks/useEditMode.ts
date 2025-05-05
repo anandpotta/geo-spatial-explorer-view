@@ -12,7 +12,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
   const updateEditMode = useCallback(() => {
     if (!editControlRef.current) {
       console.log('Edit control not available yet');
-      return;
+      return false;
     }
     
     try {
@@ -21,7 +21,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       
       if (!editToolbar) {
         console.log('Edit toolbar not available');
-        return;
+        return false;
       }
       
       const editHandler = editToolbar._modes?.edit?.handler;
@@ -32,7 +32,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       if (shouldEnableEdit && editHandler && typeof editHandler.enable === 'function') {
         const isAlreadyEnabled = editHandler.enabled && editHandler.enabled();
         if (!isAlreadyEnabled) {
-          console.log('Activating edit mode');
+          console.log('Activating edit mode through useEditMode hook');
           
           // First ensure all layers are selected to make them eligible for editing
           if (editHandler._featureGroup) {
@@ -48,8 +48,9 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
           
           // Update state and show notification
           setIsEditActive(true);
-          toast.success('Edit mode activated. Select a shape to modify it.');
+          return true;
         }
+        return isAlreadyEnabled;
       } else if (!shouldEnableEdit) {
         // Deactivate edit mode
         if (editHandler && typeof editHandler.disable === 'function' && editHandler.enabled && editHandler.enabled()) {
@@ -71,21 +72,25 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
           (el as HTMLElement).style.opacity = '1';
           (el as HTMLElement).style.visibility = 'visible';
           (el as HTMLElement).style.display = 'block';
+          (el as HTMLElement).style.pointerEvents = 'auto';
         });
       }, 200);
+      
+      return shouldEnableEdit && isEditActive;
     } catch (err) {
       console.error('Error updating edit mode:', err);
+      return false;
     }
-  }, [editControlRef, activeTool]);
+  }, [editControlRef, activeTool, isEditActive]);
 
   // Retry mechanism for edit mode activation with increased persistence
   useEffect(() => {
-    // Function to activate or deactivate edit mode based on activeTool
-    const attemptUpdateEditMode = (retry = 0) => {
-      if (!editControlRef.current && retry < 5) {
+    // Function to activate or deactivate edit mode with retries
+    const attemptUpdateEditMode = (retry = 0, maxRetries = 5) => {
+      if (!editControlRef.current && retry < maxRetries) {
         // Retry with increasing delay
-        const delay = Math.pow(2, retry) * 100;
-        setTimeout(() => attemptUpdateEditMode(retry + 1), delay);
+        const delay = Math.min(Math.pow(2, retry) * 100, 2000);
+        setTimeout(() => attemptUpdateEditMode(retry + 1, maxRetries), delay);
         return;
       }
       
@@ -95,23 +100,27 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     // Initial update with retry logic
     attemptUpdateEditMode();
     
-    // Also set up periodic check to ensure the edit mode stays correctly set
-    const intervalId = setInterval(() => {
-      const shouldBeActive = activeTool === 'edit';
-      if (shouldBeActive !== isEditActive) {
-        updateEditMode();
-      }
-      
-      // Always ensure image controls are visible
+    // Set up a timer that periodically ensures image controls are visible
+    const visibilityCheckId = setInterval(() => {
       document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
         (el as HTMLElement).style.opacity = '1';
         (el as HTMLElement).style.visibility = 'visible';
         (el as HTMLElement).style.display = 'block';
+        (el as HTMLElement).style.pointerEvents = 'auto';
       });
-    }, 500);
+    }, 1000);
+    
+    // Also set up a less frequent check for edit mode status
+    const editCheckId = setInterval(() => {
+      const shouldBeActive = activeTool === 'edit';
+      if (shouldBeActive !== isEditActive) {
+        updateEditMode();
+      }
+    }, 3000);
     
     return () => {
-      clearInterval(intervalId);
+      clearInterval(visibilityCheckId);
+      clearInterval(editCheckId);
     };
   }, [editControlRef, activeTool, updateEditMode, isEditActive]);
   
@@ -119,22 +128,41 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
   useEffect(() => {
     // Monitor for DOM changes that might remove our controls
     const observer = new MutationObserver((mutations) => {
+      let needsCheck = false;
+      
       mutations.forEach((mutation) => {
         if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-          // Re-show any image controls that might have been hidden
-          setTimeout(() => {
-            document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
-              (el as HTMLElement).style.opacity = '1';
-              (el as HTMLElement).style.visibility = 'visible';
-              (el as HTMLElement).style.display = 'block';
-            });
-          }, 10);
+          needsCheck = true;
+        }
+        
+        // Also check for attribute changes on image controls
+        if (mutation.type === 'attributes' && 
+            (mutation.target.classList.contains('image-controls-wrapper') || 
+             mutation.target.classList.contains('image-controls-container'))) {
+          needsCheck = true;
         }
       });
+      
+      if (needsCheck) {
+        // Re-show any image controls that might have been hidden
+        setTimeout(() => {
+          document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
+            (el as HTMLElement).style.opacity = '1';
+            (el as HTMLElement).style.visibility = 'visible';
+            (el as HTMLElement).style.display = 'block';
+            (el as HTMLElement).style.pointerEvents = 'auto';
+          });
+        }, 10);
+      }
     });
     
     // Start observing the document with the configured parameters
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { 
+      childList: true, 
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
     
     return () => {
       observer.disconnect();
