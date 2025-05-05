@@ -18,7 +18,7 @@ export const applyImageClipMask = (
   id: string
 ): boolean => {
   if (!pathElement || !imageUrl) {
-    console.error('Cannot apply clip mask: missing path or image URL');
+    console.error('Cannot apply clip mask: missing path or image URL', { pathElement, imageUrl, id });
     return false;
   }
   
@@ -53,6 +53,9 @@ export const applyImageClipMask = (
     
     // Store original path data and style for potential restoration
     storeOriginalAttributes(pathElement);
+    
+    // Add the drawing ID to the path for future reference
+    pathElement.setAttribute('data-drawing-id', id);
     
     // Create the defs section if it doesn't exist
     let defs = svg.querySelector('defs');

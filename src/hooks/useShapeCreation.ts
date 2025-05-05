@@ -15,6 +15,10 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
       // Extract GeoJSON for saving
       const geoJSON = layer.toGeoJSON();
       
+      // Generate a unique ID for the shape if it doesn't have one
+      const drawingId = layer.drawingId || `drawing-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+      layer.drawingId = drawingId;
+      
       // Get the SVG path data if available
       let svgPath = null;
       if (layer._path && layer._path.getAttribute) {
@@ -23,6 +27,9 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
         
         // Apply visible-path-stroke class to ensure path visibility
         pathElement.classList.add('visible-path-stroke');
+        
+        // Add drawing ID to the path for future reference
+        pathElement.setAttribute('data-drawing-id', drawingId);
         
         // Force a reflow to ensure the browser renders the path
         pathElement.getBoundingClientRect();
@@ -42,6 +49,9 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
               // Apply visible-path-stroke class to ensure path visibility
               pathElement.classList.add('visible-path-stroke');
               
+              // Add drawing ID to the path for future reference
+              pathElement.setAttribute('data-drawing-id', layer.drawingId || drawingId);
+              
               // Force a reflow to ensure the path is displayed
               pathElement.getBoundingClientRect();
             }
@@ -55,7 +65,8 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
         geoJSON,
         svgPath,
         center: layer.getBounds ? layer.getBounds().getCenter() : null,
-        type: e.layerType
+        type: e.layerType,
+        drawingId: drawingId
       };
       
       // Call the provided callback with the shape

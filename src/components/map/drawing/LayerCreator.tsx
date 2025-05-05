@@ -58,18 +58,24 @@ export const createLayerFromDrawing = ({
         
         let layer: L.Layer | null = null;
         
+        // Add ID to options for all layer types
+        const options = {
+          ...(drawing.properties || {}),
+          drawingId: drawing.id
+        };
+        
         switch (drawing.type) {
           case 'rectangle':
-            layer = L.rectangle(drawing.coordinates as any, drawing.properties);
+            layer = L.rectangle(drawing.coordinates as any, options);
             break;
           case 'polygon':
-            layer = L.polygon(drawing.coordinates, drawing.properties);
+            layer = L.polygon(drawing.coordinates, options);
             break;
           case 'circle':
             // For circle, first coordinate is center, properties should contain radius
             // Create circle options with radius explicitly defined
             const circleOptions = {
-              ...drawing.properties,
+              ...options,
               radius: 500 // Default radius if not specified
             };
             
@@ -84,15 +90,9 @@ export const createLayerFromDrawing = ({
             break;
           case 'marker':
             // Create proper marker options from properties
-            const markerOptions: L.MarkerOptions = {};
-            
-            // Copy relevant properties if they exist
-            if (drawing.properties) {
-              if ('icon' in drawing.properties) markerOptions.icon = (drawing.properties as any).icon;
-              if ('draggable' in drawing.properties) markerOptions.draggable = (drawing.properties as any).draggable;
-              if ('opacity' in drawing.properties) markerOptions.opacity = (drawing.properties as any).opacity;
-              if ('zIndexOffset' in drawing.properties) markerOptions.zIndexOffset = (drawing.properties as any).zIndexOffset;
-            }
+            const markerOptions: L.MarkerOptions = {
+              ...options
+            };
             
             layer = L.marker(drawing.coordinates[0], markerOptions);
             break;
@@ -109,9 +109,7 @@ export const createLayerFromDrawing = ({
     };
     
     // Create the layer
-    let layer;
-    
-    layer = getLayerFromDrawing(drawing);
+    let layer = getLayerFromDrawing(drawing);
     
     if (layer) {
       // Attach the drawing ID to the layer
@@ -127,6 +125,18 @@ export const createLayerFromDrawing = ({
       if (onRegionClick) {
         setupLayerEvents(layer, drawing, onRegionClick);
       }
+      
+      // Add drawing ID to the SVG path element if it exists
+      setTimeout(() => {
+        try {
+          if ((layer as any)._path) {
+            const path = (layer as any)._path as SVGPathElement;
+            path.setAttribute('data-drawing-id', drawing.id);
+          }
+        } catch (err) {
+          console.warn('Error setting path attributes:', err);
+        }
+      }, 50);
       
       // Create layer controls
       createLayerControls({
