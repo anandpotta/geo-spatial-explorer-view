@@ -33,6 +33,7 @@ interface MapViewProps {
   onClearAll?: () => void;
   isMapReady?: boolean;
   containerKey?: string;
+  containerID?: string;
 }
 
 const MapView = ({
@@ -54,7 +55,8 @@ const MapView = ({
   onRegionClick,
   onClearAll,
   isMapReady = false,
-  containerKey = 'default-map'
+  containerKey = 'default-map',
+  containerID
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
@@ -89,8 +91,8 @@ const MapView = ({
     );
   }
 
-  // Ensure each MapContainer has a truly unique ID
-  const uniqueContainerId = `${containerKey}-${Date.now()}`;
+  // Use provided containerID or generate a truly unique ID
+  const uniqueContainerId = containerID || `${containerKey}-${Date.now()}`;
   
   return (
     <div className="w-full h-full relative">
@@ -115,11 +117,7 @@ const MapView = ({
         whenReady={() => {
           // Force immediate resize to ensure proper container dimensions
           setTimeout(() => {
-            const mapInstance = document.getElementById(uniqueContainerId);
-            if (mapInstance) {
-              // Trigger a resize event to ensure map renders correctly
-              window.dispatchEvent(new Event('resize'));
-            }
+            window.dispatchEvent(new Event('resize'));
           }, 100);
         }}
       >
@@ -132,7 +130,7 @@ const MapView = ({
         />
         <AttributionControl position="bottomright" prefix={false} />
         
-        <MapReference onMapReady={onMapReady} />
+        <MapReference onMapReady={onMapReady} mapKey={containerKey} />
         
         <DrawingControlsContainer
           ref={drawingControlsRef}

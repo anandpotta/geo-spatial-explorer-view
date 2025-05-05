@@ -15,35 +15,16 @@ export const useLeafletMapInitialization = ({
 }: UseLeafletMapInitializationProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [mapInstanceKey, setMapInstanceKey] = useState<string>(`map-container-${Date.now()}`);
-  const containerRefHistory = useRef<Set<string>>(new Set());
+  const [mapInstanceKey, setMapInstanceKey] = useState<string>(`map-instance-${Date.now()}`);
+  const containerIdRef = useRef<string>(`map-container-${Date.now()}`);
   
   // Map reference initialization function with proper cleanup
   const handleSetMapRef = useCallback((map: L.Map) => {
-    // Get container ID using the proper getContainer method
-    const container = map.getContainer();
-    console.log('Map reference provided, container ID:', container?.id);
+    // Store container ID for tracking
+    const containerId = map.getContainer()?.id;
+    console.log('Map reference provided, container ID:', containerId);
     
-    // Store the container ID to track it
-    if (container?.id) {
-      containerRefHistory.current.add(container.id);
-    }
-    
-    // Safely cleanup any existing map before setting the new one
-    if (mapRef.current) {
-      console.log('Map reference already exists, removing previous instance');
-      try {
-        // Check if we can safely remove the map
-        if (mapRef.current !== map) {
-          mapRef.current.remove();
-        }
-      } catch (err) {
-        console.warn('Error removing previous map instance:', err);
-      }
-      mapRef.current = null;
-    }
-    
-    // Set the new map reference
+    // Store the map reference
     mapRef.current = map;
     
     setTimeout(() => {
@@ -81,73 +62,26 @@ export const useLeafletMapInitialization = ({
         });
       } catch (err) {
         console.error('Error flying to location:', err);
-        // Reset map instance if there's an error
-        mapRef.current = null;
-        // Generate a new key to force remounting of the map component
-        setMapInstanceKey(`map-container-${Date.now()}`);
+        forceMapRemount();
       }
     }
   }, [selectedLocation, isMapReady]);
   
-  // Cleanup function for when component unmounts
-  useEffect(() => {
-    return () => {
-      // Proper cleanup when component unmounts
-      if (mapRef.current) {
-        console.log('Cleaning up Leaflet map instance on component unmount');
-        try {
-          // Use a local reference for the timeout to avoid accessing potentially null references
-          const mapToRemove = mapRef.current;
-          
-          // Immediate removal with short timeout to prevent race conditions
-          setTimeout(() => {
-            try {
-              if (document.body.contains(mapToRemove.getContainer())) {
-                mapToRemove.remove();
-              }
-            } catch (e) {
-              // Silent catch for cleanup errors during unmount
-            }
-          }, 0);
-        } catch (err) {
-          console.error('Error cleaning up map:', err);
-        }
-        
-        // Clear the reference immediately
-        mapRef.current = null;
-        setIsMapReady(false);
-      }
-    };
-  }, []);
-  
-  // Force map remount when view changes
+  // Force map remount when needed
   const forceMapRemount = useCallback(() => {
-    // First, clean up any existing map
-    if (mapRef.current) {
-      try {
-        // Capture and clear reference
-        const mapToRemove = mapRef.current;
-        mapRef.current = null;
-        
-        // Remove after a short delay
-        setTimeout(() => {
-          try {
-            if (document.body.contains(mapToRemove.getContainer())) {
-              mapToRemove.remove();
-            }
-          } catch (err) {
-            console.warn('Error removing map during forced remount:', err);
-          }
-        }, 0);
-      } catch (err) {
-        console.warn('Error during map remount preparation:', err);
-      }
-    }
+    // Generate new keys for container and instance
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
     
-    // Generate a new unique key with additional randomness
-    const newKey = `map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    setMapInstanceKey(newKey);
+    // Clear the map reference first
+    mapRef.current = null;
+    
+    // Set new unique keys
+    containerIdRef.current = `map-container-${timestamp}-${randomSuffix}`;
+    setMapInstanceKey(`map-instance-${timestamp}-${randomSuffix}`);
     setIsMapReady(false);
+    
+    console.log('Forced map remount with new key:', containerIdRef.current);
   }, []);
   
   // Handle location selection
@@ -178,10 +112,19 @@ export const useLeafletMapInitialization = ({
     }
   }, [isMapReady]);
   
+  // Return proper cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      setIsMapReady(false);
+      mapRef.current = null;
+    };
+  }, []);
+  
   return {
     mapRef,
     isMapReady,
     mapInstanceKey,
+    containerId: containerIdRef.current,
     handleSetMapRef,
     handleLocationSelect,
     forceMapRemount

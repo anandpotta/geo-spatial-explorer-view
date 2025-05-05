@@ -29,6 +29,7 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     mapRef, 
     isMapReady, 
     mapInstanceKey, 
+    containerId,
     handleSetMapRef, 
     handleLocationSelect,
     forceMapRemount
@@ -46,41 +47,14 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   useEffect(() => {
     const savedMarkers = getSavedMarkers();
     mapState.setMarkers(savedMarkers);
-    
-    // Clean up map instance on unmount
-    return () => {
-      if (mapRef.current) {
-        try {
-          // Store a reference to avoid closure issues
-          const mapToRemove = mapRef.current;
-          mapRef.current = null;
-          
-          // Use setTimeout to avoid potential cleanup issues
-          setTimeout(() => {
-            try {
-              if (mapToRemove && document.body.contains(mapToRemove.getContainer())) {
-                mapToRemove.remove();
-              }
-            } catch (err) {
-              console.error("Error cleaning up map on unmount:", err);
-            }
-          }, 0);
-        } catch (err) {
-          console.error("Error cleaning up map on unmount:", err);
-        }
-      }
-    };
   }, []);
 
-  // If selectedLocation changes, force remount of the map to prevent container reuse issues
+  // If selectedLocation changes, handle it with better remounting approach
   useEffect(() => {
     if (selectedLocation) {
-      // Add a small delay before remounting to ensure previous map is properly cleaned up
-      setTimeout(() => {
-        forceMapRemount();
-      }, 10);
+      forceMapRemount();
     }
-  }, [selectedLocation?.id, forceMapRemount]);
+  }, [selectedLocation?.id]);
 
   const handleClearAll = useCallback(() => {
     mapState.setTempMarker(null);
@@ -105,7 +79,9 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
       
       {!mapState.showFloorPlan && (
         <MapView
-          key={`map-view-${mapInstanceKey}`}
+          key={mapInstanceKey}
+          containerKey={mapInstanceKey}
+          containerID={containerId}
           position={mapState.position}
           zoom={mapState.zoom}
           markers={mapState.markers}
@@ -124,7 +100,6 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
           onRegionClick={mapState.handleRegionClick}
           onClearAll={handleClearAll}
           isMapReady={isMapReady}
-          containerKey={mapInstanceKey}
         />
       )}
       

@@ -5,6 +5,7 @@ import L from 'leaflet';
 
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
+  mapKey?: string;
 }
 
 // Define interface for internal map properties not exposed in TypeScript definitions
@@ -16,10 +17,20 @@ interface LeafletMapInternal extends L.Map {
   };
 }
 
-const MapReference = ({ onMapReady }: MapReferenceProps) => {
+const MapReference = ({ onMapReady, mapKey }: MapReferenceProps) => {
   const map = useMap() as LeafletMapInternal;
   const hasCalledOnReady = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  useEffect(() => {
+    // Cancel any pending timers when component unmounts or mapKey changes
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [mapKey]);
   
   useEffect(() => {
     // Only call onMapReady once per instance
@@ -58,23 +69,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           console.error('Error in map initialization:', err);
         }
       }, 300); // Increase timeout to ensure map is initialized
-      
-      return () => {
-        // Clear timeout on unmount to prevent memory leaks
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
-      };
     }
-    
-    // Cleanup function for the effect
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
   }, [map, onMapReady]);
   
   return null;
