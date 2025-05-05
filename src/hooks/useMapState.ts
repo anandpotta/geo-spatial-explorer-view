@@ -21,6 +21,7 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const prevMarkersRef = useRef<LocationMarker[]>([]);
+  const lastEventTimeRef = useRef<number>(0);
 
   // Load existing markers on mount
   useEffect(() => {
@@ -29,7 +30,18 @@ export function useMapState(selectedLocation?: Location) {
     prevMarkersRef.current = savedMarkers;
     
     // Listen for marker updates
-    const handleMarkersUpdated = () => {
+    const handleMarkersUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const timestamp = customEvent.detail?.timestamp || Date.now();
+      
+      // Prevent duplicate processing of the same event
+      if (timestamp <= lastEventTimeRef.current) {
+        console.log("Skipping duplicate markers updated event");
+        return;
+      }
+      
+      lastEventTimeRef.current = timestamp;
+      
       // Get updated markers from storage
       const updatedMarkers = getSavedMarkers();
       
@@ -80,14 +92,20 @@ export function useMapState(selectedLocation?: Location) {
   const handleSaveMarker = useCallback(() => {
     if (!tempMarker || !markerName.trim()) return;
     
+    // Generate a unique ID with a timestamp prefix to ensure uniqueness
+    const timestamp = Date.now().toString(36);
+    const uniqueId = `${timestamp}-${uuidv4()}`;
+    
     const newMarker: LocationMarker = {
-      id: uuidv4(),
+      id: uniqueId,
       name: markerName,
       position: tempMarker,
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined
     };
+    
+    console.log(`Saving new marker with ID: ${uniqueId}`);
     
     // Save the marker to localStorage
     saveMarker(newMarker);
@@ -127,8 +145,7 @@ export function useMapState(selectedLocation?: Location) {
 
   const handleDeleteMarker = useCallback((id: string) => {
     deleteMarker(id);
-    // Update the markers state
-    setMarkers(prev => prev.filter(marker => marker.id !== id));
+    // Let the event handler update the state properly
     toast.success("Location removed");
   }, []);
 

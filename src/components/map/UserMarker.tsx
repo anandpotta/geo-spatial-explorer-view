@@ -28,14 +28,14 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     
     localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
     
-    // Dispatch event to update other components
-    window.dispatchEvent(new CustomEvent('markersUpdated'));
+    // Dispatch event to update other components with a unique timestamp
+    window.dispatchEvent(new CustomEvent('markersUpdated', { detail: { timestamp: Date.now() } }));
   }, [marker.id]);
   
   return (
     <Marker 
       position={marker.position} 
-      key={`marker-${marker.id}`}
+      key={`marker-instance-${marker.id}`}
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd

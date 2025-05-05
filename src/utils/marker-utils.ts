@@ -1,3 +1,4 @@
+
 import { getConnectionStatus } from './api-service';
 
 export interface LocationMarker {
@@ -38,8 +39,10 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(uniqueMarkers));
   
-  // Dispatch a custom event to notify components that markers have been updated
-  window.dispatchEvent(new CustomEvent('markersUpdated'));
+  // Use a custom event to signal marker updates with a timestamp to prevent duplicate events
+  const eventDetail = { timestamp: Date.now() };
+  const event = new CustomEvent('markersUpdated', { detail: eventDetail });
+  window.dispatchEvent(event);
   
   syncMarkersWithBackend(uniqueMarkers);
 }
@@ -55,10 +58,21 @@ export function getSavedMarkers(): LocationMarker[] {
   
   try {
     const markers = JSON.parse(markersJson);
-    return markers.map((marker: any) => ({
-      ...marker,
-      createdAt: new Date(marker.createdAt)
-    }));
+    // Ensure each marker has a unique ID
+    const uniqueMarkers = [];
+    const seenIds = new Set();
+    
+    for (const marker of markers) {
+      if (!seenIds.has(marker.id)) {
+        seenIds.add(marker.id);
+        uniqueMarkers.push({
+          ...marker,
+          createdAt: new Date(marker.createdAt)
+        });
+      }
+    }
+    
+    return uniqueMarkers;
   } catch (e) {
     console.error('Failed to parse saved markers', e);
     return [];
@@ -71,12 +85,13 @@ export function deleteMarker(id: string): void {
     const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
     localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
     
-    // Ensure both events are dispatched
+    // Ensure both events are dispatched with unique timestamps
+    const eventDetail = { timestamp: Date.now() };
     try {
       // Use requestAnimationFrame to avoid blocking the UI thread
       requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('storage'));
-        window.dispatchEvent(new Event('markersUpdated'));
+        window.dispatchEvent(new CustomEvent('storage', { detail: eventDetail }));
+        window.dispatchEvent(new CustomEvent('markersUpdated', { detail: eventDetail }));
         
         // Force re-enabling of interactions on the body
         document.body.style.pointerEvents = '';
@@ -89,8 +104,8 @@ export function deleteMarker(id: string): void {
       console.error("Error dispatching events:", e);
       // Fallback method for older browsers
       setTimeout(() => {
-        window.dispatchEvent(new Event('storage'));
-        window.dispatchEvent(new Event('markersUpdated'));
+        window.dispatchEvent(new CustomEvent('storage', { detail: eventDetail }));
+        window.dispatchEvent(new CustomEvent('markersUpdated', { detail: eventDetail }));
       }, 0);
     }
   } catch (e) {
@@ -168,6 +183,7 @@ async function deleteMarkerFromBackend(id: string): Promise<void> {
 }
 
 export function createMarker(markerData: Partial<LocationMarker>): LocationMarker {
+  // Always generate a new UUID for new markers to ensure uniqueness
   const marker: LocationMarker = {
     id: markerData.id || crypto.randomUUID(),
     name: markerData.name || 'Unnamed Location',
