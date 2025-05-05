@@ -6,6 +6,8 @@ import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 import { getDefaultTransformOptions, ImageTransformOptions } from '@/utils/image-transform-utils';
 import { addImageToLayer } from '@/utils/layer-image-utils';
 import { createLayerControls } from './LayerControls';
+import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { getSavedMarkers } from '@/utils/marker-utils';
 
 export interface LayerFactoryOptions {
   drawing: DrawingData;
@@ -75,11 +77,9 @@ export const createLayerFromDrawing = ({
 };
 
 function setupDrawingOptions(drawing: DrawingData): L.PathOptions {
-  const { getDrawingIdsWithFloorPlans } = require('@/utils/floor-plan-utils');
-  const { getSavedMarkers } = require('@/utils/marker-utils');
-  
-  const markers = getSavedMarkers();
+  // Use imported functions instead of requiring them
   const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
+  const markers = getSavedMarkers();
   
   const associatedMarker = markers.find((m: any) => m.associatedDrawing === drawing.id);
   const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
