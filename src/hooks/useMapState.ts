@@ -20,14 +20,21 @@ export function useMapState(selectedLocation?: Location) {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const prevMarkersRef = useRef<LocationMarker[]>([]);
-  const lastEventTimeRef = useRef<number>(0);
+  const markerStateRef = useRef<{
+    markers: LocationMarker[],
+    lastEventTime: number
+  }>({
+    markers: [],
+    lastEventTime: 0
+  });
 
   // Load existing markers on mount
   useEffect(() => {
     const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
-    prevMarkersRef.current = savedMarkers;
+    // Use a stable reference to avoid duplicate markers
+    const uniqueSavedMarkers = deduplicateMarkers(savedMarkers);
+    setMarkers(uniqueSavedMarkers);
+    markerStateRef.current.markers = uniqueSavedMarkers;
     
     // Listen for marker updates
     const handleMarkersUpdated = (event: Event) => {
@@ -35,40 +42,85 @@ export function useMapState(selectedLocation?: Location) {
       const timestamp = customEvent.detail?.timestamp || Date.now();
       
       // Prevent duplicate processing of the same event
-      if (timestamp <= lastEventTimeRef.current) {
+      if (timestamp <= markerStateRef.current.lastEventTime) {
         console.log("Skipping duplicate markers updated event");
         return;
       }
       
-      lastEventTimeRef.current = timestamp;
+      markerStateRef.current.lastEventTime = timestamp;
       
       // Get updated markers from storage
-      const updatedMarkers = getSavedMarkers();
+      let updatedMarkers = getSavedMarkers();
       
-      // Deduplicate markers by ID
-      const uniqueMarkers = [];
-      const seenIds = new Set();
+      // Deduplicate markers
+      updatedMarkers = deduplicateMarkers(updatedMarkers);
       
-      for (const marker of updatedMarkers) {
+      // Only update state if the marker set has actually changed
+      const hasChanges = markersHaveChanged(markerStateRef.current.markers, updatedMarkers);
+      
+      if (hasChanges) {
+        console.log(`Updating markers state with ${updatedMarkers.length} unique markers`);
+        setMarkers(updatedMarkers);
+        markerStateRef.current.markers = updatedMarkers;
+      }
+    };
+    
+    const deduplicateMarkers = (markerArray: LocationMarker[]): LocationMarker[] => {
+      const uniqueMarkers: LocationMarker[] = [];
+      const seenIds = new Set<string>();
+      
+      for (const marker of markerArray) {
         if (!seenIds.has(marker.id)) {
           seenIds.add(marker.id);
           uniqueMarkers.push(marker);
         }
       }
       
-      // Only update state if the marker set has actually changed
-      const currentIds = new Set(prevMarkersRef.current.map(m => m.id));
-      const newIds = new Set(uniqueMarkers.map(m => m.id));
-      
-      const hasChanges = 
-        uniqueMarkers.length !== prevMarkersRef.current.length || 
-        [...newIds].some(id => !currentIds.has(id));
-      
-      if (hasChanges) {
-        console.log(`Updating markers state with ${uniqueMarkers.length} unique markers`);
-        setMarkers(uniqueMarkers);
-        prevMarkersRef.current = uniqueMarkers;
+      return uniqueMarkers;
+    };
+    
+    const markersHaveChanged = (
+      oldMarkers: LocationMarker[], 
+      newMarkers: LocationMarker[]
+    ): boolean => {
+      if (oldMarkers.length !== newMarkers.length) {
+        return true;
       }
+      
+      const oldIds = new Set(oldMarkers.map(m => m.id));
+      const newIds = new Set(newMarkers.map(m => m.id));
+      
+      // Check if any IDs were added or removed
+      if (oldIds.size !== newIds.size) {
+        return true;
+      }
+      
+      // Check if any IDs are different
+      for (const id of oldIds) {
+        if (!newIds.has(id)) {
+          return true;
+        }
+      }
+      
+      // Check if any positions changed
+      for (let i = 0; i < oldMarkers.length; i++) {
+        const oldMarker = oldMarkers[i];
+        const newMarker = newMarkers.find(m => m.id === oldMarker.id);
+        
+        if (!newMarker) {
+          return true;
+        }
+        
+        if (
+          oldMarker.position[0] !== newMarker.position[0] ||
+          oldMarker.position[1] !== newMarker.position[1] ||
+          oldMarker.name !== newMarker.name
+        ) {
+          return true;
+        }
+      }
+      
+      return false;
     };
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);

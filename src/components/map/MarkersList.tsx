@@ -1,7 +1,8 @@
+
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
-import { useMemo } from 'react';
+import { useMemo, useId } from 'react';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -24,6 +25,9 @@ const MarkersList = ({
   setMarkerName,
   setMarkerType
 }: MarkersListProps) => {
+  // Generate a unique instance ID to ensure consistent marker keys
+  const instanceId = useId();
+  
   // Use useMemo to deduplicate markers based on id
   const uniqueMarkers = useMemo(() => {
     if (!Array.isArray(markers) || markers.length === 0) {
@@ -51,7 +55,7 @@ const MarkersList = ({
     <>
       {Array.isArray(uniqueMarkers) && uniqueMarkers.map((marker) => (
         <UserMarker 
-          key={`user-marker-${marker.id}`} 
+          key={`user-marker-${instanceId}-${marker.id}`} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />

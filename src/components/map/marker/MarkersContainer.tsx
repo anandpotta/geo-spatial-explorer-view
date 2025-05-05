@@ -1,7 +1,7 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useState, useRef } from 'react';
 
 interface MarkersContainerProps {
   markers: LocationMarker[];
@@ -26,9 +26,16 @@ const MarkersContainer = memo(({
 }: MarkersContainerProps) => {
   // Use a state to store deduplicated markers
   const [uniqueMarkers, setUniqueMarkers] = useState<LocationMarker[]>([]);
+  const processedMarkersRef = useRef<string>("");
   
   // Update unique markers whenever the markers prop changes
   useEffect(() => {
+    // Skip processing if we already processed this exact set of markers
+    const markersSignature = JSON.stringify(markers.map(m => m.id).sort());
+    if (markersSignature === processedMarkersRef.current) {
+      return;
+    }
+    
     // Create a map to ensure uniqueness by ID
     const markerMap = new Map<string, LocationMarker>();
     
@@ -45,6 +52,7 @@ const MarkersContainer = memo(({
     console.log(`Deduplicated ${markers.length} markers down to ${deduplicatedMarkers.length}`);
     
     setUniqueMarkers(deduplicatedMarkers);
+    processedMarkersRef.current = markersSignature;
   }, [markers]);
   
   return (
