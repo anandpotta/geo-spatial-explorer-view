@@ -179,7 +179,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const drawOptions = {
     rectangle: {
       shapeOptions: {
-        color: '#8B5CF6',
+        color: '#33C3F0',
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
@@ -193,7 +193,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         message: '<strong>Cannot draw that shape!</strong>'
       },
       shapeOptions: {
-        color: '#8B5CF6',
+        color: '#33C3F0',
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
@@ -207,7 +207,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     },
     circle: {
       shapeOptions: {
-        color: '#8B5CF6',
+        color: '#33C3F0',
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,

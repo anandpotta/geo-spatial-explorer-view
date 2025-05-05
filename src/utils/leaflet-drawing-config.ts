@@ -14,6 +14,7 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
     geoJSONOptions.stroke = true;
     geoJSONOptions.weight = geoJSONOptions.weight || 4;
     geoJSONOptions.opacity = 1;
+    geoJSONOptions.color = '#33C3F0'; // Sky blue color
     
     // Create layer with corrected options
     const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
@@ -26,6 +27,7 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
         l.options.stroke = true;
         l.options.weight = options.weight || 4;
         l.options.opacity = 1;
+        l.options.color = '#33C3F0'; // Sky blue color
       }
       
       // Store SVG path data if available
@@ -52,7 +54,7 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
 };
 
 export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
-  color: color || '#8B5CF6', // Using a more visible purple color
+  color: color || '#33C3F0', // Using sky blue color
   weight: 4, // Increased stroke width
   opacity: 1, // Full opacity for stroke
   fillOpacity: 0.3,

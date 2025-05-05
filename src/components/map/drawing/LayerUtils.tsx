@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
@@ -9,11 +10,11 @@ export const prepareLayerOptions = (drawing: DrawingData): L.PathOptions => {
   const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
   const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
   
-  const options = getDefaultDrawingOptions(drawing.properties.color);
+  const options = getDefaultDrawingOptions(drawing.properties?.color || '#33C3F0');
   if (hasFloorPlan) {
     options.fillColor = '#3b82f6';
     options.fillOpacity = 1; // Always use full opacity for images
-    options.color = '#1d4ed8';
+    options.color = '#33C3F0';
   }
   
   // Always ensure opacity is set to visible values
@@ -32,7 +33,7 @@ export const prepareLayerOptions = (drawing: DrawingData): L.PathOptions => {
  * Get default drawing options for layers
  */
 export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
-  color: color || '#8B5CF6', // Using a more visible purple color by default
+  color: color || '#33C3F0', // Using sky blue color by default
   weight: 4, // Increase stroke width for better visibility
   opacity: 1, // Use full opacity for the stroke
   fillOpacity: 0.3,

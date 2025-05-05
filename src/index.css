@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -186,4 +187,20 @@
 
 .location-marker {
   @apply bg-map-pin text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg cursor-pointer;
+}
+
+.visible-path-stroke {
+  stroke-width: 4px !important;
+  stroke: #33C3F0 !important;
+  stroke-opacity: 1 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  fill-opacity: 0.3 !important;
+  vector-effect: non-scaling-stroke;
+}
+
+.leaflet-overlay-pane path.leaflet-interactive {
+  stroke-width: 4px !important;
+  stroke-opacity: 1 !important;
+  stroke: #33C3F0 !important;
 }
