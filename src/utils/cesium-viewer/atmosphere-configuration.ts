@@ -1,4 +1,3 @@
-
 import * as Cesium from 'cesium';
 
 /**
@@ -24,9 +23,10 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
           skyAtmosphere.brightnessShift = 3.0;
         }
         
-        // Safely check for dynamicLighting method
+        // Safely check for dynamicLighting method - using a number constant instead of enum
         if (typeof skyAtmosphere.setDynamicLighting === 'function') {
-          skyAtmosphere.setDynamicLighting(Cesium.SkyAtmosphereDynamicLighting.NONE);
+          // 0 corresponds to NONE in some Cesium versions
+          skyAtmosphere.setDynamicLighting(0);
         }
       }
     }
