@@ -38,23 +38,39 @@ export const applyClipMaskToDrawing = ({
     console.log(`Applying clip mask for drawing ${drawingId}`);
     const imageData = floorPlanData.imageData;
     
-    // Make multiple attempts to apply the clip mask
+    // Make multiple attempts to apply the clip mask with increasing delays
     let attempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 10; // Increased from 5 to 10
     
     const tryApply = () => {
       if (attempts >= maxAttempts) return;
       
       attempts++;
+      console.log(`Attempt ${attempts} to apply clip mask for drawing ${drawingId}`);
       const applied = applyImageClipMask(pathElement, imageData, drawingId);
       
       if (!applied && attempts < maxAttempts) {
-        console.log(`Attempt ${attempts} failed, trying again in 300ms`);
-        setTimeout(tryApply, 300);
+        // Use exponential backoff for retries (300ms, 600ms, 1200ms, etc.)
+        const delay = Math.min(300 * Math.pow(1.5, attempts - 1), 3000);
+        console.log(`Attempt ${attempts} failed, trying again in ${delay}ms`);
+        setTimeout(tryApply, delay);
       } else if (!applied) {
         console.warn(`Failed to apply clip mask for drawing ${drawingId} after ${maxAttempts} attempts`);
       } else {
         console.log(`Successfully applied clip mask on attempt ${attempts}`);
+        
+        // Force a redraw after successful application
+        setTimeout(() => {
+          if (pathElement && document.contains(pathElement)) {
+            const svg = pathElement.closest('svg');
+            if (svg) {
+              console.log('Forcing SVG redraw after successful clip mask application');
+              svg.style.display = 'none';
+              svg.getBoundingClientRect(); // Force reflow
+              svg.style.display = '';
+            }
+          }
+        }, 100);
       }
     };
     

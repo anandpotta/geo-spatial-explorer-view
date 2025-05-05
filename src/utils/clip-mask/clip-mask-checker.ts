@@ -9,7 +9,9 @@
 export const hasClipMaskApplied = (pathElement: SVGPathElement): boolean => {
   // More reliable check using multiple indicators
   const hasDataAttribute = pathElement.hasAttribute('data-has-clip-mask');
-  const hasClipPath = pathElement.hasAttribute('clip-path') || pathElement.style.clipPath;
+  const hasClipPath = pathElement.hasAttribute('clip-path') || 
+                     pathElement.style.clipPath || 
+                     pathElement.getAttribute('clip-path');
   const hasFillPattern = (pathElement.getAttribute('fill')?.includes('url(#pattern-') || 
                           pathElement.style.fill?.includes('url(#pattern-'));
   

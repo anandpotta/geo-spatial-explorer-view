@@ -32,10 +32,11 @@ export const createClipPath = (
  * Cleans up existing clip path and pattern elements for a drawing ID
  */
 export const cleanupExistingElements = (defs: SVGDefsElement, id: string): void => {
-  const existingClipPath = defs.querySelector(`#clip-${id}`);
+  // Use safer querySelector with proper escaping for IDs with special characters
+  const existingClipPath = defs.querySelector(`#clip-${CSS.escape(id)}`);
   if (existingClipPath) defs.removeChild(existingClipPath);
   
-  const existingPattern = defs.querySelector(`#pattern-${id}`);
+  const existingPattern = defs.querySelector(`#pattern-${CSS.escape(id)}`);
   if (existingPattern) defs.removeChild(existingPattern);
 };
 
@@ -66,10 +67,23 @@ export const applyClipPathAndFill = (
     pathElement.setAttribute('stroke', 'none');
     pathElement.setAttribute('clip-path', clipPathUrl);
     
+    // Apply directly to SVG elements with both methods for maximum browser compatibility
+    try {
+      // Modern browsers
+      pathElement.style.setProperty('clip-path', clipPathUrl, 'important');
+      pathElement.style.setProperty('fill', fill, 'important');
+      
+      // Ensure visibility
+      pathElement.style.setProperty('visibility', 'visible', 'important');
+      pathElement.style.setProperty('display', 'inline', 'important');
+    } catch (e) {
+      console.warn('Error applying style properties', e);
+    }
+    
     // Force a redraw of the path
     const displayValue = pathElement.style.display;
     pathElement.style.display = 'none';
     pathElement.getBoundingClientRect(); // Force reflow
-    pathElement.style.display = displayValue;
+    pathElement.style.display = displayValue || 'inline';
   });
 };

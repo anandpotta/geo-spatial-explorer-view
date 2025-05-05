@@ -178,4 +178,3 @@ export const applyImageClipMask = (
     return false;
   }
 };
-
