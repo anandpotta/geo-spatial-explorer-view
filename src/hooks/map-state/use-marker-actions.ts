@@ -33,34 +33,39 @@ export function useMarkerActions(
     
     console.log(`Saving new marker with ID: ${uniqueId}`);
     
-    // Clear the temporary marker first to prevent React from trying to render
-    // both the temp marker and the saved marker simultaneously
+    // Important: First clear all state variables BEFORE saving to storage
+    // This ensures the temp marker is gone before the saved marker appears
+    const markerToSave = {...newMarker}; // Create a copy to use after state clearing
+    const drawingToSave = currentDrawing ? {...currentDrawing} : null;
+    
+    // Clear all temp state immediately
     setTempMarker(null);
     setMarkerName('');
     setCurrentDrawing(null);
     
-    // After clearing temp marker state, save the marker to localStorage
-    // This should trigger only one update event
-    setTimeout(() => {
-      saveMarker(newMarker);
+    // Use requestAnimationFrame to ensure DOM updates have processed
+    // before attempting to save the marker to storage
+    requestAnimationFrame(() => {
+      // After the UI has updated (removing temp marker), save the actual marker
+      saveMarker(markerToSave);
       
-      if (currentDrawing) {
+      if (drawingToSave) {
         // Create a safe copy of currentDrawing without circular references
         const safeDrawing: DrawingData = {
-          ...currentDrawing,
+          ...drawingToSave,
           // Remove any potential circular references from geoJSON
-          geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
-            type: currentDrawing.geoJSON.type,
-            geometry: currentDrawing.geoJSON.geometry,
-            properties: currentDrawing.geoJSON.properties
+          geoJSON: drawingToSave.geoJSON ? JSON.parse(JSON.stringify({
+            type: drawingToSave.geoJSON.type,
+            geometry: drawingToSave.geoJSON.geometry,
+            properties: drawingToSave.geoJSON.properties
           })) : undefined,
           properties: {
-            ...currentDrawing.properties,
+            ...drawingToSave.properties,
             name: markerName,
             // Use the drawing type if available, or fallback to 'region'
             // Don't try to set properties.type directly if it's not in the interface
-            ...(currentDrawing.properties?.type ? { type: currentDrawing.properties.type } : { type: 'region' }),
-            associatedMarkerId: newMarker.id
+            ...(drawingToSave.properties?.type ? { type: drawingToSave.properties.type } : { type: 'region' }),
+            associatedMarkerId: markerToSave.id
           }
         };
         
@@ -68,8 +73,7 @@ export function useMarkerActions(
       }
       
       toast.success("Location saved successfully");
-      console.log("Marker saved, waiting for markersUpdated event");
-    }, 0);
+    });
   }, [tempMarker, markerName, markerType, currentDrawing, setTempMarker, setMarkerName, setCurrentDrawing]);
 
   const handleDeleteMarker = useCallback((id: string) => {

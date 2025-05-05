@@ -20,8 +20,12 @@ const TempMarker = ({
   setMarkerType,
   onSave
 }: TempMarkerProps) => {
+  // Create a stable instance ID to help React's reconciliation
+  const instanceId = React.useRef(`temp-marker-${Date.now()}`).current;
+  
   return (
     <Marker 
+      key={`temp-marker-${instanceId}`}
       position={position} 
       draggable={true}
       eventHandlers={{
@@ -46,4 +50,13 @@ const TempMarker = ({
   );
 };
 
-export default React.memo(TempMarker);
+// Use React.memo to prevent unnecessary re-renders
+export default React.memo(TempMarker, (prevProps, nextProps) => {
+  // Only re-render if essential props change
+  return (
+    prevProps.position[0] === nextProps.position[0] &&
+    prevProps.position[1] === nextProps.position[1] &&
+    prevProps.markerName === nextProps.markerName &&
+    prevProps.markerType === nextProps.markerType
+  );
+});

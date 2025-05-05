@@ -1,3 +1,4 @@
+
 import React, { useCallback, useRef, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
@@ -57,6 +58,8 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   );
 };
 
+// Use strict memo equality to prevent unnecessary re-renders,
+// which can cause duplicate markers in the DOM
 export default React.memo(UserMarker, (prevProps, nextProps) => {
   // Only re-render if the marker's essential properties have changed
   return (
