@@ -22,7 +22,7 @@ export function useEditModeActivation(
     
     try {
       const editControl = editControlRef.current;
-      const editToolbar = editControl._toolbars?.edit;
+      const editToolbar = editControl?._toolbars?.edit;
       
       if (!editToolbar) {
         console.log('Edit toolbar not available yet');
@@ -35,33 +35,45 @@ export function useEditModeActivation(
       const shouldEnableEdit = activeTool === 'edit';
       
       if (shouldEnableEdit && editHandler && typeof editHandler.enable === 'function') {
-        const isAlreadyEnabled = editHandler.enabled && editHandler.enabled();
-        if (!isAlreadyEnabled) {
-          console.log('Enabling edit mode');
+        try {
+          // Check if already enabled to avoid duplicate activation
+          const isAlreadyEnabled = editHandler.enabled && editHandler.enabled();
           
-          // First ensure all layers are selected to make them eligible for editing
-          if (editHandler._featureGroup) {
-            editHandler._featureGroup.eachLayer((layer: any) => {
-              if (typeof layer._path !== 'undefined') {
-                editHandler._selectableLayers.addLayer(layer);
+          if (!isAlreadyEnabled) {
+            console.log('Enabling edit mode');
+            
+            // First ensure all layers are selected to make them eligible for editing
+            if (editHandler._featureGroup) {
+              try {
+                editHandler._featureGroup.eachLayer((layer: any) => {
+                  if (typeof layer._path !== 'undefined') {
+                    editHandler._selectableLayers.addLayer(layer);
+                  }
+                });
+                
+                // Then enable edit mode
+                editHandler.enable();
+                
+                // Show notification
+                toast.success('Edit mode activated', { 
+                  id: 'edit-mode-success',
+                  duration: 2000
+                });
+                
+                // Ensure edit controls are visible
+                ensureEditControlsVisibility();
+                return true;
+              } catch (layerError) {
+                console.error('Error selecting layers:', layerError);
+                return false;
               }
-            });
+            }
           }
-          
-          // Then enable edit mode
-          editHandler.enable();
-          
-          // Update state and show notification
-          toast.success('Edit mode activated', { 
-            id: 'edit-mode-success',
-            duration: 2000
-          });
-          
-          // Ensure edit controls are visible
-          ensureEditControlsVisibility();
-          return true;
+          return isAlreadyEnabled;
+        } catch (activationError) {
+          console.error('Error activating edit mode:', activationError);
+          return false;
         }
-        return isAlreadyEnabled;
       } else if (!shouldEnableEdit) {
         // Deactivate edit mode
         if (editHandler && typeof editHandler.disable === 'function' && editHandler.enabled && editHandler.enabled()) {
@@ -74,7 +86,7 @@ export function useEditModeActivation(
         }
       }
       
-      // Always ensure controls are visible regardless of edit mode
+      // Always ensure controls are visible
       ensureEditControlsVisibility();
       
       return shouldEnableEdit && isEditActive;

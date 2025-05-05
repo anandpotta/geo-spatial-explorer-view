@@ -60,10 +60,14 @@ export const ensureEditControlsVisibility = () => {
  * Ensures image controls are always visible
  */
 export const ensureImageControlsVisibility = () => {
-  document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
-    (el as HTMLElement).style.opacity = '1';
-    (el as HTMLElement).style.visibility = 'visible';
-    (el as HTMLElement).style.display = 'block';
-    (el as HTMLElement).style.pointerEvents = 'auto';
-  });
+  try {
+    document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
+      (el as HTMLElement).style.opacity = '1';
+      (el as HTMLElement).style.visibility = 'visible';
+      (el as HTMLElement).style.display = 'block';
+      (el as HTMLElement).style.pointerEvents = 'auto';
+    });
+  } catch (err) {
+    console.error('Error ensuring image controls visibility:', err);
+  }
 };
