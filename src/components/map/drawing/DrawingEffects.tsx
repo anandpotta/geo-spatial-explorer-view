@@ -5,7 +5,7 @@ import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 interface DrawingEffectsProps {
   activeTool: string | null;
   isInitialized: boolean;
-  activateEditMode: () => boolean;
+  activateEditMode: () => void;
 }
 
 const DrawingEffects: React.FC<DrawingEffectsProps> = ({ 
@@ -38,12 +38,7 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
       setTimeout(() => {
         try {
           console.log("Activating edit mode from effect");
-          const activated = activateEditMode();
-          if (activated) {
-            console.log("Edit mode successfully activated");
-          } else {
-            console.log("Failed to activate edit mode");
-          }
+          activateEditMode();
         } catch (err) {
           console.error('Error activating edit mode:', err);
         }

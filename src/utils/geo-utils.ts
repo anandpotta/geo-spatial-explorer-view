@@ -28,15 +28,3 @@ export {
   getSavedFloorPlans,
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
-
-// Export from our refactored SVG utilities
-export {
-  getSvgPathFromElement,
-  simplifyPath,
-  extractPointsFromPath,
-  simplifyPoints,
-  pointsToPathData,
-  getAllSvgPaths,
-  applyImageClipMask,
-  removeClipMask,
-} from './svg-utils';

@@ -9,52 +9,43 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Format the edit options properly based on what was passed
-  let editOptions;
-  
-  // Handle different types of edit parameters
-  if (edit === true) {
-    // If edit is boolean true, create a proper object structure
-    editOptions = { 
-      featureGroup: featureGroup,
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
-      }
-    };
-  } else if (edit === false) {
-    // If edit is boolean false, pass it as false
-    editOptions = false;
-  } else if (edit && typeof edit === 'object') {
-    // If edit is an object, merge with featureGroup but don't overwrite featureGroup
-    editOptions = {
-      ...edit,
-      featureGroup: featureGroup
-    };
-    
-    // Ensure selectedPathOptions is properly defined if not already
-    if (!editOptions.selectedPathOptions) {
-      editOptions.selectedPathOptions = {
-        maintainColor: true,
-        opacity: 0.7
-      };
-    }
-  } else {
-    // Default case if edit is undefined or null
-    editOptions = {
-      featureGroup: featureGroup,
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
-      }
-    };
+  // Make sure we have a valid featureGroup to prevent errors
+  if (!featureGroup) {
+    console.warn('EditControl received null or undefined featureGroup');
+    return null;
   }
   
-  // Create the element with React.createElement to properly pass the ref
+  // Setup proper edit options with safe fallbacks
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      featureGroup: featureGroup,
+      edit: true,
+      remove: true,
+      poly: {
+        allowIntersection: false
+      },
+      selectedPathOptions: {
+        maintainColor: false,
+        opacity: 0.7
+      }
+    }
+  };
+  
+  // Return the original EditControl with proper prop structure
   return React.createElement(OriginalEditControl, {
     ...otherProps,
+    position: 'topright',
+    draw: {
+      rectangle: true,
+      polygon: true,
+      circle: true,
+      circlemarker: false,
+      marker: true,
+      polyline: false
+    },
     edit: editOptions,
-    ref: ref
+    ref
   });
 });
 

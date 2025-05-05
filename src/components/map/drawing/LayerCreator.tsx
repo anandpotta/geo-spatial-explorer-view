@@ -1,12 +1,11 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
+import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
-import { toast } from 'sonner';
-import { hasFloorPlan, prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
-import { setupLayerClickHandlers } from './LayerEventHandlers';
-import { applyClipMaskToDrawing } from './ClipMaskManager';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -16,14 +15,10 @@ interface CreateLayerOptions {
   layersRef: Map<string, L.Layer>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
-  imageControlRoots: Map<string, any>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
 }
-
-// Keep track of floor plan applications to prevent repeated attempts
-const floorPlanApplied = new Map<string, number>();
 
 export const createLayerFromDrawing = ({
   drawing,
@@ -33,7 +28,6 @@ export const createLayerFromDrawing = ({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
-  imageControlRoots,
   onRegionClick,
   onRemoveShape,
   onUploadRequest
@@ -48,28 +42,34 @@ export const createLayerFromDrawing = ({
       return;
     }
 
-    // Prepare layer options
-    const options = prepareLayerOptions(drawing);
+    const markers = getSavedMarkers();
+    const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
     
-    // Create the layer
-    const layer = createGeoJSONLayer(drawing, options);
+    const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
+    const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
+    
+    const options = getDefaultDrawingOptions(drawing.properties.color);
+    if (hasFloorPlan) {
+      options.fillColor = '#3b82f6';
+      options.fillOpacity = 0.4;
+      options.color = '#1d4ed8';
+    }
+    
+    // Always ensure opacity is set to visible values
+    options.opacity = 1;
+    options.fillOpacity = options.fillOpacity || 0.2;
+    
+    const layer = createDrawingLayer(drawing, options);
     
     if (layer) {
-      // Store the drawing ID at the layer level as well for easier reference
-      (layer as any).drawingId = drawing.id;
-      
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
-          // Add the ID at the sublayer level too
           (l as any).drawingId = drawing.id;
-          
-          // Add drawing ID attribute to the SVG path for identification
-          addDrawingAttributesToLayer(l, drawing.id);
           
           // Store the layer reference
           layersRef.set(drawing.id, l);
           
-          // Add the remove, upload, and image control buttons when in edit mode
+          // Add the remove and upload buttons when in edit mode
           if (onRemoveShape && onUploadRequest) {
             createLayerControls({
               layer: l,
@@ -78,7 +78,6 @@ export const createLayerFromDrawing = ({
               featureGroup,
               removeButtonRoots,
               uploadButtonRoots,
-              imageControlRoots,
               isMounted,
               onRemoveShape,
               onUploadRequest
@@ -86,34 +85,24 @@ export const createLayerFromDrawing = ({
           }
           
           // Make clicking on any shape trigger the click handler
-          setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
+          if (onRegionClick && isMounted) {
+            l.on('click', (e) => {
+              // Stop event propagation to prevent map click
+              if (e.originalEvent) {
+                L.DomEvent.stopPropagation(e.originalEvent);
+              }
+              
+              if (isMounted) {
+                onRegionClick(drawing);
+              }
+            });
+          }
         }
       });
       
       if (isMounted) {
         try {
           layer.addTo(featureGroup);
-          
-          // Check if we've recently applied a floor plan to this drawing to avoid repeated attempts
-          const lastApplied = floorPlanApplied.get(drawing.id) || 0;
-          const now = Date.now();
-          const shouldApply = now - lastApplied > 5000; // 5 seconds debounce
-          
-          // Add a small delay before applying clip mask to ensure the path is rendered
-          if (hasFloorPlan(drawing.id) && isMounted && shouldApply) {
-            floorPlanApplied.set(drawing.id, now);
-            
-            setTimeout(() => {
-              // Apply clip mask if a floor plan exists
-              if (isMounted) {
-                applyClipMaskToDrawing({
-                  drawingId: drawing.id,
-                  isMounted,
-                  layer
-                });
-              }
-            }, 250); // Short delay to let the DOM update
-          }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
         }

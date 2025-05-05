@@ -5,13 +5,12 @@ import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
 import DrawTools from './DrawTools';
 import LayerManager from './drawing/LayerManager';
-import { handleClearAll } from './drawing/ClearAllHandler';
+import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
+import { toast } from 'sonner';
 import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
 import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
-import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
-import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
-import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -33,6 +32,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onPathsUpdated
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
+  const [svgPaths, setSvgPaths] = useState<string[]>([]);
   
   const {
     featureGroupRef,
@@ -48,14 +48,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const {
     handleFileChange,
     handleUploadRequest
-  } = useFileUploadHandling({ onUploadToDrawing });
-  
-  const { svgPaths, setSvgPaths } = useSvgPathTracking({
-    isInitialized,
-    drawToolsRef,
-    mountedRef,
-    onPathsUpdated
-  });
+  } = useFileUpload({ onUploadToDrawing });
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
@@ -80,17 +73,53 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     };
   }, []);
 
-  const handleCreatedWrapper = createShapeCreationHandler({
-    onCreated,
-    onPathsUpdated,
-    svgPaths
-  });
+  // Periodically check for SVG paths when tools are active
+  useEffect(() => {
+    if (!isInitialized || !drawToolsRef.current) return;
+    
+    const checkForPaths = () => {
+      if (!mountedRef.current) return;
+      
+      try {
+        if (drawToolsRef.current) {
+          const paths = drawToolsRef.current.getSVGPathData();
+          if (paths && paths.length > 0) {
+            setSvgPaths(paths);
+            if (onPathsUpdated) {
+              onPathsUpdated(paths);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error getting SVG paths:', err);
+      }
+    };
+    
+    const intervalId = setInterval(checkForPaths, 1000);
+    return () => clearInterval(intervalId);
+  }, [isInitialized, activeTool]);
 
-  const handleClearAllWrapper = () => {
-    handleClearAll({
-      featureGroup: featureGroupRef.current,
-      onClearAll
-    });
+  const handleClearAll = () => {
+    if (featureGroupRef.current) {
+      featureGroupRef.current.clearLayers();
+      
+      const markers = getSavedMarkers();
+      markers.forEach(marker => {
+        deleteMarker(marker.id);
+      });
+      
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('savedDrawings');
+      
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      
+      if (onClearAll) {
+        onClearAll();
+      }
+      
+      toast.success('All drawings and markers cleared');
+    }
   };
 
   const handleRemoveShape = (drawingId: string) => {
@@ -103,6 +132,18 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     if (onRegionClick) {
       onRegionClick(drawing);
     }
+  };
+
+  const handleCreatedWrapper = (shape: any) => {
+    // Process the shape and check for SVG path data
+    if (shape.svgPath) {
+      // Add path to state
+      setSvgPaths(prev => [...prev, shape.svgPath]);
+      if (onPathsUpdated) {
+        onPathsUpdated([...svgPaths, shape.svgPath]);
+      }
+    }
+    onCreated(shape);
   };
 
   return (
@@ -128,7 +169,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
           ref={drawToolsRef}
           onCreated={handleCreatedWrapper} 
           activeTool={activeTool} 
-          onClearAll={handleClearAllWrapper}
+          onClearAll={handleClearAll}
           featureGroup={featureGroupRef.current}
         />
       </FeatureGroup>
