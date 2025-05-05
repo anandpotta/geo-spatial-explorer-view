@@ -33,6 +33,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const {
     handleFileChange,
     handleUploadRequest,
+    selectedDrawingForUpload,
     fileInputRef
   } = useFileUploadHandling({ onUploadToDrawing });
   
