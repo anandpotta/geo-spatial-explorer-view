@@ -57,7 +57,9 @@ export function useMarkerActions(
           properties: {
             ...currentDrawing.properties,
             name: markerName,
-            type: currentDrawing.properties?.type || 'region', // Ensure type is provided
+            // Use the drawing type if available, or fallback to 'region'
+            // Don't try to set properties.type directly if it's not in the interface
+            ...(currentDrawing.properties?.type ? { type: currentDrawing.properties.type } : { type: 'region' }),
             associatedMarkerId: newMarker.id
           }
         };

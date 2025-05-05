@@ -13,6 +13,7 @@ export interface DrawingData {
     name?: string;
     description?: string;
     color?: string;
+    type?: string; // Added type property
     createdAt: Date;
     associatedMarkerId?: string;
   };
