@@ -5,20 +5,47 @@ import L from 'leaflet';
 declare module 'leaflet' {
   interface PathOptions {
     svgPath?: string;
+    renderer?: L.Renderer;
+    clipImage?: string;
   }
   
   interface GeoJSONOptions {
     svgPath?: string;
+    clipImage?: string;
   }
 }
 
 export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
   try {
-    const layer = L.geoJSON(drawing.geoJSON, { style: options });
+    // Always use SVG renderer for better path handling
+    options.renderer = L.svg();
     
-    // Store SVG path data if available
-    if (drawing.svgPath) {
-      layer.options.svgPath = drawing.svgPath;
+    const layer = L.geoJSON(drawing.geoJSON, { 
+      style: (feature) => {
+        // Create a new options object to avoid modifying the original
+        const styleOptions = { ...options };
+        
+        // Add the clip image if available
+        if (drawing.clipImage) {
+          styleOptions.clipImage = drawing.clipImage;
+        }
+        
+        // Store SVG path data if available
+        if (drawing.svgPath) {
+          styleOptions.svgPath = drawing.svgPath;
+        }
+        
+        return styleOptions;
+      }
+    });
+    
+    // Add the image clip mask if available
+    if (drawing.clipImage) {
+      layer.on('add', (event) => {
+        setTimeout(() => {
+          applyClipMaskToLayer(layer, drawing.clipImage, drawing.svgPath);
+        }, 100); // Small delay to ensure the layer is fully rendered
+      });
     }
     
     return layer;
@@ -28,11 +55,84 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
   }
 };
 
+/**
+ * Apply a clip mask to a layer using the provided image and SVG path
+ */
+export const applyClipMaskToLayer = (layer: L.GeoJSON | null, imageUrl: string, svgPath?: string) => {
+  if (!layer || !imageUrl) return;
+  
+  try {
+    // Process each path in the GeoJSON layer
+    layer.eachLayer((l: any) => {
+      if (!l._path) return;
+      
+      const svgElement = l._path;
+      if (!svgElement) return;
+      
+      // Get the SVG parent element
+      const svg = svgElement.ownerSVGElement;
+      if (!svg) return;
+      
+      // Create a unique ID for this clip path
+      const clipId = `clip-path-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Get the path data from the element
+      const pathData = svgElement.getAttribute('d');
+      if (!pathData) return;
+      
+      // Create a defs element if it doesn't exist
+      let defs = svg.querySelector('defs');
+      if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        svg.appendChild(defs);
+      }
+      
+      // Create a clip path element
+      const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+      clipPath.setAttribute('id', clipId);
+      
+      // Create a path element for the clip path
+      const clipPathPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      clipPathPath.setAttribute('d', pathData);
+      
+      // Add the path to the clip path
+      clipPath.appendChild(clipPathPath);
+      
+      // Add the clip path to the defs
+      defs.appendChild(clipPath);
+      
+      // Create an image element
+      const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      
+      // Get the bounding box of the path
+      const bbox = svgElement.getBBox();
+      
+      // Set the image attributes
+      image.setAttribute('x', bbox.x.toString());
+      image.setAttribute('y', bbox.y.toString());
+      image.setAttribute('width', bbox.width.toString());
+      image.setAttribute('height', bbox.height.toString());
+      image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      image.setAttribute('clip-path', `url(#${clipId})`);
+      image.setAttribute('href', imageUrl);
+      
+      // Add the image before the path in the SVG
+      svg.insertBefore(image, svgElement);
+      
+      // Reduce the opacity of the original path
+      svgElement.setAttribute('fill-opacity', '0.1');
+    });
+  } catch (error) {
+    console.error('Error applying clip mask:', error);
+  }
+};
+
 export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
   color: color || '#3388ff',
   weight: 3,
   opacity: 0.7,
-  fillOpacity: 0.3
+  fillOpacity: 0.3,
+  renderer: L.svg() // Always use SVG renderer
 });
 
 export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {

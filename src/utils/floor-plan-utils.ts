@@ -1,82 +1,97 @@
 
-/**
- * Floor plan utilities for handling storage and retrieval of floor plans
- */
-
 export interface FloorPlanData {
+  id: string;
   data: string;
   isPdf: boolean;
   fileName: string;
-  timestamp: string;
+  clipImage?: string;  // Added for image clipping
+  updatedAt: number;
 }
 
-/**
- * Save a floor plan to local storage
- */
-export function saveFloorPlan(drawingId: string, data: string, isPdf: boolean, fileName: string): void {
-  if (!drawingId) return;
-  
-  const savedFloorPlans = getSavedFloorPlans();
-  savedFloorPlans[drawingId] = {
-    data,
-    isPdf,
-    fileName,
-    timestamp: new Date().toISOString()
-  };
-  
-  localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
-  
-  // Dispatch an event to notify components about the floor plan update
-  window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-    detail: { drawingId }
-  }));
-}
-
-/**
- * Get all saved floor plans from local storage
- */
-export function getSavedFloorPlans(): Record<string, FloorPlanData> {
+export const saveFloorPlan = (
+  drawingId: string, 
+  data: string, 
+  isPdf: boolean = false, 
+  fileName: string = '', 
+  clipImage?: string
+): void => {
   try {
-    const floorPlansJson = localStorage.getItem('floorPlans');
-    return floorPlansJson ? JSON.parse(floorPlansJson) : {};
-  } catch (e) {
-    console.error('Failed to parse saved floor plans', e);
-    return {};
-  }
-}
-
-/**
- * Get a specific floor plan by drawing ID
- */
-export function getFloorPlanById(drawingId: string): FloorPlanData | null {
-  if (!drawingId) return null;
-  
-  const savedFloorPlans = getSavedFloorPlans();
-  return savedFloorPlans[drawingId] || null;
-}
-
-/**
- * Delete a floor plan from local storage
- */
-export function deleteFloorPlan(drawingId: string): void {
-  if (!drawingId) return;
-  
-  const savedFloorPlans = getSavedFloorPlans();
-  if (savedFloorPlans[drawingId]) {
-    delete savedFloorPlans[drawingId];
-    localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
+    const savedFloorPlans = getSavedFloorPlans();
     
-    // Dispatch an event to notify components about the floor plan update
-    window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-      detail: { drawingId }
-    }));
+    // Check if floor plan with same ID exists
+    const existingIndex = savedFloorPlans.findIndex(fp => fp.id === drawingId);
+    
+    const floorPlanData: FloorPlanData = {
+      id: drawingId,
+      data,
+      isPdf,
+      fileName,
+      updatedAt: Date.now(),
+      clipImage  // Add clip image if available
+    };
+    
+    if (existingIndex >= 0) {
+      // Update existing floor plan
+      savedFloorPlans[existingIndex] = floorPlanData;
+    } else {
+      // Add new floor plan
+      savedFloorPlans.push(floorPlanData);
+    }
+    
+    localStorage.setItem('savedFloorPlans', JSON.stringify(savedFloorPlans));
+    
+    // Dispatch an event to notify other components
+    window.dispatchEvent(new Event('floorPlanUpdated'));
+  } catch (error) {
+    console.error('Error saving floor plan:', error);
   }
-}
+};
 
-/**
- * Get all drawing IDs that have associated floor plans
- */
-export function getDrawingIdsWithFloorPlans(): string[] {
-  const savedFloorPlans = getSavedFloorPlans();
-  return Object.keys(savedFloorPlans);
-}
+export const getFloorPlanById = (drawingId: string): FloorPlanData | null => {
+  try {
+    const savedFloorPlans = getSavedFloorPlans();
+    return savedFloorPlans.find(fp => fp.id === drawingId) || null;
+  } catch (error) {
+    console.error('Error getting floor plan:', error);
+    return null;
+  }
+};
+
+export const getSavedFloorPlans = (): FloorPlanData[] => {
+  try {
+    const floorPlansJson = localStorage.getItem('savedFloorPlans');
+    
+    if (!floorPlansJson) {
+      return [];
+    }
+    
+    return JSON.parse(floorPlansJson);
+  } catch (error) {
+    console.error('Error getting saved floor plans:', error);
+    return [];
+  }
+};
+
+export const deleteFloorPlan = (drawingId: string): void => {
+  try {
+    const savedFloorPlans = getSavedFloorPlans();
+    const filteredFloorPlans = savedFloorPlans.filter(fp => fp.id !== drawingId);
+    
+    localStorage.setItem('savedFloorPlans', JSON.stringify(filteredFloorPlans));
+    
+    // Dispatch an event to notify other components
+    window.dispatchEvent(new Event('floorPlanUpdated'));
+  } catch (error) {
+    console.error('Error deleting floor plan:', error);
+  }
+};
+
+export const getDrawingIdsWithFloorPlans = (): string[] => {
+  try {
+    const savedFloorPlans = getSavedFloorPlans();
+    return savedFloorPlans.map(fp => fp.id);
+  } catch (error) {
+    console.error('Error getting drawing IDs with floor plans:', error);
+    return [];
+  }
+};
