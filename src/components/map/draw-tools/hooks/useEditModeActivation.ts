@@ -3,13 +3,6 @@ import { useCallback, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
 import { ensureEditControlsVisibility } from './utils/editControlsVisibility';
 
-// Create a flag in window object to track activation status
-declare global {
-  interface Window {
-    _editModeActivating: boolean;
-  }
-}
-
 /**
  * Hook for edit mode activation functionality
  */
