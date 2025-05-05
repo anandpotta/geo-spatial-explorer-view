@@ -75,6 +75,7 @@
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .leaflet-draw-toolbar {
@@ -82,6 +83,7 @@
   visibility: visible !important;
   display: block !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* Ensure draw toolbar buttons remain visible */
@@ -89,6 +91,7 @@
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 /* Add extra visibility for the draw control container */
@@ -97,4 +100,25 @@
   display: block !important;
   visibility: visible !important;
   pointer-events: auto !important;
+}
+
+/* Fix for draw toolbar tooltips */
+.leaflet-draw-tooltip {
+  z-index: 12500 !important;
+  visibility: visible !important;
+  display: block !important;
+  pointer-events: none !important;
+}
+
+/* Make sure all control buttons are clickable */
+.leaflet-draw-toolbar a.leaflet-draw-draw-polyline,
+.leaflet-draw-toolbar a.leaflet-draw-draw-polygon,
+.leaflet-draw-toolbar a.leaflet-draw-draw-rectangle,
+.leaflet-draw-toolbar a.leaflet-draw-draw-circle,
+.leaflet-draw-toolbar a.leaflet-draw-draw-marker,
+.leaflet-draw-toolbar a.leaflet-draw-draw-circlemarker,
+.leaflet-draw-toolbar a.leaflet-draw-edit-edit,
+.leaflet-draw-toolbar a.leaflet-draw-edit-remove {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }

@@ -15,9 +15,49 @@ export const addImageToLayer = (
   onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void
 ) => {
   try {
-    // Skip if layer doesn't have _path property (SVG element)
+    // Handle layers without _path property
     if (!(layer as any)._path) {
-      console.warn('Layer has no _path property, cannot add image');
+      console.log(`Layer has no _path property for drawing ${drawingId}, trying to find path in child layers`);
+      
+      // Check if it's a feature group that might contain multiple layers
+      if ((layer as any).eachLayer && typeof (layer as any).eachLayer === 'function') {
+        let foundLayer = false;
+        (layer as any).eachLayer((childLayer: any) => {
+          if (!foundLayer && childLayer._path) {
+            console.log('Found child layer with _path, using it instead');
+            addImageToLayer(
+              childLayer, 
+              drawingId, 
+              imageData, 
+              transformOptions, 
+              imageControlsRoots, 
+              onImageTransform
+            );
+            foundLayer = true;
+          }
+        });
+        
+        if (foundLayer) {
+          return; // Image added to child layer successfully
+        }
+      }
+      
+      // If we still can't find a suitable layer, try to use the map container as fallback
+      const map = (layer as any)._map;
+      if (map && map.getContainer()) {
+        console.log('Using map container as fallback for image placement');
+        addImageToMapContainer(
+          map,
+          drawingId,
+          imageData,
+          transformOptions,
+          imageControlsRoots,
+          onImageTransform
+        );
+        return;
+      }
+      
+      console.warn('Could not add image: no suitable layer or container found');
       return;
     }
     
@@ -200,6 +240,126 @@ export const addImageToLayer = (
     };
   } catch (err) {
     console.error('Error adding image to layer:', err);
+    return undefined;
+  }
+};
+
+/**
+ * Adds an image directly to the map container as a fallback
+ */
+const addImageToMapContainer = (
+  map: L.Map,
+  drawingId: string,
+  imageData: string,
+  transformOptions: ImageTransformOptions,
+  imageControlsRoots: Map<string, any>,
+  onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void
+) => {
+  try {
+    // Remove any existing image containers for this drawing
+    const existingContainers = document.querySelectorAll(`div[data-drawing-id="${drawingId}"]`);
+    existingContainers.forEach(container => {
+      if (container.parentElement) {
+        container.parentElement.removeChild(container);
+      }
+    });
+    
+    // Get overlay pane for proper positioning
+    const overlayPane = map.getPanes().overlayPane;
+    if (!overlayPane) {
+      console.warn('Could not find overlay pane');
+      return;
+    }
+    
+    // Create container for the image
+    const containerDiv = document.createElement('div');
+    containerDiv.className = 'leaflet-drawing-image-container';
+    containerDiv.dataset.drawingId = drawingId;
+    containerDiv.style.position = 'absolute';
+    containerDiv.style.left = '50%';
+    containerDiv.style.top = '50%';
+    containerDiv.style.transform = 'translate(-50%, -50%)';
+    containerDiv.style.width = '300px'; // Default size
+    containerDiv.style.height = '300px';
+    containerDiv.style.zIndex = '1000';
+    
+    // Append container to the overlay pane
+    overlayPane.appendChild(containerDiv);
+    
+    // Create and add image element
+    const imgElement = createImageElement(imageData, (img) => {
+      img.style.position = 'absolute';
+      img.style.left = '50%';
+      img.style.top = '50%';
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '100%';
+      
+      // Apply transformation
+      transformImage(img, transformOptions);
+    });
+    
+    containerDiv.appendChild(imgElement);
+    
+    // Create image edit controls - always visible
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'leaflet-drawing-image-controls';
+    containerDiv.appendChild(controlsContainer);
+    
+    // Create React root for image controls
+    import('@/components/map/drawing/ImageControlsRenderer').then(module => {
+      try {
+        module.renderImageControls(
+          controlsContainer,
+          drawingId,
+          transformOptions,
+          imageControlsRoots,
+          (options) => {
+            if (onImageTransform) {
+              onImageTransform(drawingId, options);
+              
+              // Also update the display immediately
+              transformImage(imgElement, {
+                ...transformOptions,
+                ...options
+              });
+            }
+          }
+        );
+      } catch (err) {
+        console.error('Error rendering image controls:', err);
+      }
+    });
+    
+    // Listen for image transform updates
+    const handleTransformUpdate = (e: CustomEvent) => {
+      const detail = e.detail as { drawingId: string, transformOptions: ImageTransformOptions };
+      if (detail.drawingId === drawingId) {
+        transformImage(imgElement, detail.transformOptions);
+      }
+    };
+    
+    window.addEventListener('image-transform-updated', handleTransformUpdate as EventListener);
+    
+    // Return a cleanup function
+    return () => {
+      window.removeEventListener('image-transform-updated', handleTransformUpdate as EventListener);
+      
+      if (containerDiv.parentElement) {
+        containerDiv.parentElement.removeChild(containerDiv);
+      }
+      
+      const controlsRoot = imageControlsRoots.get(`${drawingId}-image-controls`);
+      if (controlsRoot) {
+        try {
+          controlsRoot.unmount();
+        } catch (err) {
+          console.error('Error unmounting image controls root:', err);
+        }
+        imageControlsRoots.delete(`${drawingId}-image-controls`);
+      }
+    };
+  } catch (err) {
+    console.error('Error adding image to map container:', err);
     return undefined;
   }
 };

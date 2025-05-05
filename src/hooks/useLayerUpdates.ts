@@ -45,6 +45,48 @@ export function useLayerUpdates({
     }
   };
   
+  const ensureDrawControlsVisibility = () => {
+    try {
+      // Make drawing controls visible
+      const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
+      drawControls.forEach(control => {
+        (control as HTMLElement).style.display = 'block';
+        (control as HTMLElement).style.visibility = 'visible';
+        (control as HTMLElement).style.opacity = '1';
+        (control as HTMLElement).style.zIndex = '12000';
+        (control as HTMLElement).style.pointerEvents = 'auto';
+      });
+      
+      // Ensure toolbar is visible
+      const toolbars = document.querySelectorAll('.leaflet-draw-toolbar');
+      toolbars.forEach(toolbar => {
+        (toolbar as HTMLElement).style.display = 'block';
+        (toolbar as HTMLElement).style.visibility = 'visible';
+        (toolbar as HTMLElement).style.opacity = '1';
+        (toolbar as HTMLElement).style.zIndex = '12000';
+        (toolbar as HTMLElement).style.pointerEvents = 'auto';
+      });
+      
+      // Ensure toolbar buttons are clickable
+      const buttons = document.querySelectorAll('.leaflet-draw-toolbar a');
+      buttons.forEach(button => {
+        (button as HTMLElement).style.display = 'block';
+        (button as HTMLElement).style.visibility = 'visible';
+        (button as HTMLElement).style.opacity = '1';
+        (button as HTMLElement).style.pointerEvents = 'auto';
+        (button as HTMLElement).style.cursor = 'pointer';
+      });
+      
+      // Fix control container z-index
+      const controlContainer = document.querySelector('.leaflet-control-container');
+      if (controlContainer) {
+        (controlContainer as HTMLElement).style.zIndex = '10000';
+      }
+    } catch (err) {
+      console.error('Error ensuring draw controls visibility:', err);
+    }
+  };
+  
   const updateLayers = () => {
     if (!featureGroup || !isMountedRef.current) return;
     
@@ -96,19 +138,9 @@ export function useLayerUpdates({
         }
       });
       
-      // Additional step: ensure drawing controls remain visible after layer updates
+      // Always ensure drawing controls remain visible after layer updates
       setTimeout(() => {
-        try {
-          const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
-          drawControls.forEach(control => {
-            (control as HTMLElement).style.display = 'block';
-            (control as HTMLElement).style.visibility = 'visible';
-            (control as HTMLElement).style.opacity = '1';
-            (control as HTMLElement).style.zIndex = '12000';
-          });
-        } catch (err) {
-          console.error('Error ensuring draw controls visibility:', err);
-        }
+        ensureDrawControlsVisibility();
       }, 100);
     } catch (err) {
       console.error('Error updating layers:', err);
@@ -142,21 +174,7 @@ export function useLayerUpdates({
     // Add event listener for z-index interference
     const handleZIndexChange = () => {
       if (!isMountedRef.current) return;
-      
-      // Ensure drawing controls are visible
-      setTimeout(() => {
-        try {
-          const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
-          drawControls.forEach(control => {
-            (control as HTMLElement).style.display = 'block';
-            (control as HTMLElement).style.visibility = 'visible';
-            (control as HTMLElement).style.opacity = '1';
-            (control as HTMLElement).style.zIndex = '12000';
-          });
-        } catch (err) {
-          console.error('Error handling z-index change:', err);
-        }
-      }, 100);
+      ensureDrawControlsVisibility();
     };
     
     window.addEventListener('markersUpdated', handleMarkerUpdated);
@@ -164,11 +182,19 @@ export function useLayerUpdates({
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     window.addEventListener('click', handleZIndexChange);
     
+    // Create an interval to periodically check and ensure controls remain visible
+    const visibilityInterval = setInterval(() => {
+      if (isMountedRef.current) {
+        ensureDrawControlsVisibility();
+      }
+    }, 500);
+    
     return () => {
       window.removeEventListener('markersUpdated', handleMarkerUpdated);
       window.removeEventListener('image-uploaded', handleImageUpdated as EventListener);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
       window.removeEventListener('click', handleZIndexChange);
+      clearInterval(visibilityInterval);
     };
   }, []);
 
@@ -192,26 +218,46 @@ export function useLayerUpdates({
     
     window.addEventListener('storage', handleStorageChange);
     
-    // Set up an interval to ensure controls remain visible
-    const visibilityInterval = setInterval(() => {
-      if (!isMountedRef.current) return;
+    // Add event listeners for interactions with drawing controls
+    const handleDrawControlInteraction = (e: MouseEvent) => {
+      // Prevent any default behavior that might interfere
+      e.stopPropagation();
       
-      try {
-        const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
-        drawControls.forEach(control => {
-          (control as HTMLElement).style.display = 'block';
-          (control as HTMLElement).style.visibility = 'visible';
-          (control as HTMLElement).style.opacity = '1';
-          (control as HTMLElement).style.zIndex = '12000';
-        });
-      } catch (err) {
-        console.error('Error in visibility interval:', err);
-      }
+      // Ensure drawing controls remain visible
+      setTimeout(ensureDrawControlsVisibility, 50);
+    };
+    
+    // Add listeners to draw control elements
+    const addDrawControlListeners = () => {
+      const drawControls = document.querySelectorAll('.leaflet-draw-toolbar a');
+      drawControls.forEach(button => {
+        button.addEventListener('mousedown', handleDrawControlInteraction);
+        button.addEventListener('click', handleDrawControlInteraction);
+        button.addEventListener('mouseenter', ensureDrawControlsVisibility);
+      });
+    };
+    
+    // Initial setup of listeners
+    setTimeout(addDrawControlListeners, 500);
+    
+    // Set up an interval to ensure controls remain visible and listeners are attached
+    const controlsInterval = setInterval(() => {
+      if (!isMountedRef.current) return;
+      ensureDrawControlsVisibility();
+      addDrawControlListeners();
     }, 1000);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(visibilityInterval);
+      clearInterval(controlsInterval);
+      
+      // Clean up draw control listeners
+      const drawControls = document.querySelectorAll('.leaflet-draw-toolbar a');
+      drawControls.forEach(button => {
+        button.removeEventListener('mousedown', handleDrawControlInteraction);
+        button.removeEventListener('click', handleDrawControlInteraction);
+        button.removeEventListener('mouseenter', ensureDrawControlsVisibility);
+      });
       
       // Only try to clear layers if the featureGroup is still valid
       if (featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {
@@ -224,5 +270,5 @@ export function useLayerUpdates({
     };
   }, [savedDrawings, activeTool]);
 
-  return { updateLayers };
+  return { updateLayers, ensureDrawControlsVisibility };
 }

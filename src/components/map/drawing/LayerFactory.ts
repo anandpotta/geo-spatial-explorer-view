@@ -54,6 +54,9 @@ export const createLayerFromDrawing = ({
     const layer = createDrawingLayer(drawing, options);
     
     if (layer) {
+      // Log layer creation to help with debugging
+      console.log(`Created layer for drawing: ${drawing.id}, type: ${drawing.geoJSON.type}`);
+      
       attachLayerHandlers({
         layer,
         drawing,
@@ -113,12 +116,19 @@ function attachLayerHandlers({
   onUploadRequest,
   onImageTransform
 }: LayerFactoryOptions & { layer: L.GeoJSON }) {
+  // Add the layer to the feature group first to ensure it's properly initialized
+  try {
+    layer.addTo(featureGroup);
+  } catch (err) {
+    console.error('Error adding layer to featureGroup:', err);
+  }
+  
+  // Store the layer reference
+  layersRef.set(drawing.id, layer);
+  
   layer.eachLayer((l: L.Layer) => {
     if (l && isMounted) {
       (l as any).drawingId = drawing.id;
-      
-      // Store the layer reference
-      layersRef.set(drawing.id, l);
       
       // Check for floor plan first
       const floorPlan = getFloorPlanById(drawing.id);
@@ -178,12 +188,4 @@ function attachLayerHandlers({
       }
     }
   });
-  
-  if (isMounted) {
-    try {
-      layer.addTo(featureGroup);
-    } catch (err) {
-      console.error('Error adding layer to featureGroup:', err);
-    }
-  }
 }
