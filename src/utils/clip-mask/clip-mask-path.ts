@@ -76,14 +76,22 @@ export const applyClipPathAndFill = (
       // Ensure visibility
       pathElement.style.setProperty('visibility', 'visible', 'important');
       pathElement.style.setProperty('display', 'inline', 'important');
+      
+      // Force immediate redraw
+      pathElement.getBoundingClientRect();
     } catch (e) {
       console.warn('Error applying style properties', e);
     }
     
-    // Force a redraw of the path
-    const displayValue = pathElement.style.display;
-    pathElement.style.display = 'none';
-    pathElement.getBoundingClientRect(); // Force reflow
-    pathElement.style.display = displayValue || 'inline';
+    // Double apply after a short delay to ensure it takes effect
+    setTimeout(() => {
+      if (pathElement && document.contains(pathElement)) {
+        pathElement.style.fill = fill;
+        pathElement.style.clipPath = clipPathUrl;
+        pathElement.setAttribute('fill', fill);
+        pathElement.setAttribute('clip-path', clipPathUrl);
+      }
+    }, 50);
   });
 };
+

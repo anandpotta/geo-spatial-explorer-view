@@ -147,10 +147,16 @@ export const applyImageClipMask = (
         // Apply the clip path and fill
         applyClipPathAndFill(pathElement, id);
         
-        // Force a redraw - properly using getBoundingClientRect instead of offsetHeight
-        svg.style.display = 'none';
-        svg.getBoundingClientRect(); // Force reflow
-        svg.style.display = '';
+        // Force multiple redraws to ensure the pattern is visible
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            if (svg && document.contains(svg)) {
+              svg.style.display = 'none';
+              svg.getBoundingClientRect(); // Force reflow
+              svg.style.display = '';
+            }
+          }, i * 200);
+        }
         
         // Show success toast (only once per drawing)
         showClipMaskSuccessToast(id);
@@ -178,3 +184,4 @@ export const applyImageClipMask = (
     return false;
   }
 };
+

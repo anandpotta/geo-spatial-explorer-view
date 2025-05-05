@@ -40,7 +40,7 @@ export const applyClipMaskToDrawing = ({
     
     // Make multiple attempts to apply the clip mask with increasing delays
     let attempts = 0;
-    const maxAttempts = 10; // Increased from 5 to 10
+    const maxAttempts = 15; // Increased from 10 to 15
     
     const tryApply = () => {
       if (attempts >= maxAttempts) return;
@@ -50,7 +50,7 @@ export const applyClipMaskToDrawing = ({
       const applied = applyImageClipMask(pathElement, imageData, drawingId);
       
       if (!applied && attempts < maxAttempts) {
-        // Use exponential backoff for retries (300ms, 600ms, 1200ms, etc.)
+        // Use exponential backoff for retries (300ms, 450ms, 675ms, etc.)
         const delay = Math.min(300 * Math.pow(1.5, attempts - 1), 3000);
         console.log(`Attempt ${attempts} failed, trying again in ${delay}ms`);
         setTimeout(tryApply, delay);
@@ -59,18 +59,25 @@ export const applyClipMaskToDrawing = ({
       } else {
         console.log(`Successfully applied clip mask on attempt ${attempts}`);
         
-        // Force a redraw after successful application
-        setTimeout(() => {
-          if (pathElement && document.contains(pathElement)) {
-            const svg = pathElement.closest('svg');
-            if (svg) {
-              console.log('Forcing SVG redraw after successful clip mask application');
-              svg.style.display = 'none';
-              svg.getBoundingClientRect(); // Force reflow
-              svg.style.display = '';
+        // Force multiple redraws after successful application to ensure visibility
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            if (pathElement && document.contains(pathElement)) {
+              const svg = pathElement.closest('svg');
+              if (svg) {
+                console.log(`Forcing SVG redraw after successful clip mask application (${i})`);
+                svg.style.display = 'none';
+                svg.getBoundingClientRect(); // Force reflow
+                svg.style.display = '';
+              }
             }
-          }
-        }, 100);
+          }, i * 300); // Stagger redraws with 300ms interval
+        }
+        
+        // Trigger window resize event to ensure SVG redraw
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 1000);
       }
     };
     
@@ -80,3 +87,4 @@ export const applyClipMaskToDrawing = ({
     toast.error('Could not apply floor plan to drawing');
   }
 };
+

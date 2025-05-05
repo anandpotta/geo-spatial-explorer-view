@@ -27,5 +27,7 @@ export const hasClipMaskApplied = (pathElement: SVGPathElement): boolean => {
   }
   
   // Return true if any of the indicators suggest a clip mask is present
-  return hasDataAttribute || (hasClipPath && hasFillPattern);
+  // To be extra safe, require at least two indicators to be present
+  return (hasDataAttribute && (hasClipPath || hasFillPattern));
 };
+
