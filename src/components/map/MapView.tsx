@@ -103,9 +103,15 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenReady={(mapEvent) => {
+        whenReady={() => {
           // Force immediate resize to ensure proper container dimensions
-          setTimeout(() => mapEvent.target.invalidateSize(), 100);
+          setTimeout(() => {
+            const mapInstance = document.getElementById(containerKey);
+            if (mapInstance) {
+              // Trigger a resize event to ensure map renders correctly
+              window.dispatchEvent(new Event('resize'));
+            }
+          }, 100);
         }}
       >
         <TileLayer 
