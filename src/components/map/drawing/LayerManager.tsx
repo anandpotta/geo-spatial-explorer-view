@@ -77,21 +77,25 @@ const LayerManager = ({
           const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
           const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
           
+          // Set options based on drawing type and whether it has a floor plan
           const options = getDefaultDrawingOptions(drawing.properties.color);
+          
           if (hasFloorPlan) {
             options.fillColor = '#3b82f6';
-            options.fillOpacity = 0.4;
+            options.fillOpacity = 0.2; // Reduce opacity to show the image better
             options.color = '#1d4ed8';
+            options.weight = 2; // Increase border width
           }
           
-          // Check if there's a clip image for this drawing
+          // Get the floor plan and clip image
           const floorPlan = getFloorPlanById(drawing.id);
           if (floorPlan && floorPlan.clipImage) {
             console.log('Found clip image for drawing', drawing.id);
             options.clipImage = floorPlan.clipImage;
-            drawing.clipImage = floorPlan.clipImage; // Add the clip image to the drawing itself
+            drawing.clipImage = floorPlan.clipImage; // Store the clip image on the drawing object
           }
           
+          // Create the layer with the drawing and options
           const layer = createDrawingLayer(drawing, options);
           
           if (layer) {
@@ -152,13 +156,14 @@ const LayerManager = ({
                   });
                 }
                 
-                // Apply clip mask if available
+                // Apply clip mask if available - with increased delay to ensure the layer is fully rendered
                 if (floorPlan && floorPlan.clipImage && l._path) {
                   setTimeout(() => {
                     if (isMountedRef.current) {
+                      console.log('Applying clip mask for drawing', drawing.id);
                       applyClipMaskToLayer(layer, floorPlan.clipImage as string, drawing.svgPath);
                     }
-                  }, 100); // Small delay to ensure the layer is fully rendered
+                  }, 300); // Increased delay to ensure the layer is fully rendered
                 }
               }
             });

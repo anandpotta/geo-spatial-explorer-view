@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 
 // Extend the PathOptions and GeoJSONOptions interfaces to include our custom svgPath property
@@ -123,22 +122,24 @@ export const applyClipMaskToLayer = (layer: L.GeoJSON | null, imageUrl: string, 
       // Get the bounding box of the path
       const bbox = svgElement.getBBox();
       
-      // Set the image attributes
+      // Set the image attributes with improved positioning
       image.setAttribute('x', bbox.x.toString());
       image.setAttribute('y', bbox.y.toString());
       image.setAttribute('width', bbox.width.toString());
       image.setAttribute('height', bbox.height.toString());
-      image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+      image.setAttribute('preserveAspectRatio', 'xMidYMid slice'); // Ensure the image fills the clip area
       image.setAttribute('clip-path', `url(#${clipId})`);
       image.setAttribute('href', imageUrl);
       
       console.log('Adding image with dimensions:', bbox.width, 'x', bbox.height);
       
-      // Add the image before the path in the SVG
+      // Insert the image before the path in the SVG so it appears underneath
       svg.insertBefore(image, svgElement);
       
-      // Reduce the opacity of the original path
-      svgElement.setAttribute('fill-opacity', '0.1');
+      // Make the path semi-transparent to see the image but still show the border
+      svgElement.setAttribute('fill-opacity', '0');
+      svgElement.setAttribute('stroke-width', '2');
+      svgElement.setAttribute('stroke-opacity', '0.8');
     });
   } catch (error) {
     console.error('Error applying clip mask:', error);

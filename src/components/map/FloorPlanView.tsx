@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload, Image as ImageIcon } from "lucide-react";
@@ -99,7 +98,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             dataUrl
           );
           
-          // Make sure we trigger a re-render of the map
+          // Dispatch event to trigger map update
           console.log('Dispatching floorPlanUpdated event');
           window.dispatchEvent(new CustomEvent('floorPlanUpdated'));
           
