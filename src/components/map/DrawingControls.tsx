@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import L from 'leaflet';
@@ -31,7 +32,7 @@ const DrawingControls = forwardRef(({
   onClearAll, 
   onRemoveShape 
 }: DrawingControlsProps, ref) => {
-  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
   const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
   const mountedRef = useRef<boolean>(true);
@@ -39,7 +40,19 @@ const DrawingControls = forwardRef(({
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
-    getDrawTools: () => drawToolsRef.current
+    getDrawTools: () => drawToolsRef.current,
+    activateEditMode: () => {
+      if (drawToolsRef.current?.getEditControl()) {
+        // Activate the edit mode
+        const editControl = drawToolsRef.current.getEditControl();
+        if (editControl && editControl._toolbars && editControl._toolbars.edit) {
+          const editModes = editControl._toolbars.edit._modes;
+          if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
+            editModes.edit.handler.enable();
+          }
+        }
+      }
+    }
   }));
   
   useEffect(() => {
@@ -48,9 +61,10 @@ const DrawingControls = forwardRef(({
     const handleFloorPlanUpdated = () => {
       if (featureGroupRef.current && mountedRef.current) {
         try {
-          featureGroupRef.current.clearLayers();
+          // Don't clear layers on floor plan update - we just want to redraw them with new styles
+          window.dispatchEvent(new Event('storage'));
         } catch (err) {
-          console.error('Error clearing layers on floor plan update:', err);
+          console.error('Error handling floor plan update:', err);
         }
       }
     };
@@ -63,11 +77,38 @@ const DrawingControls = forwardRef(({
     };
   }, []);
 
+  // Effect to activate edit mode when activeTool changes to 'edit'
   useEffect(() => {
-    if (featureGroupRef.current && !isInitialized) {
+    if (activeTool === 'edit' && drawToolsRef.current?.getEditControl()) {
+      setTimeout(() => {
+        try {
+          if (drawToolsRef.current && mountedRef.current) {
+            // This is the updated code to safely activate edit mode
+            const editControl = drawToolsRef.current.getEditControl();
+            if (editControl && editControl._toolbars && editControl._toolbars.edit) {
+              const editModes = editControl._toolbars.edit._modes;
+              if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
+                editModes.edit.handler.enable();
+                console.log("Edit mode activated successfully");
+              } else {
+                console.warn("Edit handler not found or not a function");
+              }
+            } else {
+              console.warn("Edit toolbar not found");
+            }
+          }
+        } catch (err) {
+          console.error('Error activating edit mode:', err);
+        }
+      }, 300);
+    }
+  }, [activeTool, isInitialized]);
+
+  useEffect(() => {
+    if (featureGroupRef.current) {
       setIsInitialized(true);
     }
-  }, [featureGroupRef.current]);
+  }, []);
 
   const handleClearAll = () => {
     if (featureGroupRef.current) {
@@ -114,6 +155,7 @@ const DrawingControls = forwardRef(({
         onCreated={onCreated} 
         activeTool={activeTool} 
         onClearAll={handleClearAll}
+        featureGroup={featureGroupRef.current}
       />
     </FeatureGroup>
   );

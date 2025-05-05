@@ -17,24 +17,39 @@ export function useMarkerHandlers(mapState: any) {
 
   const handleShapeCreated = (shape: any) => {
     if (shape.type === 'marker') {
-      // Ensure we get the precise coordinates
-      const exactPosition: [number, number] = [
-        shape.position[0],
-        shape.position[1]
-      ];
-      mapState.setTempMarker(exactPosition);
-      mapState.setMarkerName('New Marker');
+      // Ensure position exists and is valid before accessing it
+      if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
+        const exactPosition: [number, number] = [
+          shape.position[0],
+          shape.position[1]
+        ];
+        mapState.setTempMarker(exactPosition);
+        mapState.setMarkerName('New Marker');
+      } else if (shape.layer && shape.layer.getLatLng) {
+        // Alternative: try to get position from the layer if available
+        const latLng = shape.layer.getLatLng();
+        mapState.setTempMarker([latLng.lat, latLng.lng]);
+        mapState.setMarkerName('New Marker');
+      } else {
+        console.error('Invalid marker position data:', shape);
+        toast.error('Could not create marker: invalid position data');
+        return;
+      }
     } else {
       // Create a safe copy of the shape without potential circular references
       const safeShape = {
         type: shape.type,
-        id: shape.id,
+        id: shape.id || crypto.randomUUID(), // Ensure there's always an ID
         coordinates: shape.coordinates || [],
         // If geoJSON exists, create a clean copy
         geoJSON: shape.geoJSON ? {
           type: shape.geoJSON.type,
           geometry: shape.geoJSON.geometry,
           properties: shape.geoJSON.properties || {}
+        } : shape.layer ? {
+          type: "Feature",
+          geometry: shape.layer.toGeoJSON().geometry,
+          properties: {}
         } : undefined,
         options: shape.options || {},
         properties: shape.properties || {
@@ -44,7 +59,12 @@ export function useMarkerHandlers(mapState: any) {
         }
       };
       
+      // Store the safe shape in the current drawing
       mapState.setCurrentDrawing(safeShape);
+      
+      // Also immediately save the drawing to prevent loss
+      saveDrawing(safeShape);
+      
       toast.success(`${shape.type} created - Click to tag this building`);
     }
   };

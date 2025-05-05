@@ -83,6 +83,7 @@ const DrawingTools = ({
       setIsClearDialogOpen(true);
       return;
     }
+    
     onToolSelect(tool);
   };
 
@@ -135,10 +136,22 @@ const DrawingTools = ({
         <div className="h-4" />
         
         <button
-          className="w-full p-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors flex items-center justify-center"
+          className="w-full p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"
           onClick={() => handleToolClick('clear')}
+          aria-label="Clear all layers"
         >
           <Trash2 className="h-5 w-5" />
+          <span className="ml-2">Clear All</span>
+        </button>
+        
+        <div className="h-4" />
+        
+        <button
+          className="w-full p-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
+          onClick={() => handleToolClick('edit')}
+          aria-label="Edit layers"
+        >
+          <span>Edit Layers</span>
         </button>
       </div>
 

@@ -27,6 +27,7 @@ const LayerManager = ({
 }: LayerManagerProps) => {
   const isMountedRef = useRef(true);
   const removeButtonRoots = useRef<Map<string, any>>(new Map());
+  const layersRef = useRef<Map<string, L.Layer>>(new Map());
 
   useEffect(() => {
     return () => {
@@ -40,6 +41,7 @@ const LayerManager = ({
         }
       });
       removeButtonRoots.current.clear();
+      layersRef.current.clear();
     };
   }, []);
 
@@ -71,6 +73,7 @@ const LayerManager = ({
         }
       });
       removeButtonRoots.current.clear();
+      layersRef.current.clear();
       
       const markers = getSavedMarkers();
       const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
@@ -88,6 +91,10 @@ const LayerManager = ({
               options.color = '#1d4ed8';
             }
             
+            // Always ensure opacity is set to visible values
+            options.opacity = 1;
+            options.fillOpacity = options.fillOpacity || 0.2;
+            
             const layer = createDrawingLayer(drawing, options);
             
             if (layer) {
@@ -95,21 +102,40 @@ const LayerManager = ({
                 if (l && isMountedRef.current) {
                   (l as any).drawingId = drawing.id;
                   
+                  // Store the layer reference
+                  layersRef.current.set(drawing.id, l);
+                  
+                  // Add the remove button when in edit mode
                   if (activeTool === 'edit' && isMountedRef.current) {
                     let buttonPosition;
+                    
                     if ('getLatLng' in l) {
+                      // For markers
                       buttonPosition = (l as L.Marker).getLatLng();
                     } else if ('getBounds' in l) {
-                      buttonPosition = (l as any).getBounds().getNorthEast();
+                      // For polygons, rectangles, etc.
+                      const bounds = (l as any).getBounds();
+                      if (bounds) {
+                        buttonPosition = bounds.getNorthEast();
+                      }
+                    } else if ('getLatLngs' in l) {
+                      // For polylines or complex shapes
+                      const latlngs = (l as any).getLatLngs();
+                      if (latlngs && latlngs.length > 0) {
+                        buttonPosition = Array.isArray(latlngs[0]) ? latlngs[0][0] : latlngs[0];
+                      }
                     }
                     
                     if (buttonPosition) {
                       const container = document.createElement('div');
+                      container.className = 'remove-button-wrapper';
+                      
                       const buttonLayer = L.marker(buttonPosition, {
                         icon: L.divIcon({
                           className: 'remove-button-container',
                           html: container,
-                          iconSize: [24, 24]
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
                         }),
                         interactive: true,
                         zIndexOffset: 1000
@@ -131,7 +157,8 @@ const LayerManager = ({
                     }
                   }
                   
-                  if (onRegionClick && isMountedRef.current) {
+                  // Always make clicking on a shape that has a floor plan trigger the handler
+                  if (hasFloorPlan && onRegionClick && isMountedRef.current) {
                     l.on('click', () => {
                       if (isMountedRef.current) {
                         onRegionClick(drawing);
@@ -155,11 +182,36 @@ const LayerManager = ({
     }
   };
 
+  // Listen for marker updates to ensure drawings stay visible
+  useEffect(() => {
+    const handleMarkerUpdated = () => {
+      if (isMountedRef.current) {
+        // Small delay to ensure storage is updated first
+        setTimeout(updateLayers, 50);
+      }
+    };
+    
+    window.addEventListener('markersUpdated', handleMarkerUpdated);
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkerUpdated);
+    };
+  }, []);
+
   useEffect(() => {
     if (!featureGroup || !isMountedRef.current) return;
     updateLayers();
     
+    // Also update layers when storage changes
+    const handleStorageChange = () => {
+      if (isMountedRef.current) {
+        updateLayers();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
     return () => {
+      window.removeEventListener('storage', handleStorageChange);
       if (featureGroup && featureGroup.clearLayers) {
         try {
           featureGroup.clearLayers();
