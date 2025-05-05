@@ -1,6 +1,6 @@
 
 export type { Location } from './location-utils';
-export type { LocationMarker } from './markers/types';
+export type { LocationMarker } from './marker-utils';
 export type { DrawingData } from './drawing-utils';
 export type { FloorPlanData } from './floor-plan-utils';
 
@@ -14,7 +14,7 @@ export {
   saveMarker,
   getSavedMarkers,
   deleteMarker,
-} from './markers/storage';
+} from './marker-utils';
 
 export {
   saveDrawing,
@@ -29,10 +29,14 @@ export {
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
 
-// Added storage utilities
+// Export from our refactored SVG utilities
 export {
-  clearAllMapData,
-  clearMarkers,
-  clearDrawings,
-  clearFloorPlans,
-} from './storage-utils';
+  getSvgPathFromElement,
+  simplifyPath,
+  extractPointsFromPath,
+  simplifyPoints,
+  pointsToPathData,
+  getAllSvgPaths,
+  applyImageClipMask,
+  removeClipMask,
+} from './svg-utils';

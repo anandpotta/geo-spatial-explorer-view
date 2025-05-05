@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LocationMarker } from "@/utils/markers/types";
+import { LocationMarker } from "@/utils/marker-utils";
 import MarkerMenuItem from "./MarkerMenuItem";
 import { SidebarMenu } from "@/components/ui/sidebar";
 

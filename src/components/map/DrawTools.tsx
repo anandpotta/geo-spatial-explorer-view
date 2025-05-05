@@ -1,203 +1,159 @@
 
-import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
-import { EditControl } from "react-leaflet-draw";
-import { v4 as uuidv4 } from 'uuid';
-import { saveDrawing } from '@/utils/drawing-utils';
-import { toast } from 'sonner';
-import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { EditControl } from "./LeafletCompatibilityLayer";
+import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
+import { useEditMode } from '@/hooks/useEditMode';
+import { usePathElements } from '@/hooks/usePathElements';
+import { useShapeCreation } from '@/hooks/useShapeCreation';
+import { toast } from 'sonner';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onClearAll?: () => void;
+  featureGroup: L.FeatureGroup;
 }
 
-const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsProps, ref) => {
+const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
-  const [isDrawingEnabled, setIsDrawingEnabled] = useState(false);
   
-  // Expose the editControlRef to parent components
-  useImperativeHandle(ref, () => ({
-    getEditControl: () => editControlRef.current,
-  }));
-
-  // Clean up function to safely disable any active drawing handlers
-  const safelyDisableTools = () => {
-    if (!editControlRef.current || !editControlRef.current.leafletElement) return;
+  // Use hooks for separated functionality
+  useEditMode(editControlRef, activeTool);
+  const { getPathElements, getSVGPathData } = usePathElements(featureGroup);
+  const { handleCreated } = useShapeCreation(onCreated);
+  
+  // Configure SVG renderer and optimize polygon drawing
+  useEffect(() => {
+    if (!featureGroup) return;
     
-    try {
-      const leafletElement = editControlRef.current.leafletElement;
+    // Fix: Don't use getMap as it doesn't exist on FeatureGroup
+    // Use type assertion to access _map internally without TypeScript errors
+    const map = (featureGroup as any)._map;
+    if (!map) return;
+    
+    // Set up SVG renderer configuration to reduce flickering
+    const cleanupSvgRenderer = configureSvgRenderer();
+    
+    // Optimize polygon drawing specifically
+    const originalOnMarkerDrag = optimizePolygonDrawing();
+    
+    // Set up path preservation
+    const cleanupPathPreservation = enhancePathPreservation(map);
+    
+    // Apply additional anti-flickering CSS to the map container
+    const mapContainer = map.getContainer();
+    if (mapContainer) {
+      mapContainer.classList.add('optimize-svg-rendering');
       
-      // Check if _modes exists before attempting to disable tools
-      if (!leafletElement._modes) {
-        console.log('No drawing modes available to disable');
-        return;
+      // Add a style element with our anti-flicker CSS
+      const styleEl = document.createElement('style');
+      styleEl.innerHTML = `
+        .optimize-svg-rendering .leaflet-overlay-pane svg {
+          transform: translateZ(0);
+          backface-visibility: hidden;
+          perspective: 1000px;
+        }
+        .leaflet-drawing {
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          vector-effect: non-scaling-stroke;
+        }
+        .leaflet-interactive {
+          transform: translateZ(0);
+          backface-visibility: hidden;
+        }
+      `;
+      document.head.appendChild(styleEl);
+      
+      // Force the browser to acknowledge these changes
+      mapContainer.getBoundingClientRect();
+    }
+    
+    // Cleanup function
+    return () => {
+      cleanupSvgRenderer();
+      cleanupPathPreservation();
+      
+      // Restore original marker drag handler if it was modified
+      if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
+        (L.Edit as any).Poly.prototype._onMarkerDrag = originalOnMarkerDrag;
       }
       
-      // Safely attempt to disable each tool
-      Object.keys(leafletElement._modes).forEach((mode) => {
-        try {
-          const handler = leafletElement._modes[mode].handler;
-          
-          if (handler && 
-              typeof handler.enabled === 'function' && 
-              handler.enabled() && 
-              typeof handler.disable === 'function') {
-            console.log(`Disabling ${mode} tool`);
-            handler.disable();
-          }
-        } catch (err) {
-          console.warn(`Error disabling ${mode} tool:`, err);
+      // Remove the style element
+      const styles = document.querySelectorAll('style');
+      styles.forEach(style => {
+        if (style.innerHTML.includes('optimize-svg-rendering')) {
+          document.head.removeChild(style);
         }
       });
-    } catch (err) {
-      console.warn('Error accessing leaflet element:', err);
+      
+      // Remove the class from map container
+      if (mapContainer) {
+        mapContainer.classList.remove('optimize-svg-rendering');
+      }
+    };
+  }, [featureGroup]);
+  
+  useImperativeHandle(ref, () => ({
+    getEditControl: () => editControlRef.current,
+    getPathElements,
+    getSVGPathData,
+    activateEditMode: () => {
+      try {
+        if (editControlRef.current) {
+          const editControl = editControlRef.current;
+          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+          
+          if (editHandler && typeof editHandler.enable === 'function') {
+            console.log('Manually activating edit mode');
+            editHandler.enable();
+            return true;
+          }
+        }
+        return false;
+      } catch (err) {
+        console.error('Error manually activating edit mode:', err);
+        return false;
+      }
     }
+  }));
+
+  // Create a properly structured edit object
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
+    },
+    remove: true
   };
 
-  // Handle cleanup when component unmounts
-  useEffect(() => {
-    return () => {
-      safelyDisableTools();
-    };
-  }, []);
-
-  // Handle active tool changes
-  useEffect(() => {
-    if (!editControlRef.current || !editControlRef.current.leafletElement) return;
-    
-    try {
-      const leafletElement = editControlRef.current.leafletElement;
-      
-      // First disable any active tools
-      safelyDisableTools();
-      
-      // Early return if no active tool or modes aren't available
-      if (!activeTool || !leafletElement._modes) {
-        setIsDrawingEnabled(false);
-        return;
-      }
-      
-      const toolMessages = {
-        polygon: "Click on map to start drawing polygon",
-        marker: "Click on map to place marker",
-        circle: "Click on map to draw circle",
-        rectangle: "Click on map to draw rectangle",
-        edit: "Click on a shape to edit it"
-      };
-
-      // Safely enable the requested tool if it exists
-      if (leafletElement._modes[activeTool] && 
-          leafletElement._modes[activeTool].handler &&
-          typeof leafletElement._modes[activeTool].handler.enable === 'function') {
-        try {
-          console.log(`Enabling ${activeTool} tool`);
-          leafletElement._modes[activeTool].handler.enable();
-          setIsDrawingEnabled(true);
-          
-          toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
-        } catch (err) {
-          console.warn(`Error enabling ${activeTool} tool:`, err);
-          toast.error(`Could not activate ${activeTool} tool`);
-          setIsDrawingEnabled(false);
-        }
-      } else {
-        console.warn(`Tool ${activeTool} not found or cannot be enabled`);
-        setIsDrawingEnabled(false);
-      }
-    } catch (err) {
-      console.error('Error updating active drawing tool:', err);
-      setIsDrawingEnabled(false);
-    }
-  }, [activeTool]);
-
-  const handleCreated = (e: any) => {
-    const { layerType, layer } = e;
-    const id = `${Date.now().toString(36)}-${uuidv4()}`;
-    
-    try {
-      if (layerType === 'marker' && 'getLatLng' in layer) {
-        const markerLayer = layer as L.Marker;
-        const { lat, lng } = markerLayer.getLatLng();
-        onCreated({ type: 'marker', position: [lat, lng], id });
-        return;
-      }
-
-      // Safety check for layer
-      if (!layer) {
-        console.warn('Created layer is undefined');
-        return;
-      }
-
-      const layerWithOptions = layer as L.Path;
-      const options = layerWithOptions.options || {};
-      
-      // Add ID to layer for tracking
-      layer.drawingId = id;
-      
-      // Make sure coordinates are safely extracted
-      let coordinates;
-      try {
-        coordinates = getCoordinatesFromLayer(layer, layerType);
-      } catch (err) {
-        console.warn('Error getting coordinates from layer:', err);
-        coordinates = [];
-      }
-      
-      // Extract SVG path data for polygons and rectangles
-      let svgPath = '';
-      if ((layerType === 'polygon' || layerType === 'rectangle') && layer._path) {
-        try {
-          // Get the SVG path element
-          const pathElement = layer._path;
-          if (pathElement && pathElement.getAttribute) {
-            // Extract the 'd' attribute which contains the SVG path data
-            svgPath = pathElement.getAttribute('d') || '';
-            console.log(`Extracted SVG path: ${svgPath}`);
-          }
-        } catch (err) {
-          console.warn('Error extracting SVG path:', err);
-        }
-      }
-      
-      // Create the drawing data object
-      const drawingData = {
-        id,
-        type: layerType,
-        coordinates,
-        svgPath, // Add SVG path data
-        geoJSON: layer.toGeoJSON ? layer.toGeoJSON() : null,
-        options: {
-          color: options.color,
-          weight: options.weight,
-          opacity: options.opacity,
-          fillOpacity: options.fillOpacity
-        },
-        properties: {
-          name: `New ${layerType}`,
-          color: options.color || '#3388ff',
-          createdAt: new Date()
-        }
-      };
-      
-      if (drawingData.geoJSON) {
-        saveDrawing(drawingData);
-        toast.success(`${layerType} created successfully`);
-        onCreated({ 
-          type: layerType, 
-          layer, 
-          geoJSON: drawingData.geoJSON, 
-          svgPath: drawingData.svgPath, 
-          id 
-        });
-      } else {
-        toast.error(`Error creating ${layerType}`);
-      }
-    } catch (err) {
-      console.error('Error handling created shape:', err);
-      toast.error('Error creating shape');
-    }
+  const drawOptions = {
+    rectangle: true,
+    polygon: {
+      allowIntersection: false,
+      drawError: {
+        color: '#e1e100',
+        message: '<strong>Cannot draw that shape!</strong>'
+      },
+      shapeOptions: {
+        color: '#3388ff',
+        weight: 4,
+        opacity: 0.7,
+        fillOpacity: 0.2
+      },
+      showArea: false,
+      metric: true,
+      smoothFactor: 1 // Lower value for less smoothing (more accurate paths)
+    },
+    circle: true,
+    circlemarker: false,
+    marker: true,
+    polyline: false
   };
 
   return (
@@ -205,32 +161,13 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
       ref={editControlRef}
       position="topright"
       onCreated={handleCreated}
-      draw={{
-        rectangle: true,
-        polygon: true,
-        circle: true,
-        circlemarker: false,
-        marker: true,
-        polyline: false
-      }}
-      edit={{
-        remove: false, // Disable built-in remove button since we're using our own
-        edit: {
-          // Fix for selectedPathOptions - using only valid PathOptions properties
-          selectedPathOptions: {
-            color: "#fe57a1", // Use a distinctive color for edit mode
-            opacity: 0.7,
-            fillOpacity: 0.3,
-            dashArray: "10, 10", // Add dashed lines to indicate edit mode
-            weight: 3
-          }
-        }
-      }}
+      draw={drawOptions}
+      edit={editOptions}
+      featureGroup={featureGroup}
     />
   );
 });
 
-// Set a display name for the component
 DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;

@@ -1,8 +1,8 @@
 
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 
 export const createReactRoot = (element: HTMLElement) => {
-  return ReactDOM.createRoot(element);
+  return createRoot(element);
 };
 
-export { ReactDOM };
+export { createRoot };

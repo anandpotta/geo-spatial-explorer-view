@@ -2,7 +2,6 @@
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
-import { useMemo, useRef } from 'react';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -25,22 +24,17 @@ const MarkersList = ({
   setMarkerName,
   setMarkerType
 }: MarkersListProps) => {
-  // Generate a unique instance ID to ensure consistent marker keys
-  const instanceId = useRef<string>(`markers-${Date.now()}`).current;
-
-  console.log(`MarkersList rendering ${markers.length} markers from ${markers.length} inputs`);
-  
   return (
     <>
-      {markers.map((marker) => (
+      {Array.isArray(markers) && markers.map((marker) => (
         <UserMarker 
-          key={`user-marker-${instanceId}-${marker.id}`} 
+          key={marker.id} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />
       ))}
       
-      {tempMarker && (
+      {tempMarker && Array.isArray(tempMarker) && (
         <TempMarker 
           position={tempMarker}
           markerName={markerName}

@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { MapPin, Trash2 } from "lucide-react";
-import { LocationMarker } from "@/utils/markers/types";
+import { LocationMarker } from "@/utils/marker-utils";
 
 interface MarkerMenuItemProps {
   marker: LocationMarker;

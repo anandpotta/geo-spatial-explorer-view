@@ -1,25 +1,34 @@
 
 import L from 'leaflet';
 
-// Extend the PathOptions and GeoJSONOptions interfaces to include our custom svgPath property
-declare module 'leaflet' {
-  interface PathOptions {
-    svgPath?: string;
-  }
-  
-  interface GeoJSONOptions {
-    svgPath?: string;
-  }
-}
-
 export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
   try {
-    const layer = L.geoJSON(drawing.geoJSON, { style: options });
-    
-    // Store SVG path data if available
-    if (drawing.svgPath) {
-      layer.options.svgPath = drawing.svgPath;
+    // Create a copy of options without renderer for GeoJSON
+    const geoJSONOptions = { ...options };
+    // Remove renderer from GeoJSON options as it's not a valid property
+    if ('renderer' in geoJSONOptions) {
+      delete geoJSONOptions.renderer;
     }
+    
+    // Create layer with corrected options
+    const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
+    
+    // After creation, apply SVG renderer to each layer
+    layer.eachLayer((l: any) => {
+      if (l && l.options) {
+        // Apply SVG renderer to the layer options
+        l.options.renderer = L.svg();
+      }
+      
+      // Store SVG path data if available
+      if (drawing.svgPath && l._path) {
+        try {
+          l._path.setAttribute('d', drawing.svgPath);
+        } catch (err) {
+          console.error('Error setting path data:', err);
+        }
+      }
+    });
     
     return layer;
   } catch (error) {
@@ -32,7 +41,8 @@ export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
   color: color || '#3388ff',
   weight: 3,
   opacity: 0.7,
-  fillOpacity: 0.3
+  fillOpacity: 0.3,
+  renderer: L.svg() // Force SVG renderer
 });
 
 export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {
@@ -56,44 +66,28 @@ export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[n
   return [];
 };
 
-/**
- * Extract SVG path data from a Leaflet path element
- */
-export const extractSvgPathData = (pathElement: SVGPathElement | null): string => {
-  if (!pathElement) return '';
+export const getSVGPathFromLayer = (layer: any): string | null => {
+  if (!layer) return null;
   
   try {
-    return pathElement.getAttribute('d') || '';
-  } catch (error) {
-    console.error('Error extracting SVG path data:', error);
-    return '';
-  }
-};
-
-/**
- * Convert GeoJSON coordinates to SVG path data
- * This is a fallback when direct SVG extraction is not possible
- */
-export const geoJsonToSvgPath = (coordinates: Array<[number, number]>, map: L.Map | null): string => {
-  if (!coordinates || coordinates.length < 3 || !map) return '';
-  
-  try {
-    // Convert geo coordinates to pixel coordinates on the map
-    const points = coordinates.map(coord => {
-      const point = map.latLngToLayerPoint(new L.LatLng(coord[0], coord[1]));
-      return [point.x, point.y];
-    });
-    
-    // Create SVG path data
-    let pathData = `M ${points[0][0]} ${points[0][1]}`;
-    for (let i = 1; i < points.length; i++) {
-      pathData += ` L ${points[i][0]} ${points[i][1]}`;
+    // Try to access the SVG path element
+    if (layer._path) {
+      return layer._path.getAttribute('d') || null;
     }
-    pathData += ' Z'; // Close the path
     
-    return pathData;
-  } catch (error) {
-    console.error('Error converting GeoJSON to SVG path:', error);
-    return '';
+    // If it's a feature group, try to access paths on child layers
+    if (layer.eachLayer) {
+      let path: string | null = null;
+      layer.eachLayer((childLayer: any) => {
+        if (!path && childLayer._path) {
+          path = childLayer._path.getAttribute('d') || null;
+        }
+      });
+      return path;
+    }
+  } catch (err) {
+    console.error('Error getting SVG path:', err);
   }
+  
+  return null;
 };

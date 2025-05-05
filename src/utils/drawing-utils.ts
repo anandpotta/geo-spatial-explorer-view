@@ -9,11 +9,11 @@ export interface DrawingData {
   coordinates: Array<[number, number]>;
   geoJSON?: any;
   options?: any;
+  svgPath?: string; // SVG path data for the drawing
   properties: {
     name?: string;
     description?: string;
     color?: string;
-    type?: string; // Added type property
     createdAt: Date;
     associatedMarkerId?: string;
   };

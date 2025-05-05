@@ -1,15 +1,14 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
-import { setupLeafletIcons } from './LeafletMapIcons';
 import { useMapState } from '@/hooks/useMapState';
+import { useMapInitialization } from '@/hooks/useMapInitialization';
+import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
-import FloorPlanHandler from './FloorPlanHandler';
-import { useLeafletMapInitialization } from '@/hooks/useLeafletMapInitialization';
-import LocationHandler from './LocationHandler';
+import FloorPlanView from './FloorPlanView';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -21,42 +20,73 @@ interface LeafletMapProps {
   onClearAll?: () => void;
 }
 
-const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect, onClearAll }: LeafletMapProps) => {
-  const mapState = useMapState(selectedLocation);
-  const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
+const LeafletMap = ({ 
+  selectedLocation, 
+  onMapReady, 
+  activeTool, 
+  onLocationSelect, 
+  onClearAll 
+}: LeafletMapProps) => {
+  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
   
+  // Custom hooks
+  const mapState = useMapState(selectedLocation);
   const { 
     mapRef, 
-    isMapReady, 
     mapInstanceKey, 
-    containerId,
-    handleSetMapRef, 
-    handleLocationSelect,
-    forceMapRemount
-  } = useLeafletMapInitialization({
-    selectedLocation,
-    onMapReady
-  });
-  
-  // Setup Leaflet icons
+    isMapReady, 
+    handleSetMapRef 
+  } = useMapInitialization(selectedLocation);
+  const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
+  const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
+
+  // Handle markers updates
   useEffect(() => {
-    setupLeafletIcons();
+    const handleMarkersUpdated = () => {
+      const savedMarkers = getSavedMarkers();
+      mapState.setMarkers(savedMarkers);
+    };
+    
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+    };
   }, []);
 
-  // Load markers once on mount, not on every render
+  // Handle selected location changes
   useEffect(() => {
-    const savedMarkers = getSavedMarkers();
-    mapState.setMarkers(savedMarkers);
-  }, []);
-
-  // If selectedLocation changes, handle it with better remounting approach
-  useEffect(() => {
-    if (selectedLocation) {
-      forceMapRemount();
+    if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
+      try {
+        const container = mapRef.current.getContainer();
+        if (container && document.body.contains(container)) {
+          console.log('Flying to selected location:', selectedLocation);
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+            animate: true,
+            duration: 1.5
+          });
+        }
+      } catch (err) {
+        console.error('Error flying to location:', err);
+      }
     }
-  }, [selectedLocation?.id]);
+  }, [selectedLocation, isMapReady, isMapReferenceSet]);
 
-  const handleClearAll = useCallback(() => {
+  // Custom map reference handler that sets our local state
+  const handleMapRefWrapper = (map: L.Map) => {
+    handleSetMapRef(map);
+    setIsMapReferenceSet(true);
+    
+    // Only call parent onMapReady once when the map is first ready
+    if (onMapReady && !isMapReferenceSet) {
+      onMapReady(map);
+    }
+  };
+
+  // Clear all layers and reset state
+  const handleClearAllWrapper = () => {
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
     mapState.setMarkerType('building');
@@ -67,47 +97,41 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     if (onClearAll) {
       onClearAll();
     }
-  }, [mapState, onClearAll]);
+    
+    handleClearAll();
+  };
+
+  if (mapState.showFloorPlan) {
+    return (
+      <FloorPlanView 
+        onBack={() => mapState.setShowFloorPlan(false)} 
+        drawing={mapState.selectedDrawing}
+      />
+    );
+  }
 
   return (
-    <>
-      <FloorPlanHandler
-        showFloorPlan={mapState.showFloorPlan}
-        selectedDrawing={mapState.selectedDrawing}
-        onBack={() => mapState.setShowFloorPlan(false)}
-      />
-      
-      {!mapState.showFloorPlan && (
-        <MapView
-          key={mapInstanceKey}
-          containerKey={mapInstanceKey}
-          containerID={containerId}
-          position={mapState.position}
-          zoom={mapState.zoom}
-          markers={mapState.markers}
-          tempMarker={mapState.tempMarker}
-          markerName={mapState.markerName}
-          markerType={mapState.markerType}
-          onMapReady={handleSetMapRef}
-          onLocationSelect={(position) => handleLocationSelect(position)}
-          onMapClick={handleMapClick}
-          onDeleteMarker={mapState.handleDeleteMarker}
-          onSaveMarker={mapState.handleSaveMarker}
-          setMarkerName={mapState.setMarkerName}
-          setMarkerType={mapState.setMarkerType}
-          onShapeCreated={handleShapeCreated}
-          activeTool={activeTool || mapState.activeTool}
-          onRegionClick={mapState.handleRegionClick}
-          onClearAll={handleClearAll}
-          isMapReady={isMapReady}
-        />
-      )}
-      
-      <LocationHandler
-        handleLocationSelect={handleLocationSelect}
-        onLocationSelect={onLocationSelect}
-      />
-    </>
+    <MapView
+      key={`map-view-${mapInstanceKey}`}
+      position={mapState.position}
+      zoom={mapState.zoom}
+      markers={mapState.markers}
+      tempMarker={mapState.tempMarker}
+      markerName={mapState.markerName}
+      markerType={mapState.markerType}
+      onMapReady={handleMapRefWrapper}
+      onLocationSelect={handleLocationSelect}
+      onMapClick={handleMapClick}
+      onDeleteMarker={mapState.handleDeleteMarker}
+      onSaveMarker={mapState.handleSaveMarker}
+      setMarkerName={mapState.setMarkerName}
+      setMarkerType={mapState.setMarkerType}
+      onShapeCreated={handleShapeCreated}
+      activeTool={activeTool || mapState.activeTool}
+      onRegionClick={mapState.handleRegionClick}
+      onClearAll={handleClearAllWrapper}
+      isMapReady={isMapReady}
+    />
   );
 };
 

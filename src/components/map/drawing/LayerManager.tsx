@@ -1,14 +1,7 @@
 
 import { useEffect, useRef } from 'react';
-import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getSavedMarkers } from '@/utils/marker-utils';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
-import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-drawing-config';
-import { deleteDrawing } from '@/utils/drawing-utils';
-import { toast } from 'sonner';
-import RemoveButton from './RemoveButton';
-import ReactDOM from 'react-dom/client';
+import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -16,160 +9,100 @@ interface LayerManagerProps {
   activeTool: string | null;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
+  onUploadRequest?: (drawingId: string) => void;
 }
 
-const LayerManager = ({ 
-  featureGroup, 
-  savedDrawings, 
+const LayerManager = ({
+  featureGroup,
+  savedDrawings,
   activeTool,
   onRegionClick,
-  onRemoveShape 
+  onRemoveShape,
+  onUploadRequest
 }: LayerManagerProps) => {
-  // Track mounted state to avoid updates after component unmount
-  const isMountedRef = useRef(true);
-  
-  // Clean up all React portals and event listeners
+  const isMountedRef = useRef<boolean>(true);
+  const layersRef = useRef<Map<string, L.Layer>>(new Map());
+  const removeButtonRoots = useRef<Map<string, any>>(new Map());
+  const uploadButtonRoots = useRef<Map<string, any>>(new Map());
+  const imageControlRoots = useRef<Map<string, any>>(new Map());
+
+  const { updateLayers } = useLayerUpdates({
+    featureGroup,
+    savedDrawings,
+    activeTool,
+    isMountedRef,
+    layersRef,
+    removeButtonRoots: removeButtonRoots.current,
+    uploadButtonRoots: uploadButtonRoots.current,
+    imageControlRoots: imageControlRoots.current,
+    onRegionClick,
+    onRemoveShape,
+    onUploadRequest
+  });
+
+  // Safe unmounting of React roots
+  const safeUnmountRoots = () => {
+    // Unmount all React roots in a safe way
+    const unmountRoot = (root: any) => {
+      if (!root) return;
+      try {
+        // Check if the unmount method exists before calling it
+        if (root && typeof root.unmount === 'function') {
+          root.unmount();
+        }
+      } catch (err) {
+        console.error('Error unmounting root:', err);
+      }
+    };
+    
+    // Safely clear all roots
+    const safelyClearRoots = (rootsMap: Map<string, any>) => {
+      if (!rootsMap) return;
+      
+      // Create array of entries to avoid modification during iteration
+      const entries = Array.from(rootsMap.entries());
+      entries.forEach(([key, root]) => {
+        unmountRoot(root);
+        rootsMap.delete(key);
+      });
+    };
+    
+    // Clear all types of roots
+    safelyClearRoots(removeButtonRoots.current);
+    safelyClearRoots(uploadButtonRoots.current);
+    safelyClearRoots(imageControlRoots.current);
+  };
+
   useEffect(() => {
+    isMountedRef.current = true;
+    
     return () => {
       isMountedRef.current = false;
+      
+      // Use the safe unmounting function
+      safeUnmountRoots();
+      
+      // Clear the layers reference
+      layersRef.current.clear();
     };
   }, []);
 
-  const handleRemoveShape = (drawingId: string) => {
-    if (!drawingId) {
-      console.warn('Missing drawing ID for removal');
-      return;
-    }
-    
-    deleteDrawing(drawingId);
-    if (onRemoveShape) {
-      onRemoveShape(drawingId);
-    }
-    updateLayers();
-    toast.success('Shape removed successfully');
-  };
-
-  const updateLayers = () => {
-    if (!featureGroup || !isMountedRef.current) return;
-    
-    // Clear existing layers safely
-    try {
-      featureGroup.clearLayers();
-    } catch (err) {
-      console.error('Error clearing feature group layers:', err);
-      return;
-    }
-    
-    const markers = getSavedMarkers();
-    const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
-    
-    savedDrawings.forEach(drawing => {
-      if (drawing.geoJSON && isMountedRef.current) {
-        try {
-          const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
-          const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
-          
-          const options = getDefaultDrawingOptions(drawing.properties.color);
-          if (hasFloorPlan) {
-            options.fillColor = '#3b82f6';
-            options.fillOpacity = 0.4;
-            options.color = '#1d4ed8';
-          }
-          
-          const layer = createDrawingLayer(drawing, options);
-          
-          if (layer) {
-            layer.eachLayer((l: L.Layer) => {
-              if (l && isMountedRef.current) {
-                // Ensure each layer has the drawingId
-                (l as any).drawingId = drawing.id;
-                
-                // Add remove button in edit mode
-                if (activeTool === 'edit' && isMountedRef.current) {
-                  // Get the center point for the remove button
-                  let buttonPosition;
-                  if ('getLatLng' in l) {
-                    buttonPosition = (l as L.Marker).getLatLng();
-                  } else if ('getBounds' in l) {
-                    buttonPosition = (l as any).getBounds().getNorthEast();
-                  }
-                  
-                  if (buttonPosition) {
-                    const buttonLayer = L.marker(buttonPosition, {
-                      icon: L.divIcon({
-                        className: 'remove-button-container',
-                        html: '<div class="remove-button-placeholder"></div>',
-                        iconSize: [24, 24]
-                      }),
-                      interactive: true,
-                      zIndexOffset: 1000
-                    });
-                    
-                    // Add the button layer to the feature group
-                    if (isMountedRef.current) {
-                      buttonLayer.addTo(featureGroup);
-                      
-                      // Use setTimeout to ensure the DOM element is available
-                      setTimeout(() => {
-                        const container = document.querySelector('.remove-button-placeholder');
-                        if (container && isMountedRef.current) {
-                          try {
-                            const root = ReactDOM.createRoot(container as HTMLElement);
-                            root.render(
-                              <RemoveButton onClick={() => handleRemoveShape(drawing.id)} />
-                            );
-                          } catch (err) {
-                            console.error('Error rendering remove button:', err);
-                          }
-                        }
-                      }, 0);
-                    }
-                  }
-                }
-                
-                // Add click handler for region
-                if (onRegionClick && isMountedRef.current) {
-                  l.on('click', () => {
-                    if (isMountedRef.current) {
-                      onRegionClick(drawing);
-                    }
-                  });
-                }
-              }
-            });
-            
-            // Add the layer to the feature group
-            if (isMountedRef.current) {
-              layer.addTo(featureGroup);
-            }
-          }
-        } catch (err) {
-          console.error('Error adding drawing layer:', err);
-        }
-      }
-    });
-  };
-
-  // Update layers when savedDrawings or activeTool changes
+  // Re-render layers when drawings or activeTool changes
   useEffect(() => {
-    if (!featureGroup || !isMountedRef.current) return;
-    
-    console.log('Updating layers, active tool:', activeTool);
-    updateLayers();
-    
-    return () => {
-      // Cleanup function to ensure we don't update layers after unmount
-      if (featureGroup && featureGroup.clearLayers) {
-        try {
-          featureGroup.clearLayers();
-        } catch (err) {
-          console.error('Error clearing layers on unmount:', err);
+    if (isMountedRef.current) {
+      // First safely unmount any existing roots to prevent conflicts
+      safeUnmountRoots();
+      
+      // Then update layers with a small delay to ensure unmounting is complete
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          updateLayers();
         }
-      }
-    };
-  }, [savedDrawings, activeTool]);
+      }, 10);
+    }
+  }, [savedDrawings, activeTool, updateLayers]);
 
-  return null;
+  return null; // This is a non-visual component
 };
 
 export default LayerManager;

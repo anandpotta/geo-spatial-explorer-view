@@ -1,15 +1,16 @@
 
-import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
-import SavedLocationsDropdown from './SavedLocationsDropdown';
-import MapReference from './MapReference';
-import MapEvents from './MapEvents';
+import { useState, useRef } from 'react';
+import { DrawingData } from '@/utils/drawing-utils';
 import { LocationMarker } from '@/utils/marker-utils';
-import L from 'leaflet';
+import FloorPlanView from './FloorPlanView';
+import { useFloorPlanState } from '@/hooks/useFloorPlanState';
+import MapHeader from './header/MapHeader';
+import MapContainer from './container/MapContainer';
+import MapReference from './MapReference';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
-import FloorPlanView from './FloorPlanView';
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { DrawingData } from '@/utils/drawing-utils';
+import MapEvents from './MapEvents';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -32,8 +33,6 @@ interface MapViewProps {
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
   isMapReady?: boolean;
-  containerKey?: string;
-  containerID?: string;
 }
 
 const MapView = ({
@@ -54,44 +53,16 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
-  isMapReady = false,
-  containerKey = 'default-map',
-  containerID
+  isMapReady = false
 }: MapViewProps) => {
-  const [showFloorPlan, setShowFloorPlan] = useState(false);
-  const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
   const drawingControlsRef = useRef(null);
-  const instanceId = useMemo(() => `map-instance-${Date.now().toString(36)}`, []);
-  const markersRef = useRef<LocationMarker[]>([]);
-  
-  // Use a stable reference for markers with useMemo to avoid unnecessary rerenders
-  const stableMarkers = useMemo(() => {
-    // Skip processing if the marker arrays are identical by reference
-    if (markersRef.current === markers) {
-      return markersRef.current;
-    }
-    
-    // Deduplicate markers by ID to ensure no duplicates are passed down
-    const uniqueMarkers = new Map<string, LocationMarker>();
-    
-    if (Array.isArray(markers)) {
-      // Always use the last occurrence of each ID (most up-to-date)
-      markers.forEach(marker => {
-        if (marker && marker.id) {
-          uniqueMarkers.set(marker.id, marker);
-        }
-      });
-    }
-    
-    const result = Array.from(uniqueMarkers.values());
-    markersRef.current = result;
-    return result;
-  }, [markers]);
-
-  const handleRegionClick = (drawing: DrawingData) => {
-    setSelectedDrawing(drawing);
-    setShowFloorPlan(true);
-  };
+  const {
+    showFloorPlan,
+    setShowFloorPlan,
+    selectedDrawing,
+    handleRegionClick
+  } = useFloorPlanState();
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
@@ -109,46 +80,19 @@ const MapView = ({
     );
   }
 
-  // Use provided containerID or generate a truly unique ID
-  const uniqueContainerId = containerID || `${containerKey}-${Date.now()}`;
-  
   return (
     <div className="w-full h-full relative">
-      <div className="absolute top-4 right-4 z-[1000]">
-        <SavedLocationsDropdown 
-          onLocationSelect={handleLocationSelect} 
-          isMapReady={isMapReady}
-        />
-      </div>
+      <MapHeader 
+        onLocationSelect={handleLocationSelect} 
+        isMapReady={isMapReady} 
+      />
       
-      <MapContainer 
-        key={uniqueContainerId}
-        id={uniqueContainerId}
-        className="w-full h-full"
-        attributionControl={false}
-        center={position}
+      <MapContainer
+        position={position}
         zoom={zoom}
-        zoomControl={false}
-        fadeAnimation={true}
-        markerZoomAnimation={true}
-        preferCanvas={true}
-        whenReady={() => {
-          // Force immediate resize to ensure proper container dimensions
-          setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-          }, 100);
-        }}
+        mapKey={mapKey}
       >
-        <TileLayer 
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-          maxZoom={19}
-          subdomains={['a', 'b', 'c']}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          className="leaflet-tile-pane"
-        />
-        <AttributionControl position="bottomright" prefix={false} />
-        
-        <MapReference onMapReady={onMapReady} mapKey={containerKey} />
+        <MapReference onMapReady={onMapReady} />
         
         <DrawingControlsContainer
           ref={drawingControlsRef}
@@ -159,8 +103,7 @@ const MapView = ({
         />
         
         <MarkersContainer
-          key={`markers-container-${instanceId}`}
-          markers={stableMarkers}
+          markers={markers}
           tempMarker={tempMarker}
           markerName={markerName}
           markerType={markerType}

@@ -1,13 +1,17 @@
 
-import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
+import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
-import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
 import DrawTools from './DrawTools';
 import LayerManager from './drawing/LayerManager';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
-import 'leaflet-draw/dist/leaflet.draw.css';
+import { handleClearAll } from './drawing/ClearAllHandler';
+import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
+import FileUploadInput from './drawing/FileUploadInput';
+import DrawingEffects from './drawing/DrawingEffects';
+import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
+import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
+import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -15,60 +19,79 @@ interface DrawingControlsProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
+  onUploadToDrawing?: (drawingId: string, file: File) => void;
+  onPathsUpdated?: (paths: string[]) => void;
 }
 
-declare module 'leaflet' {
-  interface Layer {
-    drawingId?: string;
-  }
-}
-
-const DrawingControls = forwardRef(({ 
+const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({ 
   onCreated, 
   activeTool, 
   onRegionClick, 
   onClearAll, 
-  onRemoveShape 
+  onRemoveShape,
+  onUploadToDrawing,
+  onPathsUpdated
 }: DrawingControlsProps, ref) => {
-  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
-  const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
-  const mountedRef = useRef<boolean>(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  
+  const {
+    featureGroupRef,
+    drawToolsRef,
+    mountedRef,
+    isInitialized,
+    setIsInitialized,
+    fileInputRef,
+    activateEditMode,
+    openFileUploadDialog
+  } = useDrawingControls();
+  
+  const {
+    handleFileChange,
+    handleUploadRequest
+  } = useFileUploadHandling({ onUploadToDrawing });
+  
+  const { svgPaths, setSvgPaths } = useSvgPathTracking({
+    isInitialized,
+    drawToolsRef,
+    mountedRef,
+    onPathsUpdated
+  });
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
-    getDrawTools: () => drawToolsRef.current
+    getDrawTools: () => drawToolsRef.current,
+    activateEditMode,
+    openFileUploadDialog,
+    getSvgPaths: () => {
+      if (drawToolsRef.current) {
+        return drawToolsRef.current.getSVGPathData();
+      }
+      return [];
+    }
   }));
   
-  // Set up event listener for floor plan updates
   useEffect(() => {
-    getDrawingIdsWithFloorPlans();
-    
-    const handleFloorPlanUpdated = () => {
-      if (featureGroupRef.current && mountedRef.current) {
-        try {
-          featureGroupRef.current.clearLayers();
-        } catch (err) {
-          console.error('Error clearing layers on floor plan update:', err);
-        }
-      }
-    };
-    
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    if (featureGroupRef.current) {
+      setIsInitialized(true);
+    }
     
     return () => {
       mountedRef.current = false;
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
   }, []);
 
-  // Initialize feature group ref when it's available
-  useEffect(() => {
-    if (featureGroupRef.current && !isInitialized) {
-      setIsInitialized(true);
-    }
-  }, [featureGroupRef.current]);
+  const handleCreatedWrapper = createShapeCreationHandler({
+    onCreated,
+    onPathsUpdated,
+    svgPaths
+  });
+
+  const handleClearAllWrapper = () => {
+    handleClearAll({
+      featureGroup: featureGroupRef.current,
+      onClearAll
+    });
+  };
 
   const handleRemoveShape = (drawingId: string) => {
     if (onRemoveShape) {
@@ -76,24 +99,40 @@ const DrawingControls = forwardRef(({
     }
   };
 
+  const handleDrawingClick = (drawing: DrawingData) => {
+    if (onRegionClick) {
+      onRegionClick(drawing);
+    }
+  };
+
   return (
-    <FeatureGroup ref={featureGroupRef}>
-      {featureGroupRef.current && isInitialized && (
-        <LayerManager 
-          featureGroup={featureGroupRef.current}
-          savedDrawings={savedDrawings}
-          activeTool={activeTool}
-          onRegionClick={onRegionClick}
-          onRemoveShape={handleRemoveShape}
-        />
-      )}
-      <DrawTools 
-        ref={drawToolsRef}
-        onCreated={onCreated} 
+    <>
+      <FileUploadInput ref={fileInputRef} onChange={handleFileChange} />
+      <DrawingEffects 
         activeTool={activeTool} 
-        onClearAll={onClearAll} 
+        isInitialized={isInitialized}
+        activateEditMode={activateEditMode}
       />
-    </FeatureGroup>
+      <FeatureGroup ref={featureGroupRef}>
+        {featureGroupRef.current && isInitialized && (
+          <LayerManager 
+            featureGroup={featureGroupRef.current}
+            savedDrawings={savedDrawings}
+            activeTool={activeTool}
+            onRegionClick={handleDrawingClick}
+            onRemoveShape={handleRemoveShape}
+            onUploadRequest={handleUploadRequest}
+          />
+        )}
+        <DrawTools 
+          ref={drawToolsRef}
+          onCreated={handleCreatedWrapper} 
+          activeTool={activeTool} 
+          onClearAll={handleClearAllWrapper}
+          featureGroup={featureGroupRef.current}
+        />
+      </FeatureGroup>
+    </>
   );
 });
 
