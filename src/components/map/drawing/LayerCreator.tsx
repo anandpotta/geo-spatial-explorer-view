@@ -193,7 +193,7 @@ const addImageToLayer = (
       const pathRect = pathElement.getBoundingClientRect();
       const svgRect = svgElement.getBoundingClientRect();
       
-      // Update position on map move or zoom
+      // Define updatePosition function here so it's in scope
       const updatePosition = () => {
         if (!pathElement || !svgElement) return;
         
