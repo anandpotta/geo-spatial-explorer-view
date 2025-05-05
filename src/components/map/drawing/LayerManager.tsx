@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
@@ -24,6 +24,7 @@ const LayerManager = ({
   const isMountedRef = useRef<boolean>(true);
   const isInitialRenderRef = useRef(true);
   const lastDrawingsRef = useRef<DrawingData[]>([]);
+  const unmountPendingRef = useRef(false);
   
   const {
     removeButtonRoots,
@@ -46,38 +47,49 @@ const LayerManager = ({
     onUploadRequest
   });
 
-  // Safe unmounting of React roots
-  const safeUnmountRoots = () => {
-    // Unmount all React roots in a safe way
-    const unmountRoot = (root: any) => {
-      if (!root) return;
-      try {
-        // Check if the unmount method exists before calling it
-        if (root && typeof root.unmount === 'function') {
-          root.unmount();
-        }
-      } catch (err) {
-        console.error('Error unmounting root:', err);
-      }
-    };
+  // Safe unmounting of React roots - now implemented as a useCallback
+  const safeUnmountRoots = useCallback(() => {
+    if (unmountPendingRef.current) return; // Prevent multiple unmount attempts
     
-    // Safely clear all roots
-    const safelyClearRoots = (rootsMap: Map<string, any>) => {
-      if (!rootsMap) return;
+    unmountPendingRef.current = true;
+    
+    // Use requestAnimationFrame to ensure we're outside React's rendering cycle
+    requestAnimationFrame(() => {
+      if (!isMountedRef.current) return;
       
-      // Create array of entries to avoid modification during iteration
-      const entries = Array.from(rootsMap.entries());
-      entries.forEach(([key, root]) => {
-        unmountRoot(root);
-        rootsMap.delete(key);
-      });
-    };
-    
-    // Clear all types of roots
-    safelyClearRoots(removeButtonRoots.current);
-    safelyClearRoots(uploadButtonRoots.current);
-    safelyClearRoots(imageControlRoots.current);
-  };
+      // Unmount all React roots in a safe way
+      const unmountRoot = (root: any) => {
+        if (!root) return;
+        try {
+          // Check if the unmount method exists before calling it
+          if (root && typeof root.unmount === 'function') {
+            root.unmount();
+          }
+        } catch (err) {
+          console.error('Error unmounting root:', err);
+        }
+      };
+      
+      // Safely clear all roots
+      const safelyClearRoots = (rootsMap: Map<string, any>) => {
+        if (!rootsMap) return;
+        
+        // Create array of entries to avoid modification during iteration
+        const entries = Array.from(rootsMap.entries());
+        entries.forEach(([key, root]) => {
+          unmountRoot(root);
+          rootsMap.delete(key);
+        });
+      };
+      
+      // Clear all types of roots
+      safelyClearRoots(removeButtonRoots.current);
+      safelyClearRoots(uploadButtonRoots.current);
+      safelyClearRoots(imageControlRoots.current);
+      
+      unmountPendingRef.current = false;
+    });
+  }, [removeButtonRoots, uploadButtonRoots, imageControlRoots]);
 
   // Component lifecycle
   useEffect(() => {
@@ -88,7 +100,7 @@ const LayerManager = ({
       safeUnmountRoots();
       layersRef.current.clear();
     };
-  }, []);
+  }, [safeUnmountRoots]);
 
   // Use a more stable approach for detecting real changes to drawings
   useEffect(() => {
@@ -106,6 +118,7 @@ const LayerManager = ({
     };
     
     // First safely unmount any existing roots to prevent conflicts
+    // This now runs outside of the render cycle
     safeUnmountRoots();
     
     // Only do a full update if drawings have changed or this is the first render
@@ -113,18 +126,20 @@ const LayerManager = ({
     
     if (shouldForceUpdate) {
       // For initial render or when drawings change, use a short delay
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (isMountedRef.current) {
           updateLayers();
           isInitialRenderRef.current = false;
           lastDrawingsRef.current = [...savedDrawings];
         }
       }, 100);
+      
+      return () => clearTimeout(timeoutId);
     } else if (activeTool === 'edit') {
       // For edit mode changes, use the debounced version
       debouncedUpdateLayers();
     }
-  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
+  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers, safeUnmountRoots]);
 
   // Listen for resize events which might affect positioning
   useEffect(() => {
