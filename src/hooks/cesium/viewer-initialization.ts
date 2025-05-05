@@ -65,58 +65,78 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
       cesiumContainer.current.clientWidth, 
       cesiumContainer.current.clientHeight);
     
-    // Create viewer directly without the problematic skyAtmosphere functionality
+    // Create viewer with minimal features to avoid errors
     viewerOptions.skyAtmosphere = false; // Disable problematic skyAtmosphere 
+    viewerOptions.terrainProvider = undefined; // Disable terrain
+    viewerOptions.skyBox = false; // Disable skybox
+    viewerOptions.globe = true; // Keep the globe
+    viewerOptions.sceneMode = Cesium.SceneMode.SCENE3D; // Use 3D mode
     
-    const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
-    
-    // Log successful creation
-    console.log("Cesium viewer created successfully");
-    
-    // Configure for offline mode
-    configureOfflineViewer(viewer);
-    
-    // Set initial earth view
-    setDefaultCameraView(viewer);
+    // Create viewer with error handling
+    try {
+      const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
+      viewerRef.current = viewer;
+      
+      console.log("Cesium viewer created successfully");
+      
+      // Configure for offline mode with safe settings
+      try {
+        configureOfflineViewer(viewer);
+      } catch (e) {
+        console.warn("Error during offline configuration:", e);
+      }
+      
+      // Set initial earth view
+      try {
+        setDefaultCameraView(viewer);
+      } catch (e) {
+        console.warn("Error setting default camera view:", e);
+      }
 
-    // Force multiple render cycles to ensure the globe is visible
-    for (let i = 0; i < 30; i++) { // Fixed: Changed A0 to 0
-      viewer.scene.requestRender();
-    }
-    
-    // Save the viewer reference
-    viewerRef.current = viewer;
-    
-    console.log("Cesium map initialized in offline mode");
-    
-    // Enable animation
-    viewer.clock.shouldAnimate = true;
-    
-    // Force globe visibility
-    forceGlobeVisibility(viewer);
-    
-    // Request render again after a slight delay
-    setTimeout(() => {
-      if (viewer && !viewer.isDestroyed()) {
-        viewer.resize();
-        forceGlobeVisibility(viewer);
-        for (let i = 0; i < 10; i++) {
+      // Force a manual camera setup if needed
+      if (viewer.camera) {
+        // Set a safe initial position manually
+        viewer.camera.position = new Cesium.Cartesian3(0, 0, 20000000);
+        viewer.camera.direction = new Cesium.Cartesian3(0, 0, -1);
+        viewer.camera.up = new Cesium.Cartesian3(0, 1, 0);
+      }
+
+      // Force multiple render cycles to ensure the globe is visible
+      for (let i = 0; i < 5; i++) {
+        try {
           viewer.scene.requestRender();
+        } catch (e) {
+          console.warn("Render error caught:", e);
         }
       }
-    }, 100);
-    
-    setupRenderChecks({
-      viewer,
-      viewerRef,
-      checkRenderIntervalRef: options.checkRenderIntervalRef,
-      renderTimeoutRef: options.renderTimeoutRef,
-      setIsInitialized,
-      setIsLoadingMap,
-      onMapReady
-    });
-    
-  } catch (error) {
-    handleInitializationError(error, options);
+      
+      console.log("Cesium map initialized in offline mode");
+      
+      // Enable animation
+      viewer.clock.shouldAnimate = true;
+      
+      // Force globe visibility
+      try {
+        forceGlobeVisibility(viewer);
+      } catch (e) {
+        console.warn("Error forcing globe visibility:", e);
+      }
+      
+      setupRenderChecks({
+        viewer,
+        viewerRef,
+        checkRenderIntervalRef: options.checkRenderIntervalRef,
+        renderTimeoutRef: options.renderTimeoutRef,
+        setIsInitialized,
+        setIsLoadingMap,
+        onMapReady
+      });
+    } catch (viewerError) {
+      console.error("Error creating viewer:", viewerError);
+      handleInitializationError(viewerError, options);
+    }
+  } catch (setupError) {
+    console.error("Error during initialization setup:", setupError);
+    handleInitializationError(setupError, options);
   }
 }

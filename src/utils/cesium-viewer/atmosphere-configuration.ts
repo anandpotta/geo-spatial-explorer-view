@@ -1,3 +1,4 @@
+
 import * as Cesium from 'cesium';
 
 /**
@@ -47,7 +48,7 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
     }
     
     // Force multiple renders
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 5; i++) {
       viewer.scene.requestRender();
     }
   } catch (e) {
@@ -84,7 +85,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     }
     
     // Force multiple render cycles
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 5; i++) {
       viewer.scene.requestRender();
     }
     
@@ -102,18 +103,6 @@ export function configureRendering(viewer: Cesium.Viewer): void {
     
     // Force a resize for proper dimensions
     viewer.resize();
-    
-    // Schedule additional renders after setup
-    setTimeout(() => {
-      if (!viewer.isDestroyed()) {
-        for (let i = 0; i < 20; i++) {
-          viewer.scene.requestRender();
-        }
-        
-        // One more resize after renders
-        viewer.resize();
-      }
-    }, 500);
   } catch (e) {
     console.error('Error configuring rendering:', e);
   }
@@ -121,6 +110,7 @@ export function configureRendering(viewer: Cesium.Viewer): void {
 
 /**
  * Forces immediate rendering of the globe with enhanced visibility
+ * Fixed to prevent normalization errors during rendering
  */
 export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
   if (!viewer || !viewer.scene || !viewer.scene.globe) {
@@ -132,10 +122,8 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     viewer.scene.globe.show = true;
     viewer.scene.globe.baseColor = new Cesium.Color(0.0, 1.0, 1.0, 1.0); // Even brighter cyan color
     
-    // Force all internal properties to be visible
+    // Safely check before accessing internal properties
     const globe = viewer.scene.globe;
-    (globe as any)._surface._tilesToRender = [];
-    (globe as any)._surface._tileLoadQueue = [];
     
     // Make globe fully opaque
     if (typeof globe.translucency === 'object' && globe.translucency !== null) {
@@ -159,8 +147,12 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     }
     
     // Force immediate render multiple times
-    for (let i = 0; i < 20; i++) {
-      viewer.scene.requestRender();
+    for (let i = 0; i < 5; i++) {
+      try {
+        viewer.scene.requestRender();
+      } catch (e) {
+        console.warn('Render error caught and handled:', e);
+      }
     }
     
     // Ensure canvas is fully visible with maximum z-index
@@ -173,22 +165,6 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       // Force size to be 100%
       viewer.canvas.style.width = '100%';
       viewer.canvas.style.height = '100%';
-      
-      // Ensure the canvas has proper dimensions
-      const containerElement = viewer.canvas.parentElement;
-      if (containerElement && 
-          (viewer.canvas.width === 0 || viewer.canvas.height === 0 || 
-           containerElement.clientWidth === 0 || containerElement.clientHeight === 0)) {
-        // Force dimensions and reflow
-        containerElement.style.width = '100%';
-        containerElement.style.height = '100%';
-        containerElement.style.minWidth = '300px';
-        containerElement.style.minHeight = '300px';
-        void containerElement.offsetHeight; // Force reflow
-        
-        // Force resize
-        viewer.resize();
-      }
     }
     
     // Set black background for better contrast
@@ -196,57 +172,25 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     
     // Adjust camera if needed to see the globe
     if (viewer.camera) {
-      // Only adjust if too far out
-      const distance = Cesium.Cartesian3.magnitude(viewer.camera.position);
-      if (distance > 25000000) {
-        viewer.camera.lookAt(
-          Cesium.Cartesian3.ZERO,
-          new Cesium.Cartesian3(0, 0, 10000000) // Even closer look
-        );
-        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-      }
+      // Set a safe initial position
+      viewer.camera.position = new Cesium.Cartesian3(0, 0, 20000000);
+      viewer.camera.direction = Cesium.Cartesian3.normalize(
+        Cesium.Cartesian3.negate(viewer.camera.position, new Cesium.Cartesian3()),
+        new Cesium.Cartesian3()
+      );
+      viewer.camera.up = Cesium.Cartesian3.UNIT_Z;
+      viewer.camera.right = Cesium.Cartesian3.cross(
+        viewer.camera.direction,
+        viewer.camera.up,
+        new Cesium.Cartesian3()
+      );
     }
     
     // Force another render
-    viewer.scene.requestRender();
-    
-    // Force visibility on all Cesium-related elements more aggressively
-    const cesiumElements = document.querySelectorAll('[data-cesium-container="true"], .cesium-widget, .cesium-viewer');
-    cesiumElements.forEach(element => {
-      if (element instanceof HTMLElement) {
-        element.style.visibility = 'visible';
-        element.style.display = 'block';
-        element.style.opacity = '1';
-        element.style.zIndex = '10000';
-      }
-    });
-    
-    // Find all canvas elements inside Cesium containers and make them visible
-    const canvases = document.querySelectorAll('.cesium-widget canvas, [data-cesium-container="true"] canvas');
-    canvases.forEach(canvas => {
-      if (canvas instanceof HTMLElement) {
-        canvas.style.visibility = 'visible';
-        canvas.style.display = 'block';
-        canvas.style.opacity = '1';
-      }
-    });
-    
-    // Find all cesium widgets and ensure they're visible
-    const widgets = document.querySelectorAll('.cesium-widget');
-    widgets.forEach(widget => {
-      if (widget instanceof HTMLElement) {
-        widget.style.visibility = 'visible';
-        widget.style.display = 'block';
-        widget.style.width = '100%';
-        widget.style.height = '100%';
-        widget.style.background = 'transparent';
-      }
-    });
-    
-    // Force resize and multiple renders
-    viewer.resize();
-    for (let i = 0; i < 20; i++) {
+    try {
       viewer.scene.requestRender();
+    } catch (e) {
+      console.warn('Final render error caught and handled:', e);
     }
   } catch (e) {
     console.error('Error in forceGlobeVisibility:', e);

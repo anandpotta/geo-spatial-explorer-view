@@ -20,7 +20,12 @@ export function setDefaultCameraView(viewer: Cesium.Viewer): void {
       // Force globe visibility with enhanced settings
       viewer.scene.globe.showGroundAtmosphere = true;
       viewer.scene.globe.enableLighting = true;
-      viewer.scene.skyAtmosphere.show = true;
+      
+      // Safely access skyAtmosphere - only if it exists
+      if (viewer.scene.skyAtmosphere) {
+        viewer.scene.skyAtmosphere.show = true;
+      }
+      
       viewer.scene.fog.enabled = false; // Disable fog for better visibility
     }
     
