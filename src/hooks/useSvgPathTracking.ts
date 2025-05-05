@@ -8,16 +8,19 @@ interface UseSvgPathTrackingProps {
   drawToolsRef: RefObject<any>;
   mountedRef: RefObject<boolean>;
   onPathsUpdated?: (paths: string[]) => void;
+  activeTool?: string | null;
 }
 
 export function useSvgPathTracking({
   isInitialized,
   drawToolsRef,
   mountedRef,
-  onPathsUpdated
+  onPathsUpdated,
+  activeTool
 }: UseSvgPathTrackingProps) {
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState(0);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Track SVG path changes with reduced frequency
   useEffect(() => {
@@ -25,6 +28,12 @@ export function useSvgPathTracking({
 
     const updatePaths = () => {
       if (!mountedRef.current) return;
+      
+      // Skip updates during edit mode activation
+      if (activeTool === 'edit' && isUpdating) {
+        console.log('Skipping SVG path update during edit mode activation');
+        return;
+      }
       
       try {
         // Don't update too frequently (at most once per 2 seconds)
@@ -58,7 +67,23 @@ export function useSvgPathTracking({
     return () => {
       clearInterval(intervalId);
     };
-  }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated, svgPaths, lastUpdateTime]);
+  }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated, svgPaths, lastUpdateTime, activeTool, isUpdating]);
+  
+  // Add this effect to track edit mode activation
+  useEffect(() => {
+    if (activeTool === 'edit') {
+      setIsUpdating(true);
+      
+      // After a delay, allow updates again
+      const timeoutId = setTimeout(() => {
+        setIsUpdating(false);
+      }, 3000); // 3 seconds should cover most activation scenarios
+      
+      return () => clearTimeout(timeoutId);
+    }
+    
+    setIsUpdating(false);
+  }, [activeTool]);
   
   return { svgPaths, setSvgPaths };
 }

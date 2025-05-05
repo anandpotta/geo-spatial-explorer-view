@@ -11,6 +11,13 @@ export function usePathElements(featureGroup: L.FeatureGroup) {
    */
   const getPathElements = (): SVGPathElement[] => {
     const pathElements: SVGPathElement[] = [];
+    
+    // Skip if edit mode is activating
+    if (window._editModeActivating) {
+      console.log('Skipping getPathElements during edit mode activation');
+      return pathElements;
+    }
+    
     // Find all SVG paths within the map container
     if (featureGroup) {
       const map = getMapFromLayer(featureGroup);
@@ -35,6 +42,13 @@ export function usePathElements(featureGroup: L.FeatureGroup) {
    */
   const getSVGPathData = (): string[] => {
     const pathData: string[] = [];
+    
+    // Skip if edit mode is activating
+    if (window._editModeActivating) {
+      console.log('Skipping getSVGPathData during edit mode activation');
+      return pathData;
+    }
+    
     // Find all SVG paths within the map container
     if (featureGroup) {
       const map = getMapFromLayer(featureGroup);

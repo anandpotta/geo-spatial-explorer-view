@@ -54,7 +54,8 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     isInitialized,
     drawToolsRef,
     mountedRef,
-    onPathsUpdated
+    onPathsUpdated,
+    activeTool
   });
   
   useImperativeHandle(ref, () => ({
@@ -83,7 +84,8 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const handleCreatedWrapper = createShapeCreationHandler({
     onCreated,
     onPathsUpdated,
-    svgPaths
+    svgPaths,
+    activeTool // Pass activeTool to the shape creation handler
   });
 
   const handleClearAllWrapper = () => {

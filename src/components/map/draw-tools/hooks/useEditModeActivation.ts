@@ -1,7 +1,14 @@
 
-import { useCallback } from 'react';
+import { useCallback, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
 import { ensureEditControlsVisibility } from './utils/editControlsVisibility';
+
+// Create a flag in window object to track activation status
+declare global {
+  interface Window {
+    _editModeActivating: boolean;
+  }
+}
 
 /**
  * Hook for edit mode activation functionality
@@ -11,6 +18,29 @@ export function useEditModeActivation(
   activeTool: string | null, 
   isEditActive: boolean
 ) {
+  // Set flag at module level
+  useEffect(() => {
+    if (activeTool === 'edit' && !isEditActive) {
+      // Set flag when entering edit mode
+      window._editModeActivating = true;
+      
+      // Clear flag after a delay
+      const timeoutId = setTimeout(() => {
+        window._editModeActivating = false;
+      }, 3000);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        window._editModeActivating = false;
+      };
+    }
+    
+    return () => {
+      // Ensure flag is cleared when unmounting
+      window._editModeActivating = false;
+    };
+  }, [activeTool, isEditActive]);
+  
   /**
    * Updates the edit mode state based on active tool
    */
@@ -42,6 +72,9 @@ export function useEditModeActivation(
           if (!isAlreadyEnabled) {
             console.log('Enabling edit mode');
             
+            // Set activation flag
+            window._editModeActivating = true;
+            
             // First ensure all layers are selected to make them eligible for editing
             if (editHandler._featureGroup) {
               try {
@@ -62,9 +95,16 @@ export function useEditModeActivation(
                 
                 // Ensure edit controls are visible
                 ensureEditControlsVisibility();
+                
+                // Clear activation flag after delay
+                setTimeout(() => {
+                  window._editModeActivating = false;
+                }, 2000);
+                
                 return true;
               } catch (layerError) {
                 console.error('Error selecting layers:', layerError);
+                window._editModeActivating = false;
                 return false;
               }
             }
@@ -72,6 +112,7 @@ export function useEditModeActivation(
           return isAlreadyEnabled;
         } catch (activationError) {
           console.error('Error activating edit mode:', activationError);
+          window._editModeActivating = false;
           return false;
         }
       } else if (!shouldEnableEdit) {
@@ -89,9 +130,13 @@ export function useEditModeActivation(
       // Always ensure controls are visible
       ensureEditControlsVisibility();
       
+      // Clear activation flag
+      window._editModeActivating = false;
+      
       return shouldEnableEdit && isEditActive;
     } catch (err) {
       console.error('Error updating edit mode:', err);
+      window._editModeActivating = false;
       return false;
     }
   }, [editControlRef, activeTool, isEditActive]);
