@@ -31,6 +31,16 @@ export function useDrawToolHandler(ref: ForwardedRef<any>) {
               if (!path.classList.contains('visible-path-stroke')) {
                 path.classList.add('visible-path-stroke');
               }
+              
+              // Force visibility through inline style as well
+              path.setAttribute('stroke-width', '4px');
+              path.setAttribute('stroke-opacity', '1');
+              path.setAttribute('fill-opacity', '0.3');
+              path.setAttribute('visibility', 'visible');
+              path.setAttribute('display', 'block');
+              
+              // Force a reflow to ensure styles are applied
+              path.getBoundingClientRect();
             });
           });
         }
@@ -67,6 +77,14 @@ export function useDrawToolHandler(ref: ForwardedRef<any>) {
                 if (!path.classList.contains('visible-path-stroke')) {
                   path.classList.add('visible-path-stroke');
                 }
+                
+                // Apply direct styling attributes
+                path.setAttribute('stroke', '#33C3F0');
+                path.setAttribute('stroke-width', '4px');
+                path.setAttribute('stroke-opacity', '1');
+                path.setAttribute('fill-opacity', '0.3');
+                path.setAttribute('visibility', 'visible');
+                path.setAttribute('display', 'block');
               }
             });
           });
@@ -86,6 +104,14 @@ export function useDrawToolHandler(ref: ForwardedRef<any>) {
       if (!path.classList.contains('visible-path-stroke')) {
         path.classList.add('visible-path-stroke');
       }
+      
+      // Apply direct styling attributes for maximum visibility
+      path.setAttribute('stroke', '#33C3F0');
+      path.setAttribute('stroke-width', '4px');
+      path.setAttribute('stroke-opacity', '1');
+      path.setAttribute('fill-opacity', '0.3');
+      path.setAttribute('visibility', 'visible');
+      path.setAttribute('display', 'block');
       
       // Restore original path data if available
       const originalPath = path.getAttribute('data-original-path');

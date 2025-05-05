@@ -10,21 +10,18 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   const { featureGroup, edit, ...otherProps } = props;
   
   // Format the edit options properly based on what was passed
-  let editOptions;
+  let editOptions = { 
+    featureGroup: featureGroup,
+    selectedPathOptions: {
+      maintainColor: true,
+      opacity: 0.7
+    }
+  };
   
   // Handle different types of edit parameters
-  if (edit === true) {
-    // If edit is boolean true, create a proper object structure
-    editOptions = { 
-      featureGroup: featureGroup,
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
-      }
-    };
-  } else if (edit === false) {
-    // If edit is boolean false, pass it as false
-    editOptions = false;
+  if (edit === false) {
+    // If edit is boolean false, pass an empty object
+    editOptions = { featureGroup: featureGroup };
   } else if (edit && typeof edit === 'object') {
     // If edit is an object, merge with featureGroup but don't overwrite featureGroup
     editOptions = {
@@ -39,15 +36,6 @@ export const EditControl = forwardRef((props: any, ref: any) => {
         opacity: 0.7
       };
     }
-  } else {
-    // Default case if edit is undefined or null
-    editOptions = {
-      featureGroup: featureGroup,
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
-      }
-    };
   }
   
   // Create the element with React.createElement to properly pass the ref
