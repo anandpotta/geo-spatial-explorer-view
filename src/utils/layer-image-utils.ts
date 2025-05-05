@@ -1,12 +1,6 @@
 
 import L from 'leaflet';
-import { createRoot } from '@/components/map/drawing/ReactDOMUtils';
-import ImageEditControls from '@/components/map/drawing/ImageEditControls';
-import { 
-  createImageElement, 
-  transformImage,
-  ImageTransformOptions 
-} from '@/utils/image-transform-utils';
+import { createImageElement, transformImage, ImageTransformOptions } from '@/utils/image-transform-utils';
 import '@/components/map/drawing/DrawingImage.css';
 
 /**
@@ -95,16 +89,16 @@ export const addImageToLayer = (
     controlsContainer.className = 'leaflet-drawing-image-controls';
     containerDiv.appendChild(controlsContainer);
     
-    // Create React root for image controls
-    try {
-      const controlsRoot = createRoot(controlsContainer);
-      imageControlsRoots.set(`${drawingId}-image-controls`, controlsRoot);
-      
-      controlsRoot.render(
-        <ImageEditControls
-          drawingId={drawingId}
-          initialTransform={transformOptions}
-          onTransformChange={(options) => {
+    // Create React root for image controls through a delegate function
+    // Moved the actual JSX rendering to a separate file
+    import('@/components/map/drawing/ImageControlsRenderer').then(module => {
+      try {
+        module.renderImageControls(
+          controlsContainer,
+          drawingId,
+          transformOptions,
+          imageControlsRoots,
+          (options) => {
             if (onImageTransform) {
               onImageTransform(drawingId, options);
               
@@ -114,12 +108,14 @@ export const addImageToLayer = (
                 ...options
               });
             }
-          }}
-        />
-      );
-    } catch (err) {
-      console.error('Error rendering image controls:', err);
-    }
+          }
+        );
+      } catch (err) {
+        console.error('Error rendering image controls:', err);
+      }
+    }).catch(err => {
+      console.error('Error loading ImageControlsRenderer module:', err);
+    });
     
     // Listen for image transform updates
     const handleTransformUpdate = (e: CustomEvent) => {
