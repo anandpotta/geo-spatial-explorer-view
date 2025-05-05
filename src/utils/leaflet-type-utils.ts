@@ -41,7 +41,8 @@ export const isMapValid = (map: L.Map | null): boolean => {
     if (!map) return false;
     
     // Check if map has required properties and methods
-    if (!map._loaded) return false;
+    // Use type assertion for internal Leaflet properties
+    if (!(map as any)._loaded) return false;
     
     // Check if map container exists and is in the DOM
     if (!map.getContainer) return false;

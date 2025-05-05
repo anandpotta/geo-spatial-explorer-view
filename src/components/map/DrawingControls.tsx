@@ -21,6 +21,7 @@ interface DrawingControlsProps {
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadToDrawing?: (drawingId: string, file: File, transformOptions?: ImageTransformOptions) => void;
+  onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void;
   onPathsUpdated?: (paths: string[]) => void;
 }
 

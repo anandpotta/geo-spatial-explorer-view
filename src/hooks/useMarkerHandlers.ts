@@ -80,7 +80,8 @@ export function useMarkerHandlers(mapState: any) {
           name: `New ${shape.type}`,
           color: '#3388ff',
           createdAt: new Date()
-        }
+        },
+        createdAt: new Date() // Add createdAt property to fix TypeScript error
       };
       
       // Store the safe shape in the current drawing
