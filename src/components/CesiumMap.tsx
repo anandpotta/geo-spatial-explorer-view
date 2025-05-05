@@ -52,7 +52,6 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   
   return (
     <div className="w-full h-full relative">
-      {/* Optionally add a message about offline mode */}
       <CesiumMapCore {...props} />
     </div>
   );

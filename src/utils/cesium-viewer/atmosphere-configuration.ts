@@ -1,3 +1,4 @@
+
 import * as Cesium from 'cesium';
 
 /**
@@ -13,11 +14,20 @@ export function configureAtmosphere(viewer: Cesium.Viewer): void {
     if (viewer.scene.skyAtmosphere) {
       viewer.scene.skyAtmosphere.show = true;
       
-      // Set atmospheric properties for better visibility
-      if ('hueShift' in viewer.scene.skyAtmosphere) {
-        viewer.scene.skyAtmosphere.hueShift = 0.0;
-        viewer.scene.skyAtmosphere.saturationShift = 0.1;
-        viewer.scene.skyAtmosphere.brightnessShift = 3.0; // Increased brightness
+      // Use safe property checking to avoid errors with different Cesium versions
+      const skyAtmosphere = viewer.scene.skyAtmosphere as any;
+      if (skyAtmosphere) {
+        // Only set these properties if they exist
+        if ('hueShift' in skyAtmosphere) {
+          skyAtmosphere.hueShift = 0.0;
+          skyAtmosphere.saturationShift = 0.1;
+          skyAtmosphere.brightnessShift = 3.0;
+        }
+        
+        // Safely check for dynamicLighting method
+        if (typeof skyAtmosphere.setDynamicLighting === 'function') {
+          skyAtmosphere.setDynamicLighting(Cesium.SkyAtmosphereDynamicLighting.NONE);
+        }
       }
     }
     
@@ -128,8 +138,10 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     (globe as any)._surface._tileLoadQueue = [];
     
     // Make globe fully opaque
-    globe.translucency.frontFaceAlpha = 1.0;
-    globe.translucency.backFaceAlpha = 1.0;
+    if (typeof globe.translucency === 'object' && globe.translucency !== null) {
+      globe.translucency.frontFaceAlpha = 1.0;
+      globe.translucency.backFaceAlpha = 1.0;
+    }
     
     // Disable fog and enhance brightness
     if (viewer.scene.fog) {
@@ -138,9 +150,11 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     
     if (viewer.scene.skyAtmosphere) {
       viewer.scene.skyAtmosphere.show = true;
-      // Access these properties safely
-      if ('brightnessShift' in viewer.scene.skyAtmosphere) {
-        viewer.scene.skyAtmosphere.brightnessShift = 5.0; // Increase atmosphere brightness
+      
+      // Access these properties safely using type assertion
+      const skyAtmosphere = viewer.scene.skyAtmosphere as any;
+      if (skyAtmosphere && 'brightnessShift' in skyAtmosphere) {
+        skyAtmosphere.brightnessShift = 5.0; // Increase atmosphere brightness
       }
     }
     

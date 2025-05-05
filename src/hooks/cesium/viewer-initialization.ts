@@ -65,6 +65,9 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
       cesiumContainer.current.clientWidth, 
       cesiumContainer.current.clientHeight);
     
+    // Create viewer directly without the problematic skyAtmosphere functionality
+    viewerOptions.skyAtmosphere = false; // Disable problematic skyAtmosphere 
+    
     const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
     
     // Log successful creation
@@ -77,7 +80,7 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     setDefaultCameraView(viewer);
 
     // Force multiple render cycles to ensure the globe is visible
-    for (let i = 0; i < 30; i++) { // Increased render cycles
+    for (let i = A0; i < 30; i++) { // Increased render cycles
       viewer.scene.requestRender();
     }
     

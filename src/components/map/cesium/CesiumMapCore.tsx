@@ -32,15 +32,19 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
   
   // Handle viewer being ready
   const handleViewerReady = (viewer: Cesium.Viewer) => {
+    console.log("CesiumMapCore: Viewer is ready");
     viewerRef.current = viewer;
     setViewerReady(true);
+    
     if (onViewerReady) {
       onViewerReady(viewer);
     }
 
     // Force multiple renders to ensure the globe is visible
     for (let i = 0; i < 40; i++) {
-      viewer.scene.requestRender();
+      if (!viewer.isDestroyed()) {
+        viewer.scene.requestRender();
+      }
     }
     
     // Force immediate globe visibility
@@ -73,6 +77,9 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
       onFlyComplete();
     }
   };
+  
+  // This log helps diagnose when the component renders
+  console.log("CesiumMapCore rendering, viewerReady:", viewerReady);
   
   return (
     <>
