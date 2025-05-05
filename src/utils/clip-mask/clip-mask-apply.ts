@@ -147,9 +147,9 @@ export const applyImageClipMask = (
         // Apply the clip path and fill
         applyClipPathAndFill(pathElement, id);
         
-        // Force a redraw
+        // Force a redraw - FIX: Use getBoundingClientRect() instead of offsetHeight for SVG
         svg.style.display = 'none';
-        svg.offsetHeight; // Force reflow
+        svg.getBoundingClientRect(); // Force reflow without using offsetHeight
         svg.style.display = '';
         
         // Show success toast (only once per drawing)
@@ -178,3 +178,4 @@ export const applyImageClipMask = (
     return false;
   }
 };
+
