@@ -3,7 +3,7 @@ import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
-import DrawTools from './draw-tools';
+import DrawTools from './DrawTools';
 import LayerManager from './drawing/LayerManager';
 import { handleClearAll } from './drawing/ClearAllHandler';
 import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';

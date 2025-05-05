@@ -29,32 +29,14 @@ export const createImageControlsLayer = ({
   const existingControl = imageControlRoots.has(existingControlId);
   
   // Don't recreate if already exists
-  if (existingControl) {
-    // Even if it exists, ensure it's visible
-    setTimeout(() => {
-      const wrapper = document.querySelector(`.image-controls-wrapper`);
-      if (wrapper) {
-        (wrapper as HTMLElement).style.opacity = '1';
-        (wrapper as HTMLElement).style.visibility = 'visible';
-        (wrapper as HTMLElement).style.display = 'block';
-      }
-    }, 100);
-    return;
-  }
+  if (existingControl) return;
   
   const imageControlContainer = document.createElement('div');
   imageControlContainer.className = 'image-controls-wrapper';
   
-  // Always add persistent-control class to ensure visibility
-  imageControlContainer.classList.add('persistent-control');
-  
-  // Make sure styles are applied immediately and forcefully
-  imageControlContainer.style.opacity = '1';
-  imageControlContainer.style.visibility = 'visible';
-  imageControlContainer.style.display = 'block';
-  imageControlContainer.style.pointerEvents = 'auto';
-  imageControlContainer.style.position = 'relative';
-  imageControlContainer.style.zIndex = '9999';
+  if (isPersistent) {
+    imageControlContainer.classList.add('persistent-control');
+  }
   
   const imageControlLayer = L.marker(imageControlsPosition, {
     icon: L.divIcon({
@@ -64,12 +46,13 @@ export const createImageControlsLayer = ({
       iconAnchor: [16, 60]
     }),
     interactive: true,
-    zIndexOffset: 2000 // Higher zIndex to ensure visibility
+    zIndexOffset: 1000
   });
   
-  // Mark as persistent and add custom property
-  (imageControlLayer as any)._isPersistent = true;
-  (imageControlLayer as any).isImageControl = true;
+  // Store the layer reference so we can access it later
+  if (isPersistent) {
+    (imageControlLayer as any)._isPersistent = true;
+  }
   
   if (isMounted) {
     try {
@@ -81,18 +64,15 @@ export const createImageControlsLayer = ({
         <ImageControls 
           drawingId={drawingId} 
           onRemoveShape={onRemoveShape} 
-          alwaysExpanded={true} // Always show all controls
         />
       );
       
-      // Ensure visibility again after a short delay
+      // Force a small delay to ensure visibility
       setTimeout(() => {
-        if (imageControlContainer) {
+        if (imageControlContainer.style) {
           imageControlContainer.style.opacity = '1';
-          imageControlContainer.style.visibility = 'visible';
-          imageControlContainer.style.display = 'block';
         }
-      }, 300);
+      }, 50);
     } catch (err) {
       console.error('Error rendering image controls:', err);
     }

@@ -11,14 +11,13 @@ import { MOVEMENT_STEP, ROTATION_STEP, SCALE_FACTOR, SCALE_UP_FACTOR } from './i
 interface ImageControlsProps {
   drawingId: string;
   onRemoveShape?: (drawingId: string) => void;
-  alwaysExpanded?: boolean;
 }
 
 /**
  * Container component for image manipulation controls
  */
-const ImageControls = ({ drawingId, onRemoveShape, alwaysExpanded = false }: ImageControlsProps) => {
-  // Default to expanded state to show all controls
+const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
+  // Start with expanded state true to show all controls by default
   const [expanded, setExpanded] = useState(true);
   
   // Use effect to ensure controls remain visible
@@ -31,16 +30,14 @@ const ImageControls = ({ drawingId, onRemoveShape, alwaysExpanded = false }: Ima
         (wrapper as HTMLElement).style.visibility = 'visible';
         (wrapper as HTMLElement).style.display = 'block';
       }
-    }, 100);
+    }, 300);
     
     return () => clearTimeout(timer);
   }, []);
 
   return (
     <div className="image-controls-container flex flex-col gap-1 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md border border-gray-200">
-      {!alwaysExpanded && (
-        <ImageControlsExpander expanded={expanded} setExpanded={setExpanded} />
-      )}
+      <ImageControlsExpander expanded={expanded} setExpanded={setExpanded} />
       
       <div className="flex flex-col gap-1.5">
         {/* Always visible controls */}
@@ -55,8 +52,8 @@ const ImageControls = ({ drawingId, onRemoveShape, alwaysExpanded = false }: Ima
           scaleUpFactor={SCALE_UP_FACTOR}
         />
         
-        {/* Extended controls - now always shown */}
-        {(expanded || alwaysExpanded) && (
+        {/* Extended controls when expanded */}
+        {expanded && (
           <>
             <MovementControls 
               drawingId={drawingId}
