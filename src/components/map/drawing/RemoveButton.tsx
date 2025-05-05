@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
 interface RemoveButtonProps {
-  onClick: (e: React.MouseEvent) => void;
+  onClick: () => void;
   className?: string;
 }
 
@@ -12,7 +12,7 @@ const RemoveButton = ({ onClick, className = '' }: RemoveButtonProps) => {
     <Button
       onClick={(e) => {
         e.stopPropagation();
-        onClick(e);
+        onClick();
       }}
       variant="destructive"
       size="icon"
