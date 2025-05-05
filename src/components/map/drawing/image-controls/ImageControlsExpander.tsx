@@ -8,28 +8,32 @@ interface ImageControlsExpanderProps {
 }
 
 /**
- * Button to expand/collapse the image controls
+ * Component to expand/collapse image controls
  */
-const ImageControlsExpander = ({ expanded, setExpanded }: ImageControlsExpanderProps) => {
+const ImageControlsExpander: React.FC<ImageControlsExpanderProps> = ({ expanded, setExpanded }) => {
   return (
-    <div className="text-center mb-1">
-      <button 
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center justify-center w-full text-xs text-blue-600 hover:text-blue-800 font-semibold bg-gray-100 py-1 px-2 rounded"
-      >
-        {expanded ? (
-          <>
-            <span>Hide Options</span>
-            <ChevronUp size={14} className="ml-1" />
-          </>
-        ) : (
-          <>
-            <span>Show All Options</span>
-            <ChevronDown size={14} className="ml-1" />
-          </>
-        )}
-      </button>
-    </div>
+    <button 
+      className="flex items-center justify-center w-full p-1 mb-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+      onClick={() => setExpanded(!expanded)}
+      style={{
+        visibility: 'visible', 
+        opacity: 1, 
+        pointerEvents: 'auto'
+      }}
+      aria-label={expanded ? "Collapse Controls" : "Expand Controls"}
+    >
+      {expanded ? (
+        <>
+          <ChevronUp size={14} className="mr-1" />
+          <span>Less Controls</span>
+        </>
+      ) : (
+        <>
+          <ChevronDown size={14} className="mr-1" />
+          <span>More Controls</span>
+        </>
+      )}
+    </button>
   );
 };
 

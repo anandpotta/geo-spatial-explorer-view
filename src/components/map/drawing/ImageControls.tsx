@@ -23,21 +23,50 @@ const ImageControls = ({ drawingId, onRemoveShape, alwaysExpanded = false }: Ima
   
   // Use effect to ensure controls remain visible
   useEffect(() => {
-    // Make sure controls are visible after a short delay
-    const timer = setTimeout(() => {
+    // Make sure controls are visible initially and after delay
+    const makeVisible = () => {
       const wrapper = document.querySelector(`.image-controls-wrapper`);
       if (wrapper) {
-        (wrapper as HTMLElement).style.opacity = '1';
-        (wrapper as HTMLElement).style.visibility = 'visible';
-        (wrapper as HTMLElement).style.display = 'block';
+        (wrapper as HTMLElement).style.cssText = `
+          opacity: 1 !important;
+          visibility: visible !important;
+          display: block !important;
+          pointer-events: auto !important;
+          z-index: 9999 !important;
+        `;
       }
-    }, 100);
+    };
     
-    return () => clearTimeout(timer);
+    // Run immediately
+    makeVisible();
+    
+    // And after slight delays to ensure CSS has been applied
+    const timers = [
+      setTimeout(makeVisible, 100),
+      setTimeout(makeVisible, 500),
+      setTimeout(makeVisible, 1000)
+    ];
+    
+    // Set up recurring check
+    const intervalId = setInterval(makeVisible, 2000);
+    
+    return () => {
+      timers.forEach(clearTimeout);
+      clearInterval(intervalId);
+    };
   }, []);
 
   return (
-    <div className="image-controls-container flex flex-col gap-1 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md border border-gray-200">
+    <div 
+      className="image-controls-container flex flex-col gap-1 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md border border-gray-200"
+      style={{
+        opacity: 1,
+        visibility: 'visible',
+        display: 'block',
+        pointerEvents: 'auto',
+        zIndex: 9999
+      }}
+    >
       {!alwaysExpanded && (
         <ImageControlsExpander expanded={expanded} setExpanded={setExpanded} />
       )}
@@ -55,7 +84,7 @@ const ImageControls = ({ drawingId, onRemoveShape, alwaysExpanded = false }: Ima
           scaleUpFactor={SCALE_UP_FACTOR}
         />
         
-        {/* Extended controls - now always shown */}
+        {/* Extended controls - show based on expanded state */}
         {(expanded || alwaysExpanded) && (
           <>
             <MovementControls 

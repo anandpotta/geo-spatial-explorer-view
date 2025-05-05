@@ -10,7 +10,7 @@ import { useDomObserver } from './useDomObserver';
 export function useEditMode(editControlRef: RefObject<any>, activeTool: string | null) {
   const [isEditActive, setIsEditActive] = useState(false);
   const [attempts, setAttempts] = useState(0);
-  const maxAttempts = 20; // Increase max attempts
+  const maxAttempts = 30; // Increase max attempts further
   
   // Use the edit mode activation hook
   const { updateEditMode } = useEditModeActivation(editControlRef, activeTool, isEditActive);
@@ -59,14 +59,14 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     attemptUpdateEditMode();
     
     // Set up a timer that periodically ensures edit controls are visible
-    const controlsVisibilityId = setInterval(ensureEditControlsVisibility, 1000);
+    const controlsVisibilityId = setInterval(ensureEditControlsVisibility, 500); // More frequent checks
     
-    // Retry logic with progressive backoff
+    // Progressive retry strategy with shorter initial delay
     const retryTimeoutId = setTimeout(() => {
       if (!isEditActive && activeTool === 'edit' && editControlRef.current && attempts < maxAttempts) {
         attemptUpdateEditMode();
       }
-    }, Math.min(1000 + attempts * 200, 3000)); // Progressive backoff but capped at 3s
+    }, Math.min(300 + attempts * 100, 2000)); // Faster retry with shorter cap
     
     return () => {
       clearInterval(controlsVisibilityId);

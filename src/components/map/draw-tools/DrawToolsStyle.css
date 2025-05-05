@@ -1,41 +1,67 @@
 
-/* More aggressive styling to ensure edit controls are visible */
-.leaflet-draw.leaflet-control {
-  width: 30px !important; /* Changed from 200px to 30px as requested */
+/* Ensure edit controls are visible */
+.leaflet-draw.leaflet-control,
+.leaflet-draw-toolbar,
+.leaflet-draw-toolbar-top,
+.leaflet-draw-actions,
+.leaflet-draw-edit-toolbar {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
-  z-index: 9999 !important; /* Ensure highest z-index */
-  position: relative !important;
-  top: 50px !important; /* Added top position as requested */
+  z-index: 9999 !important;
 }
 
-/* Keep the rest of the styles the same */
-.leaflet-draw-toolbar {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-.leaflet-draw-toolbar a {
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Force edit controls to be visible */
+/* Ensure edit and delete buttons are visible */
 .leaflet-draw-edit-edit,
-.leaflet-draw-edit-remove {
+.leaflet-draw-edit-remove,
+.leaflet-draw-draw-polygon,
+.leaflet-draw-draw-rectangle,
+.leaflet-draw-draw-marker,
+.leaflet-draw-draw-circlemarker {
   display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Image controls always visible */
+.image-controls-wrapper,
+.image-controls-container {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 9999 !important;
+}
+
+/* Ensure buttons in the image controls are clickable */
+.image-controls-container button {
+  pointer-events: auto !important;
   visibility: visible !important;
   opacity: 1 !important;
 }
 
-/* Additional styles to ensure visibility */
-.leaflet-draw-actions {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+/* Fix for SVG paths to ensure they're properly rendered */
+svg path.leaflet-interactive {
+  fill-opacity: 0.2;
+  stroke-width: 3;
+  stroke-opacity: 0.5;
+}
+
+/* Make handle points more visible during edit mode */
+.leaflet-edit-marker-selected,
+.leaflet-marker-draggable,
+.leaflet-marker-icon {
   z-index: 10000 !important;
 }
+
+/* Make edit vertices more visible */
+.leaflet-edit-resize,
+.leaflet-edit-move,
+.leaflet-edit-rotate,
+.leaflet-vertex-icon,
+.leaflet-middle-icon {
+  z-index: 10000 !important;
+}
+
