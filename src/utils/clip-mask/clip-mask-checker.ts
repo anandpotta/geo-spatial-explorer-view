@@ -1,32 +1,30 @@
 
 /**
- * Utilities for checking if elements have clip masks applied
+ * Utilities for checking clip mask state on SVG elements
  */
+import { SVGPathElementWithAttributes } from '../svg-types';
 
 /**
- * Check if a path element already has a clip mask applied
+ * Checks if a path element already has a clip mask applied
  */
-export const hasClipMaskApplied = (pathElement: SVGPathElement): boolean => {
-  // More reliable check using multiple indicators
-  const hasDataAttribute = pathElement.hasAttribute('data-has-clip-mask');
-  const hasClipPath = pathElement.hasAttribute('clip-path') || 
-                     !!pathElement.style.clipPath || 
-                     !!pathElement.getAttribute('clip-path');
-  const hasFillPattern = !!(pathElement.getAttribute('fill')?.includes('url(#pattern-') || 
-                          pathElement.style.fill?.includes('url(#pattern-'));
+export const hasClipMaskApplied = (svgPath: SVGPathElement | null): boolean => {
+  if (!svgPath) return false;
   
-  // Debug info
-  if (hasDataAttribute || hasClipPath || hasFillPattern) {
-    console.log('Clip mask check:', { 
-      hasDataAttribute, 
-      hasClipPath, 
-      hasFillPattern,
-      clipPath: pathElement.getAttribute('clip-path') || pathElement.style.clipPath,
-      fill: pathElement.getAttribute('fill') || pathElement.style.fill
-    });
+  // Check for definitive clip mask attribute
+  if (svgPath.getAttribute('data-has-clip-mask') === 'true') {
+    return true;
   }
   
-  // Return true if any of the indicators suggest a clip mask is present
-  // To be extra safe, require at least two indicators to be present
-  return Boolean(hasDataAttribute && (hasClipPath || hasFillPattern));
+  // Second check: verify if it has clip-path attribute
+  if (svgPath.hasAttribute('clip-path')) {
+    return true;
+  }
+  
+  // Third check: check if pattern fill is applied
+  const fill = svgPath.getAttribute('fill');
+  if (fill && fill.includes('url(#pattern-')) {
+    return true;
+  }
+  
+  return false;
 };

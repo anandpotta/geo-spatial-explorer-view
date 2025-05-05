@@ -5,7 +5,6 @@ import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';
-import { useAuth } from '@/contexts/AuthContext';
 
 const GeoSpatialExplorer = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
@@ -13,7 +12,6 @@ const GeoSpatialExplorer = () => {
   const [isMapReady, setIsMapReady] = useState(false);
   const [flyCompleted, setFlyCompleted] = useState(false);
   const { toast } = useToast();
-  const { currentUser } = useAuth();
   
   // Effect to handle initial map load
   useEffect(() => {
@@ -21,17 +19,6 @@ const GeoSpatialExplorer = () => {
       console.log('Map is ready for interactions');
     }
   }, [isMapReady]);
-  
-  // Effect to welcome the user
-  useEffect(() => {
-    if (currentUser) {
-      toast({
-        title: `Welcome ${currentUser.username}!`,
-        description: 'Your personalized GeoSpatial Explorer is ready.',
-        duration: 5000,
-      });
-    }
-  }, [currentUser]);
   
   const handleLocationSelect = (location: Location) => {
     console.log('Location selected in Explorer:', location);
@@ -85,7 +72,7 @@ const GeoSpatialExplorer = () => {
   };
   
   return (
-    <div className="w-full h-full flex bg-black overflow-hidden">
+    <div className="w-full h-screen flex bg-black overflow-hidden">
       {/* Left Panel */}
       <ExplorerSidebar 
         selectedLocation={selectedLocation}

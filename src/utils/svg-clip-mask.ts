@@ -9,16 +9,10 @@ export { findSvgPathByDrawingId } from './svg-path-finder';
 
 // Re-export clip mask utility functions
 export { 
-  hasClipMaskApplied
-} from './clip-mask/clip-mask-checker';
-
-export {
-  applyImageClipMask
-} from './clip-mask/clip-mask-apply';
-
-export {
-  removeClipMask
-} from './clip-mask/clip-mask-remove';
+  hasClipMaskApplied,
+  applyImageClipMask,
+  removeClipMask 
+} from './clip-mask/index';
 
 // Re-export image manipulation functions
 export {

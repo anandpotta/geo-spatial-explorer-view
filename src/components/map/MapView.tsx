@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { LocationMarker } from '@/utils/marker-utils';
-import FloorPlanView from './floor-plan/FloorPlanView';
+import FloorPlanView from './FloorPlanView';
 import { useFloorPlanState } from '@/hooks/useFloorPlanState';
 import MapHeader from './header/MapHeader';
 import MapContainer from './container/MapContainer';

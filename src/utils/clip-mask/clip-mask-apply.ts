@@ -2,11 +2,12 @@
 /**
  * Core functionality for applying clip masks to SVG elements
  */
+import { toast } from 'sonner';
 import { storeOriginalAttributes } from './clip-mask-attributes';
 import { hasClipMaskApplied } from './clip-mask-checker';
-import { showClipMaskSuccessToast, showClipMaskErrorToast } from './clip-mask-toast';
-import { calculateImagePlacement, createPatternWithImage } from './clip-mask-image';
-import { createClipPath, cleanupExistingElements, applyClipPathAndFill } from './clip-mask-path';
+
+// Track which drawings have been displayed with toasts to avoid duplicates
+const toastShown = new Set<string>();
 
 /**
  * Creates and applies an SVG clip mask with an image to a path element
@@ -22,9 +23,6 @@ export const applyImageClipMask = (
   }
   
   try {
-    // Debug check
-    console.log('Applying image clip mask to path', id, typeof imageUrl);
-    
     // Ensure imageUrl is a string before attempting to use string methods
     const imageUrlString = typeof imageUrl === 'string' ? imageUrl : 
       (typeof imageUrl === 'object' && imageUrl !== null ? JSON.stringify(imageUrl) : '');
@@ -36,16 +34,7 @@ export const applyImageClipMask = (
     
     // Check if already has clip mask (improved check)
     if (hasClipMaskApplied(pathElement)) {
-      console.log('Path already has clip mask, updating timestamp');
-      pathElement.setAttribute('data-last-updated', Date.now().toString());
-      
-      // Even if it has a clip mask, we should update the image - the old one might be stale
-      if (!pathElement.getAttribute('clip-path') || !pathElement.style.fill) {
-        console.log('Clip mask exists but attributes missing, reapplying');
-      } else {
-        // If everything looks good, just return - no need to reapply
-        return true;
-      }
+      return true;
     }
     
     // Get the SVG element that contains this path
@@ -62,8 +51,6 @@ export const applyImageClipMask = (
       return false;
     }
     
-    console.log('Found path data:', pathData.substring(0, 20) + '...');
-    
     // Store original path data and style for potential restoration
     storeOriginalAttributes(pathElement);
     
@@ -75,10 +62,21 @@ export const applyImageClipMask = (
     }
     
     // Clean up any existing elements with the same IDs first
-    cleanupExistingElements(defs, id);
+    const existingClipPath = defs.querySelector(`#clip-${id}`);
+    if (existingClipPath) defs.removeChild(existingClipPath);
+    
+    const existingPattern = defs.querySelector(`#pattern-${id}`);
+    if (existingPattern) defs.removeChild(existingPattern);
     
     // Create a clip path element
-    createClipPath(defs, id, pathData);
+    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    clipPath.setAttribute('id', `clip-${id}`);
+    defs.appendChild(clipPath);
+    
+    // Create a path for the clip path
+    const clipPathPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    clipPathPath.setAttribute('d', pathData);
+    clipPath.appendChild(clipPathPath);
     
     // First, mark as having clip mask (prevents race conditions)
     pathElement.setAttribute('data-has-clip-mask', 'true');
@@ -100,13 +98,12 @@ export const applyImageClipMask = (
     
     tempImg.onload = () => {
       clearTimeout(imageTimeout);
-      console.log(`Image loaded successfully: ${tempImg.width}x${tempImg.height}`);
       applyImageWithDimensions(tempImg.width, tempImg.height);
     };
     
-    tempImg.onerror = (e) => {
+    tempImg.onerror = () => {
       clearTimeout(imageTimeout);
-      console.error('Failed to load image for clip mask', e);
+      console.error('Failed to load image for clip mask');
       // Don't show error toasts for image load errors to reduce spam
       // Apply default dimensions as fallback
       applyImageWithDimensions(300, 300);
@@ -115,28 +112,42 @@ export const applyImageClipMask = (
     // Function to apply the image with known dimensions
     function applyImageWithDimensions(imgWidth: number, imgHeight: number) {
       try {
-        if (!svg || !pathElement || !document.contains(pathElement) || !defs) {
-          console.error('Elements no longer in DOM, cannot apply clip mask');
-          return false;
-        }
+        if (!svg || !pathElement || !document.contains(pathElement)) return; // Safety check
         
         // Get the bounding box to properly size the pattern
         const bbox = pathElement.getBBox();
-        console.log(`Path bounding box: ${bbox.x},${bbox.y} ${bbox.width}x${bbox.height}`);
         
-        // Calculate placement for the image
-        const placement = calculateImagePlacement(bbox, imgWidth, imgHeight);
+        // Calculate scale to fit the image properly within the shape
+        const scaleX = bbox.width / imgWidth;
+        const scaleY = bbox.height / imgHeight;
+        const scale = Math.max(scaleX, scaleY); // Use max to ensure image covers the shape
         
-        // Create pattern and image elements
-        const { pattern, image } = createPatternWithImage(
-          defs, 
-          id, 
-          imageUrlString, 
-          placement.offsetX, 
-          placement.offsetY, 
-          placement.scaledWidth, 
-          placement.scaledHeight
-        );
+        const scaledWidth = imgWidth * scale;
+        const scaledHeight = imgHeight * scale;
+        
+        // Calculate position to center the image
+        const offsetX = (bbox.width - scaledWidth) / 2 + bbox.x;
+        const offsetY = (bbox.height - scaledHeight) / 2 + bbox.y;
+        
+        // Create a pattern for the image with calculated dimensions
+        const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+        pattern.setAttribute('id', `pattern-${id}`);
+        pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+        pattern.setAttribute('x', String(offsetX));
+        pattern.setAttribute('y', String(offsetY));
+        pattern.setAttribute('width', String(scaledWidth));
+        pattern.setAttribute('height', String(scaledHeight));
+        defs.appendChild(pattern);
+        
+        // Create an image element for the pattern
+        const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        image.setAttribute('href', imageUrlString);
+        image.setAttribute('width', String(scaledWidth));
+        image.setAttribute('height', String(scaledHeight));
+        image.setAttribute('x', '0');
+        image.setAttribute('y', '0');
+        image.setAttribute('preserveAspectRatio', 'none'); // Don't preserve aspect ratio for better fitting
+        pattern.appendChild(image);
         
         // Set default values for transformation
         pathElement.setAttribute('data-image-rotation', '0');
@@ -144,27 +155,29 @@ export const applyImageClipMask = (
         pathElement.setAttribute('data-image-offset-x', '0');
         pathElement.setAttribute('data-image-offset-y', '0');
         
-        // Apply the clip path and fill
-        applyClipPathAndFill(pathElement, id);
-        
-        // Force multiple redraws to ensure the pattern is visible
-        for (let i = 0; i < 3; i++) {
-          setTimeout(() => {
-            if (svg && document.contains(svg)) {
-              svg.style.display = 'none';
-              svg.getBoundingClientRect(); // Force reflow
-              svg.style.display = '';
-            }
-          }, i * 200);
-        }
-        
-        // Show success toast (only once per drawing)
-        showClipMaskSuccessToast(id);
-        
-        // Dispatch an event to notify that the clip mask was updated
-        window.dispatchEvent(new CustomEvent('clipMaskUpdated', {
-          detail: { drawingId: id }
-        }));
+        // Use requestAnimationFrame for smoother visual updates
+        requestAnimationFrame(() => {
+          if (!pathElement || !document.contains(pathElement)) return;
+          
+          // Apply all changes in a single batch to reduce visual flickering
+          const fill = `url(#pattern-${id})`;
+          const clipPathUrl = `url(#clip-${id})`;
+          
+          pathElement.style.fill = fill;
+          pathElement.style.stroke = 'none';
+          pathElement.style.clipPath = clipPathUrl;
+          
+          // Also set attributes as backup in case styles are reset
+          pathElement.setAttribute('fill', fill);
+          pathElement.setAttribute('stroke', 'none');
+          pathElement.setAttribute('clip-path', clipPathUrl);
+          
+          // Only show toast for first time applications to reduce notification spam
+          if (!toastShown.has(id)) {
+            toastShown.add(id);
+            toast.success('Floor plan applied successfully', { id: `floor-plan-${id}` });
+          }
+        });
         
         return true;
       } catch (err) {
@@ -173,15 +186,21 @@ export const applyImageClipMask = (
       }
     }
     
-    console.log(`Starting image load for ${imageUrlString.substring(0, 50)}...`);
     // Start loading the image
     tempImg.src = imageUrlString;
     
     return true;
   } catch (err) {
     console.error('Error applying image clip mask:', err);
-    showClipMaskErrorToast('Failed to apply floor plan to drawing');
     return false;
   }
 };
 
+/**
+ * Reset the toast tracking when the page reloads
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    toastShown.clear();
+  });
+}

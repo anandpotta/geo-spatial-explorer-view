@@ -6,27 +6,32 @@ import { toast } from 'sonner';
 
 interface UploadButtonControlProps {
   drawingId: string;
-  uploadButtonPosition: L.LatLng;
   featureGroup: L.FeatureGroup;
   uploadButtonRoots: Map<string, any>;
   isMounted: boolean;
   onUploadRequest: (drawingId: string) => void;
+  uploadButtonPosition?: L.LatLng;
+  layer?: L.Layer;
 }
 
 export const createUploadButtonControl = ({
   drawingId,
-  uploadButtonPosition,
   featureGroup,
   uploadButtonRoots,
   isMounted,
-  onUploadRequest
+  onUploadRequest,
+  uploadButtonPosition,
+  layer
 }: UploadButtonControlProps): void => {
-  if (!uploadButtonPosition) return;
+  // Use provided position or try to get from layer if available
+  const position = uploadButtonPosition || (layer && (layer as any).getLatLng?.());
+  
+  if (!position) return;
   
   const uploadContainer = document.createElement('div');
   uploadContainer.className = 'upload-button-wrapper';
   
-  const uploadButtonLayer = L.marker(uploadButtonPosition, {
+  const uploadButtonLayer = L.marker(position, {
     icon: L.divIcon({
       className: 'upload-button-container',
       html: uploadContainer,

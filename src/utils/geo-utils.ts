@@ -23,8 +23,9 @@ export {
 } from './drawing-utils';
 
 export {
-  storeFloorPlan as saveFloorPlan,
-  getFloorPlan as getFloorPlanById,
+  saveFloorPlan,
+  getFloorPlanById,
+  getSavedFloorPlans,
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
 

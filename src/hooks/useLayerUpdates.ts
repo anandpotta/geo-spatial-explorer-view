@@ -8,6 +8,7 @@ interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;
   savedDrawings: DrawingData[];
   activeTool: string | null;
+  isMountedRef: React.MutableRefObject<boolean>;
   layersRef: React.MutableRefObject<Map<string, L.Layer>>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
@@ -15,26 +16,28 @@ interface LayerUpdatesProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  onClearAll?: () => void;
 }
 
 export function useLayerUpdates({
   featureGroup,
   savedDrawings,
   activeTool,
+  isMountedRef,
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
   imageControlRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
+  onUploadRequest,
+  onClearAll
 }: LayerUpdatesProps) {
   // Use refs for debouncing and tracking updates
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUpdatingRef = useRef<boolean>(false);
   const lastUpdateTimeRef = useRef<number>(0);
   const updateCountRef = useRef<number>(0);
-  const isMountedRef = useRef<boolean>(true);
   
   // Use useCallback to ensure stable reference for the updateLayers function
   const updateLayers = useCallback(() => {
@@ -123,7 +126,8 @@ export function useLayerUpdates({
             imageControlRoots,
             onRegionClick,
             onRemoveShape,
-            onUploadRequest
+            onUploadRequest,
+            onClearAll
           });
         });
       }
@@ -135,7 +139,7 @@ export function useLayerUpdates({
         isUpdatingRef.current = false;
       }, 250);
     }
-  }, [featureGroup, savedDrawings, activeTool, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
+  }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest, onClearAll]);
 
   // Add a new debounced update function that's safer to call frequently
   const debouncedUpdateLayers = useCallback(() => {
@@ -151,7 +155,7 @@ export function useLayerUpdates({
         updateLayers();
       }
     }, delay);
-  }, [updateLayers]);
+  }, [updateLayers, isMountedRef]);
 
-  return { updateLayers, debouncedUpdateLayers, isMountedRef };
+  return { updateLayers, debouncedUpdateLayers };
 }

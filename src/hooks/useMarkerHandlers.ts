@@ -2,7 +2,6 @@
 import { toast } from 'sonner';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import L from 'leaflet';
-import { getCurrentUser } from '@/services/auth-service';
 
 export function useMarkerHandlers(mapState: any) {
   const handleMapClick = (latlng: L.LatLng) => {
@@ -61,15 +60,8 @@ export function useMarkerHandlers(mapState: any) {
         return;
       }
     } else {
-      // Get current user for the shape
-      const currentUser = getCurrentUser();
-      if (!currentUser) {
-        toast.error('You must be logged in to create shapes');
-        return;
-      }
-      
       // Create a safe copy of the shape without potential circular references
-      const safeShape: DrawingData = {
+      const safeShape = {
         type: shape.type,
         id: shape.id || crypto.randomUUID(), // Ensure there's always an ID
         coordinates: shape.coordinates || [],
@@ -88,8 +80,7 @@ export function useMarkerHandlers(mapState: any) {
           name: `New ${shape.type}`,
           color: '#3388ff',
           createdAt: new Date()
-        },
-        userId: currentUser.id
+        }
       };
       
       // Store the safe shape in the current drawing

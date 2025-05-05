@@ -1,27 +1,38 @@
 
-import { useState } from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import GeoSpatialExplorer from './components/GeoSpatialExplorer';
-import LoginPage from './components/auth/LoginPage';
-import Header from './components/auth/Header';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ApiSyncProvider } from "@/contexts/ApiSyncContext";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
 
-const AppContent = () => {
-  const { isAuthenticated } = useAuth();
-  
-  return (
-    <div className="h-screen flex flex-col">
-      {isAuthenticated && <Header />}
-      {isAuthenticated ? <GeoSpatialExplorer /> : <LoginPage />}
-    </div>
-  );
-};
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ApiSyncProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ApiSyncProvider>
+  </QueryClientProvider>
+);
 
 export default App;

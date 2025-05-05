@@ -1,13 +1,10 @@
 
-import { useEffect } from 'react';
-import { useLayerUpdates } from '@/hooks/useLayerUpdates';
-import { useLayerReferences } from '@/hooks/useLayerReferences';
+import { useEffect, useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
-import { useLayerLifecycle } from '@/hooks/useLayerLifecycle';
-import { useResizeHandler } from '@/hooks/useResizeHandler';
-import { useStorageEvents } from '@/hooks/useStorageEvents';
-import { safeUnmountRoots } from '@/utils/react-roots';
 import L from 'leaflet';
+import { createLayerControls } from './LayerControls';
+import { useLayerReferences } from '@/hooks/useLayerReferences';
+import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -16,6 +13,7 @@ interface LayerManagerProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  onClearAll?: () => void;
 }
 
 const LayerManager = ({
@@ -24,58 +22,78 @@ const LayerManager = ({
   activeTool,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
+  onUploadRequest,
+  onClearAll
 }: LayerManagerProps) => {
   const {
+    isMountedRef,
     removeButtonRoots,
     uploadButtonRoots,
-    layersRef,
-    imageControlRoots
+    imageControlRoots,
+    layersRef
   } = useLayerReferences();
 
-  const { updateLayers, debouncedUpdateLayers, isMountedRef } = useLayerUpdates({
+  const { updateLayers } = useLayerUpdates({
     featureGroup,
     savedDrawings,
     activeTool,
+    isMountedRef,
     layersRef,
     removeButtonRoots: removeButtonRoots.current,
     uploadButtonRoots: uploadButtonRoots.current,
     imageControlRoots: imageControlRoots.current,
     onRegionClick,
     onRemoveShape,
-    onUploadRequest
-  });
-  
-  // Use our extracted hook for layer lifecycle management
-  const { isMountedRef: lifecycleMountedRef } = useLayerLifecycle({
-    featureGroup,
-    savedDrawings,
-    activeTool,
-    onRegionClick,
-    onRemoveShape,
     onUploadRequest,
-    debouncedUpdateLayers,
-    updateLayers,
-    isMountedRef // Pass the isMountedRef from useLayerUpdates
+    onClearAll
   });
 
-  // Use our extracted hooks for event handling
-  useResizeHandler({ isMountedRef, debouncedUpdateLayers });
-  useStorageEvents({ isMountedRef, debouncedUpdateLayers });
-
-  // Clean up roots on unmount
+  // Call updateLayers when dependencies change
   useEffect(() => {
-    return () => {
-      safeUnmountRoots(
-        removeButtonRoots.current,
-        uploadButtonRoots.current,
-        imageControlRoots.current
-      );
-      layersRef.current.clear();
-    };
-  }, [layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots]);
+    if (featureGroup && isMountedRef.current) {
+      updateLayers();
+    }
+  }, [featureGroup, savedDrawings, activeTool, updateLayers]);
 
-  return null; // This is a non-visual component
+  // Configure layer controls
+  useEffect(() => {
+    const handleAddLayer = (e: any) => {
+      const layer = e.layer;
+      const drawingId = layer.drawingId;
+      
+      if (drawingId && isMountedRef.current) {
+        createLayerControls({
+          layer,
+          drawingId,
+          activeTool,
+          featureGroup,
+          uploadButtonRoots: uploadButtonRoots.current,
+          removeButtonRoots: removeButtonRoots.current,
+          imageControlRoots: imageControlRoots.current,
+          isMounted: isMountedRef.current,
+          onUploadRequest: (id) => {
+            if (onUploadRequest) onUploadRequest(id);
+          },
+          onRemoveShape: (id) => {
+            if (onRemoveShape) onRemoveShape(id);
+          },
+          onClearAll
+        });
+      }
+    };
+
+    if (featureGroup) {
+      featureGroup.on('layeradd', handleAddLayer);
+    }
+
+    return () => {
+      if (featureGroup) {
+        featureGroup.off('layeradd', handleAddLayer);
+      }
+    };
+  }, [featureGroup, activeTool, onUploadRequest, onRemoveShape, onClearAll, isMountedRef, removeButtonRoots, uploadButtonRoots, imageControlRoots]);
+
+  return null;
 };
 
 export default LayerManager;

@@ -4,9 +4,7 @@
  * This file re-exports all clip mask related functions
  */
 
-// Re-export clip mask utility functions
+// Re-export all clip mask related functions
 export { hasClipMaskApplied } from './clip-mask-checker';
 export { applyImageClipMask } from './clip-mask-apply';
 export { removeClipMask } from './clip-mask-remove';
-export { showClipMaskSuccessToast, showClipMaskErrorToast } from './clip-mask-toast';
-

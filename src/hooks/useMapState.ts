@@ -1,14 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 
 export function useMapState(selectedLocation?: Location) {
-  const { currentUser, isAuthenticated } = useAuth();
   const [position, setPosition] = useState<[number, number]>(
     selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
   );
@@ -25,8 +22,6 @@ export function useMapState(selectedLocation?: Location) {
 
   // Load existing markers on mount
   useEffect(() => {
-    if (!isAuthenticated) return;
-    
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     
@@ -52,7 +47,7 @@ export function useMapState(selectedLocation?: Location) {
       window.removeEventListener('storage', handleMarkersUpdated);
       window.removeEventListener('storage', handleDrawingsUpdated);
     };
-  }, [isAuthenticated]);
+  }, []);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -64,11 +59,6 @@ export function useMapState(selectedLocation?: Location) {
   }, []);
 
   const handleSaveMarker = () => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to save locations');
-      return;
-    }
-    
     if (!tempMarker || !markerName.trim()) return;
     
     const newMarker: LocationMarker = {
@@ -77,8 +67,7 @@ export function useMapState(selectedLocation?: Location) {
       position: tempMarker,
       type: markerType,
       createdAt: new Date(),
-      associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: currentUser?.id || '' // Add userId
+      associatedDrawing: currentDrawing ? currentDrawing.id : undefined
     };
     
     // Save the marker
@@ -98,8 +87,7 @@ export function useMapState(selectedLocation?: Location) {
           ...currentDrawing.properties,
           name: markerName,
           associatedMarkerId: newMarker.id
-        },
-        userId: currentUser?.id || '' // Add userId
+        }
       };
       
       // Save or update the drawing but don't clear it from the map
@@ -124,11 +112,6 @@ export function useMapState(selectedLocation?: Location) {
   };
 
   const handleDeleteMarker = (id: string) => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to manage locations');
-      return;
-    }
-    
     deleteMarker(id);
     // Update the markers state
     setMarkers(markers.filter(marker => marker.id !== id));
