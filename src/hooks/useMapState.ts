@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
@@ -42,7 +41,18 @@ export function useMapState(selectedLocation?: Location) {
         }
       }
       
-      setMarkers(uniqueMarkers);
+      // Only update state if the marker set has actually changed
+      const currentIds = new Set(markers.map(m => m.id));
+      const newIds = new Set(uniqueMarkers.map(m => m.id));
+      
+      const hasChanges = 
+        uniqueMarkers.length !== markers.length || 
+        [...newIds].some(id => !currentIds.has(id));
+      
+      if (hasChanges) {
+        console.log(`Updating markers state with ${uniqueMarkers.length} unique markers`);
+        setMarkers(uniqueMarkers);
+      }
     };
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);
@@ -52,7 +62,7 @@ export function useMapState(selectedLocation?: Location) {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('storage', handleMarkersUpdated);
     };
-  }, []);
+  }, [markers]);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -75,7 +85,7 @@ export function useMapState(selectedLocation?: Location) {
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined
     };
     
-    // Save the marker
+    // Save the marker to localStorage
     saveMarker(newMarker);
     
     if (currentDrawing) {
@@ -103,17 +113,10 @@ export function useMapState(selectedLocation?: Location) {
     setMarkerName('');
     setCurrentDrawing(null);
     
-    // Update the markers state with the new marker - no need to fetch again as we already have the updated marker
-    // Instead of calling getSavedMarkers(), which might reintroduce duplicates
-    // Add the new marker directly to state to avoid duplicates
-    setMarkers(prevMarkers => {
-      // Check if marker with this ID already exists (shouldn't happen with uuidv4 but just in case)
-      const exists = prevMarkers.some(m => m.id === newMarker.id);
-      if (exists) {
-        return prevMarkers; // Don't add duplicate
-      }
-      return [...prevMarkers, newMarker];
-    });
+    // Important: DON'T update the markers state directly here
+    // Let the markersUpdated event handler handle state updates
+    // This prevents duplicate entries in the state
+    console.log("Marker saved, waiting for markersUpdated event");
     
     toast.success("Location saved successfully");
   };

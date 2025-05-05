@@ -26,21 +26,25 @@ const MarkersList = ({
 }: MarkersListProps) => {
   // Use useMemo to deduplicate markers based on id
   const uniqueMarkers = useMemo(() => {
+    // Create a Map using the ID as keys to naturally eliminate duplicates
     const uniqueMap = new Map();
     
-    // Filter out duplicates by keeping only the last instance of each ID
-    markers.forEach(marker => {
+    // We need consistent rendering order, so process markers in reverse to keep the most recent
+    // This ensures when we have duplicates, we keep the last one (most recent) in the map
+    [...markers].reverse().forEach(marker => {
       uniqueMap.set(marker.id, marker);
     });
     
     return Array.from(uniqueMap.values());
   }, [markers]);
   
+  console.log(`MarkersList rendering ${uniqueMarkers.length} markers from ${markers.length} inputs`);
+  
   return (
     <>
       {Array.isArray(uniqueMarkers) && uniqueMarkers.map((marker) => (
         <UserMarker 
-          key={`marker-${marker.id}`} 
+          key={`marker-${marker.id}-${Date.now()}`} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />
