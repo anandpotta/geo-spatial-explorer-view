@@ -5,16 +5,27 @@ import L from 'leaflet';
 declare module 'leaflet' {
   interface PathOptions {
     svgPath?: string;
+    renderer?: L.Renderer;
   }
   
   interface GeoJSONOptions {
     svgPath?: string;
+    renderer?: L.Renderer;
   }
 }
 
 export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
   try {
-    const layer = L.geoJSON(drawing.geoJSON, { style: options });
+    // Enforce SVG renderer to ensure paths are rendered as SVG elements
+    const enhancedOptions = {
+      ...options,
+      renderer: L.svg()  // Force SVG renderer
+    };
+    
+    const layer = L.geoJSON(drawing.geoJSON, { 
+      style: enhancedOptions,
+      renderer: L.svg() // Force SVG renderer at the GeoJSON level too
+    });
     
     // Store SVG path data if available
     if (drawing.svgPath) {
@@ -32,7 +43,8 @@ export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
   color: color || '#3388ff',
   weight: 3,
   opacity: 0.7,
-  fillOpacity: 0.3
+  fillOpacity: 0.3,
+  renderer: L.svg()  // Force SVG renderer for default options too
 });
 
 export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {
