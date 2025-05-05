@@ -10,14 +10,31 @@ const pathExists = (path: string, paths: string[]): boolean => {
   return paths.includes(path);
 };
 
-// Debounce helper to prevent too frequent updates
+// More robust debounce helper with cancellation
 const debounce = (func: Function, delay: number) => {
-  let timeoutId: NodeJS.Timeout;
-  return (...args: any[]) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
+  let timeoutId: NodeJS.Timeout | null = null;
+  
+  return {
+    call: (...args: any[]) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        func(...args);
+        timeoutId = null;
+      }, delay);
+    },
+    cancel: () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    }
   };
 };
+
+// Track the last shape added to prevent duplicates
+let lastShapeId: string | null = null;
 
 export function createShapeCreationHandler({ 
   onCreated, 
@@ -25,22 +42,33 @@ export function createShapeCreationHandler({
   svgPaths
 }: ShapeCreationHandlerProps) {
   // Create a debounced version of the path updater
-  const debouncedPathUpdate = debounce((updatedPaths: string[]) => {
+  const debouncedUpdate = debounce((updatedPaths: string[]) => {
     if (onPathsUpdated) {
       onPathsUpdated(updatedPaths);
     }
-  }, 1000); // 1 second debounce
+  }, 2000); // Increased to 2 second debounce
   
   const handleCreatedWrapper = (shape: any) => {
-    // Process the shape and check for SVG path data
+    // Skip processing if we've already handled this exact shape
+    if (shape.id && shape.id === lastShapeId) {
+      return;
+    }
+    
+    // Track this shape ID
+    lastShapeId = shape.id || null;
+    
+    // First call the original handler
+    onCreated(shape);
+    
+    // Then handle SVG path data if present
     if (shape.svgPath) {
       // Only add path to state if it doesn't already exist
       if (!pathExists(shape.svgPath, svgPaths)) {
         const updatedPaths = [...svgPaths, shape.svgPath];
-        debouncedPathUpdate(updatedPaths);
+        // Use the debounced update
+        debouncedUpdate.call(updatedPaths);
       }
     }
-    onCreated(shape);
   };
 
   return handleCreatedWrapper;
