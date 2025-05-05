@@ -44,4 +44,23 @@ export const setupLayerEvents = (
     
     onRegionClick(drawing);
   });
+  
+  // Preserve SVG path data if available
+  if ('_path' in layer && layer._path) {
+    // Add class for consistent path styling
+    layer._path.classList.add('visible-path-stroke');
+    
+    // Store the original path data to prevent SVG path disappearance
+    if (drawing.svgPath && layer._path.getAttribute('d') !== drawing.svgPath) {
+      try {
+        layer._path.setAttribute('d', drawing.svgPath);
+        
+        // Force a reflow to ensure the path is displayed
+        layer._path.getBoundingClientRect();
+      } catch (err) {
+        console.error('Error setting path data:', err);
+      }
+    }
+  }
 };
+

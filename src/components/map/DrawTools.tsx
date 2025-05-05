@@ -92,10 +92,36 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       mapContainer.getBoundingClientRect();
     }
     
+    // Set up a MutationObserver to watch for SVG changes and preserve paths
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList' && mutation.target.nodeName === 'svg') {
+          const paths = mutation.target.querySelectorAll('path.leaflet-interactive');
+          paths.forEach(path => {
+            if (!path.classList.contains('visible-path-stroke')) {
+              path.classList.add('visible-path-stroke');
+            }
+          });
+        }
+      });
+    });
+    
+    // Observe SVG elements in the overlay pane
+    const overlayPane = map.getContainer().querySelector('.leaflet-overlay-pane');
+    if (overlayPane) {
+      observer.observe(overlayPane, { 
+        childList: true, 
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['d', 'class']
+      });
+    }
+    
     // Cleanup function
     return () => {
       cleanupSvgRenderer();
       cleanupPathPreservation();
+      observer.disconnect();
       
       // Restore original marker drag handler if it was modified
       if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
