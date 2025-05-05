@@ -7,7 +7,7 @@ declare module 'leaflet' {
     svgPath?: string;
   }
   
-  interface GeoJSONOptions<P = any, G = L.Geometry> {
+  interface GeoJSONOptions {
     svgPath?: string;
   }
 }
