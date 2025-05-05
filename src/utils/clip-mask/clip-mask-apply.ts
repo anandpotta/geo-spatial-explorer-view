@@ -155,16 +155,17 @@ export const applyImageClipMask = (
         console.log(`BBox for ${id}: x=${bbox.x}, y=${bbox.y}, w=${bbox.width}, h=${bbox.height}`);
         
         // Calculate scale to fit the image properly within the shape
+        // Use a different scaling approach to ensure image covers the entire shape
         const scaleX = bbox.width / imgWidth;
         const scaleY = bbox.height / imgHeight;
-        const scale = Math.max(scaleX, scaleY, 0.5); // Use max to ensure image covers the shape
+        const scale = Math.max(scaleX, scaleY) * 1.05; // 5% extra coverage to avoid gaps
         
         const scaledWidth = imgWidth * scale;
         const scaledHeight = imgHeight * scale;
         
-        // Calculate position to center the image
-        const offsetX = (bbox.width - scaledWidth) / 2 + bbox.x;
-        const offsetY = (bbox.height - scaledHeight) / 2 + bbox.y;
+        // Calculate position to exactly center the image in the path
+        const offsetX = bbox.x + (bbox.width - scaledWidth) / 2;
+        const offsetY = bbox.y + (bbox.height - scaledHeight) / 2;
         
         // Create a pattern for the image with calculated dimensions
         const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
@@ -295,7 +296,7 @@ if (typeof document !== 'undefined') {
       stroke-opacity: 1 !important;
       stroke-linecap: round !important;
       stroke-linejoin: round !important;
-      fill-opacity: 0.9 !important;
+      fill-opacity: 1 !important;
       vector-effect: non-scaling-stroke;
       pointer-events: auto !important;
     }

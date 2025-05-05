@@ -1,7 +1,7 @@
 
 import { ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 import DrawingToolButton from './DrawingToolButton';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 interface MapControlsProps {
   onZoomIn: () => void;
@@ -12,7 +12,8 @@ interface MapControlsProps {
 const MapControls = ({ onZoomIn, onZoomOut, onReset }: MapControlsProps) => {
   const [isZooming, setIsZooming] = useState(false);
   
-  const handleZoomIn = () => {
+  // Use useCallback to prevent unnecessary rerenders
+  const handleZoomIn = useCallback(() => {
     if (isZooming) return;
     setIsZooming(true);
     
@@ -22,10 +23,10 @@ const MapControls = ({ onZoomIn, onZoomOut, onReset }: MapControlsProps) => {
     // Reset the zooming state after a short delay
     setTimeout(() => {
       setIsZooming(false);
-    }, 300);
-  };
+    }, 500); // Increased to 500ms for better debouncing
+  }, [isZooming, onZoomIn]);
   
-  const handleZoomOut = () => {
+  const handleZoomOut = useCallback(() => {
     if (isZooming) return;
     setIsZooming(true);
     
@@ -35,10 +36,10 @@ const MapControls = ({ onZoomIn, onZoomOut, onReset }: MapControlsProps) => {
     // Reset the zooming state after a short delay
     setTimeout(() => {
       setIsZooming(false);
-    }, 300);
-  };
+    }, 500); // Increased to 500ms for better debouncing
+  }, [isZooming, onZoomOut]);
   
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     if (isZooming) return;
     setIsZooming(true);
     
@@ -48,8 +49,8 @@ const MapControls = ({ onZoomIn, onZoomOut, onReset }: MapControlsProps) => {
     // Reset the zooming state after a short delay
     setTimeout(() => {
       setIsZooming(false);
-    }, 300);
-  };
+    }, 500); // Increased to 500ms for better debouncing
+  }, [isZooming, onReset]);
 
   return (
     <div className="flex flex-col gap-2">
