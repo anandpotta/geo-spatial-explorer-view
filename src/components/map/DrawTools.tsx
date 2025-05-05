@@ -96,7 +96,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     const observer = new MutationObserver((mutations) => {
       mutations.forEach(mutation => {
         if (mutation.type === 'childList' && mutation.target.nodeName === 'svg') {
-          const paths = mutation.target.querySelectorAll('path.leaflet-interactive');
+          // Use type assertion to correctly type the SVG element
+          const svgElement = mutation.target as SVGElement;
+          const paths = svgElement.querySelectorAll('path.leaflet-interactive');
           paths.forEach(path => {
             if (!path.classList.contains('visible-path-stroke')) {
               path.classList.add('visible-path-stroke');

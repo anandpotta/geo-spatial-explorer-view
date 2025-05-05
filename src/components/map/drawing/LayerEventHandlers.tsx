@@ -1,6 +1,7 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
+import { SVGPathElementWithAttributes } from '@/utils/svg-types';
 
 /**
  * Sets up click handlers for drawing layers
@@ -47,20 +48,22 @@ export const setupLayerEvents = (
   
   // Preserve SVG path data if available
   if ('_path' in layer && layer._path) {
+    // Ensure we work with the path element with proper typing
+    const pathElement = layer._path as SVGPathElement;
+    
     // Add class for consistent path styling
-    layer._path.classList.add('visible-path-stroke');
+    pathElement.classList.add('visible-path-stroke');
     
     // Store the original path data to prevent SVG path disappearance
-    if (drawing.svgPath && layer._path.getAttribute('d') !== drawing.svgPath) {
+    if (drawing.svgPath && pathElement.getAttribute('d') !== drawing.svgPath) {
       try {
-        layer._path.setAttribute('d', drawing.svgPath);
+        pathElement.setAttribute('d', drawing.svgPath);
         
         // Force a reflow to ensure the path is displayed
-        layer._path.getBoundingClientRect();
+        pathElement.getBoundingClientRect();
       } catch (err) {
         console.error('Error setting path data:', err);
       }
     }
   }
 };
-
