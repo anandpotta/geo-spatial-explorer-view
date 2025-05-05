@@ -5,7 +5,7 @@ import { DrawingData } from '@/utils/drawing-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-drawing-config';
-import { deleteDrawing } from '@/utils/drawing-utils';
+import { deleteDrawing, saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import RemoveButton from './RemoveButton';
 import ReactDOM from 'react-dom/client';
@@ -34,6 +34,36 @@ const LayerManager = ({
       isMountedRef.current = false;
     };
   }, []);
+
+  // Listen for drawing image updates
+  useEffect(() => {
+    const handleDrawingImageUpdate = (event: CustomEvent) => {
+      const { drawingId, imageUrl } = event.detail;
+      
+      // Find the drawing and update it
+      const drawingToUpdate = savedDrawings.find(d => d.id === drawingId);
+      if (drawingToUpdate) {
+        const updatedDrawing = {
+          ...drawingToUpdate,
+          imageUrl: imageUrl
+        };
+        
+        // Save the updated drawing
+        saveDrawing(updatedDrawing);
+        
+        // Update the displayed layers
+        updateLayers();
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener('updateDrawingImage', handleDrawingImageUpdate as EventListener);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('updateDrawingImage', handleDrawingImageUpdate as EventListener);
+    };
+  }, [savedDrawings]);
 
   const handleRemoveShape = (drawingId: string) => {
     if (!drawingId) {
@@ -74,6 +104,11 @@ const LayerManager = ({
             options.fillColor = '#3b82f6';
             options.fillOpacity = 0.4;
             options.color = '#1d4ed8';
+          }
+          
+          // Pass the image URL to the drawing layer if available
+          if (drawing.imageUrl) {
+            options.imageUrl = drawing.imageUrl;
           }
           
           const layer = createDrawingLayer(drawing, options);

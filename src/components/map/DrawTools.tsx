@@ -1,10 +1,9 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { EditControl } from "react-leaflet-draw";
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
-import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
+import { getCoordinatesFromLayer, extractSvgPathData } from '@/utils/leaflet-drawing-config';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
@@ -149,13 +148,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
       let svgPath = '';
       if ((layerType === 'polygon' || layerType === 'rectangle') && layer._path) {
         try {
-          // Get the SVG path element
-          const pathElement = layer._path;
-          if (pathElement && pathElement.getAttribute) {
-            // Extract the 'd' attribute which contains the SVG path data
-            svgPath = pathElement.getAttribute('d') || '';
-            console.log(`Extracted SVG path: ${svgPath}`);
-          }
+          // Get the SVG path element and extract the path data
+          svgPath = extractSvgPathData(layer._path);
+          console.log(`Extracted SVG path: ${svgPath}`);
         } catch (err) {
           console.warn('Error extracting SVG path:', err);
         }

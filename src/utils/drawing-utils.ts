@@ -9,6 +9,8 @@ export interface DrawingData {
   coordinates: Array<[number, number]>;
   geoJSON?: any;
   options?: any;
+  svgPath?: string;
+  imageUrl?: string; // Add imageUrl property to store the path to the image
   properties: {
     name?: string;
     description?: string;
@@ -25,6 +27,11 @@ export function saveDrawing(drawing: DrawingData): void {
   const existingIndex = savedDrawings.findIndex(d => d.id === drawing.id);
   
   if (existingIndex >= 0) {
+    // Preserve imageUrl if not being updated
+    if (!drawing.imageUrl && savedDrawings[existingIndex].imageUrl) {
+      drawing.imageUrl = savedDrawings[existingIndex].imageUrl;
+    }
+    
     savedDrawings[existingIndex] = drawing;
   } else {
     savedDrawings.push(drawing);
