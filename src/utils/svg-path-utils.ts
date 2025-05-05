@@ -137,7 +137,8 @@ export const applyClipPathToElement = (
   
   try {
     element.style.clipPath = `url(#${clipPathId})`;
-    element.style.webkitClipPath = `url(#${clipPathId})`;
+    // Use type assertion to apply webkit-prefixed property
+    (element.style as any)['webkitClipPath'] = `url(#${clipPathId})`;
   } catch (err) {
     console.error('Error applying clip path to element:', err);
   }

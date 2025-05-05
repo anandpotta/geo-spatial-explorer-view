@@ -167,7 +167,8 @@ export const addImageToLayer = (
       
       // Apply clip path to image container with correct URL format
       containerDiv.style.clipPath = `url(#${clipPathId})`;
-      containerDiv.style.webkitClipPath = `url(#${clipPathId})`;
+      // Use type assertion to apply webkit-prefixed property
+      (containerDiv.style as any)['webkitClipPath'] = `url(#${clipPathId})`;
       
       // Log for debugging
       console.log(`Applied clip path: ${clipPathId} with path data: ${pathData.substring(0, 50)}...`);
