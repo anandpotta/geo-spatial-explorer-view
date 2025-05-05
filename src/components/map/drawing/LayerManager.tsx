@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
@@ -32,7 +33,7 @@ const LayerManager = ({
     imageControlRoots
   } = useLayerReferences();
 
-  const { updateLayers, debouncedUpdateLayers } = useLayerUpdates({
+  const { updateLayers, debouncedUpdateLayers, isMountedRef } = useLayerUpdates({
     featureGroup,
     savedDrawings,
     activeTool,
@@ -46,7 +47,7 @@ const LayerManager = ({
   });
   
   // Use our extracted hook for layer lifecycle management
-  const { isMountedRef } = useLayerLifecycle({
+  const { isMountedRef: lifecycleMountedRef } = useLayerLifecycle({
     featureGroup,
     savedDrawings,
     activeTool,
@@ -54,7 +55,8 @@ const LayerManager = ({
     onRemoveShape,
     onUploadRequest,
     debouncedUpdateLayers,
-    updateLayers
+    updateLayers,
+    isMountedRef // Pass the isMountedRef from useLayerUpdates
   });
 
   // Use our extracted hooks for event handling

@@ -12,6 +12,7 @@ interface UseLayerLifecycleProps {
   onUploadRequest?: (drawingId: string) => void;
   debouncedUpdateLayers: () => void;
   updateLayers: () => void;
+  isMountedRef?: React.MutableRefObject<boolean>;
 }
 
 export function useLayerLifecycle({
@@ -22,9 +23,13 @@ export function useLayerLifecycle({
   onRemoveShape,
   onUploadRequest,
   debouncedUpdateLayers,
-  updateLayers
+  updateLayers,
+  isMountedRef: externalMountedRef
 }: UseLayerLifecycleProps) {
-  const isMountedRef = useRef<boolean>(true);
+  // Use provided ref or create a new one
+  const internalMountedRef = useRef<boolean>(true);
+  const isMountedRef = externalMountedRef || internalMountedRef;
+  
   const isInitialRenderRef = useRef(true);
   const lastDrawingsRef = useRef<DrawingData[]>([]);
 
@@ -35,7 +40,7 @@ export function useLayerLifecycle({
     return () => {
       isMountedRef.current = false;
     };
-  }, []);
+  }, [isMountedRef]);
 
   // Use a more stable approach for detecting real changes to drawings
   useEffect(() => {
@@ -68,7 +73,7 @@ export function useLayerLifecycle({
       // For edit mode changes, use the debounced version
       debouncedUpdateLayers();
     }
-  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
+  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers, isMountedRef]);
 
   return {
     isMountedRef

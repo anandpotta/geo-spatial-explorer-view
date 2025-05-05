@@ -8,7 +8,6 @@ interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;
   savedDrawings: DrawingData[];
   activeTool: string | null;
-  isMountedRef: React.MutableRefObject<boolean>;
   layersRef: React.MutableRefObject<Map<string, L.Layer>>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
@@ -22,7 +21,6 @@ export function useLayerUpdates({
   featureGroup,
   savedDrawings,
   activeTool,
-  isMountedRef,
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
@@ -36,6 +34,7 @@ export function useLayerUpdates({
   const isUpdatingRef = useRef<boolean>(false);
   const lastUpdateTimeRef = useRef<number>(0);
   const updateCountRef = useRef<number>(0);
+  const isMountedRef = useRef<boolean>(true);
   
   // Use useCallback to ensure stable reference for the updateLayers function
   const updateLayers = useCallback(() => {
@@ -136,7 +135,7 @@ export function useLayerUpdates({
         isUpdatingRef.current = false;
       }, 250);
     }
-  }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
+  }, [featureGroup, savedDrawings, activeTool, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
 
   // Add a new debounced update function that's safer to call frequently
   const debouncedUpdateLayers = useCallback(() => {
@@ -152,7 +151,7 @@ export function useLayerUpdates({
         updateLayers();
       }
     }, delay);
-  }, [updateLayers, isMountedRef]);
+  }, [updateLayers]);
 
-  return { updateLayers, debouncedUpdateLayers };
+  return { updateLayers, debouncedUpdateLayers, isMountedRef };
 }
