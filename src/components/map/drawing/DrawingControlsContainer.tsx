@@ -1,4 +1,3 @@
-
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
 import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
@@ -6,6 +5,8 @@ import { toast } from 'sonner';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
 import { debugSvgElement } from '@/utils/svg-debug-utils';
+import { saveFloorPlan } from '@/utils/floor-plan-utils';
+import { getCurrentUser } from '@/services/auth-service';
 
 interface DrawingControlsContainerProps {
   onShapeCreated: (shape: any) => void;
@@ -43,14 +44,19 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   // Listen for floorPlanUpdated events to attempt reapplying clipmasks
   useEffect(() => {
     const handleFloorPlanUpdated = (event: CustomEvent) => {
-      const { drawingId } = event.detail;
+      const { drawingId, userId } = event.detail;
+      
+      // Only process floor plan updates for the current user
+      const currentUser = getCurrentUser();
+      if (!currentUser || currentUser.id !== userId) return;
+      
       if (drawingId) {
         // Wait for DOM to update
         setTimeout(() => {
           const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
           const floorPlan = floorPlans[drawingId];
           
-          if (floorPlan && floorPlan.data) {
+          if (floorPlan && floorPlan.data && floorPlan.userId === currentUser.id) {
             const pathElement = findSvgPathByDrawingId(drawingId);
             if (pathElement) {
               applyImageClipMask(pathElement, floorPlan.data, drawingId);
@@ -69,6 +75,12 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   
   const handleUploadToDrawing = (drawingId: string, file: File) => {
     console.log(`Processing upload for drawing ${drawingId}, file: ${file.name}`);
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      toast.error('Please log in to upload files');
+      return;
+    }
     
     // Handle file upload logic here
     const fileType = file.type;
@@ -90,16 +102,14 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
       if (e.target && e.target.result) {
         console.log(`File read complete for ${file.name}`);
         
-        // Save the file data to localStorage
-        const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-        floorPlans[drawingId] = {
-          data: e.target.result,
+        // Save the file data to localStorage with user association
+        saveFloorPlan(drawingId, {
+          data: e.target.result as string,
           name: file.name,
           type: file.type,
           uploaded: new Date().toISOString()
-        };
+        });
         
-        localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
         console.log(`Saved floor plan to localStorage for drawing ${drawingId}`);
         
         // Apply the image as a clip mask to the SVG path with multiple attempts
@@ -157,9 +167,6 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
         
         // Start the retry process
         setTimeout(tryApplyMask, 100);
-        
-        // Trigger a custom event to notify components that a floor plan was uploaded
-        window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { drawingId } }));
       }
     };
     

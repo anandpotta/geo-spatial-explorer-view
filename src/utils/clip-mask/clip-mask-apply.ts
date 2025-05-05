@@ -5,6 +5,7 @@
 import { toast } from 'sonner';
 import { storeOriginalAttributes } from './clip-mask-attributes';
 import { hasClipMaskApplied } from './clip-mask-checker';
+import { getCurrentUser } from '@/services/auth-service';
 
 // Track which drawings have been displayed with toasts to avoid duplicates
 const toastShown = new Set<string>();
@@ -21,6 +22,13 @@ export const applyImageClipMask = (
 ): boolean => {
   if (!pathElement || !imageUrl) {
     console.error('Cannot apply clip mask: missing path or image URL');
+    return false;
+  }
+  
+  // Get current user
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot apply clip mask: user not logged in');
     return false;
   }
   
@@ -104,6 +112,7 @@ export const applyImageClipMask = (
     pathElement.setAttribute('data-has-clip-mask', 'true');
     pathElement.setAttribute('data-last-updated', Date.now().toString());
     pathElement.setAttribute('data-drawing-id', id);
+    pathElement.setAttribute('data-user-id', currentUser.id);
     
     // Add a visible outline to help see the path
     pathElement.classList.add('visible-path-stroke');
