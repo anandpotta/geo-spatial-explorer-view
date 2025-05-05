@@ -18,8 +18,23 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const editControlRef = useRef<any>(null);
   
   // Use hooks for separated functionality
-  const { getPathElements, getSVGPathData } = usePathElements(featureGroup);
+  const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
+  
+  // Listen for clear all events
+  useEffect(() => {
+    const handleClearAllEvent = () => {
+      if (clearPathElements) {
+        clearPathElements();
+      }
+    };
+    
+    window.addEventListener('clearAllSvgPaths', handleClearAllEvent);
+    
+    return () => {
+      window.removeEventListener('clearAllSvgPaths', handleClearAllEvent);
+    };
+  }, [clearPathElements]);
   
   // Configure SVG renderer and optimize polygon drawing
   useEffect(() => {
@@ -141,7 +156,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   
   useImperativeHandle(ref, () => ({
     getPathElements,
-    getSVGPathData
+    getSVGPathData,
+    clearPathElements
   }));
 
   // Create draw-only options with edit/remove disabled

@@ -9,7 +9,11 @@ interface ClearAllHandlerProps {
 
 export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProps) {
   if (featureGroup) {
+    // Clear all visible layers from the map
     featureGroup.clearLayers();
+    
+    // Force SVG paths to be removed by triggering all relevant events
+    window.dispatchEvent(new Event('clearAllSvgPaths'));
     
     // Clear all markers from storage
     const markers = getSavedMarkers();
@@ -21,7 +25,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     const authState = localStorage.getItem('geospatial_auth_state');
     const users = localStorage.getItem('geospatial_users');
     
-    // Clear everything else from localStorage
+    // Completely clear localStorage
     localStorage.clear();
     
     // Restore authentication data
@@ -32,15 +36,25 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       localStorage.setItem('geospatial_users', users);
     }
     
+    // Forcefully clear specific storages that might be causing issues
+    localStorage.removeItem('savedDrawings');
+    localStorage.removeItem('savedMarkers');
+    localStorage.removeItem('floorPlans');
+    localStorage.removeItem('svgPaths');
+    
     // Dispatch storage and related events to notify components
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('markersUpdated'));
+    window.dispatchEvent(new Event('drawingsUpdated'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
+    
+    // Force a complete refresh of the map to ensure all elements are cleared
+    window.dispatchEvent(new Event('mapRefresh'));
     
     if (onClearAll) {
       onClearAll();
     }
     
-    toast.success('All data cleared while preserving user accounts');
+    toast.success('All map data cleared while preserving user accounts');
   }
 }

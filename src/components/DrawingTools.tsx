@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
@@ -95,15 +94,25 @@ const DrawingTools = ({
     if (featureGroup) {
       handleClearAll({ 
         featureGroup,
-        onClearAll
+        onClearAll: () => {
+          // Additional cleanup after clearing
+          if (onClearAll) {
+            onClearAll();
+          }
+          
+          // Force redraw of the map after a short delay
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 100);
+        }
       });
     } else {
-      // Fallback if featureGroup is not available
+      // Fallback if featureGroup is not available - perform direct localStorage clearing
       // Preserve authentication data
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
       
-      // Clear everything else
+      // Clear everything
       localStorage.clear();
       
       // Restore authentication data
@@ -114,15 +123,23 @@ const DrawingTools = ({
         localStorage.setItem('geospatial_users', users);
       }
       
+      // Forcefully clear specific storages that might be causing issues
+      localStorage.removeItem('savedDrawings');
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('floorPlans');
+      localStorage.removeItem('svgPaths');
+      
+      // Dispatch events to notify components
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));
+      window.dispatchEvent(new Event('drawingsUpdated'));
       window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
       
       if (onClearAll) {
         onClearAll();
       }
       
-      toast.success('All data cleared while preserving user accounts');
+      toast.success('All map data cleared while preserving user accounts');
     }
     
     setIsClearDialogOpen(false);

@@ -57,8 +57,36 @@ export function usePathElements(featureGroup: L.FeatureGroup) {
     return pathData;
   };
 
+  /**
+   * Clear all path elements in the map
+   */
+  const clearPathElements = (): void => {
+    if (featureGroup) {
+      const map = getMapFromLayer(featureGroup);
+      if (map) {
+        const container = map.getContainer();
+        if (container) {
+          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
+          svgElements.forEach(svg => {
+            // Clear out all paths
+            svg.querySelectorAll('path.leaflet-interactive').forEach(path => {
+              path.remove();
+            });
+            
+            // Also clear any clip paths or images
+            svg.querySelectorAll('clipPath, image').forEach(el => {
+              el.remove();
+            });
+          });
+        }
+      }
+    }
+  };
+
+  // Return all the functions
   return {
     getPathElements,
-    getSVGPathData
+    getSVGPathData,
+    clearPathElements
   };
 }

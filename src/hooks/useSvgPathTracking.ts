@@ -24,6 +24,25 @@ export function useSvgPathTracking({
   const lastPathsRef = useRef<string[]>([]);
   const updateCountRef = useRef(0);
 
+  // Handler for clear all event
+  useEffect(() => {
+    const handleClearAll = () => {
+      setSvgPaths([]);
+      lastPathsRef.current = [];
+      updateCountRef.current = 0;
+      if (onPathsUpdated) {
+        onPathsUpdated([]);
+      }
+      console.log('SVG paths cleared');
+    };
+    
+    window.addEventListener('clearAllSvgPaths', handleClearAll);
+    
+    return () => {
+      window.removeEventListener('clearAllSvgPaths', handleClearAll);
+    };
+  }, [onPathsUpdated]);
+
   // Periodically check for SVG paths when tools are active
   useEffect(() => {
     if (!isInitialized || !drawToolsRef.current) return;
