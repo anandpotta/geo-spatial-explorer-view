@@ -1,12 +1,11 @@
 
 import { useEffect } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
-import { toast } from 'sonner';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
   isInitialized: boolean;
-  activateEditMode: () => void;
+  activateEditMode: () => boolean;
 }
 
 const DrawingEffects: React.FC<DrawingEffectsProps> = ({ 
@@ -36,24 +35,19 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
   // Effect to activate edit mode when activeTool changes to 'edit'
   useEffect(() => {
     if (activeTool === 'edit' && isInitialized) {
-      // Use multiple attempts with increasing delays to ensure initialization
-      const attempts = [100, 300, 600, 1000];
-      
-      attempts.forEach((delay, index) => {
-        const timeoutId = setTimeout(() => {
-          try {
-            console.log(`Activating edit mode attempt ${index + 1} with delay ${delay}ms`);
-            activateEditMode();
-          } catch (err) {
-            console.error(`Error activating edit mode (attempt ${index + 1}):`, err);
-            if (index === attempts.length - 1) {
-              toast.error('Could not activate edit mode. Please try again.');
-            }
+      setTimeout(() => {
+        try {
+          console.log("Activating edit mode from effect");
+          const activated = activateEditMode();
+          if (activated) {
+            console.log("Edit mode successfully activated");
+          } else {
+            console.log("Failed to activate edit mode");
           }
-        }, delay);
-        
-        return () => clearTimeout(timeoutId);
-      });
+        } catch (err) {
+          console.error('Error activating edit mode:', err);
+        }
+      }, 300);
     }
   }, [activeTool, isInitialized, activateEditMode]);
 

@@ -11,6 +11,7 @@ import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingContro
 import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { extractSvgPaths, findAllPathsInMap, getAllMapPathData } from '@/utils/svg-path-utils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -53,7 +54,9 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
-    activateEditMode,
+    activateEditMode: () => {
+      return activateEditMode();
+    },
     openFileUploadDialog,
     getSvgPaths: () => {
       if (drawToolsRef.current) {

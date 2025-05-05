@@ -1,12 +1,13 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { hasFloorPlan, prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
+import { setupLayerClickHandlers } from './LayerEventHandlers';
+import { applyClipMaskToDrawing } from './ClipMaskManager';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -16,6 +17,7 @@ interface CreateLayerOptions {
   layersRef: Map<string, L.Layer>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
+  imageControlRoots: Map<string, any>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
@@ -29,6 +31,7 @@ export const createLayerFromDrawing = ({
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
+  imageControlRoots,
   onRegionClick,
   onRemoveShape,
   onUploadRequest
@@ -43,48 +46,24 @@ export const createLayerFromDrawing = ({
       return;
     }
 
-    const markers = getSavedMarkers();
-    const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
+    // Prepare layer options
+    const options = prepareLayerOptions(drawing);
     
-    const associatedMarker = markers.find(m => m.associatedDrawing === drawing.id);
-    const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
-    
-    const options = getDefaultDrawingOptions(drawing.properties.color);
-    if (hasFloorPlan) {
-      options.fillColor = '#3b82f6';
-      options.fillOpacity = 0.4;
-      options.color = '#1d4ed8';
-    }
-    
-    // Always ensure opacity is set to visible values
-    options.opacity = 1;
-    options.fillOpacity = options.fillOpacity || 0.2;
-    
-    // Remove transform property - it's not part of PathOptions
-    // Instead, ensure the layer is prepared for edit mode by other means
-    
-    const layer = createDrawingLayer(drawing, options);
+    // Create the layer
+    const layer = createGeoJSONLayer(drawing, options);
     
     if (layer) {
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
-          // Store drawing ID on the layer for reference
           (l as any).drawingId = drawing.id;
           
-          // Ensure each layer has editing capability
-          if (l instanceof L.Path && !(l as any).editing) {
-            (l as any).editing = new (L.Handler as any).PolyEdit(l);
-          }
-          
-          // Ensure the layer has necessary properties for edit mode
-          if ((l as any)._path) {
-            (l as any)._path.setAttribute('data-drawing-id', drawing.id);
-          }
+          // Add drawing ID attribute to the SVG path for identification
+          addDrawingAttributesToLayer(l, drawing.id);
           
           // Store the layer reference
           layersRef.set(drawing.id, l);
           
-          // Add the remove and upload buttons when in edit mode
+          // Add the remove, upload, and image control buttons when in edit mode
           if (onRemoveShape && onUploadRequest) {
             createLayerControls({
               layer: l,
@@ -93,6 +72,7 @@ export const createLayerFromDrawing = ({
               featureGroup,
               removeButtonRoots,
               uploadButtonRoots,
+              imageControlRoots,
               isMounted,
               onRemoveShape,
               onUploadRequest
@@ -100,24 +80,22 @@ export const createLayerFromDrawing = ({
           }
           
           // Make clicking on any shape trigger the click handler
-          if (onRegionClick && isMounted) {
-            l.on('click', (e) => {
-              // Stop event propagation to prevent map click
-              if (e.originalEvent) {
-                L.DomEvent.stopPropagation(e.originalEvent);
-              }
-              
-              if (isMounted) {
-                onRegionClick(drawing);
-              }
-            });
-          }
+          setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
         }
       });
       
       if (isMounted) {
         try {
           layer.addTo(featureGroup);
+          
+          // Apply clip mask if a floor plan exists
+          if (hasFloorPlan(drawing.id)) {
+            applyClipMaskToDrawing({
+              drawingId: drawing.id,
+              isMounted,
+              layer
+            });
+          }
         } catch (err) {
           console.error('Error adding layer to featureGroup:', err);
         }

@@ -4,7 +4,7 @@ import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer } from '@/utils/leaflet-type-utils';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -15,28 +15,13 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
+  const isEditModeActive = useRef<boolean>(false);
   
   // Force SVG renderer but in a safer way
   useEffect(() => {
-    // Add editing capability to all existing layers in the feature group
-    if (featureGroup) {
-      try {
-        featureGroup.eachLayer((layer: any) => {
-          if (layer && !layer.editing) {
-            // Ensure each layer has editing capability
-            if (layer instanceof L.Path) {
-              // Use type assertion for PolyEdit
-              layer.editing = new (L.Handler as any).PolyEdit(layer);
-            }
-          }
-        });
-      } catch (err) {
-        console.error('Error initializing layer editing:', err);
-      }
-    }
-    
-    // Override some Leaflet methods to ensure SVG rendering
-    const pathPrototype = L.Path.prototype as any;
+    // Instead of trying to modify the read-only property, configure the renderer
+    // when creating layers
+    const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
     const originalUpdatePath = pathPrototype._updatePath;
     
     pathPrototype._updatePath = function() {
@@ -44,13 +29,61 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         this.options.renderer = L.svg();
       }
       originalUpdatePath.call(this);
+      
+      // Add drawing ID to path element if available
+      if (this._path && this.drawingId) {
+        this._path.setAttribute('data-drawing-id', this.drawingId);
+        
+        // Also set specific fill-opacity for elements with images
+        if (this._path.getAttribute('data-has-clip-mask') === 'true') {
+          this._path.removeAttribute('fill-opacity');
+        }
+      }
     };
     
     return () => {
       // Restore original function when component unmounts
       pathPrototype._updatePath = originalUpdatePath;
     };
-  }, [featureGroup]);
+  }, []);
+  
+  // Handle switching between drawing and editing modes
+  useEffect(() => {
+    if (!editControlRef.current) return;
+    
+    // Safely check if edit mode should be activated or deactivated
+    const safelyToggleEditMode = () => {
+      if (!editControlRef.current) return;
+      
+      try {
+        const editControl = editControlRef.current;
+        const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+        
+        // When activeTool is 'edit', enable edit mode if it's not already active
+        if (activeTool === 'edit') {
+          if (editHandler && !isEditModeActive.current && typeof editHandler.enable === 'function') {
+            console.log('Activating edit mode');
+            editHandler.enable();
+            isEditModeActive.current = true;
+          }
+        } 
+        // When activeTool is not 'edit', disable edit mode if it's active
+        else if (isEditModeActive.current) {
+          if (editHandler && typeof editHandler.disable === 'function') {
+            console.log('Deactivating edit mode');
+            editHandler.disable();
+            isEditModeActive.current = false;
+          }
+        }
+      } catch (err) {
+        console.error('Error toggling edit mode:', err);
+      }
+    };
+    
+    // Use a delay to ensure the map is properly initialized
+    setTimeout(safelyToggleEditMode, 100);
+    
+  }, [activeTool, editControlRef.current]);
   
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
@@ -62,9 +95,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         if (map) {
           const container = map.getContainer();
           if (container) {
-            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
             svgElements.forEach(svg => {
-              const paths = svg.querySelectorAll('path');
+              const paths = svg.querySelectorAll('path.leaflet-interactive');
               paths.forEach(path => {
                 pathElements.push(path as SVGPathElement);
               });
@@ -82,17 +115,39 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         if (map) {
           const container = map.getContainer();
           if (container) {
-            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg');
+            const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
             svgElements.forEach(svg => {
-              const paths = svg.querySelectorAll('path');
+              const paths = svg.querySelectorAll('path.leaflet-interactive');
               paths.forEach(path => {
-                pathData.push(path.getAttribute('d') || '');
+                const d = path.getAttribute('d');
+                if (d) {
+                  pathData.push(d);
+                }
               });
             });
           }
         }
       }
       return pathData;
+    },
+    activateEditMode: () => {
+      try {
+        if (editControlRef.current) {
+          const editControl = editControlRef.current;
+          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+          
+          if (editHandler && typeof editHandler.enable === 'function') {
+            console.log('Manually activating edit mode');
+            editHandler.enable();
+            isEditModeActive.current = true;
+            return true;
+          }
+        }
+        return false;
+      } catch (err) {
+        console.error('Error manually activating edit mode:', err);
+        return false;
+      }
     }
   }));
 
@@ -105,18 +160,15 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         return;
       }
       
-      // Ensure the layer has editing capability
-      if (layer instanceof L.Path && !layer.editing) {
-        // Use type assertion for PolyEdit
-        layer.editing = new (L.Handler as any).PolyEdit(layer);
-      }
-      
       // Create a properly structured shape object
       let shape: any = { type: layerType, layer };
       
       // Extract SVG path data if available
       if (layer._path) {
         shape.svgPath = layer._path.getAttribute('d');
+        
+        // Ensure any path we create has a unique class for easier finding
+        layer._path.classList.add('leaflet-interactive-created');
       }
       
       // For markers, extract position information
@@ -160,18 +212,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   };
 
-  // Make sure we don't try to enable edit mode on non-existing layers
-  const editOptions = {
-    featureGroup: featureGroup,
-    edit: {
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
-      }
-    },
-    remove: true
-  };
-
   return (
     <EditControl
       ref={editControlRef}
@@ -185,7 +225,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         marker: true,
         polyline: false
       }}
-      edit={editOptions}
+      edit={{
+        remove: true,
+        edit: true
+      }}
       featureGroup={featureGroup}
     />
   );
