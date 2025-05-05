@@ -400,6 +400,17 @@ export function deleteFloorPlan(drawingId: string): void {
     if (floorPlans[drawingId] && floorPlans[drawingId].userId === currentUser.id) {
       delete floorPlans[drawingId];
       localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
+      
+      // Also remove from the user-specific storage
+      const storageKey = `floorPlanImages_${currentUser.id}`;
+      const existingJson = localStorage.getItem(storageKey);
+      if (existingJson) {
+        const existingUrls = JSON.parse(existingJson);
+        if (existingUrls[drawingId]) {
+          delete existingUrls[drawingId];
+          localStorage.setItem(storageKey, JSON.stringify(existingUrls));
+        }
+      }
     } else {
       console.warn('Cannot delete floor plan: Floor plan belongs to another user');
     }

@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, login as authLogin, logout as authLogout, getCurrentUser, isAuthenticated as checkAuth, initializeDefaultUsers } from '../services/auth-service';
 import { toast } from 'sonner';
+import { clearImageUrlCache } from '../utils/clip-mask/core/image-loading';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -39,9 +40,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = authLogin(username, password);
     
     if (user) {
+      // Clear image cache on login to ensure fresh data load
+      clearImageUrlCache();
+      
       setCurrentUser(user);
       setIsAuthenticated(true);
       toast.success(`Welcome, ${user.username}!`);
+      
+      // Trigger data reload for the new user
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      window.dispatchEvent(new Event('drawingsUpdated'));
+      
       return true;
     } else {
       toast.error('Invalid username or password');
@@ -53,6 +63,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     authLogout();
     setCurrentUser(null);
     setIsAuthenticated(false);
+    
+    // Clear image cache on logout
+    clearImageUrlCache();
+    
     toast.info('You have been logged out');
   };
   

@@ -4,8 +4,9 @@ import { toast } from 'sonner';
 import L from 'leaflet';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
-import { storeImageUrl } from '@/utils/clip-mask/core/image-loading';
+import { storeImageUrl, retrieveFloorPlanImageUrl } from '@/utils/clip-mask/core/image-loading';
 import { saveFloorPlan } from '@/utils/floor-plan-utils';
+import { getCurrentUser } from '@/services/auth-service';
 
 export function useFileUpload({ onUploadToDrawing }: { 
   onUploadToDrawing?: (drawingId: string, file: File) => void 
@@ -18,8 +19,15 @@ export function useFileUpload({ onUploadToDrawing }: {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0 && selectedDrawingId) {
       const file = e.target.files[0];
+      const currentUser = getCurrentUser();
       
-      console.log(`File selected: ${file.name} (${file.type}, ${file.size} bytes) for drawing ${selectedDrawingId}`);
+      if (!currentUser) {
+        toast.error('You must be logged in to upload images');
+        e.target.value = ''; // Reset file input
+        return;
+      }
+      
+      console.log(`File selected: ${file.name} (${file.type}, ${file.size} bytes) for drawing ${selectedDrawingId} by user ${currentUser.id}`);
       
       // Skip if currently processing this drawing ID
       if (processingRef.current.has(selectedDrawingId)) {
@@ -45,7 +53,7 @@ export function useFileUpload({ onUploadToDrawing }: {
       const imageUrl = URL.createObjectURL(file);
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
-      // Store the image URL in localStorage for future use
+      // Store the image URL in localStorage for future use, now with user ID association
       storeImageUrl(selectedDrawingId, imageUrl, file.name);
       
       // Also save as a floor plan for consistent storage
@@ -92,15 +100,16 @@ export function useFileUpload({ onUploadToDrawing }: {
               imageAppliedRef.current.add(selectedDrawingId);
               processingRef.current.delete(selectedDrawingId);
               
-              // Add data attribute for clip mask
+              // Add data attribute for clip mask with user ID
               svgPathElement.setAttribute('data-has-clip-mask', 'true');
               svgPathElement.setAttribute('data-image-url', imageUrl);
+              svgPathElement.setAttribute('data-user-id', currentUser.id);
               
               // Trigger a floor plan updated event to notify components
               setTimeout(() => {
                 window.dispatchEvent(new Event('resize'));
                 window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-                  detail: { drawingId: selectedDrawingId, freshlyUploaded: true } 
+                  detail: { drawingId: selectedDrawingId, userId: currentUser.id, freshlyUploaded: true } 
                 }));
               }, 200);
             } else {

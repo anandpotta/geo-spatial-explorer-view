@@ -23,9 +23,16 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Load existing markers on mount
+  // Load existing markers and drawings when user changes or auth state changes
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !currentUser) {
+      // Clear data when user logs out
+      setMarkers([]);
+      setDrawings([]);
+      return;
+    }
+    
+    console.log(`Loading data for user: ${currentUser.id}`);
     
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
@@ -35,24 +42,42 @@ export function useMapState(selectedLocation?: Location) {
     
     // Listen for marker updates
     const handleMarkersUpdated = () => {
-      setMarkers(getSavedMarkers());
+      if (isAuthenticated && currentUser) {
+        setMarkers(getSavedMarkers());
+      }
     };
 
     // Listen for drawing updates
     const handleDrawingsUpdated = () => {
-      setDrawings(getSavedDrawings());
+      if (isAuthenticated && currentUser) {
+        setDrawings(getSavedDrawings());
+      }
+    };
+    
+    // Listen for floor plan updates
+    const handleFloorPlanUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.drawingId) {
+        console.log(`Floor plan updated for drawing ${customEvent.detail.drawingId}, triggering refresh`);
+        // Trigger a refresh of the drawings
+        handleDrawingsUpdated();
+      }
     };
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
     window.addEventListener('storage', handleMarkersUpdated);
     window.addEventListener('storage', handleDrawingsUpdated);
+    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
       window.removeEventListener('storage', handleMarkersUpdated);
       window.removeEventListener('storage', handleDrawingsUpdated);
+      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentUser]);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -64,7 +89,7 @@ export function useMapState(selectedLocation?: Location) {
   }, []);
 
   const handleSaveMarker = () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !currentUser) {
       toast.error('Please log in to save locations');
       return;
     }
@@ -78,7 +103,7 @@ export function useMapState(selectedLocation?: Location) {
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: currentUser?.id || '' // Add userId
+      userId: currentUser.id
     };
     
     // Save the marker
@@ -99,7 +124,7 @@ export function useMapState(selectedLocation?: Location) {
           name: markerName,
           associatedMarkerId: newMarker.id
         },
-        userId: currentUser?.id || '' // Add userId
+        userId: currentUser.id
       };
       
       // Save or update the drawing but don't clear it from the map
@@ -109,10 +134,6 @@ export function useMapState(selectedLocation?: Location) {
     // Clear the temporary marker to allow placing a new one
     setTempMarker(null);
     setMarkerName('');
-    
-    // Important: Don't reset currentDrawing here, 
-    // this keeps the connection between marker and drawing
-    // and prevents the drawing from disappearing
     
     // Update the markers state with the new marker
     setMarkers(getSavedMarkers());
