@@ -19,6 +19,7 @@ interface LeafletMapInternal extends L.Map {
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap() as LeafletMapInternal;
   const hasCalledOnReady = useRef(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     // Only call onMapReady once per instance
@@ -26,7 +27,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       console.log('Map is ready, will call onMapReady after initialization');
       
       // Wait until the map is fully initialized before calling onMapReady
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         try {
           // Check if map container still exists and is attached to DOM
           if (map && map.getContainer() && document.body.contains(map.getContainer())) {
@@ -56,8 +57,22 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         }
       }, 300); // Increase timeout to ensure map is initialized
       
-      return () => clearTimeout(timer);
+      return () => {
+        // Clear timeout on unmount to prevent memory leaks
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      };
     }
+    
+    // Cleanup function for the effect
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [map, onMapReady]);
   
   return null;

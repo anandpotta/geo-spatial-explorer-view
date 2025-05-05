@@ -30,7 +30,8 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     isMapReady, 
     mapInstanceKey, 
     handleSetMapRef, 
-    handleLocationSelect 
+    handleLocationSelect,
+    forceMapRemount
   } = useLeafletMapInitialization({
     selectedLocation,
     onMapReady
@@ -45,7 +46,26 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   useEffect(() => {
     const savedMarkers = getSavedMarkers();
     mapState.setMarkers(savedMarkers);
+    
+    // Force map remount when selectedLocation changes
+    return () => {
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+          mapRef.current = null;
+        } catch (err) {
+          console.error("Error cleaning up map on unmount:", err);
+        }
+      }
+    };
   }, []);
+
+  // If selectedLocation changes, force remount of the map to prevent container reuse issues
+  useEffect(() => {
+    if (selectedLocation) {
+      forceMapRemount();
+    }
+  }, [selectedLocation, forceMapRemount]);
 
   const handleClearAll = useCallback(() => {
     mapState.setTempMarker(null);

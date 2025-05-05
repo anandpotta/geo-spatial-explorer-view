@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../CesiumMap';
-import LeafletMap from '../map/LeafletMap'; // Update the import path
+import LeafletMap from '../map/LeafletMap';
 import DrawingTools from '../DrawingTools';
 import LocationSearch from '../LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
@@ -27,10 +27,15 @@ const MapContent = ({
   const leafletMapRef = useRef<any>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
+  const prevViewRef = useRef<string>(currentView);
   
   // Reset map instance when view changes
   useEffect(() => {
-    setMapKey(Date.now());
+    if (prevViewRef.current !== currentView) {
+      console.log(`View changed from ${prevViewRef.current} to ${currentView}, forcing remount`);
+      setMapKey(Date.now());
+      prevViewRef.current = currentView;
+    }
   }, [currentView]);
 
   const handleCesiumViewerRef = (viewer: any) => {
@@ -107,6 +112,9 @@ const MapContent = ({
     }
   };
 
+  const leafletKey = `leaflet-${mapKey}-${currentView === 'leaflet' ? 'active' : 'inactive'}`;
+  const cesiumKey = `cesium-${mapKey}-${currentView === 'cesium' ? 'active' : 'inactive'}`;
+
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
       <div className="relative w-full h-full">
@@ -130,7 +138,7 @@ const MapContent = ({
               onMapReady={onMapReady}
               onFlyComplete={onFlyComplete}
               cinematicFlight={true}
-              key={`cesium-${mapKey}`}
+              key={cesiumKey}
               onViewerReady={handleCesiumViewerRef}
             />
           )}
@@ -148,7 +156,7 @@ const MapContent = ({
               selectedLocation={selectedLocation} 
               onMapReady={handleLeafletMapRef}
               activeTool={activeTool}
-              key={`leaflet-${mapKey}`}
+              key={leafletKey}
               onClearAll={handleClearAll}
             />
           )}

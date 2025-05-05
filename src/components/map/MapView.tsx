@@ -89,8 +89,9 @@ const MapView = ({
     );
   }
 
-  // Use unique containerKey to ensure React properly unmounts/remounts
-  // the MapContainer when needed
+  // Ensure each MapContainer has a truly unique ID
+  const uniqueContainerId = `${containerKey}-${Date.now()}`;
+  
   return (
     <div className="w-full h-full relative">
       <div className="absolute top-4 right-4 z-[1000]">
@@ -101,8 +102,8 @@ const MapView = ({
       </div>
       
       <MapContainer 
-        key={containerKey}
-        id={containerKey}
+        key={uniqueContainerId}
+        id={uniqueContainerId}
         className="w-full h-full"
         attributionControl={false}
         center={position}
@@ -114,7 +115,7 @@ const MapView = ({
         whenReady={() => {
           // Force immediate resize to ensure proper container dimensions
           setTimeout(() => {
-            const mapInstance = document.getElementById(containerKey);
+            const mapInstance = document.getElementById(uniqueContainerId);
             if (mapInstance) {
               // Trigger a resize event to ensure map renders correctly
               window.dispatchEvent(new Event('resize'));

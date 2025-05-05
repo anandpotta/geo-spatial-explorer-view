@@ -16,14 +16,25 @@ export const useLeafletMapInitialization = ({
   const mapRef = useRef<L.Map | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapInstanceKey, setMapInstanceKey] = useState<string>(`map-container-${Date.now()}`);
+  const containerRefHistory = useRef<Set<string>>(new Set());
   
   // Map reference initialization function with proper cleanup
   const handleSetMapRef = useCallback((map: L.Map) => {
-    console.log('Map reference provided');
+    console.log('Map reference provided, container ID:', map._container?.id);
     
+    // Store the container ID to track it
+    if (map._container?.id) {
+      containerRefHistory.current.add(map._container.id);
+    }
+    
+    // Cleanup any existing map before setting the new one
     if (mapRef.current) {
       console.log('Map reference already exists, removing previous instance');
-      mapRef.current.remove();
+      try {
+        mapRef.current.remove();
+      } catch (err) {
+        console.warn('Error removing previous map instance:', err);
+      }
       mapRef.current = null;
     }
     
@@ -66,6 +77,7 @@ export const useLeafletMapInitialization = ({
         console.error('Error flying to location:', err);
         // Reset map instance if there's an error
         mapRef.current = null;
+        // Generate a new key to force remounting of the map component
         setMapInstanceKey(`map-container-${Date.now()}`);
       }
     }
@@ -77,11 +89,36 @@ export const useLeafletMapInitialization = ({
       // Proper cleanup when component unmounts
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance on component unmount');
-        mapRef.current.remove();
-        mapRef.current = null;
+        try {
+          // Use setTimeout to ensure we're not removing the map while it's still being used
+          setTimeout(() => {
+            if (mapRef.current) {
+              mapRef.current.remove();
+              mapRef.current = null;
+            }
+          }, 0);
+        } catch (err) {
+          console.error('Error cleaning up map:', err);
+        }
         setIsMapReady(false);
       }
     };
+  }, []);
+  
+  // Force map remount when view changes
+  const forceMapRemount = useCallback(() => {
+    if (mapRef.current) {
+      try {
+        mapRef.current.remove();
+      } catch (err) {
+        console.warn('Error removing map during forced remount:', err);
+      }
+      mapRef.current = null;
+    }
+    
+    // Generate a new unique key to force remounting
+    setMapInstanceKey(`map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+    setIsMapReady(false);
   }, []);
   
   // Handle location selection
@@ -117,6 +154,7 @@ export const useLeafletMapInitialization = ({
     isMapReady,
     mapInstanceKey,
     handleSetMapRef,
-    handleLocationSelect
+    handleLocationSelect,
+    forceMapRemount
   };
 };
