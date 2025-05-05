@@ -1,9 +1,12 @@
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import L from 'leaflet';
-import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
 import { ImageTransformOptions } from '@/utils/image-transform-utils';
+import { useDrawControlsVisibility } from './useDrawControlsVisibility';
+import { useLayerEventListeners } from './useLayerEventListeners';
+import { useDrawControlInteractions } from './useDrawControlInteractions';
+import { updateLayers as updateLayerUtil } from '@/utils/layer-update-utils';
 
 interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;
@@ -20,6 +23,9 @@ interface LayerUpdatesProps {
   onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void;
 }
 
+/**
+ * Hook to manage layer updates and control visibility
+ */
 export function useLayerUpdates({
   featureGroup,
   savedDrawings,
@@ -34,170 +40,56 @@ export function useLayerUpdates({
   onUploadRequest,
   onImageTransform
 }: LayerUpdatesProps) {
-  const safelyUnmountRoot = (root: any) => {
-    if (!root) return;
-    try {
-      if (root.unmount && typeof root.unmount === 'function') {
-        root.unmount();
-      }
-    } catch (err) {
-      console.error('Error unmounting root:', err);
-    }
-  };
+  // Use the drawing controls visibility hook
+  const { ensureDrawControlsVisibility } = useDrawControlsVisibility();
   
-  const ensureDrawControlsVisibility = () => {
-    try {
-      // Make drawing controls visible
-      const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
-      drawControls.forEach(control => {
-        (control as HTMLElement).style.display = 'block';
-        (control as HTMLElement).style.visibility = 'visible';
-        (control as HTMLElement).style.opacity = '1';
-        (control as HTMLElement).style.zIndex = '12000';
-        (control as HTMLElement).style.pointerEvents = 'auto';
-      });
-      
-      // Ensure toolbar is visible
-      const toolbars = document.querySelectorAll('.leaflet-draw-toolbar');
-      toolbars.forEach(toolbar => {
-        (toolbar as HTMLElement).style.display = 'block';
-        (toolbar as HTMLElement).style.visibility = 'visible';
-        (toolbar as HTMLElement).style.opacity = '1';
-        (toolbar as HTMLElement).style.zIndex = '12000';
-        (toolbar as HTMLElement).style.pointerEvents = 'auto';
-      });
-      
-      // Ensure toolbar buttons are clickable
-      const buttons = document.querySelectorAll('.leaflet-draw-toolbar a');
-      buttons.forEach(button => {
-        (button as HTMLElement).style.display = 'block';
-        (button as HTMLElement).style.visibility = 'visible';
-        (button as HTMLElement).style.opacity = '1';
-        (button as HTMLElement).style.pointerEvents = 'auto';
-        (button as HTMLElement).style.cursor = 'pointer';
-      });
-      
-      // Fix control container z-index
-      const controlContainer = document.querySelector('.leaflet-control-container');
-      if (controlContainer) {
-        (controlContainer as HTMLElement).style.zIndex = '10000';
-      }
-    } catch (err) {
-      console.error('Error ensuring draw controls visibility:', err);
-    }
-  };
+  // Create a memoized update layers function
+  const updateLayers = useCallback(() => {
+    updateLayerUtil({
+      featureGroup,
+      savedDrawings,
+      activeTool,
+      isMountedRef: isMountedRef.current,
+      layersRef: layersRef.current,
+      removeButtonRoots: removeButtonRoots.current,
+      uploadButtonRoots: uploadButtonRoots.current,
+      imageControlsRoots: imageControlsRoots.current,
+      ensureDrawControlsVisibility,
+      onRegionClick,
+      onRemoveShape,
+      onUploadRequest,
+      onImageTransform
+    });
+  }, [
+    featureGroup,
+    savedDrawings,
+    activeTool,
+    isMountedRef,
+    layersRef,
+    removeButtonRoots,
+    uploadButtonRoots,
+    imageControlsRoots,
+    ensureDrawControlsVisibility,
+    onRegionClick,
+    onRemoveShape,
+    onUploadRequest,
+    onImageTransform
+  ]);
   
-  const updateLayers = () => {
-    if (!featureGroup || !isMountedRef.current) return;
-    
-    try {
-      // Safely clear existing layers with proper error handling
-      try {
-        featureGroup.clearLayers();
-      } catch (err) {
-        console.error('Error clearing feature group layers:', err);
-      }
-      
-      // Safely unmount all React roots
-      removeButtonRoots.current.forEach(root => {
-        safelyUnmountRoot(root);
-      });
-      removeButtonRoots.current.clear();
-      
-      uploadButtonRoots.current.forEach(root => {
-        safelyUnmountRoot(root);
-      });
-      uploadButtonRoots.current.clear();
-      
-      imageControlsRoots.current.forEach(root => {
-        safelyUnmountRoot(root);
-      });
-      imageControlsRoots.current.clear();
-      
-      layersRef.current.clear();
-      
-      // Create layers for each drawing
-      savedDrawings.forEach(drawing => {
-        try {
-          createLayerFromDrawing({
-            drawing,
-            featureGroup,
-            activeTool,
-            isMounted: isMountedRef.current,
-            layersRef: layersRef.current,
-            removeButtonRoots: removeButtonRoots.current,
-            uploadButtonRoots: uploadButtonRoots.current,
-            imageControlsRoots: imageControlsRoots.current,
-            onRegionClick,
-            onRemoveShape,
-            onUploadRequest,
-            onImageTransform
-          });
-        } catch (err) {
-          console.error(`Error creating layer for drawing ${drawing.id}:`, err);
-        }
-      });
-      
-      // Always ensure drawing controls remain visible after layer updates
-      setTimeout(() => {
-        ensureDrawControlsVisibility();
-      }, 100);
-    } catch (err) {
-      console.error('Error updating layers:', err);
-    }
-  };
+  // Use the layer event listeners hook
+  useLayerEventListeners({
+    isMountedRef,
+    updateLayers,
+    ensureDrawControlsVisibility
+  });
+  
+  // Use the draw control interactions hook
+  useDrawControlInteractions({
+    isMountedRef,
+    ensureDrawControlsVisibility
+  });
 
-  // Listen for marker updates to ensure drawings stay visible
-  useEffect(() => {
-    const handleMarkerUpdated = () => {
-      if (isMountedRef.current) {
-        // Small delay to ensure storage is updated first
-        setTimeout(updateLayers, 50);
-      }
-    };
-    
-    const handleImageUpdated = () => {
-      if (isMountedRef.current) {
-        // Update layers when an image is uploaded or changed
-        setTimeout(updateLayers, 50);
-      }
-    };
-    
-    const handleFloorPlanUpdated = (event: CustomEvent) => {
-      if (isMountedRef.current) {
-        // Update layers when a floor plan is uploaded or changed
-        console.log('Floor plan updated for drawing:', event.detail?.drawingId);
-        setTimeout(updateLayers, 50);
-      }
-    };
-    
-    // Add event listener for z-index interference
-    const handleZIndexChange = () => {
-      if (!isMountedRef.current) return;
-      ensureDrawControlsVisibility();
-    };
-    
-    window.addEventListener('markersUpdated', handleMarkerUpdated);
-    window.addEventListener('image-uploaded', handleImageUpdated as EventListener);
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
-    window.addEventListener('click', handleZIndexChange);
-    
-    // Create an interval to periodically check and ensure controls remain visible
-    const visibilityInterval = setInterval(() => {
-      if (isMountedRef.current) {
-        ensureDrawControlsVisibility();
-      }
-    }, 500);
-    
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkerUpdated);
-      window.removeEventListener('image-uploaded', handleImageUpdated as EventListener);
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
-      window.removeEventListener('click', handleZIndexChange);
-      clearInterval(visibilityInterval);
-    };
-  }, []);
-
+  // Effect for updating layers when savedDrawings or activeTool changes
   useEffect(() => {
     if (!featureGroup || !isMountedRef.current) return;
     
@@ -218,57 +110,10 @@ export function useLayerUpdates({
     
     window.addEventListener('storage', handleStorageChange);
     
-    // Add event listeners for interactions with drawing controls
-    const handleDrawControlInteraction = (e: MouseEvent) => {
-      // Prevent any default behavior that might interfere
-      e.stopPropagation();
-      
-      // Ensure drawing controls remain visible
-      setTimeout(ensureDrawControlsVisibility, 50);
-    };
-    
-    // Add listeners to draw control elements
-    const addDrawControlListeners = () => {
-      const drawControls = document.querySelectorAll('.leaflet-draw-toolbar a');
-      drawControls.forEach(button => {
-        button.addEventListener('mousedown', handleDrawControlInteraction);
-        button.addEventListener('click', handleDrawControlInteraction);
-        button.addEventListener('mouseenter', ensureDrawControlsVisibility);
-      });
-    };
-    
-    // Initial setup of listeners
-    setTimeout(addDrawControlListeners, 500);
-    
-    // Set up an interval to ensure controls remain visible and listeners are attached
-    const controlsInterval = setInterval(() => {
-      if (!isMountedRef.current) return;
-      ensureDrawControlsVisibility();
-      addDrawControlListeners();
-    }, 1000);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(controlsInterval);
-      
-      // Clean up draw control listeners
-      const drawControls = document.querySelectorAll('.leaflet-draw-toolbar a');
-      drawControls.forEach(button => {
-        button.removeEventListener('mousedown', handleDrawControlInteraction);
-        button.removeEventListener('click', handleDrawControlInteraction);
-        button.removeEventListener('mouseenter', ensureDrawControlsVisibility);
-      });
-      
-      // Only try to clear layers if the featureGroup is still valid
-      if (featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {
-        try {
-          featureGroup.clearLayers();
-        } catch (err) {
-          console.error('Error clearing layers on unmount:', err);
-        }
-      }
     };
-  }, [savedDrawings, activeTool]);
+  }, [featureGroup, savedDrawings, activeTool, isMountedRef, updateLayers]);
 
   return { updateLayers, ensureDrawControlsVisibility };
 }
