@@ -137,8 +137,9 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         
         // Also check for attribute changes on image controls
         if (mutation.type === 'attributes' && 
-            (mutation.target.classList.contains('image-controls-wrapper') || 
-             mutation.target.classList.contains('image-controls-container'))) {
+            mutation.target instanceof Element && (
+            mutation.target.classList.contains('image-controls-wrapper') || 
+            mutation.target.classList.contains('image-controls-container'))) {
           needsCheck = true;
         }
       });
