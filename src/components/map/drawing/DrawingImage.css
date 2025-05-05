@@ -11,12 +11,14 @@
 }
 
 .leaflet-drawing-image {
-  display: block;
+  display: block !important;
   max-width: 100%;
   max-height: 100%;
   pointer-events: auto;
   object-fit: contain;
   transition: transform 0.1s ease-out;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* Always make image controls visible */

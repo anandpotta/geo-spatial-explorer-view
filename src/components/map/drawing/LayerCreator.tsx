@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
@@ -203,10 +202,6 @@ const addImageToLayer = (
     
     // Create and add image element with improved positioning
     const imgElement = createImageElement(imageData, (img) => {
-      // Get the path's bounding box for positioning
-      const pathRect = pathElement.getBoundingClientRect();
-      const svgRect = svgElement.getBoundingClientRect();
-      
       // Initial positioning
       updatePosition();
       
@@ -291,7 +286,6 @@ const addImageToLayer = (
       }
       
       // Remove map event listeners
-      const map = (layer as any)._map;
       if (map) {
         map.off('zoom move moveend', updatePosition);
       }

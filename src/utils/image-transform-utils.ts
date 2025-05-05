@@ -22,10 +22,11 @@ export const transformImage = (
     scale(${scale})
   `;
   
-  // Ensure image is visible
+  // Ensure image is fully visible with no transparency
   imgElement.style.display = 'block';
   imgElement.style.opacity = '1';
   imgElement.style.visibility = 'visible';
+  imgElement.style.objectFit = 'contain';
   
   // Log transformation for debugging
   console.log(`Applied transform: rotation=${rotation}, scale=${scale}, translateX=${translateX}, translateY=${translateY}`);
@@ -72,6 +73,9 @@ export const createImageElement = (
   img.style.display = 'block'; // Ensure image is visible
   img.style.opacity = '1';
   img.style.visibility = 'visible';
+  img.style.objectFit = 'contain';
+  img.style.maxWidth = '100%';
+  img.style.maxHeight = '100%';
   img.alt = "Drawing image";
   
   // Add console log to debug image loading
