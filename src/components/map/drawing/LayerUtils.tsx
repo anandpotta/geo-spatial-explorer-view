@@ -1,17 +1,17 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { getDrawingIdsWithFloorPlans, hasFloorPlan } from '@/utils/floor-plan-utils';
 
 /**
  * Prepares options for drawing layers
  */
-export const prepareLayerOptions = (drawing: DrawingData): L.PathOptions => {
-  const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
-  const hasFloorPlan = drawingsWithFloorPlans.includes(drawing.id);
+export const prepareLayerOptions = async (drawing: DrawingData): Promise<L.PathOptions> => {
+  // Check if this drawing has a floor plan
+  const hasFloorPlanApplied = await hasFloorPlan(drawing.id);
   
   const options = getDefaultDrawingOptions(drawing.properties?.color || '#33C3F0');
-  if (hasFloorPlan) {
+  if (hasFloorPlanApplied) {
     options.fillColor = '#3b82f6';
     options.fillOpacity = 1; // Always use full opacity for images
     options.color = '#33C3F0';
@@ -19,7 +19,7 @@ export const prepareLayerOptions = (drawing: DrawingData): L.PathOptions => {
   
   // Always ensure opacity is set to visible values
   options.opacity = 1;
-  if (!hasFloorPlan) {
+  if (!hasFloorPlanApplied) {
     options.fillOpacity = options.fillOpacity || 0.2;
   }
   
@@ -156,7 +156,6 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
 /**
  * Checks if a drawing has a floor plan
  */
-export const hasFloorPlan = (drawingId: string): boolean => {
-  const drawingsWithFloorPlans = getDrawingIdsWithFloorPlans();
-  return drawingsWithFloorPlans.includes(drawingId);
+export const hasFloorPlan = async (drawingId: string): Promise<boolean> => {
+  return await hasFloorPlan(drawingId);
 };

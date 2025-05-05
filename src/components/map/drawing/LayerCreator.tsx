@@ -1,12 +1,14 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
-import { hasFloorPlan, prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
+import { prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
 import { applyClipMaskToDrawing } from './clip-mask';
+import { hasFloorPlan } from '@/utils/floor-plan-utils';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -27,7 +29,7 @@ const layersCreated = new Map<string, number>();
 // Track floor plan applications to prevent repeated attempts
 const floorPlanApplied = new Map<string, number>();
 
-export const createLayerFromDrawing = ({
+export const createLayerFromDrawing = async ({
   drawing,
   featureGroup,
   activeTool,
@@ -72,8 +74,8 @@ export const createLayerFromDrawing = ({
       return;
     }
 
-    // Prepare layer options
-    const options = prepareLayerOptions(drawing);
+    // Prepare layer options - this is now async
+    const options = await prepareLayerOptions(drawing);
     
     // Create the layer
     const layer = createGeoJSONLayer(drawing, options);
@@ -127,7 +129,7 @@ export const createLayerFromDrawing = ({
       const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
       
       // Add a small delay before applying clip mask to ensure the path is rendered
-      if (hasFloorPlan(drawing.id) && isMounted && shouldApply) {
+      if (await hasFloorPlan(drawing.id) && isMounted && shouldApply) {
         floorPlanApplied.set(drawing.id, now);
         
         setTimeout(() => {

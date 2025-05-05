@@ -16,21 +16,29 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   const [isPdf, setIsPdf] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
   // Check if there's a saved floor plan for this building in localStorage
   useEffect(() => {
     if (drawing?.id) {
-      const savedFloorPlan = getFloorPlanById(drawing.id);
-      if (savedFloorPlan) {
-        setSelectedImage(savedFloorPlan.data);
-        setIsPdf(savedFloorPlan.isPdf);
-        setFileName(savedFloorPlan.fileName);
-      } else {
-        // Reset state if no floor plan is found
-        setSelectedImage(null);
-        setIsPdf(false);
-        setFileName('');
-      }
+      setIsLoading(true);
+      
+      const loadFloorPlan = async () => {
+        const savedFloorPlan = await getFloorPlanById(drawing.id);
+        if (savedFloorPlan) {
+          setSelectedImage(savedFloorPlan.data);
+          setIsPdf(savedFloorPlan.isPdf);
+          setFileName(savedFloorPlan.fileName);
+        } else {
+          // Reset state if no floor plan is found
+          setSelectedImage(null);
+          setIsPdf(false);
+          setFileName('');
+        }
+        setIsLoading(false);
+      };
+      
+      loadFloorPlan();
     }
   }, [drawing]);
   
@@ -144,7 +152,12 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         </label>
       </div>
       <div className="w-full h-full flex items-center justify-center bg-black/5">
-        {selectedImage ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-8 w-8 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin"></div>
+            <p>Loading floor plan...</p>
+          </div>
+        ) : selectedImage ? (
           <div className="space-y-4 text-center max-w-[90%]">
             <h2 className="text-xl font-semibold">
               {drawing?.properties?.name || 'Floor Plan View'} 
