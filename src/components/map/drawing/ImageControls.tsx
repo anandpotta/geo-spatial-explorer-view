@@ -1,138 +1,77 @@
 
-import React from 'react';
-import { RotateCw, RotateCcw, Shrink, Trash } from 'lucide-react';
-import { toast } from 'sonner';
-import { 
-  rotateImageInClipMask, 
-  scaleImageInClipMask, 
-  removeClipMask, 
-  findSvgPathByDrawingId 
-} from '@/utils/svg-clip-mask';
+import React, { useState, useEffect } from 'react';
+import RotationControls from './image-controls/RotationControls';
+import ScalingControls from './image-controls/ScalingControls';
+import MovementControls from './image-controls/MovementControls';
+import ResetControl from './image-controls/ResetControl';
+import RemoveControl from './image-controls/RemoveControl';
+import ImageControlsExpander from './image-controls/ImageControlsExpander';
+import { MOVEMENT_STEP, ROTATION_STEP, SCALE_FACTOR, SCALE_UP_FACTOR } from './image-controls/constants';
 
 interface ImageControlsProps {
   drawingId: string;
   onRemoveShape?: (drawingId: string) => void;
+  alwaysExpanded?: boolean;
 }
 
-const ImageControls = ({ drawingId, onRemoveShape }: ImageControlsProps) => {
-  const rotateLeft = () => {
-    try {
-      const pathElement = findSvgPathByDrawingId(drawingId);
-      if (pathElement) {
-        rotateImageInClipMask(pathElement, -15);
-        toast.success('Image rotated left');
-        
-        // Force redraw
-        window.dispatchEvent(new Event('resize'));
-      } else {
-        console.error('Path element not found for rotation');
-        toast.error('Could not find image to rotate');
+/**
+ * Container component for image manipulation controls
+ */
+const ImageControls = ({ drawingId, onRemoveShape, alwaysExpanded = false }: ImageControlsProps) => {
+  // Default to expanded state to show all controls
+  const [expanded, setExpanded] = useState(true);
+  
+  // Use effect to ensure controls remain visible
+  useEffect(() => {
+    // Make sure controls are visible after a short delay
+    const timer = setTimeout(() => {
+      const wrapper = document.querySelector(`.image-controls-wrapper`);
+      if (wrapper) {
+        (wrapper as HTMLElement).style.opacity = '1';
+        (wrapper as HTMLElement).style.visibility = 'visible';
+        (wrapper as HTMLElement).style.display = 'block';
       }
-    } catch (err) {
-      console.error('Error rotating image left:', err);
-      toast.error('Failed to rotate image');
-    }
-  };
-
-  const rotateRight = () => {
-    try {
-      const pathElement = findSvgPathByDrawingId(drawingId);
-      if (pathElement) {
-        rotateImageInClipMask(pathElement, 15);
-        toast.success('Image rotated right');
-        
-        // Force redraw
-        window.dispatchEvent(new Event('resize'));
-      } else {
-        console.error('Path element not found for rotation');
-        toast.error('Could not find image to rotate');
-      }
-    } catch (err) {
-      console.error('Error rotating image right:', err);
-      toast.error('Failed to rotate image');
-    }
-  };
-
-  const shrinkImage = () => {
-    try {
-      const pathElement = findSvgPathByDrawingId(drawingId);
-      if (pathElement) {
-        scaleImageInClipMask(pathElement, 0.8);
-        toast.success('Image scaled down');
-        
-        // Force redraw
-        window.dispatchEvent(new Event('resize'));
-      } else {
-        console.error('Path element not found for scaling');
-        toast.error('Could not find image to scale');
-      }
-    } catch (err) {
-      console.error('Error scaling image:', err);
-      toast.error('Failed to scale image');
-    }
-  };
-
-  const removeImage = () => {
-    try {
-      const pathElement = findSvgPathByDrawingId(drawingId);
-      if (pathElement) {
-        removeClipMask(pathElement);
-        toast.success('Image removed from path');
-        
-        // Remove floor plan from localStorage
-        const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
-        if (floorPlans[drawingId]) {
-          delete floorPlans[drawingId];
-          localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
-        }
-        
-        // Force redraw
-        window.dispatchEvent(new Event('resize'));
-        
-        // Call the parent remove handler if provided
-        if (onRemoveShape) {
-          onRemoveShape(drawingId);
-        }
-      } else {
-        console.error('Path element not found for removal');
-        toast.error('Could not find image to remove');
-      }
-    } catch (err) {
-      console.error('Error removing image:', err);
-      toast.error('Failed to remove image');
-    }
-  };
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <div className="image-controls-container flex flex-col gap-1 bg-white/75 backdrop-blur-sm p-1 rounded-md shadow-md">
-      <button 
-        onClick={rotateLeft}
-        className="p-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-        aria-label="Rotate Left"
-      >
-        <RotateCcw size={16} />
-      </button>
-      <button 
-        onClick={rotateRight}
-        className="p-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-        aria-label="Rotate Right"
-      >
-        <RotateCw size={16} />
-      </button>
-      <button 
-        onClick={shrinkImage}
-        className="p-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-        aria-label="Shrink Image"
-      >
-        <Shrink size={16} />
-      </button>
-      <button 
-        onClick={removeImage}
-        className="p-1 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
-        aria-label="Remove Image"
-      >
-        <Trash size={16} />
-      </button>
+    <div className="image-controls-container flex flex-col gap-1 bg-white/90 backdrop-blur-sm p-2 rounded-md shadow-md border border-gray-200">
+      {!alwaysExpanded && (
+        <ImageControlsExpander expanded={expanded} setExpanded={setExpanded} />
+      )}
+      
+      <div className="flex flex-col gap-1.5">
+        {/* Always visible controls */}
+        <RotationControls 
+          drawingId={drawingId}
+          rotationStep={ROTATION_STEP} 
+        />
+        
+        <ScalingControls 
+          drawingId={drawingId}
+          scaleDownFactor={SCALE_FACTOR}
+          scaleUpFactor={SCALE_UP_FACTOR}
+        />
+        
+        {/* Extended controls - now always shown */}
+        {(expanded || alwaysExpanded) && (
+          <>
+            <MovementControls 
+              drawingId={drawingId}
+              movementStep={MOVEMENT_STEP}
+            />
+            
+            <ResetControl drawingId={drawingId} />
+          </>
+        )}
+        
+        <RemoveControl 
+          drawingId={drawingId}
+          onRemoveShape={onRemoveShape}
+        />
+      </div>
     </div>
   );
 };

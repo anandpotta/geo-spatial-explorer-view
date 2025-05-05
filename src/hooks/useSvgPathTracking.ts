@@ -1,7 +1,9 @@
 
 import { useState, useEffect, RefObject } from 'react';
+import { getMapFromLayer } from '@/utils/leaflet-type-utils';
+import { toast } from 'sonner';
 
-interface SvgPathTrackingProps {
+interface UseSvgPathTrackingProps {
   isInitialized: boolean;
   drawToolsRef: RefObject<any>;
   mountedRef: RefObject<boolean>;
@@ -13,37 +15,50 @@ export function useSvgPathTracking({
   drawToolsRef,
   mountedRef,
   onPathsUpdated
-}: SvgPathTrackingProps) {
+}: UseSvgPathTrackingProps) {
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
-
-  // Periodically check for SVG paths when tools are active
+  const [lastUpdateTime, setLastUpdateTime] = useState(0);
+  
+  // Track SVG path changes with reduced frequency
   useEffect(() => {
     if (!isInitialized || !drawToolsRef.current) return;
-    
-    const checkForPaths = () => {
+
+    const updatePaths = () => {
       if (!mountedRef.current) return;
       
       try {
-        if (drawToolsRef.current) {
-          const paths = drawToolsRef.current.getSVGPathData();
-          if (paths && paths.length > 0) {
-            setSvgPaths(paths);
-            if (onPathsUpdated) {
-              onPathsUpdated(paths);
-            }
+        // Don't update too frequently (at most once per 2 seconds)
+        const now = Date.now();
+        if (now - lastUpdateTime < 2000) {
+          return;
+        }
+        
+        const paths = drawToolsRef.current.getSVGPathData();
+        
+        // Only update if paths have changed
+        if (JSON.stringify(paths) !== JSON.stringify(svgPaths)) {
+          setSvgPaths(paths);
+          setLastUpdateTime(now);
+          
+          if (onPathsUpdated) {
+            onPathsUpdated(paths);
           }
         }
       } catch (err) {
-        console.error('Error getting SVG paths:', err);
+        console.error('Error updating SVG paths:', err);
       }
     };
     
-    const intervalId = setInterval(checkForPaths, 1000);
-    return () => clearInterval(intervalId);
-  }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated]);
-
-  return {
-    svgPaths,
-    setSvgPaths
-  };
+    // Update paths initially
+    updatePaths();
+    
+    // Set up interval for path checking but at a much lower frequency
+    const intervalId = setInterval(updatePaths, 5000); // Check every 5 seconds
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated, svgPaths, lastUpdateTime]);
+  
+  return { svgPaths, setSvgPaths };
 }

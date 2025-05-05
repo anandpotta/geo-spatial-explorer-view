@@ -32,7 +32,8 @@ export const createLayerControls = ({
   onRemoveShape,
   onUploadRequest
 }: LayerControlsProps) => {
-  if (activeTool !== 'edit' || !isMounted) return;
+  // Only proceed if component is mounted (we removed the edit mode check here)
+  if (!isMounted) return;
 
   // Check if the map is valid
   if (!validateFeatureGroupMap(featureGroup)) {
@@ -46,19 +47,21 @@ export const createLayerControls = ({
   
   if (!buttonPosition) return;
   
-  // Create remove button control
-  createRemoveButtonControl({
-    layer,
-    drawingId,
-    buttonPosition,
-    featureGroup,
-    removeButtonRoots,
-    isMounted,
-    onRemoveShape
-  });
+  // Create remove button control - only in edit mode
+  if (activeTool === 'edit') {
+    createRemoveButtonControl({
+      layer,
+      drawingId,
+      buttonPosition,
+      featureGroup,
+      removeButtonRoots,
+      isMounted,
+      onRemoveShape
+    });
+  }
   
-  // Create upload button control
-  if (uploadButtonPosition) {
+  // Create upload button control - only in edit mode
+  if (activeTool === 'edit' && uploadButtonPosition) {
     createUploadButtonControl({
       drawingId,
       uploadButtonPosition,
@@ -69,18 +72,22 @@ export const createLayerControls = ({
     });
   }
   
-  // Check if this drawing has a floor plan
-  const hasExistingFloorPlan = hasFloorPlan(drawingId);
-  
-  // Create image controls if there's a floor plan
-  if (hasExistingFloorPlan && imageControlsPosition) {
-    createImageControlsLayer({
-      drawingId,
-      imageControlsPosition,
-      featureGroup,
-      imageControlRoots,
-      isMounted,
-      onRemoveShape
-    });
+  // Create image controls for all drawings with images, regardless of edit mode
+  if (imageControlsPosition) {
+    // Check if there is a floor plan for this drawing
+    const hasImage = hasFloorPlan(drawingId);
+    
+    if (hasImage) {
+      // Create image controls immediately and mark as persistent
+      createImageControlsLayer({
+        drawingId,
+        imageControlsPosition,
+        featureGroup,
+        imageControlRoots,
+        isMounted,
+        onRemoveShape,
+        isPersistent: true  // Always mark as persistent
+      });
+    }
   }
 };

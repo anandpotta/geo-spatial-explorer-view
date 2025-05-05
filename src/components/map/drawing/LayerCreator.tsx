@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -7,7 +6,7 @@ import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
 import { hasFloorPlan, prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
-import { applyClipMaskToDrawing } from './ClipMaskManager';
+import { applyClipMaskToDrawing } from './clip-mask';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -23,6 +22,11 @@ interface CreateLayerOptions {
   onUploadRequest?: (drawingId: string) => void;
 }
 
+// Keep track of layer creation to prevent repeated attempts
+const layersCreated = new Map<string, number>();
+// Track floor plan applications to prevent repeated attempts
+const floorPlanApplied = new Map<string, number>();
+
 export const createLayerFromDrawing = ({
   drawing,
   featureGroup,
@@ -37,120 +41,108 @@ export const createLayerFromDrawing = ({
   onUploadRequest
 }: CreateLayerOptions) => {
   if (!drawing.geoJSON || !isMounted) return;
+  
+  // Check if we've already created this layer recently
+  const now = Date.now();
+  const lastCreated = layersCreated.get(drawing.id) || 0;
+  if (now - lastCreated < 1000) { // Debounce layer creation
+    return;
+  }
+  
+  // Update the creation timestamp
+  layersCreated.set(drawing.id, now);
 
   try {
     // Check if the feature group is attached to a valid map
     const map = getMapFromLayer(featureGroup);
     if (!isMapValid(map)) {
-      console.warn("No valid map attached to feature group, skipping layer creation");
+      return;
+    }
+
+    // Check if this layer already exists
+    let existingLayer = false;
+    featureGroup.eachLayer(layer => {
+      if ((layer as any).drawingId === drawing.id) {
+        existingLayer = true;
+      }
+    });
+    
+    if (existingLayer) {
+      console.log(`Layer for drawing ${drawing.id} already exists, skipping creation`);
       return;
     }
 
     // Prepare layer options
     const options = prepareLayerOptions(drawing);
     
-    // We can't directly add drawingId to options as it's not part of the PathOptions type
-    // Instead, let's use custom data attributes later
-    
     // Create the layer
     const layer = createGeoJSONLayer(drawing, options);
     
-    if (layer) {
-      // Store the drawing ID at the layer level using a custom property
-      (layer as any).drawingId = drawing.id;
-      
-      // Add feature properties with drawing ID
-      // We need to check if feature exists and is a Feature type with properties
-      if (layer.feature && typeof (layer.feature as any).properties !== 'undefined') {
-        // Safe to access and modify properties now
-        if (!(layer.feature as any).properties) {
-          (layer.feature as any).properties = {};
+    if (!layer) {
+      return;
+    }
+    
+    // Store the drawing ID at the layer level as well for easier reference
+    (layer as any).drawingId = drawing.id;
+    
+    // Process the layer and add it to the feature group
+    layer.eachLayer((l: L.Layer) => {
+      if (l && isMounted) {
+        // Add the ID at the sublayer level too
+        (l as any).drawingId = drawing.id;
+        
+        // Add drawing ID attribute to the SVG path for identification
+        addDrawingAttributesToLayer(l, drawing.id);
+        
+        // Store the layer reference
+        layersRef.set(drawing.id, l);
+        
+        // Add controls when in edit mode
+        if (onRemoveShape && onUploadRequest) {
+          createLayerControls({
+            layer: l,
+            drawingId: drawing.id,
+            activeTool,
+            featureGroup,
+            removeButtonRoots,
+            uploadButtonRoots,
+            imageControlRoots,
+            isMounted,
+            onRemoveShape,
+            onUploadRequest
+          });
         }
-        (layer.feature as any).properties.drawingId = drawing.id;
+        
+        // Setup click handlers
+        setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
       }
+    });
+    
+    // Add the layer to the feature group
+    if (isMounted && layer) {
+      featureGroup.addLayer(layer);
       
-      layer.eachLayer((l: L.Layer) => {
-        if (l && isMounted) {
-          // Store the drawing ID on each sublayer
-          (l as any).drawingId = drawing.id;
-          
-          // Store feature properties with drawing ID - check types first
-          if ((l as any).feature && typeof (l as any).feature === 'object') {
-            // Initialize properties if needed
-            if (typeof (l as any).feature.properties === 'undefined') {
-              (l as any).feature.properties = {};
-            }
-            // Set drawing ID on properties object
-            if ((l as any).feature.properties) {
-              (l as any).feature.properties.drawingId = drawing.id;
-            }
-          }
-          
-          // Add drawing ID attribute to the SVG path for identification
-          addDrawingAttributesToLayer(l, drawing.id);
-          
-          // Set the id on the SVG element itself if possible
-          if ((l as any)._path) {
-            (l as any)._path.setAttribute('data-drawing-id', drawing.id);
-          }
-          
-          // Store the layer reference
-          layersRef.set(drawing.id, l);
-          
-          // Add the remove, upload, and image control buttons when in edit mode
-          if (onRemoveShape && onUploadRequest) {
-            createLayerControls({
-              layer: l,
+      // Check if we've recently applied a floor plan to this drawing
+      const lastApplied = floorPlanApplied.get(drawing.id) || 0;
+      const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
+      
+      // Add a small delay before applying clip mask to ensure the path is rendered
+      if (hasFloorPlan(drawing.id) && isMounted && shouldApply) {
+        floorPlanApplied.set(drawing.id, now);
+        
+        setTimeout(() => {
+          // Apply clip mask if a floor plan exists
+          if (isMounted) {
+            applyClipMaskToDrawing({
               drawingId: drawing.id,
-              activeTool,
-              featureGroup,
-              removeButtonRoots,
-              uploadButtonRoots,
-              imageControlRoots,
               isMounted,
-              onRemoveShape,
-              onUploadRequest
+              layer
             });
           }
-          
-          // Make clicking on any shape trigger the click handler
-          setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
-        }
-      });
-      
-      if (isMounted) {
-        try {
-          // Add to feature group
-          layer.addTo(featureGroup);
-          
-          // Get all the SVG paths after adding to the feature group
-          setTimeout(() => {
-            const paths = document.querySelectorAll('path.leaflet-interactive');
-            console.log(`Found ${paths.length} path elements after adding layer to feature group`);
-            
-            // Set drawing ID on all paths that might be related to this drawing
-            paths.forEach((path) => {
-              if (!path.hasAttribute('data-drawing-id')) {
-                path.setAttribute('data-drawing-id', drawing.id);
-                console.log(`Set data-drawing-id attribute on a path element`);
-              }
-            });
-            
-            // Apply clip mask if a floor plan exists
-            if (hasFloorPlan(drawing.id)) {
-              applyClipMaskToDrawing({
-                drawingId: drawing.id,
-                isMounted,
-                layer
-              });
-            }
-          }, 50);
-        } catch (err) {
-          console.error('Error adding layer to featureGroup:', err);
-        }
+        }, 300); // Delay to let the DOM update
       }
     }
   } catch (err) {
-    console.error('Error adding drawing layer:', err);
+    console.error('Error creating layer for drawing:', err);
   }
 };

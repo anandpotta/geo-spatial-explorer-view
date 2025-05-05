@@ -23,6 +23,9 @@ export const prepareLayerOptions = (drawing: DrawingData): L.PathOptions => {
     options.fillOpacity = options.fillOpacity || 0.2;
   }
   
+  // Add custom option to store drawing ID that will be used by Leaflet internals
+  (options as any).drawingId = drawing.id;
+  
   return options;
 };
 
@@ -34,7 +37,8 @@ export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
   weight: 3,
   opacity: 0.7,
   fillOpacity: 0.3,
-  renderer: L.svg() // Force SVG renderer
+  renderer: L.svg(), // Force SVG renderer
+  className: 'leaflet-interactive-drawing' // Add a custom class for easier selection
 });
 
 /**
@@ -62,7 +66,14 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
       // Store SVG path data if available
       if (drawing.svgPath && l._path) {
         try {
+          console.log(`Setting SVG path data for drawing ${drawing.id}`);
           l._path.setAttribute('d', drawing.svgPath);
+          
+          // Store the path data as a backup
+          l._path.setAttribute('data-original-path', drawing.svgPath);
+          
+          // Force the browser to acknowledge the path by triggering a reflow
+          l._path.getBoundingClientRect();
         } catch (err) {
           console.error('Error setting path data:', err);
         }
@@ -82,24 +93,51 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
 export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
   if (!layer) return;
 
-  // Check for SVG path element in the layer
-  if ((layer as any)._path) {
-    console.log(`Setting data-drawing-id=${drawingId} on path element`);
-    (layer as any)._path.setAttribute('data-drawing-id', drawingId);
-    
-    // Force browser to recognize the attribute by triggering a reflow
-    (layer as any)._path.getBoundingClientRect();
-  }
-
-  // If it's a feature group, process each layer
-  if (typeof (layer as any).eachLayer === 'function') {
-    (layer as any).eachLayer((subLayer: L.Layer) => {
-      if ((subLayer as any)._path) {
-        console.log(`Setting data-drawing-id=${drawingId} on sub-path element`);
-        (subLayer as any)._path.setAttribute('data-drawing-id', drawingId);
-        (subLayer as any)._path.getBoundingClientRect();
+  try {
+    // Check for SVG path element in the layer
+    if ((layer as any)._path) {
+      const path = (layer as any)._path;
+      console.log(`Setting data-drawing-id=${drawingId} on path element`);
+      
+      // Add multiple ways to identify this path
+      path.setAttribute('data-drawing-id', drawingId);
+      path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+      path.id = `drawing-path-${drawingId}`;
+      
+      // Force browser to recognize the attribute by triggering a reflow
+      path.getBoundingClientRect();
+      
+      // Make sure we also add ID on the parent element if it exists
+      if (path.parentElement) {
+        path.parentElement.setAttribute('data-drawing-container', drawingId);
+        path.parentElement.id = `drawing-container-${drawingId}`;
       }
-    });
+    }
+
+    // If it's a feature group, process each layer
+    if (typeof (layer as any).eachLayer === 'function') {
+      (layer as any).eachLayer((subLayer: L.Layer) => {
+        if ((subLayer as any)._path) {
+          const path = (subLayer as any)._path;
+          console.log(`Setting data-drawing-id=${drawingId} on sub-path element`);
+          
+          // Add multiple ways to identify this path
+          path.setAttribute('data-drawing-id', drawingId);
+          path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+          path.id = `drawing-path-${drawingId}`;
+          
+          path.getBoundingClientRect();
+          
+          // Make sure we also add ID on the parent element if it exists
+          if (path.parentElement) {
+            path.parentElement.setAttribute('data-drawing-container', drawingId);
+            path.parentElement.id = `drawing-container-${drawingId}`;
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Error adding drawing attributes to layer:', err);
   }
 };
 
