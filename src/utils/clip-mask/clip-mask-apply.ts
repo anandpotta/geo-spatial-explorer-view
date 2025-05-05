@@ -13,6 +13,26 @@ const toastShown = new Set<string>();
 const loadingImages = new Map<string, boolean>();
 
 /**
+ * Gets the stored image URL for a drawing from localStorage
+ */
+const getStoredImageUrl = (drawingId: string): string | null => {
+  try {
+    const floorPlanKey = `floorplan-${drawingId}`;
+    const storedData = localStorage.getItem(floorPlanKey);
+    if (storedData) {
+      const floorPlanData = JSON.parse(storedData);
+      if (floorPlanData && floorPlanData.imageUrl) {
+        return floorPlanData.imageUrl;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error('Error retrieving stored image URL:', err);
+    return null;
+  }
+};
+
+/**
  * Creates and applies an SVG clip mask with an image to a path element
  */
 export const applyImageClipMask = (
@@ -20,8 +40,8 @@ export const applyImageClipMask = (
   imageUrl: string | object | null | undefined, 
   id: string
 ): boolean => {
-  if (!pathElement || !imageUrl) {
-    console.error('Cannot apply clip mask: missing path or image URL', {pathElement, imageUrl});
+  if (!pathElement) {
+    console.error('Cannot apply clip mask: missing path element');
     return false;
   }
   
@@ -46,14 +66,44 @@ export const applyImageClipMask = (
     console.log(`Applying clip mask for drawing ${id}`);
     console.log(`Path element:`, pathElement);
     
-    // Ensure imageUrl is a string before attempting to use string methods
-    const imageUrlString = typeof imageUrl === 'string' ? imageUrl : 
-      (typeof imageUrl === 'object' && imageUrl !== null ? JSON.stringify(imageUrl) : '');
+    // Handle different image URL types
+    let imageUrlString: string;
     
-    if (!imageUrlString) {
-      console.error('Invalid image URL format');
-      loadingImages.set(id, false);
-      return false;
+    // If imageUrl is just the drawing ID, try to get the stored URL from localStorage
+    if (typeof imageUrl === 'string' && (imageUrl === id || !imageUrl.startsWith('blob:') && !imageUrl.startsWith('data:'))) {
+      console.log(`Looking up stored image URL for drawing ID: ${id}`);
+      const storedUrl = getStoredImageUrl(id);
+      if (storedUrl) {
+        imageUrlString = storedUrl;
+        console.log(`Found stored image URL: ${imageUrlString}`);
+      } else {
+        console.error(`No stored image URL found for drawing ID: ${id}`);
+        loadingImages.set(id, false);
+        return false;
+      }
+    } else if (typeof imageUrl === 'string') {
+      imageUrlString = imageUrl;
+    } else if (typeof imageUrl === 'object' && imageUrl !== null) {
+      console.warn('Object passed as imageUrl, trying to convert to string:', imageUrl);
+      try {
+        imageUrlString = JSON.stringify(imageUrl);
+      } catch (err) {
+        console.error('Failed to convert imageUrl object to string:', err);
+        loadingImages.set(id, false);
+        return false;
+      }
+    } else {
+      // If no valid imageUrl, try to get the stored URL from localStorage
+      console.log(`No valid imageUrl provided, trying to get stored URL for ${id}`);
+      const storedUrl = getStoredImageUrl(id);
+      if (storedUrl) {
+        imageUrlString = storedUrl;
+        console.log(`Using stored image URL: ${imageUrlString}`);
+      } else {
+        console.error(`No valid imageUrl and no stored URL found for ${id}`);
+        loadingImages.set(id, false);
+        return false;
+      }
     }
     
     console.log(`Using image URL: ${imageUrlString}`);
@@ -146,6 +196,20 @@ export const applyImageClipMask = (
     tempImg.onerror = (e) => {
       clearTimeout(imageTimeout);
       console.error('Failed to load image for clip mask', e);
+      console.error(`Image URL that failed: ${imageUrlString}`);
+      // Try to access the image URL to check if it's valid
+      fetch(imageUrlString)
+        .then(res => {
+          if (!res.ok) {
+            console.error(`Image URL returned ${res.status} (${res.statusText})`);
+          } else {
+            console.log('Image URL seems valid, but loading failed for another reason');
+          }
+        })
+        .catch(err => {
+          console.error('Error accessing image URL:', err);
+        });
+      
       // Apply default dimensions as fallback
       applyImageWithDimensions(300, 300);
       loadingImages.set(id, false);

@@ -131,8 +131,10 @@ export const applyClipMaskToDrawing = async ({
       return true;
     }
     
-    // If no explicit imageUrl is provided, try to get one from the floor plan data
-    if (!imageUrl) {
+    // Try to get an image URL from stored floor plans
+    let actualImageUrl = imageUrl;
+    
+    if (!actualImageUrl) {
       console.log(`No imageUrl provided, checking if ${drawingId} has a floor plan`);
       
       try {
@@ -140,9 +142,21 @@ export const applyClipMaskToDrawing = async ({
         const hasExistingFloorPlan = await hasFloorPlan(drawingId);
         
         if (hasExistingFloorPlan) {
-          // If we have a floor plan, proceed with application using client-side image application
-          console.log(`Floor plan exists for ${drawingId}, retrieving image URL from storage`);
-          // Note: The actual image URL will be handled by the applyImageClipMask function via localStorage
+          // If we have a floor plan, try to get the stored image URL
+          try {
+            // Try to get from localStorage
+            const floorPlanKey = `floorplan-${drawingId}`;
+            const storedData = localStorage.getItem(floorPlanKey);
+            if (storedData) {
+              const floorPlanData = JSON.parse(storedData);
+              if (floorPlanData && floorPlanData.imageUrl) {
+                actualImageUrl = floorPlanData.imageUrl;
+                console.log(`Retrieved image URL from storage: ${actualImageUrl}`);
+              }
+            }
+          } catch (err) {
+            console.error('Error getting floor plan image URL:', err);
+          }
         } else {
           console.log(`No floor plan found for ${drawingId}`);
           return false;
@@ -154,10 +168,11 @@ export const applyClipMaskToDrawing = async ({
     }
     
     // Now apply the clip mask with the image
-    const result = applyImageClipMask(pathElement, imageUrl || drawingId, drawingId);
+    // Always pass the actual imageUrl, not just the drawing ID
+    const result = applyImageClipMask(pathElement, actualImageUrl, drawingId);
     
     if (result) {
-      console.log(`Applied clip mask to drawing ${drawingId} with image ${imageUrl || 'from stored floor plan'}`);
+      console.log(`Applied clip mask to drawing ${drawingId} with image ${actualImageUrl || 'from stored floor plan'}`);
       
       // Mark as successful
       successfulApplications.set(drawingId, true);

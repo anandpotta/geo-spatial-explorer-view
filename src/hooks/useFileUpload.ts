@@ -44,6 +44,20 @@ export function useFileUpload({ onUploadToDrawing }: {
       const imageUrl = URL.createObjectURL(file);
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
+      // Store the image URL in localStorage for future use
+      try {
+        const floorPlanKey = `floorplan-${selectedDrawingId}`;
+        const floorPlanData = { 
+          imageUrl, 
+          timestamp: Date.now(),
+          fileName: file.name
+        };
+        localStorage.setItem(floorPlanKey, JSON.stringify(floorPlanData));
+        console.log(`Stored image URL in localStorage with key: ${floorPlanKey}`);
+      } catch (err) {
+        console.error('Error storing image URL in localStorage:', err);
+      }
+      
       // Show loading toast
       toast.loading('Applying image to drawing...', { id: `uploading-${selectedDrawingId}` });
       
@@ -97,7 +111,8 @@ export function useFileUpload({ onUploadToDrawing }: {
               return;
             }
             
-            // Apply the image directly using svg-utils function
+            // Apply the image directly using svg-utils function with the actual image URL
+            console.log(`Applying image URL: ${imageUrl} to drawing: ${selectedDrawingId}`);
             const result = applyImageClipMask(svgPathElement, imageUrl, selectedDrawingId);
             
             if (result) {
