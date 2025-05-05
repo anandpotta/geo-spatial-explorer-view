@@ -28,3 +28,11 @@ export {
   getSavedFloorPlans,
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
+
+// Added storage utilities
+export {
+  clearAllMapData,
+  clearMarkers,
+  clearDrawings,
+  clearFloorPlans,
+} from './storage-utils';

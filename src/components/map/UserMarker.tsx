@@ -44,10 +44,14 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     }));
   }, []);
   
+  // Generate a stable key that includes both the ID and position
+  // This helps React distinguish between markers even when positions change
+  const stableKey = `marker-${marker.id}-${marker.position[0].toFixed(6)}-${marker.position[1].toFixed(6)}`;
+  
   return (
     <Marker 
       position={marker.position} 
-      key={`marker-${marker.id}`}
+      key={stableKey}
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd
