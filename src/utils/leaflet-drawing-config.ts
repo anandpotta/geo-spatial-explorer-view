@@ -1,5 +1,11 @@
-
 import L from 'leaflet';
+
+// Extend the PathOptions interface to include our custom svgPath property
+declare module 'leaflet' {
+  interface PathOptions {
+    svgPath?: string;
+  }
+}
 
 export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
   try {
