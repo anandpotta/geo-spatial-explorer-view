@@ -10,6 +10,7 @@
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 9999 !important;
+  width: 30px !important; /* Single consistent width */
 }
 
 /* Ensure edit and delete buttons are visible */
@@ -71,4 +72,23 @@ svg path.leaflet-interactive.leaflet-editing-icon {
 .leaflet-vertex-icon,
 .leaflet-middle-icon {
   z-index: 10000 !important;
+}
+
+/* Fix for flickering by preventing z-index changes */
+.leaflet-top .leaflet-control {
+  z-index: 9999 !important; /* Consistent z-index */
+  transition: none !important; /* Prevent any animations that might cause flickering */
+}
+
+/* Additional fixes for control buttons stability */
+.leaflet-draw-toolbar a {
+  width: 30px !important;
+  height: 30px !important;
+  background-size: 270px 30px !important;
+}
+
+/* Ensure stable positioning of control elements */
+.leaflet-control {
+  position: absolute !important;
+  transform: none !important; /* Prevent transform changes */
 }
