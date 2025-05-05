@@ -12,6 +12,14 @@ export function useMarkerHandlers(mapState: any) {
       // Always set a default name to make it easier to save
       const defaultName = mapState.selectedLocation?.label || 'New Building';
       mapState.setMarkerName(defaultName);
+      
+      // Make sure to focus on the marker name input field after a short delay
+      setTimeout(() => {
+        const inputField = document.querySelector('.leaflet-popup input');
+        if (inputField) {
+          (inputField as HTMLElement).focus();
+        }
+      }, 100);
     }
   };
 
@@ -25,11 +33,27 @@ export function useMarkerHandlers(mapState: any) {
         ];
         mapState.setTempMarker(exactPosition);
         mapState.setMarkerName('New Marker');
+        
+        // Focus on the marker name input field after a short delay
+        setTimeout(() => {
+          const inputField = document.querySelector('.leaflet-popup input');
+          if (inputField) {
+            (inputField as HTMLElement).focus();
+          }
+        }, 100);
       } else if (shape.layer && shape.layer.getLatLng) {
         // Alternative: try to get position from the layer if available
         const latLng = shape.layer.getLatLng();
         mapState.setTempMarker([latLng.lat, latLng.lng]);
         mapState.setMarkerName('New Marker');
+        
+        // Focus on the marker name input field after a short delay
+        setTimeout(() => {
+          const inputField = document.querySelector('.leaflet-popup input');
+          if (inputField) {
+            (inputField as HTMLElement).focus();
+          }
+        }, 100);
       } else {
         console.error('Invalid marker position data:', shape);
         toast.error('Could not create marker: invalid position data');
@@ -65,7 +89,7 @@ export function useMarkerHandlers(mapState: any) {
       // Also immediately save the drawing to prevent loss
       saveDrawing(safeShape);
       
-      toast.success(`${shape.type} created - Click to tag this building`);
+      toast.success(`${shape.type} created - Click to tag this building or upload a file`);
     }
   };
 

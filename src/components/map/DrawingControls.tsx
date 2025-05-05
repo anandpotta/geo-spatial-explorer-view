@@ -1,15 +1,16 @@
 
-import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
+import { useEffect, forwardRef, useImperativeHandle } from 'react';
 import { FeatureGroup } from 'react-leaflet';
-import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
 import DrawTools from './DrawTools';
 import LayerManager from './drawing/LayerManager';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { toast } from 'sonner';
-import 'leaflet-draw/dist/leaflet.draw.css';
+import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
+import FileUploadInput from './drawing/FileUploadInput';
+import DrawingEffects from './drawing/DrawingEffects';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -17,97 +18,49 @@ interface DrawingControlsProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
+  onUploadToDrawing?: (drawingId: string, file: File) => void;
 }
 
-declare module 'leaflet' {
-  interface Layer {
-    drawingId?: string;
-  }
-}
-
-const DrawingControls = forwardRef(({ 
+const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({ 
   onCreated, 
   activeTool, 
   onRegionClick, 
   onClearAll, 
-  onRemoveShape 
+  onRemoveShape,
+  onUploadToDrawing
 }: DrawingControlsProps, ref) => {
-  const featureGroupRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
-  const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
-  const mountedRef = useRef<boolean>(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const {
+    featureGroupRef,
+    drawToolsRef,
+    mountedRef,
+    isInitialized,
+    setIsInitialized,
+    fileInputRef,
+    activateEditMode,
+    openFileUploadDialog
+  } = useDrawingControls();
+  
+  const {
+    handleFileChange,
+    handleUploadRequest
+  } = useFileUpload({ onUploadToDrawing });
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
-    activateEditMode: () => {
-      if (drawToolsRef.current?.getEditControl()) {
-        // Activate the edit mode
-        const editControl = drawToolsRef.current.getEditControl();
-        if (editControl && editControl._toolbars && editControl._toolbars.edit) {
-          const editModes = editControl._toolbars.edit._modes;
-          if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
-            editModes.edit.handler.enable();
-          }
-        }
-      }
-    }
+    activateEditMode,
+    openFileUploadDialog
   }));
   
-  useEffect(() => {
-    getDrawingIdsWithFloorPlans();
-    
-    const handleFloorPlanUpdated = () => {
-      if (featureGroupRef.current && mountedRef.current) {
-        try {
-          // Don't clear layers on floor plan update - we just want to redraw them with new styles
-          window.dispatchEvent(new Event('storage'));
-        } catch (err) {
-          console.error('Error handling floor plan update:', err);
-        }
-      }
-    };
-    
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
-    
-    return () => {
-      mountedRef.current = false;
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
-    };
-  }, []);
-
-  // Effect to activate edit mode when activeTool changes to 'edit'
-  useEffect(() => {
-    if (activeTool === 'edit' && drawToolsRef.current?.getEditControl()) {
-      setTimeout(() => {
-        try {
-          if (drawToolsRef.current && mountedRef.current) {
-            // This is the updated code to safely activate edit mode
-            const editControl = drawToolsRef.current.getEditControl();
-            if (editControl && editControl._toolbars && editControl._toolbars.edit) {
-              const editModes = editControl._toolbars.edit._modes;
-              if (editModes && editModes.edit && editModes.edit.handler && typeof editModes.edit.handler.enable === 'function') {
-                editModes.edit.handler.enable();
-                console.log("Edit mode activated successfully");
-              } else {
-                console.warn("Edit handler not found or not a function");
-              }
-            } else {
-              console.warn("Edit toolbar not found");
-            }
-          }
-        } catch (err) {
-          console.error('Error activating edit mode:', err);
-        }
-      }, 300);
-    }
-  }, [activeTool, isInitialized]);
-
   useEffect(() => {
     if (featureGroupRef.current) {
       setIsInitialized(true);
     }
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const handleClearAll = () => {
@@ -139,25 +92,40 @@ const DrawingControls = forwardRef(({
     }
   };
 
+  const handleDrawingClick = (drawing: DrawingData) => {
+    if (onRegionClick) {
+      onRegionClick(drawing);
+    }
+  };
+
   return (
-    <FeatureGroup ref={featureGroupRef}>
-      {featureGroupRef.current && isInitialized && (
-        <LayerManager 
-          featureGroup={featureGroupRef.current}
-          savedDrawings={savedDrawings}
-          activeTool={activeTool}
-          onRegionClick={onRegionClick}
-          onRemoveShape={handleRemoveShape}
-        />
-      )}
-      <DrawTools 
-        ref={drawToolsRef}
-        onCreated={onCreated} 
+    <>
+      <FileUploadInput ref={fileInputRef} onChange={handleFileChange} />
+      <DrawingEffects 
         activeTool={activeTool} 
-        onClearAll={handleClearAll}
-        featureGroup={featureGroupRef.current}
+        isInitialized={isInitialized}
+        activateEditMode={activateEditMode}
       />
-    </FeatureGroup>
+      <FeatureGroup ref={featureGroupRef}>
+        {featureGroupRef.current && isInitialized && (
+          <LayerManager 
+            featureGroup={featureGroupRef.current}
+            savedDrawings={savedDrawings}
+            activeTool={activeTool}
+            onRegionClick={handleDrawingClick}
+            onRemoveShape={handleRemoveShape}
+            onUploadRequest={handleUploadRequest}
+          />
+        )}
+        <DrawTools 
+          ref={drawToolsRef}
+          onCreated={onCreated} 
+          activeTool={activeTool} 
+          onClearAll={handleClearAll}
+          featureGroup={featureGroupRef.current}
+        />
+      </FeatureGroup>
+    </>
   );
 });
 

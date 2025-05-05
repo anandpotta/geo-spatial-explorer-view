@@ -6,13 +6,19 @@ import React from 'react';
 
 // Create a wrapper component that forwards the ref and handles the featureGroup prop
 export const EditControl = React.forwardRef((props: any, ref: any) => {
-  // The EditControl expects to find the featureGroup through context
-  // but we're passing it manually, so we need to extract it
-  const { featureGroup, ...otherProps } = props;
+  // Extract featureGroup from props to ensure it's correctly passed
+  const { featureGroup, edit, ...otherProps } = props;
   
-  // Return the original EditControl without the featureGroup prop
+  // Prepare edit options properly
+  const editOptions = edit ? {
+    ...edit,
+    featureGroup: featureGroup
+  } : edit;
+  
+  // Return the original EditControl with proper prop structure
   return React.createElement(OriginalEditControl, {
     ...otherProps,
+    edit: editOptions,
     ref
   });
 });
