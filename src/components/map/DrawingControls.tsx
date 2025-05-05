@@ -12,6 +12,8 @@ import DrawingEffects from './drawing/DrawingEffects';
 import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
 import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
 import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -33,6 +35,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onPathsUpdated
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
+  const { isAuthenticated } = useAuth();
   
   const {
     featureGroupRef,
@@ -46,7 +49,8 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   
   const {
     handleFileChange,
-    handleUploadRequest
+    handleUploadRequest,
+    fileInputRef: uploadFileInputRef
   } = useFileUploadHandling({ onUploadToDrawing });
   
   // Use a wrapper function to prevent redundant updates
@@ -67,7 +71,13 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
-    openFileUploadDialog,
+    openFileUploadDialog: () => {
+      if (!isAuthenticated) {
+        toast.error('Please log in to upload files');
+        return;
+      }
+      openFileUploadDialog();
+    },
     getSvgPaths: () => {
       if (drawToolsRef.current) {
         return drawToolsRef.current.getSVGPathData();
@@ -86,13 +96,27 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     };
   }, []);
 
-  const handleCreatedWrapper = createShapeCreationHandler({
-    onCreated,
-    onPathsUpdated: handlePathsUpdated,
-    svgPaths
-  });
+  const handleCreatedWrapper = (shape: any) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to save drawings');
+      return;
+    }
+    
+    const wrappedHandler = createShapeCreationHandler({
+      onCreated,
+      onPathsUpdated: handlePathsUpdated,
+      svgPaths
+    });
+    
+    wrappedHandler(shape);
+  };
 
   const handleClearAllWrapper = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to clear drawings');
+      return;
+    }
+    
     handleClearAll({
       featureGroup: featureGroupRef.current,
       onClearAll
@@ -100,6 +124,11 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   };
 
   const handleRemoveShape = (drawingId: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to remove shapes');
+      return;
+    }
+    
     if (onRemoveShape) {
       onRemoveShape(drawingId);
     }
@@ -113,7 +142,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
 
   return (
     <>
-      <FileUploadInput ref={fileInputRef} onChange={handleFileChange} />
+      <FileUploadInput ref={uploadFileInputRef} onChange={handleFileChange} />
       <DrawingEffects 
         activeTool={activeTool} 
         isInitialized={isInitialized}

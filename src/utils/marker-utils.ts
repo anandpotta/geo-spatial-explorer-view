@@ -1,5 +1,6 @@
 
 import { getConnectionStatus } from './api-service';
+import { getCurrentUser } from '../services/auth-service';
 
 export interface LocationMarker {
   id: string;
@@ -10,20 +11,33 @@ export interface LocationMarker {
   createdAt: Date;
   isPinned?: boolean;
   associatedDrawing?: string;
+  userId: string; // Add userId to associate markers with specific users
 }
 
 export function saveMarker(marker: LocationMarker): void {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot save marker: No user is logged in');
+    return;
+  }
+  
+  // Ensure the marker has the current user's ID
+  const markerWithUser = {
+    ...marker,
+    userId: currentUser.id
+  };
+  
   const savedMarkers = getSavedMarkers();
   
   // Check if marker already exists (for updates)
-  const existingIndex = savedMarkers.findIndex(m => m.id === marker.id);
+  const existingIndex = savedMarkers.findIndex(m => m.id === markerWithUser.id);
   
   if (existingIndex >= 0) {
     // Update existing marker
-    savedMarkers[existingIndex] = marker;
+    savedMarkers[existingIndex] = markerWithUser;
   } else {
     // Add new marker
-    savedMarkers.push(marker);
+    savedMarkers.push(markerWithUser);
   }
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
@@ -35,7 +49,9 @@ export function saveMarker(marker: LocationMarker): void {
 }
 
 export function getSavedMarkers(): LocationMarker[] {
+  const currentUser = getCurrentUser();
   const markersJson = localStorage.getItem('savedMarkers');
+  
   if (!markersJson) {
     fetchMarkersFromBackend().catch(() => {
       console.log('Could not fetch markers from backend, using local storage');
@@ -44,11 +60,19 @@ export function getSavedMarkers(): LocationMarker[] {
   }
   
   try {
-    const markers = JSON.parse(markersJson);
-    return markers.map((marker: any) => ({
+    let markers = JSON.parse(markersJson);
+    // Map the dates
+    markers = markers.map((marker: any) => ({
       ...marker,
       createdAt: new Date(marker.createdAt)
     }));
+    
+    // Filter markers by user if a user is logged in
+    if (currentUser) {
+      markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
+    }
+    
+    return markers;
   } catch (e) {
     console.error('Failed to parse saved markers', e);
     return [];
@@ -57,6 +81,12 @@ export function getSavedMarkers(): LocationMarker[] {
 
 export function deleteMarker(id: string): void {
   try {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      console.error('Cannot delete marker: No user is logged in');
+      return;
+    }
+    
     const savedMarkers = getSavedMarkers();
     const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
     localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
@@ -158,6 +188,11 @@ async function deleteMarkerFromBackend(id: string): Promise<void> {
 }
 
 export function createMarker(markerData: Partial<LocationMarker>): LocationMarker {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Cannot create marker: No user is logged in');
+  }
+  
   const marker: LocationMarker = {
     id: markerData.id || crypto.randomUUID(),
     name: markerData.name || 'Unnamed Location',
@@ -167,6 +202,7 @@ export function createMarker(markerData: Partial<LocationMarker>): LocationMarke
     createdAt: markerData.createdAt || new Date(),
     isPinned: markerData.isPinned || false,
     associatedDrawing: markerData.associatedDrawing,
+    userId: currentUser.id
   };
   
   saveMarker(marker);
