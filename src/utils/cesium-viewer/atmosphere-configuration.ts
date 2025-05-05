@@ -170,20 +170,15 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
     // Set black background for better contrast
     viewer.scene.backgroundColor = Cesium.Color.BLACK;
     
-    // Adjust camera if needed to see the globe
+    // Adjust camera if needed to see the globe - using safer approach to avoid normalization errors
     if (viewer.camera) {
       // Set a safe initial position
       viewer.camera.position = new Cesium.Cartesian3(0, 0, 20000000);
-      viewer.camera.direction = Cesium.Cartesian3.normalize(
-        Cesium.Cartesian3.negate(viewer.camera.position, new Cesium.Cartesian3()),
-        new Cesium.Cartesian3()
-      );
-      viewer.camera.up = Cesium.Cartesian3.UNIT_Z;
-      viewer.camera.right = Cesium.Cartesian3.cross(
-        viewer.camera.direction,
-        viewer.camera.up,
-        new Cesium.Cartesian3()
-      );
+      
+      // Use unit vectors directly to avoid normalization errors
+      viewer.camera.direction = new Cesium.Cartesian3(0, 0, -1);
+      viewer.camera.up = new Cesium.Cartesian3(0, 1, 0);
+      viewer.camera.right = new Cesium.Cartesian3(1, 0, 0);
     }
     
     // Force another render

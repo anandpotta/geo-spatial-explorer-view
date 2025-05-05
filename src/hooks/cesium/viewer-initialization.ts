@@ -14,6 +14,19 @@ import { ViewerInitializationOptions } from './initialization-types';
 import { forceGlobeVisibility } from '@/utils/cesium-viewer';
 
 /**
+ * Checks if WebGL is available in the current browser
+ */
+function isWebGLAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && 
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * Initializes the Cesium viewer
  */
 export function initializeViewer(options: ViewerInitializationOptions): void {
@@ -26,6 +39,20 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     setMapError,
     onMapReady
   } = options;
+
+  // Check for WebGL support first
+  if (!isWebGLAvailable()) {
+    console.error("WebGL is not available in this browser");
+    setMapError("WebGL is not supported in your browser. Please try a different browser or update your graphics drivers.");
+    setIsLoadingMap(false);
+    
+    toast({
+      title: "WebGL Error",
+      description: "Your browser doesn't support WebGL, which is required for the 3D globe. Falling back to 2D map view.",
+      variant: "destructive"
+    });
+    return;
+  }
 
   if (!cesiumContainer.current) {
     console.log("No container element available for Cesium viewer");
@@ -72,6 +99,19 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     viewerOptions.globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84); // Create a valid Globe object instead of boolean
     viewerOptions.sceneMode = Cesium.SceneMode.SCENE3D; // Use 3D mode
     
+    // Set WebGL options for maximum compatibility
+    if (!viewerOptions.contextOptions) {
+      viewerOptions.contextOptions = {
+        webgl: {
+          alpha: false,
+          antialias: true,
+          powerPreference: 'default', // Use default instead of high-performance for compatibility
+          failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
+          preserveDrawingBuffer: true
+        }
+      };
+    }
+    
     // Create viewer with error handling
     try {
       const viewer = new Cesium.Viewer(cesiumContainer.current, viewerOptions);
@@ -97,8 +137,17 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
       if (viewer.camera) {
         // Set a safe initial position manually
         viewer.camera.position = new Cesium.Cartesian3(0, 0, 20000000);
-        viewer.camera.direction = new Cesium.Cartesian3(0, 0, -1);
-        viewer.camera.up = new Cesium.Cartesian3(0, 1, 0);
+        
+        // Create direction vector safely
+        const direction = new Cesium.Cartesian3(0, 0, -1);
+        const up = new Cesium.Cartesian3(0, 1, 0);
+        
+        // Set camera direction and up without normalization (we're using unit vectors)
+        viewer.camera.direction = direction;
+        viewer.camera.up = up;
+        
+        // Manually compute right vector without normalization
+        viewer.camera.right = new Cesium.Cartesian3(1, 0, 0);
       }
 
       // Force multiple render cycles to ensure the globe is visible
