@@ -15,6 +15,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPdf, setIsPdf] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("");
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   
   // Check if there's a saved floor plan for this building in localStorage
   useEffect(() => {
@@ -33,7 +34,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     }
   }, [drawing]);
   
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -42,29 +43,60 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       return;
     }
     
-    // Save file name and check if it's a PDF
-    setFileName(file.name);
-    setIsPdf(file.type.includes('pdf'));
+    // Check file size - warn if over 1MB
+    if (file.size > 1024 * 1024) {
+      toast('Large file detected, processing may take a moment...', {
+        duration: 3000
+      });
+    }
     
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
-      if (result && drawing?.id) {
-        const dataUrl = result as string;
-        setSelectedImage(dataUrl);
-        
-        // Save to utils for this specific building
-        saveFloorPlan(
-          drawing.id,
-          dataUrl,
-          file.type.includes('pdf'),
-          file.name
-        );
-        
-        toast.success('Floor plan uploaded successfully');
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    
+    try {
+      // Save file name and check if it's a PDF
+      setFileName(file.name);
+      setIsPdf(file.type.includes('pdf'));
+      
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const result = e.target?.result;
+        if (result && drawing?.id) {
+          const dataUrl = result as string;
+          setSelectedImage(dataUrl);
+          
+          // Save to utils for this specific building
+          const saveSuccess = await saveFloorPlan(
+            drawing.id,
+            dataUrl,
+            file.type.includes('pdf'),
+            file.name
+          );
+          
+          if (saveSuccess) {
+            toast.success('Floor plan uploaded successfully');
+            
+            // Trigger a custom event to ensure clip masks are applied
+            window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
+              detail: { drawingId: drawing.id }
+            }));
+          } else {
+            toast.error('Failed to save floor plan - image may be too large');
+          }
+        }
+        setIsUploading(false);
+      };
+      
+      reader.onerror = () => {
+        toast.error('Failed to read uploaded file');
+        setIsUploading(false);
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error processing file:', err);
+      toast.error('Failed to process upload');
+      setIsUploading(false);
+    }
   };
 
   // Helper function to calculate proper scaling for the image
@@ -85,17 +117,19 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           <FlipHorizontal className="mr-2 h-4 w-4" />
           Back to Map
         </Button>
-        <label className="cursor-pointer">
+        <label className={`cursor-pointer ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
           <input
             type="file"
             className="hidden"
             accept="image/*,.pdf"
             onChange={handleFileUpload}
+            disabled={isUploading}
           />
           <Button
             variant="outline"
             className="bg-white/80 backdrop-blur-sm"
             type="button"
+            disabled={isUploading}
             onClick={() => {
               // This will trigger the file input click
               const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -103,7 +137,9 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             }}
           >
             <Upload className="mr-2 h-4 w-4" />
-            {selectedImage ? 'Change Floor Plan' : 'Upload Floor Plan'}
+            {isUploading 
+              ? 'Processing...' 
+              : (selectedImage ? 'Change Floor Plan' : 'Upload Floor Plan')}
           </Button>
         </label>
       </div>
@@ -157,9 +193,10 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
                   const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
                   if (fileInput) fileInput.click();
                 }}
+                disabled={isUploading}
               >
                 <Upload className="mr-2 h-4 w-4" />
-                Select File
+                {isUploading ? 'Processing...' : 'Select File'}
               </Button>
             </div>
           </div>

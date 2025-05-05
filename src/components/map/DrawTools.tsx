@@ -60,6 +60,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         .leaflet-interactive {
           transform: translateZ(0);
           backface-visibility: hidden;
+          pointer-events: auto !important;
         }
         .image-controls-wrapper {
           opacity: 1 !important;
@@ -78,12 +79,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           stroke-opacity: 1 !important;
           stroke-linecap: round !important;
           stroke-linejoin: round !important;
-          fill-opacity: 0.3 !important;
+          fill-opacity: 0.7 !important;
           vector-effect: non-scaling-stroke;
         }
         .leaflet-overlay-pane path.leaflet-interactive {
           stroke-width: 4px !important;
           stroke-opacity: 1 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
         }
       `;
       document.head.appendChild(styleEl);
@@ -92,10 +95,29 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       mapContainer.getBoundingClientRect();
     }
     
+    // Add event listener to check for clip mask application
+    const handleFloorPlanUpdate = (e: Event) => {
+      const drawingId = (e as CustomEvent)?.detail?.drawingId;
+      if (drawingId) {
+        console.log(`Floor plan updated for drawing ${drawingId}, triggering refresh`);
+        // Force refresh all SVG paths to ensure clip masks are correctly applied
+        const paths = getPathElements();
+        if (paths.length > 0) {
+          // Force a redraw
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 100);
+        }
+      }
+    };
+    
+    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdate);
+    
     // Cleanup function
     return () => {
       cleanupSvgRenderer();
       cleanupPathPreservation();
+      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdate);
       
       // Restore original marker drag handler if it was modified
       if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
@@ -115,7 +137,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         mapContainer.classList.remove('optimize-svg-rendering');
       }
     };
-  }, [featureGroup]);
+  }, [featureGroup, getPathElements]);
   
   useImperativeHandle(ref, () => ({
     getPathElements,

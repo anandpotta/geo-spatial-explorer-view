@@ -83,6 +83,9 @@ export const applyImageClipMask = (
     pathElement.setAttribute('data-last-updated', Date.now().toString());
     pathElement.setAttribute('data-drawing-id', id);
     
+    // Add a visible outline to help see the path
+    pathElement.classList.add('visible-path-stroke');
+    
     // Create a pre-loaded image to get dimensions
     const tempImg = new Image();
     
@@ -104,7 +107,6 @@ export const applyImageClipMask = (
     tempImg.onerror = () => {
       clearTimeout(imageTimeout);
       console.error('Failed to load image for clip mask');
-      // Don't show error toasts for image load errors to reduce spam
       // Apply default dimensions as fallback
       applyImageWithDimensions(300, 300);
     };
@@ -120,7 +122,7 @@ export const applyImageClipMask = (
         // Calculate scale to fit the image properly within the shape
         const scaleX = bbox.width / imgWidth;
         const scaleY = bbox.height / imgHeight;
-        const scale = Math.max(scaleX, scaleY); // Use max to ensure image covers the shape
+        const scale = Math.max(scaleX, scaleY, 0.5); // Use max to ensure image covers the shape
         
         const scaledWidth = imgWidth * scale;
         const scaledHeight = imgHeight * scale;
@@ -147,6 +149,20 @@ export const applyImageClipMask = (
         image.setAttribute('x', '0');
         image.setAttribute('y', '0');
         image.setAttribute('preserveAspectRatio', 'none'); // Don't preserve aspect ratio for better fitting
+        
+        // Add loading handler to ensure image is rendered properly
+        image.onload = () => {
+          console.log(`Image loaded for drawing ${id}`);
+          // Force a repaint after image loads
+          window.dispatchEvent(new Event('resize'));
+        };
+        
+        // Add error handler
+        image.onerror = () => {
+          console.error(`Failed to load image for pattern-${id}`);
+          image.setAttribute('href', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" font-size="14">Image failed</text></svg>');
+        };
+        
         pattern.appendChild(image);
         
         // Set default values for transformation
@@ -164,12 +180,10 @@ export const applyImageClipMask = (
           const clipPathUrl = `url(#clip-${id})`;
           
           pathElement.style.fill = fill;
-          pathElement.style.stroke = 'none';
           pathElement.style.clipPath = clipPathUrl;
           
           // Also set attributes as backup in case styles are reset
           pathElement.setAttribute('fill', fill);
-          pathElement.setAttribute('stroke', 'none');
           pathElement.setAttribute('clip-path', clipPathUrl);
           
           // Only show toast for first time applications to reduce notification spam
@@ -177,6 +191,11 @@ export const applyImageClipMask = (
             toastShown.add(id);
             toast.success('Floor plan applied successfully', { id: `floor-plan-${id}` });
           }
+          
+          // Force a repaint to ensure the image renders
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 100);
         });
         
         return true;
