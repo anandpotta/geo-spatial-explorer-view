@@ -57,7 +57,7 @@ export const applyWithStability = ({ drawingId, imageUrl, pathElement, isMounted
 /**
  * Applies a clip mask to a drawing with floor plan
  */
-export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyClipMaskOptions): void => {
+export const applyClipMaskToDrawing = async ({ drawingId, isMounted, layer }: ApplyClipMaskOptions): Promise<void> => {
   if (!drawingId || !isMounted) return;
   
   try {
@@ -75,8 +75,8 @@ export const applyClipMaskToDrawing = ({ drawingId, isMounted, layer }: ApplyCli
     // Update the timestamp of our attempt
     lastApplicationTime.set(drawingId, now);
     
-    // Get the floor plan data
-    const floorPlanData = getFloorPlanById(drawingId);
+    // Get the floor plan data - await the promise
+    const floorPlanData = await getFloorPlanById(drawingId);
     if (!floorPlanData || !floorPlanData.data) {
       console.log(`No floor plan image found for drawing ${drawingId}`);
       return;

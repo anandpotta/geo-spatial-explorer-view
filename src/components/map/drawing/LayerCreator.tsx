@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -135,6 +134,7 @@ export const createLayerFromDrawing = async ({
         setTimeout(() => {
           // Apply clip mask if a floor plan exists
           if (isMounted) {
+            // This is now an async function but we don't need to await it here
             applyClipMaskToDrawing({
               drawingId: drawing.id,
               isMounted,

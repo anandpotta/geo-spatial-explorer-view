@@ -11,7 +11,14 @@ export function useDrawings() {
     const loadDrawings = () => {
       const drawings = getSavedDrawings();
       setSavedDrawings(drawings);
-      setDrawingsWithFloorPlans(getDrawingIdsWithFloorPlans());
+      
+      // Handle the Promise correctly
+      getDrawingIdsWithFloorPlans().then(ids => {
+        setDrawingsWithFloorPlans(ids);
+      }).catch(err => {
+        console.error('Error loading drawings with floor plans:', err);
+        setDrawingsWithFloorPlans([]);
+      });
     };
     
     loadDrawings();
@@ -21,7 +28,12 @@ export function useDrawings() {
     };
     
     const handleFloorPlanUpdated = () => {
-      setDrawingsWithFloorPlans(getDrawingIdsWithFloorPlans());
+      // Handle the Promise correctly here too
+      getDrawingIdsWithFloorPlans().then(ids => {
+        setDrawingsWithFloorPlans(ids);
+      }).catch(err => {
+        console.error('Error updating drawings with floor plans:', err);
+      });
     };
     
     window.addEventListener('storage', handleStorageChange);

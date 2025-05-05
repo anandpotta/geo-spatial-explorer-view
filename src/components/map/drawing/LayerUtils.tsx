@@ -1,14 +1,14 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getDrawingIdsWithFloorPlans, hasFloorPlan } from '@/utils/floor-plan-utils';
+import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { hasFloorPlan as checkFloorPlan } from '@/utils/floor-plan-utils';
 
 /**
  * Prepares options for drawing layers
  */
 export const prepareLayerOptions = async (drawing: DrawingData): Promise<L.PathOptions> => {
   // Check if this drawing has a floor plan
-  const hasFloorPlanApplied = await hasFloorPlan(drawing.id);
+  const hasFloorPlanApplied = await checkFloorPlan(drawing.id);
   
   const options = getDefaultDrawingOptions(drawing.properties?.color || '#33C3F0');
   if (hasFloorPlanApplied) {
@@ -156,6 +156,4 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
 /**
  * Checks if a drawing has a floor plan
  */
-export const hasFloorPlan = async (drawingId: string): Promise<boolean> => {
-  return await hasFloorPlan(drawingId);
-};
+export const hasFloorPlan = checkFloorPlan;
