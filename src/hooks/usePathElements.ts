@@ -1,109 +1,68 @@
 
+import { useState, useCallback, useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { getMapFromLayer } from '@/utils/leaflet-type-utils';
-import { getCurrentUser } from '@/services/auth-service';
+import { extractSvgPaths } from '@/utils/svg-path-utils';
 
 /**
- * Hook to provide methods for accessing SVG path elements
+ * Hook for managing SVG path elements in a feature group
  */
-export function usePathElements(featureGroup: L.FeatureGroup) {
-  /**
-   * Get all path elements in the map
-   */
-  const getPathElements = (): SVGPathElement[] => {
-    const pathElements: SVGPathElement[] = [];
-    // Find all SVG paths within the map container
-    if (featureGroup) {
-      const map = getMapFromLayer(featureGroup);
-      if (map) {
-        const container = map.getContainer();
-        if (container) {
-          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
-          svgElements.forEach(svg => {
-            const paths = svg.querySelectorAll('path.leaflet-interactive');
-            paths.forEach(path => {
-              pathElements.push(path as SVGPathElement);
-            });
-          });
-        }
-      }
+export function usePathElements(featureGroup: L.FeatureGroup | null) {
+  const pathElementsRef = useRef<SVGPathElement[]>([]);
+  const pathDataRef = useRef<string[]>([]);
+  const lastCheckTimeRef = useRef<number>(0);
+  
+  // Get all path elements in the feature group
+  const getPathElements = useCallback((): SVGPathElement[] => {
+    if (!featureGroup) return [];
+    
+    try {
+      // Check if we have the map container
+      const map = (featureGroup as any)._map;
+      if (!map) return [];
+      
+      const container = map.getContainer();
+      if (!container) return [];
+      
+      // Find SVG container in the overlay pane
+      const overlayPane = container.querySelector('.leaflet-overlay-pane');
+      if (!overlayPane) return [];
+      
+      // Get all path elements
+      const pathElements = Array.from(overlayPane.querySelectorAll('path'));
+      pathElementsRef.current = pathElements as SVGPathElement[];
+      return pathElementsRef.current;
+    } catch (err) {
+      console.error('Error getting path elements:', err);
+      return [];
     }
-    return pathElements;
-  };
+  }, [featureGroup]);
 
-  /**
-   * Get path data from all SVG paths in the map
-   */
-  const getSVGPathData = (): string[] => {
-    const pathData: string[] = [];
-    // Find all SVG paths within the map container
-    if (featureGroup) {
-      const map = getMapFromLayer(featureGroup);
-      if (map) {
-        const container = map.getContainer();
-        if (container) {
-          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
-          svgElements.forEach(svg => {
-            const paths = svg.querySelectorAll('path.leaflet-interactive');
-            paths.forEach(path => {
-              const d = path.getAttribute('d');
-              if (d) {
-                pathData.push(d);
-              }
-            });
-          });
-        }
-      }
-    }
-    return pathData;
-  };
-
-  /**
-   * Clear all path elements in the map
-   */
-  const clearPathElements = (): void => {
-    if (featureGroup) {
-      const map = getMapFromLayer(featureGroup);
-      if (map) {
-        const container = map.getContainer();
-        if (container) {
-          const svgElements = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
-          svgElements.forEach(svg => {
-            // Clear out all paths
-            svg.querySelectorAll('path.leaflet-interactive').forEach(path => {
-              path.remove();
-            });
-            
-            // Also clear any clip paths or images
-            svg.querySelectorAll('clipPath, image').forEach(el => {
-              el.remove();
-            });
-          });
-        }
-      }
+  // Get SVG path data from all path elements
+  const getSVGPathData = useCallback((): string[] => {
+    // Rate limit checking to prevent excessive DOM access
+    const now = Date.now();
+    if (now - lastCheckTimeRef.current < 2000) { // 2 seconds between checks
+      return pathDataRef.current;
     }
     
-    // Also clear the SVG paths from localStorage for the current user
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      try {
-        // Get existing paths data
-        const existingData = localStorage.getItem('svgPaths');
-        if (existingData) {
-          let pathsData = JSON.parse(existingData);
-          // Delete current user's paths
-          if (pathsData[currentUser.id]) {
-            delete pathsData[currentUser.id];
-            localStorage.setItem('svgPaths', JSON.stringify(pathsData));
-          }
-        }
-      } catch (err) {
-        console.error('Error clearing SVG paths from storage:', err);
-      }
-    }
-  };
+    lastCheckTimeRef.current = now;
+    
+    // Get fresh path elements
+    const pathElements = getPathElements();
+    if (pathElements.length === 0) return [];
+    
+    // Extract and update path data
+    const pathData = pathElements.map(path => path.getAttribute('d')).filter(Boolean) as string[];
+    pathDataRef.current = pathData;
+    return pathData;
+  }, [getPathElements]);
 
-  // Return all the functions
+  // Clear all path elements (used for clear all operation)
+  const clearPathElements = useCallback(() => {
+    pathElementsRef.current = [];
+    pathDataRef.current = [];
+  }, []);
+
   return {
     getPathElements,
     getSVGPathData,

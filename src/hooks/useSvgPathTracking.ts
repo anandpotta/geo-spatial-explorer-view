@@ -67,6 +67,7 @@ export function useSvgPathTracking({
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   const lastPathsRef = useRef<string[]>([]);
   const updateCountRef = useRef(0);
+  const updateTimeRef = useRef<number>(0);
 
   // Load saved paths when component initializes
   useEffect(() => {
@@ -113,19 +114,24 @@ export function useSvgPathTracking({
       try {
         if (drawToolsRef.current) {
           const paths = drawToolsRef.current.getSVGPathData();
+          
+          // Only process if we have actual paths
           if (paths && paths.length > 0) {
-            // Only update if paths have actually changed
-            if (!arePathsEqual(paths, lastPathsRef.current)) {
+            // Only update if paths have changed AND we're not updating too frequently
+            const now = Date.now();
+            const timeSinceLastUpdate = now - updateTimeRef.current;
+            
+            // Add a minimum time between updates (3 seconds) to prevent excessive updates
+            if (!arePathsEqual(paths, lastPathsRef.current) && timeSinceLastUpdate > 3000) {
               lastPathsRef.current = [...paths];
               setSvgPaths(paths);
               
               // Save paths to localStorage
               saveSvgPaths(paths);
+              updateTimeRef.current = now;
               
               if (onPathsUpdated) {
                 updateCountRef.current += 1;
-                
-                // Include count in logging for debugging purposes
                 console.log(`SVG Paths updated (${updateCountRef.current}):`, paths);
                 onPathsUpdated(paths);
               }
@@ -141,7 +147,7 @@ export function useSvgPathTracking({
     checkForPaths();
     
     // Use a longer interval to reduce update frequency
-    const intervalId = setInterval(checkForPaths, 3000);
+    const intervalId = setInterval(checkForPaths, 5000); // Increased from 3000 to 5000ms
     return () => clearInterval(intervalId);
   }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated]);
 
