@@ -74,22 +74,8 @@ export function useFileUpload({ onUploadToDrawing }: {
       
       console.log(`Found SVG path element:`, svgPathElement);
       
-      if (svgPathElement && hasClipMaskApplied(svgPathElement)) {
-        console.log(`Drawing ${selectedDrawingId} already has clip mask, refreshing view`);
-        // Just update the last-updated timestamp to trigger a repaint
-        requestAnimationFrame(() => {
-          if (svgPathElement) {
-            svgPathElement.setAttribute('data-last-updated', Date.now().toString());
-            
-            // Only show toast if we found the element
-            toast.success(`${file.name} applied to drawing`, { id: `uploading-${selectedDrawingId}` });
-            imageAppliedRef.current.add(selectedDrawingId);
-          }
-        });
-        processingRef.current.delete(selectedDrawingId);
-        e.target.value = ''; // Reset file input
-        return;
-      }
+      // Even if it already has a clip mask, we'll reapply it with the new image
+      // This handles both updating existing masks and applying new ones
       
       // Implement a more focused application approach with fewer retries
       const maxRetries = 5; 
@@ -102,14 +88,6 @@ export function useFileUpload({ onUploadToDrawing }: {
           
           if (svgPathElement) {
             console.log(`Found SVG path element for drawing ID ${selectedDrawingId}`);
-            
-            // Double check if element already has clip mask
-            if (hasClipMaskApplied(svgPathElement)) {
-              console.log(`Drawing ${selectedDrawingId} already has clip mask, skipping application`);
-              processingRef.current.delete(selectedDrawingId);
-              toast.success(`${file.name} applied to drawing`, { id: `uploading-${selectedDrawingId}` });
-              return;
-            }
             
             // Apply the image directly using svg-utils function with the actual image URL
             console.log(`Applying image URL: ${imageUrl} to drawing: ${selectedDrawingId}`);

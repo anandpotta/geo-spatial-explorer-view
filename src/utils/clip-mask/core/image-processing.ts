@@ -68,8 +68,8 @@ export const processImageForClipMask = (
   };
   
   // Add error handler
-  image.onerror = () => {
-    console.error(`Failed to load image for pattern-${drawingId}`, { imageUrl });
+  image.onerror = (e) => {
+    console.error(`Failed to load image for pattern-${drawingId}`, { imageUrl, error: e });
     pathElement.classList.remove('loading-clip-mask');
     pathElement.setAttribute('data-image-error', 'true');
     
@@ -146,6 +146,7 @@ export const processImageForClipMask = (
       pattern.setAttribute('y', String(offsetY));
       pattern.setAttribute('width', String(scaledWidth));
       pattern.setAttribute('height', String(scaledHeight));
+      pattern.setAttribute('patternUnits', 'userSpaceOnUse');
       
       // Update image dimensions
       image.setAttribute('width', String(scaledWidth));

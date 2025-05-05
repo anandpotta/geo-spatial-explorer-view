@@ -11,7 +11,7 @@ import {
 } from './core/image-loading';
 import { getCurrentUser } from '@/services/auth-service';
 import { resolveImageUrl } from './core/url-handling';
-import { createClipMaskSvgElements } from './core/svg-elements';
+import { createClipMaskSvgElements, applyPatternAndClipPath } from './core/svg-elements';
 import { preparePathForClipMask } from './core/attributes';
 import { processImageForClipMask } from './core/image-processing';
 
@@ -55,6 +55,7 @@ export const applyImageClipMask = (
     // Resolve the image URL
     const imageUrlString = resolveImageUrl(imageUrl, id);
     if (!imageUrlString) {
+      console.error(`Could not resolve image URL for ${id}`);
       loadingImages.set(id, false);
       return false;
     }
@@ -67,6 +68,19 @@ export const applyImageClipMask = (
       // Just update timestamp to trigger a refresh
       pathElement.setAttribute('data-last-updated', Date.now().toString());
       loadingImages.set(id, false);
+      
+      // Ensure the fill is still properly applied
+      const patternId = `pattern-${id}`;
+      const fill = `url(#${patternId})`;
+      pathElement.style.fill = fill;
+      pathElement.setAttribute('fill', fill);
+      
+      // Force a repaint
+      requestAnimationFrame(() => {
+        pathElement.getBoundingClientRect();
+        window.dispatchEvent(new Event('resize'));
+      });
+      
       return true;
     }
     
@@ -81,6 +95,7 @@ export const applyImageClipMask = (
     // Create SVG elements for clip mask
     const elements = createClipMaskSvgElements(svg, pathElement, id);
     if (!elements) {
+      console.error('Failed to create SVG elements for clip mask');
       loadingImages.set(id, false);
       return false;
     }
@@ -98,11 +113,21 @@ export const applyImageClipMask = (
       // Success callback
       () => {
         // Apply the pattern and clip path
+        console.log(`Applying pattern and clip path for ${id}`);
         applyPatternAndClipPath(pathElement, `pattern-${id}`, `clip-${id}`);
+        
+        // Force a repaint to ensure changes are rendered
+        requestAnimationFrame(() => {
+          if (pathElement && document.contains(pathElement)) {
+            pathElement.getBoundingClientRect();
+            window.dispatchEvent(new Event('resize'));
+          }
+        });
       },
       // Error callback
       () => {
         // Error handled in processImageForClipMask
+        console.error('Error in image processing callback');
       }
     );
     
@@ -113,5 +138,3 @@ export const applyImageClipMask = (
     return false;
   }
 };
-
-import { applyPatternAndClipPath } from './core/svg-elements';

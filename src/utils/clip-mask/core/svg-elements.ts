@@ -76,6 +76,10 @@ export const applyPatternAndClipPath = (
       console.log(`Setting fill to: ${fill}`);
       console.log(`Setting clip-path to: ${clipPathUrl}`);
       
+      // Remove any existing fill and clip path
+      pathElement.removeAttribute('fill');
+      pathElement.removeAttribute('clip-path');
+      
       // Set fill first
       pathElement.style.fill = fill;
       pathElement.setAttribute('fill', fill);
@@ -86,6 +90,9 @@ export const applyPatternAndClipPath = (
       
       // Add extra visibility classes
       pathElement.classList.add('has-image-fill');
+      
+      // Force a repaint to ensure changes are rendered
+      pathElement.getBoundingClientRect();
     });
     
     return true;

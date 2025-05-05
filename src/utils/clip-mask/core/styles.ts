@@ -28,6 +28,14 @@ if (typeof document !== 'undefined') {
       fill-opacity: 1 !important;
     }
     
+    path[data-has-clip-mask="true"] {
+      fill-opacity: 1 !important;
+    }
+    
+    path[fill^="url(#pattern-"] {
+      fill-opacity: 1 !important;
+    }
+    
     @keyframes dash {
       to {
         stroke-dashoffset: 8;
