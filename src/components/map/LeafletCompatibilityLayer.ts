@@ -9,33 +9,35 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
+  // Define the default selectedPathOptions
+  const defaultSelectedPathOptions = {
+    maintainColor: true,
+    opacity: 0.7
+  };
+  
   // Format the edit options properly based on what was passed
   let editOptions = { 
     featureGroup: featureGroup,
-    selectedPathOptions: {
-      maintainColor: true,
-      opacity: 0.7
-    }
+    selectedPathOptions: defaultSelectedPathOptions
   };
   
   // Handle different types of edit parameters
   if (edit === false) {
-    // If edit is boolean false, pass an empty object
-    editOptions = { featureGroup: featureGroup };
+    // Even when edit is false, we need to include selectedPathOptions
+    editOptions = { 
+      featureGroup: featureGroup,
+      selectedPathOptions: defaultSelectedPathOptions 
+    };
   } else if (edit && typeof edit === 'object') {
     // If edit is an object, merge with featureGroup but don't overwrite featureGroup
     editOptions = {
       ...edit,
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      // Ensure selectedPathOptions is defined by merging with defaults if it exists
+      selectedPathOptions: edit.selectedPathOptions 
+        ? edit.selectedPathOptions 
+        : defaultSelectedPathOptions
     };
-    
-    // Ensure selectedPathOptions is properly defined if not already
-    if (!editOptions.selectedPathOptions) {
-      editOptions.selectedPathOptions = {
-        maintainColor: true,
-        opacity: 0.7
-      };
-    }
   }
   
   // Create the element with React.createElement to properly pass the ref
