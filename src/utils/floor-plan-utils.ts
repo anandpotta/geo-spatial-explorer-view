@@ -14,6 +14,7 @@ export interface FloorPlanData {
 // Constants for storage limits
 const MAX_FILE_SIZE_MB = 4;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const MAX_TOTAL_STORAGE_MB = 4.5; // Set a limit slightly below the 5MB localStorage limit
 
 /**
  * Checks if a drawing has an associated floor plan
@@ -102,14 +103,31 @@ function hasStorageSpace(dataSize: number): boolean {
       }
     }
     
-    // Most browsers limit localStorage to ~5MB, leave some buffer
-    const availableSpace = 5 * 1024 * 1024 - totalSize;
+    // Check against our own defined limit, which is below the browser limit
+    const availableSpace = MAX_TOTAL_STORAGE_MB * 1024 * 1024 - totalSize;
     
     return dataSize < availableSpace;
   } catch (e) {
     console.error('Error checking storage space:', e);
     return false;
   }
+}
+
+/**
+ * Get the current storage usage in MB
+ */
+function getCurrentStorageUsage(): number {
+  let totalSize = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) {
+      const value = localStorage.getItem(key);
+      if (value) {
+        totalSize += value.length;
+      }
+    }
+  }
+  return totalSize / (1024 * 1024);
 }
 
 /**
@@ -142,6 +160,25 @@ function reduceImageQuality(dataUrl: string, quality: number = 0.7): Promise<str
 }
 
 /**
+ * Force clear all floor plans to make space
+ */
+function forceStorageCleanup(): boolean {
+  try {
+    // Clear all floor plans to make space
+    localStorage.removeItem('floorPlans');
+    
+    // Try to save a small test value to ensure we have space
+    localStorage.setItem('test', 'test');
+    localStorage.removeItem('test');
+    
+    return true;
+  } catch (e) {
+    console.error('Error clearing storage space:', e);
+    return false;
+  }
+}
+
+/**
  * Clean up older floor plans to make room for new ones
  */
 function clearOldFloorPlans(userId: string, newPlanSize: number): boolean {
@@ -165,17 +202,20 @@ function clearOldFloorPlans(userId: string, newPlanSize: number): boolean {
     
     // Remove oldest plans until we free enough space
     let deletedCount = 0;
+    let totalDeleted = 0;
     for (const [drawingId, _] of userFloorPlans) {
       // Don't delete too many, keep at least the newest ones
-      if (deletedCount >= Math.ceil(userFloorPlans.length / 3)) break;
+      if (deletedCount >= Math.ceil(userFloorPlans.length / 2)) break;
       
+      // Track how many we've deleted
       delete floorPlans[drawingId];
       deletedCount++;
+      totalDeleted++;
       
       // Try to save the reduced floor plans
       try {
         localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
-        console.log(`Removed ${deletedCount} old floor plans to make space`);
+        console.log(`Removed ${totalDeleted} old floor plans to make space`);
         return true;
       } catch (e) {
         // If we still can't save, continue deleting more
@@ -183,10 +223,16 @@ function clearOldFloorPlans(userId: string, newPlanSize: number): boolean {
       }
     }
     
+    // If we've deleted all user floor plans and still no space, try more drastic measures
+    if (deletedCount >= userFloorPlans.length) {
+      return forceStorageCleanup();
+    }
+    
     return false;
   } catch (e) {
     console.error('Error clearing old floor plans:', e);
-    return false;
+    // Try force cleanup as a last resort
+    return forceStorageCleanup();
   }
 }
 
@@ -216,6 +262,14 @@ export function saveFloorPlan(
     if (dataSize > MAX_FILE_SIZE_BYTES) {
       toast.error(`File too large (${(dataSize / 1024 / 1024).toFixed(1)}MB). Maximum size is ${MAX_FILE_SIZE_MB}MB`);
       return false;
+    }
+    
+    // Check current storage usage and warn if close to limit
+    const currentUsage = getCurrentStorageUsage();
+    console.log(`Current storage usage: ${currentUsage.toFixed(2)}MB / ${MAX_TOTAL_STORAGE_MB}MB`);
+    
+    if (currentUsage > MAX_TOTAL_STORAGE_MB * 0.7) {
+      console.warn('Storage usage is high, consider clearing some old floor plans');
     }
     
     const floorPlansJson = localStorage.getItem('floorPlans');
@@ -248,20 +302,49 @@ export function saveFloorPlan(
     } catch (e) {
       console.warn('Storage quota exceeded, attempting to optimize...');
       
-      // If it's an image (not PDF), try to reduce quality
+      // Try clearing old floor plans first
+      const cleared = clearOldFloorPlans(currentUser.id, dataSize);
+      
+      if (cleared) {
+        // Try saving again after clearing old plans
+        try {
+          const refreshedPlans = localStorage.getItem('floorPlans');
+          const currentPlans = refreshedPlans ? JSON.parse(refreshedPlans) : {};
+          currentPlans[drawingId] = newFloorPlan;
+          
+          localStorage.setItem('floorPlans', JSON.stringify(currentPlans));
+          
+          toast.success('Old floor plans removed to make space for new one');
+          window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+            detail: { drawingId, userId: currentUser.id } 
+          }));
+          
+          return true;
+        } catch (saveErr) {
+          console.error('Still not enough storage space after cleanup:', saveErr);
+        }
+      }
+      
+      // If image (not PDF), try to reduce quality as fallback
       if (!floorPlanData.isPdf && floorPlanData.data.startsWith('data:image')) {
         try {
-          reduceImageQuality(floorPlanData.data, 0.5)
+          toast.info('Compressing image to fit in storage...');
+          
+          reduceImageQuality(floorPlanData.data, 0.4)
             .then(reducedData => {
               // Try again with reduced quality
               const compressedPlan = {
                 ...newFloorPlan,
                 data: reducedData
               };
-              floorPlans[drawingId] = compressedPlan;
               
               try {
-                localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
+                // Get fresh version of floorPlans
+                const refreshedPlans = localStorage.getItem('floorPlans');
+                const currentPlans = refreshedPlans ? JSON.parse(refreshedPlans) : {};
+                currentPlans[drawingId] = compressedPlan;
+                
+                localStorage.setItem('floorPlans', JSON.stringify(currentPlans));
                 
                 toast.success('Floor plan saved with reduced quality');
                 window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
@@ -271,7 +354,7 @@ export function saveFloorPlan(
                 return true;
               } catch (err) {
                 console.error('Still not enough space after compression:', err);
-                toast.error('Not enough storage space. Try removing other floor plans.');
+                toast.error('Not enough storage space. Please clear all data and try again.');
                 return false;
               }
             })
@@ -284,30 +367,8 @@ export function saveFloorPlan(
           console.error('Error in compression process:', compressErr);
         }
       } else {
-        // For PDFs or if compression fails, try clearing old plans
-        const cleared = clearOldFloorPlans(currentUser.id, dataSize);
-        
-        if (cleared) {
-          // Try saving again after clearing
-          try {
-            floorPlans[drawingId] = newFloorPlan;
-            localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
-            
-            toast.success('Old floor plans removed to make space for new one');
-            window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-              detail: { drawingId, userId: currentUser.id } 
-            }));
-            
-            return true;
-          } catch (saveErr) {
-            console.error('Still not enough storage space after cleanup:', saveErr);
-            toast.error('Not enough storage space. Try manually removing some floor plans.');
-            return false;
-          }
-        } else {
-          toast.error('Storage limit reached. Please delete some floor plans first.');
-          return false;
-        }
+        toast.error('Storage limit reached. Please clear all data and try again.');
+        return false;
       }
     }
   } catch (e) {

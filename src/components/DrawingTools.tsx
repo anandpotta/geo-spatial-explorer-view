@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
@@ -98,15 +99,30 @@ const DrawingTools = ({
       });
     } else {
       // Fallback if featureGroup is not available
-      localStorage.removeItem('savedMarkers');
-      localStorage.removeItem('savedDrawings');
-      localStorage.removeItem('floorPlans');
+      // Preserve authentication data
+      const authState = localStorage.getItem('geospatial_auth_state');
+      const users = localStorage.getItem('geospatial_users');
+      
+      // Clear everything else
+      localStorage.clear();
+      
+      // Restore authentication data
+      if (authState) {
+        localStorage.setItem('geospatial_auth_state', authState);
+      }
+      if (users) {
+        localStorage.setItem('geospatial_users', users);
+      }
+      
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
       
       if (onClearAll) {
         onClearAll();
       }
       
-      toast.success('All layers cleared');
+      toast.success('All data cleared while preserving user accounts');
     }
     
     setIsClearDialogOpen(false);

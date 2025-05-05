@@ -17,16 +17,11 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       deleteMarker(marker.id);
     });
     
-    // Remove specific items but preserve user authentication data
-    localStorage.removeItem('savedMarkers');
-    localStorage.removeItem('savedDrawings');
-    localStorage.removeItem('floorPlans');
-    
-    // Preserve the authentication state
+    // Preserve authentication data
     const authState = localStorage.getItem('geospatial_auth_state');
     const users = localStorage.getItem('geospatial_users');
     
-    // Clear everything else
+    // Clear everything else from localStorage
     localStorage.clear();
     
     // Restore authentication data
@@ -37,6 +32,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       localStorage.setItem('geospatial_users', users);
     }
     
+    // Dispatch storage and related events to notify components
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('markersUpdated'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
