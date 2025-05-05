@@ -59,43 +59,11 @@ export const setupLayerEvents = (
       try {
         pathElement.setAttribute('d', drawing.svgPath);
         
-        // Also store as data attribute for easier recovery
-        pathElement.setAttribute('data-original-path', drawing.svgPath);
-        
         // Force a reflow to ensure the path is displayed
         pathElement.getBoundingClientRect();
       } catch (err) {
         console.error('Error setting path data:', err);
       }
     }
-    
-    // Set up a MutationObserver to watch for attribute changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach(mutation => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'd') {
-          const currentPath = pathElement.getAttribute('d');
-          const originalPath = pathElement.getAttribute('data-original-path');
-          
-          // If the path changed and we have the original, restore it
-          if (originalPath && currentPath !== originalPath) {
-            pathElement.setAttribute('d', originalPath);
-          }
-          
-          // Ensure visibility
-          if (!pathElement.classList.contains('visible-path-stroke')) {
-            pathElement.classList.add('visible-path-stroke');
-          }
-        }
-      });
-    });
-    
-    // Start observing the path element
-    observer.observe(pathElement, {
-      attributes: true,
-      attributeFilter: ['d', 'class', 'style']
-    });
-    
-    // Add event listener to layer events that might affect visibility
-    layer.on('remove', () => observer.disconnect());
   }
 };
