@@ -1,6 +1,6 @@
 
 import L from 'leaflet';
-import { ImageTransformOptions, getDefaultTransformOptions } from '@/utils/image-transform-utils';
+import { ImageTransformOptions, getDefaultTransformOptions, transformImage } from '@/utils/image-transform-utils';
 import { 
   createImageContainer, 
   addImageToContainer, 
@@ -221,3 +221,4 @@ export const addImageToMapContainer = (
     return undefined;
   }
 };
+
