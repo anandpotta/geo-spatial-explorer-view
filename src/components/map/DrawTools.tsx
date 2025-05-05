@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -78,10 +77,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
-        edit: true,  // Simplified from object to boolean to prevent layering issues
+        edit: true,
         remove: true,
-        featureGroup: featureGroup  // Explicitly pass the featureGroup to edit options
+        // Don't pass featureGroup here, it will be added by our wrapper
       }}
+      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
     />
   );
 });
