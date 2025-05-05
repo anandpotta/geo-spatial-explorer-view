@@ -11,6 +11,7 @@ import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
 import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
 import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
+import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
