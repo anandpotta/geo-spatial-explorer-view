@@ -187,24 +187,25 @@ const addImageToLayer = (
     // Append container to the overlay pane
     overlayPane.appendChild(containerDiv);
     
+    // Define updatePosition function outside the image element creation callback
+    // so it can be referenced elsewhere
+    const updatePosition = () => {
+      if (!pathElement || !svgElement) return;
+      
+      const newPathRect = pathElement.getBoundingClientRect();
+      const newSvgRect = svgElement.getBoundingClientRect();
+      
+      containerDiv.style.left = `${newPathRect.left - newSvgRect.left}px`;
+      containerDiv.style.top = `${newPathRect.top - newSvgRect.top}px`;
+      containerDiv.style.width = `${newPathRect.width}px`;
+      containerDiv.style.height = `${newPathRect.height}px`;
+    };
+    
     // Create and add image element with improved positioning
     const imgElement = createImageElement(imageData, (img) => {
       // Get the path's bounding box for positioning
       const pathRect = pathElement.getBoundingClientRect();
       const svgRect = svgElement.getBoundingClientRect();
-      
-      // Define updatePosition function here so it's in scope
-      const updatePosition = () => {
-        if (!pathElement || !svgElement) return;
-        
-        const newPathRect = pathElement.getBoundingClientRect();
-        const newSvgRect = svgElement.getBoundingClientRect();
-        
-        containerDiv.style.left = `${newPathRect.left - newSvgRect.left}px`;
-        containerDiv.style.top = `${newPathRect.top - newSvgRect.top}px`;
-        containerDiv.style.width = `${newPathRect.width}px`;
-        containerDiv.style.height = `${newPathRect.height}px`;
-      };
       
       // Initial positioning
       updatePosition();
@@ -218,12 +219,6 @@ const addImageToLayer = (
       
       // Apply transformation
       transformImage(img, transformOptions);
-      
-      // Update position on map events
-      const map = (layer as any)._map;
-      if (map) {
-        map.on('zoom move moveend', updatePosition);
-      }
     });
     
     containerDiv.appendChild(imgElement);
@@ -268,6 +263,12 @@ const addImageToLayer = (
     };
     
     window.addEventListener('image-transform-updated', handleTransformUpdate as EventListener);
+    
+    // Update position on map events
+    const map = (layer as any)._map;
+    if (map) {
+      map.on('zoom move moveend', updatePosition);
+    }
     
     // Return a cleanup function
     return () => {
