@@ -1,7 +1,7 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { toast } from 'sonner';
+import { ensureEditControlsVisibility } from '../draw-tools/hooks/utils/editControlsVisibility';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
