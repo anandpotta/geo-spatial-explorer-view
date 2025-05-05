@@ -1,7 +1,7 @@
 
 import { useEffect, useRef } from 'react';
-import { LocationMarker } from '@/utils/geo-utils';
-import { getSavedMarkers } from '@/utils/marker-utils';
+import { LocationMarker } from '@/utils/markers/types';
+import { getSavedMarkers } from '@/utils/markers/storage';
 import { deduplicateMarkers, markersHaveChanged } from './marker-utils';
 
 export function useMarkerUpdates(

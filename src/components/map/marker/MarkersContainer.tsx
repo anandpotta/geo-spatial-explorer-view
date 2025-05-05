@@ -1,5 +1,5 @@
 
-import { LocationMarker } from '@/utils/marker-utils';
+import { LocationMarker } from '@/utils/markers/types';
 import MarkersList from '../MarkersList';
 import { memo, useEffect, useState, useRef } from 'react';
 

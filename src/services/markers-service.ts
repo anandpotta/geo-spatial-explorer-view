@@ -1,5 +1,5 @@
 
-import { LocationMarker } from '@/utils/geo-utils';
+import { LocationMarker } from '@/utils/markers/types';
 import { apiCall, getConnectionStatus } from '@/utils/api-service';
 import { toast } from '@/components/ui/use-toast';
 

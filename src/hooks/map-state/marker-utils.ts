@@ -1,5 +1,5 @@
 
-import { LocationMarker } from '@/utils/geo-utils';
+import { LocationMarker } from '@/utils/markers/types';
 
 /**
  * Removes duplicate markers by ID from an array

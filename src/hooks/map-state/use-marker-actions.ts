@@ -1,8 +1,8 @@
 
 import { useCallback } from 'react';
-import { LocationMarker } from '@/utils/geo-utils';
+import { LocationMarker } from '@/utils/markers/types';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
-import { saveMarker, deleteMarker } from '@/utils/marker-utils';
+import { saveMarker, deleteMarker } from '@/utils/markers/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
