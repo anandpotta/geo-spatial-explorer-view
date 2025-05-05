@@ -1,24 +1,29 @@
 
 import { LocationMarker } from './types';
 import { getCurrentUser } from '../../services/auth-service';
+import { toast } from 'sonner';
+import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
 import { getConnectionStatus } from '../api-service';
 
-/**
- * Get all saved markers for the current user
- */
 export function getSavedMarkers(): LocationMarker[] {
   const currentUser = getCurrentUser();
   const markersJson = localStorage.getItem('savedMarkers');
   
   if (!markersJson) {
-    fetchMarkersFromBackend().catch(() => {
-      console.log('Could not fetch markers from backend, using local storage');
-    });
+    // Try to fetch from backend first if localStorage is empty
+    const { isOnline, isBackendAvailable } = getConnectionStatus();
+    if (isOnline && isBackendAvailable) {
+      fetchMarkersFromBackend().catch(err => {
+        // Silent fail for initial load
+        console.log('Could not fetch markers from backend, using local storage');
+      });
+    }
     return [];
   }
   
   try {
     let markers = JSON.parse(markersJson);
+    
     // Map the dates
     markers = markers.map((marker: any) => ({
       ...marker,
@@ -37,17 +42,15 @@ export function getSavedMarkers(): LocationMarker[] {
   }
 }
 
-/**
- * Save a marker to local storage
- */
 export function saveMarker(marker: LocationMarker): void {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     console.error('Cannot save marker: No user is logged in');
+    toast.error('Please log in to save your markers');
     return;
   }
   
-  // Ensure the marker has the current user's ID
+  // Ensure the marker has a user ID
   const markerWithUser = {
     ...marker,
     userId: currentUser.id
@@ -55,63 +58,57 @@ export function saveMarker(marker: LocationMarker): void {
   
   const savedMarkers = getSavedMarkers();
   
-  // Check if marker already exists (for updates)
+  // Check if marker with same ID exists and update it
   const existingIndex = savedMarkers.findIndex(m => m.id === markerWithUser.id);
   
   if (existingIndex >= 0) {
-    // Update existing marker
     savedMarkers[existingIndex] = markerWithUser;
   } else {
-    // Add new marker
     savedMarkers.push(markerWithUser);
   }
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Dispatch a custom event to notify components that markers have been updated
-  window.dispatchEvent(new CustomEvent('markersUpdated'));
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('markersUpdated'));
   
-  syncMarkersWithBackend(savedMarkers);
+  // Only attempt to sync if we're online
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    syncMarkersWithBackend(savedMarkers)
+      .catch(err => {
+        if (navigator.onLine) {
+          console.warn('Failed to sync markers, will retry later:', err);
+        }
+      });
+  }
 }
 
-/**
- * Delete a marker from local storage
- */
 export function deleteMarker(id: string): void {
-  try {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      console.error('Cannot delete marker: No user is logged in');
-      return;
-    }
-    
-    const savedMarkers = getSavedMarkers();
-    const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
-    localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
-    
-    // Ensure both events are dispatched
-    try {
-      // Use requestAnimationFrame to avoid blocking the UI thread
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('storage'));
-        window.dispatchEvent(new Event('markersUpdated'));
-        
-        // Force re-enabling of interactions on the body
-        document.body.style.pointerEvents = '';
-        document.body.removeAttribute('aria-hidden');
-        
-        // Try to sync with backend in the background
-        deleteMarkerFromBackend(id);
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot delete marker: No user is logged in');
+    toast.error('Please log in to manage your markers');
+    return;
+  }
+  
+  const savedMarkers = getSavedMarkers();
+  const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
+  localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('markersUpdated'));
+  
+  // Only attempt to sync delete if we're online
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    deleteMarkerFromBackend(id)
+      .catch(err => {
+        if (navigator.onLine) {
+          console.warn('Failed to delete marker from backend, will retry later:', err);
+        }
       });
-    } catch (e) {
-      console.error("Error dispatching events:", e);
-      // Fallback method for older browsers
-      setTimeout(() => {
-        window.dispatchEvent(new Event('storage'));
-        window.dispatchEvent(new Event('markersUpdated'));
-      }, 0);
-    }
-  } catch (e) {
-    console.error("Error deleting marker:", e);
   }
 }
