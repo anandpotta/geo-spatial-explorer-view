@@ -1,6 +1,16 @@
 
 import { getCurrentUser } from '@/services/auth-service';
 
+// Define the FloorPlanData interface
+export interface FloorPlanData {
+  imageData: string;
+  drawingId: string;
+  userId: string;
+  isPdf: boolean;
+  fileName: string;
+  timestamp: number;
+}
+
 // Key for storing floor plans in localStorage
 const FLOOR_PLAN_STORAGE_KEY = 'floorPlans';
 

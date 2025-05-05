@@ -44,7 +44,9 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     isInitialized,
     setIsInitialized,
     fileInputRef,
-    openFileUploadDialog
+    openFileUploadDialog,
+    selectedDrawing,
+    setSelectedDrawing
   } = useDrawingControls();
   
   const {
@@ -71,12 +73,12 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
-    openFileUploadDialog: () => {
+    openFileUploadDialog: (drawingId: string) => {
       if (!isAuthenticated) {
         toast.error('Please log in to upload files');
         return;
       }
-      openFileUploadDialog();
+      openFileUploadDialog(drawingId);
     },
     getSvgPaths: () => {
       if (drawToolsRef.current) {

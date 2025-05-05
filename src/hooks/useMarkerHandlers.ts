@@ -2,8 +2,11 @@
 import { toast } from 'sonner';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import L from 'leaflet';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useMarkerHandlers(mapState: any) {
+  const { currentUser } = useAuth();
+  
   const handleMapClick = (latlng: L.LatLng) => {
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
@@ -61,7 +64,7 @@ export function useMarkerHandlers(mapState: any) {
       }
     } else {
       // Create a safe copy of the shape without potential circular references
-      const safeShape = {
+      const safeShape: DrawingData = {
         type: shape.type,
         id: shape.id || crypto.randomUUID(), // Ensure there's always an ID
         coordinates: shape.coordinates || [],
@@ -80,7 +83,8 @@ export function useMarkerHandlers(mapState: any) {
           name: `New ${shape.type}`,
           color: '#3388ff',
           createdAt: new Date()
-        }
+        },
+        userId: currentUser?.id || '' // Add the user ID
       };
       
       // Store the safe shape in the current drawing
