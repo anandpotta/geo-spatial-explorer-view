@@ -73,23 +73,21 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           setSelectedImage(dataUrl);
           
           // Save to utils for this specific building
-          const saveSuccess = await saveFloorPlan(
+          saveFloorPlan(
             drawing.id,
-            dataUrl,
-            file.type.includes('pdf'),
-            file.name
+            {
+              data: dataUrl,
+              isPdf: file.type.includes('pdf'),
+              fileName: file.name
+            }
           );
           
-          if (saveSuccess) {
-            toast.success('Floor plan uploaded successfully');
-            
-            // Trigger a custom event to ensure clip masks are applied
-            window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-              detail: { drawingId: drawing.id }
-            }));
-          } else {
-            toast.error('Failed to save floor plan - image may be too large');
-          }
+          toast.success('Floor plan uploaded successfully');
+          
+          // Trigger a custom event to ensure clip masks are applied
+          window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
+            detail: { drawingId: drawing.id }
+          }));
         }
         setIsUploading(false);
       };

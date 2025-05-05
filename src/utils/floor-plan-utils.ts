@@ -6,7 +6,9 @@ export interface FloorPlanData {
   name: string;
   type: string;
   uploaded: string;
-  userId: string; // Add userId to associate floor plans with specific users
+  userId: string;
+  isPdf: boolean;
+  fileName: string;
 }
 
 /**
@@ -82,7 +84,14 @@ export async function getDrawingIdsWithFloorPlans(): Promise<string[]> {
 /**
  * Saves floor plan data for a specific drawing
  */
-export function saveFloorPlan(drawingId: string, floorPlanData: Omit<FloorPlanData, 'userId'>): void {
+export function saveFloorPlan(
+  drawingId: string, 
+  floorPlanData: {
+    data: string;
+    isPdf: boolean;
+    fileName: string;
+  }
+): void {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     console.error('Cannot save floor plan: No user is logged in');
@@ -95,8 +104,13 @@ export function saveFloorPlan(drawingId: string, floorPlanData: Omit<FloorPlanDa
     
     // Add the user ID to the floor plan data
     floorPlans[drawingId] = {
-      ...floorPlanData,
-      userId: currentUser.id
+      data: floorPlanData.data,
+      name: floorPlanData.fileName,
+      type: floorPlanData.isPdf ? 'application/pdf' : 'image/png',
+      uploaded: new Date().toISOString(),
+      userId: currentUser.id,
+      isPdf: floorPlanData.isPdf,
+      fileName: floorPlanData.fileName
     };
     
     localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
