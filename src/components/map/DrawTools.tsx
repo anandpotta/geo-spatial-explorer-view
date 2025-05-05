@@ -4,7 +4,7 @@ import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { toast } from 'sonner';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { getMapFromLayer, safelyDisableEditForLayer } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer } from '@/utils/leaflet-type-utils';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -15,87 +15,27 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
-  const isComponentMounted = useRef(true);
-
+  
   // Force SVG renderer but in a safer way
   useEffect(() => {
-    // This effect will ensure all layers use SVG renderer
-    if (!featureGroup) return;
+    // Instead of trying to modify the read-only property, configure the renderer
+    // when creating layers
+    const pathPrototype = L.Path.prototype as any; // Cast to any to access internal methods
+    const originalUpdatePath = pathPrototype._updatePath;
     
-    try {
-      // Override the _updatePath method once the featureGroup is ready
-      const pathPrototype = L.Path.prototype as any;
-      if (!pathPrototype._originalUpdatePath) {
-        pathPrototype._originalUpdatePath = pathPrototype._updatePath;
-        
-        pathPrototype._updatePath = function() {
-          if (this.options && !this.options.renderer) {
-            this.options.renderer = L.svg();
-          }
-          pathPrototype._originalUpdatePath.call(this);
-        };
+    pathPrototype._updatePath = function() {
+      if (this.options && !this.options.renderer) {
+        this.options.renderer = L.svg();
       }
-    } catch (err) {
-      console.error('Error setting up SVG renderer:', err);
-    }
+      originalUpdatePath.call(this);
+    };
     
     return () => {
-      // Mark component as unmounted to prevent further operations
-      isComponentMounted.current = false;
-      
       // Restore original function when component unmounts
-      try {
-        const pathPrototype = L.Path.prototype as any;
-        if (pathPrototype._originalUpdatePath) {
-          pathPrototype._updatePath = pathPrototype._originalUpdatePath;
-          delete pathPrototype._originalUpdatePath;
-        }
-      } catch (err) {
-        console.error('Error restoring path prototype:', err);
-      }
+      pathPrototype._updatePath = originalUpdatePath;
     };
-  }, [featureGroup]);
-
-  // Make sure the edit control is properly disposed when component unmounts
-  useEffect(() => {
-    return () => {
-      if (!isComponentMounted.current) return;
-
-      try {
-        if (editControlRef.current && editControlRef.current._toolbars) {
-          // Safely disable any active handlers before unmounting
-          if (editControlRef.current._toolbars.edit) {
-            Object.values(editControlRef.current._toolbars.edit._modes).forEach((mode: any) => {
-              if (mode && mode.handler && typeof mode.handler.disable === 'function') {
-                try {
-                  mode.handler.disable();
-                } catch (err) {
-                  console.error('Error disabling edit mode:', err);
-                }
-              }
-            });
-          }
-          
-          // Manually remove all editing capabilities from layers
-          if (featureGroup) {
-            featureGroup.eachLayer((layer: any) => {
-              safelyDisableEditForLayer(layer);
-              
-              // Clear editing references that might cause issues
-              if (layer.editing) {
-                // Remove problematic properties in a safe way
-                if (layer.editing._poly) layer.editing._poly = null;
-                if (layer.editing._shape) layer.editing._shape = null;
-              }
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Error cleaning up edit control:', err);
-      }
-    };
-  }, [featureGroup]);
-
+  }, []);
+  
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
     getPathElements: () => {
@@ -141,8 +81,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   }));
 
   const handleCreated = (e: any) => {
-    if (!isComponentMounted.current) return;
-    
     try {
       const { layerType, layer } = e;
       
@@ -187,9 +125,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       
       // Wait for the next tick to ensure DOM is updated
       setTimeout(() => {
-        // Only proceed if the component is still mounted
-        if (!isComponentMounted.current) return;
-        
         // Try to get SVG path data after layer is rendered
         if (!shape.svgPath && layer._path) {
           shape.svgPath = layer._path.getAttribute('d');
@@ -203,15 +138,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   };
 
-  if (!featureGroup) {
-    console.warn('DrawTools received null or undefined featureGroup');
-    return null;
-  }
-
   return (
     <EditControl
       ref={editControlRef}
       position="topright"
+      onCreated={handleCreated}
       draw={{
         rectangle: true,
         polygon: true,
@@ -221,17 +152,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         polyline: false
       }}
       edit={{
-        featureGroup: featureGroup,
-        edit: {
-          selectedPathOptions: {
-            maintainColor: false,
-            opacity: 0.7
-          }
-        },
         remove: true
       }}
-      onCreated={handleCreated}
-      featureGroup={featureGroup}
+      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
     />
   );
 });

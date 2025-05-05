@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
-import { DrawingData, saveDrawing, getSavedDrawings, deleteDrawing } from '@/utils/drawing-utils';
+import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -118,26 +117,6 @@ export function useMapState(selectedLocation?: Location) {
     setMarkers(markers.filter(marker => marker.id !== id));
     toast.success("Location removed");
   };
-  
-  const handleRemoveShape = (drawingId: string) => {
-    deleteDrawing(drawingId);
-    
-    // Also delete any associated marker
-    const associatedMarker = markers.find(m => m.associatedDrawing === drawingId);
-    if (associatedMarker) {
-      deleteMarker(associatedMarker.id);
-      setMarkers(markers.filter(m => m.id !== associatedMarker.id));
-    }
-    
-    // Update the drawings state
-    setDrawings(drawings.filter(d => d.id !== drawingId));
-    
-    toast.success("Shape removed");
-    
-    // Dispatch events to ensure UI updates
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('markersUpdated'));
-  };
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
@@ -169,7 +148,6 @@ export function useMapState(selectedLocation?: Location) {
     setActiveTool,
     handleSaveMarker,
     handleDeleteMarker,
-    handleRemoveShape,
     handleRegionClick
   };
 }

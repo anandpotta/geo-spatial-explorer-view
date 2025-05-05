@@ -1,10 +1,10 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-drawing-config';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
+import { toast } from 'sonner';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 interface CreateLayerOptions {
