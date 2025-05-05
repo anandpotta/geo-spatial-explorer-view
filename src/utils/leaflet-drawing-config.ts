@@ -10,6 +10,11 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
       delete geoJSONOptions.renderer;
     }
     
+    // Ensure stroke is enabled with proper settings
+    geoJSONOptions.stroke = true;
+    geoJSONOptions.weight = geoJSONOptions.weight || 4;
+    geoJSONOptions.opacity = 1;
+    
     // Create layer with corrected options
     const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
     
@@ -18,12 +23,21 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
       if (l && l.options) {
         // Apply SVG renderer to the layer options
         l.options.renderer = L.svg();
+        l.options.stroke = true;
+        l.options.weight = options.weight || 4;
+        l.options.opacity = 1;
       }
       
       // Store SVG path data if available
       if (drawing.svgPath && l._path) {
         try {
           l._path.setAttribute('d', drawing.svgPath);
+          
+          // Add class for visible stroke
+          l._path.classList.add('visible-path-stroke');
+          
+          // Force a reflow to ensure styles are applied
+          l._path.getBoundingClientRect();
         } catch (err) {
           console.error('Error setting path data:', err);
         }
@@ -38,11 +52,14 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
 };
 
 export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
-  color: color || '#3388ff',
-  weight: 3,
-  opacity: 0.7,
+  color: color || '#8B5CF6', // Using a more visible purple color
+  weight: 4, // Increased stroke width
+  opacity: 1, // Full opacity for stroke
   fillOpacity: 0.3,
-  renderer: L.svg() // Force SVG renderer
+  renderer: L.svg(), // Force SVG renderer
+  stroke: true, // Explicitly enable stroke
+  lineCap: 'round', // Round line caps
+  lineJoin: 'round' // Round line joins
 });
 
 export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {

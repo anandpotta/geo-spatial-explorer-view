@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
@@ -33,12 +32,15 @@ export const prepareLayerOptions = (drawing: DrawingData): L.PathOptions => {
  * Get default drawing options for layers
  */
 export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
-  color: color || '#3388ff',
-  weight: 3,
-  opacity: 0.7,
+  color: color || '#8B5CF6', // Using a more visible purple color by default
+  weight: 4, // Increase stroke width for better visibility
+  opacity: 1, // Use full opacity for the stroke
   fillOpacity: 0.3,
   renderer: L.svg(), // Force SVG renderer
-  className: 'leaflet-interactive-drawing' // Add a custom class for easier selection
+  className: 'leaflet-interactive-drawing', // Add a custom class for easier selection
+  stroke: true, // Ensure stroke is enabled
+  lineCap: 'round', // Round line caps
+  lineJoin: 'round' // Round line joins
 });
 
 /**
@@ -61,6 +63,11 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
       if (l && l.options) {
         // Apply SVG renderer to the layer options
         l.options.renderer = L.svg();
+        
+        // Ensure stroke is set to true for this layer
+        l.options.stroke = true;
+        l.options.weight = options.weight || 4;
+        l.options.opacity = 1;
       }
       
       // Store SVG path data if available
@@ -104,6 +111,9 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       path.classList.add('drawing-path-' + drawingId.substring(0, 8));
       path.id = `drawing-path-${drawingId}`;
       
+      // Add class for visible stroke
+      path.classList.add('visible-path-stroke');
+      
       // Force browser to recognize the attribute by triggering a reflow
       path.getBoundingClientRect();
       
@@ -125,6 +135,7 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
           path.setAttribute('data-drawing-id', drawingId);
           path.classList.add('drawing-path-' + drawingId.substring(0, 8));
           path.id = `drawing-path-${drawingId}`;
+          path.classList.add('visible-path-stroke');
           
           path.getBoundingClientRect();
           

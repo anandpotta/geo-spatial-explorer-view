@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -74,6 +73,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           visibility: visible !important;
           display: block !important;
           opacity: 1 !important;
+        }
+        .visible-path-stroke {
+          stroke-width: 4px !important;
+          stroke: #8B5CF6 !important;
+          stroke-opacity: 1 !important;
+          stroke-linecap: round !important;
+          stroke-linejoin: round !important;
+          fill-opacity: 0.3 !important;
+          vector-effect: non-scaling-stroke;
+        }
+        .leaflet-overlay-pane path.leaflet-interactive {
+          stroke-width: 4px !important;
+          stroke-opacity: 1 !important;
         }
       `;
       document.head.appendChild(styleEl);
@@ -165,7 +177,15 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   };
 
   const drawOptions = {
-    rectangle: true,
+    rectangle: {
+      shapeOptions: {
+        color: '#8B5CF6',
+        weight: 4,
+        opacity: 1,
+        fillOpacity: 0.3,
+        stroke: true
+      }
+    },
     polygon: {
       allowIntersection: false,
       drawError: {
@@ -173,16 +193,27 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         message: '<strong>Cannot draw that shape!</strong>'
       },
       shapeOptions: {
-        color: '#3388ff',
+        color: '#8B5CF6',
         weight: 4,
-        opacity: 0.7,
-        fillOpacity: 0.2
+        opacity: 1,
+        fillOpacity: 0.3,
+        stroke: true,
+        lineCap: 'round',
+        lineJoin: 'round'
       },
       showArea: false,
       metric: true,
       smoothFactor: 1 // Lower value for less smoothing (more accurate paths)
     },
-    circle: true,
+    circle: {
+      shapeOptions: {
+        color: '#8B5CF6',
+        weight: 4,
+        opacity: 1,
+        fillOpacity: 0.3,
+        stroke: true
+      }
+    },
     circlemarker: false,
     marker: true,
     polyline: false
