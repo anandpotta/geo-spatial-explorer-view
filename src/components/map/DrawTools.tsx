@@ -51,6 +51,37 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       }
     };
   }, [featureGroup]);
+
+  // Ensure draw controls remain visible
+  useEffect(() => {
+    const ensureControlsVisibility = () => {
+      // Find and force visibility of draw control elements
+      const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
+      drawControls.forEach(control => {
+        (control as HTMLElement).style.display = 'block';
+        (control as HTMLElement).style.visibility = 'visible';
+        (control as HTMLElement).style.opacity = '1';
+        (control as HTMLElement).style.zIndex = '12000';
+      });
+      
+      // Also ensure toolbar is visible
+      const toolbars = document.querySelectorAll('.leaflet-draw-toolbar');
+      toolbars.forEach(toolbar => {
+        (toolbar as HTMLElement).style.display = 'block';
+        (toolbar as HTMLElement).style.visibility = 'visible';
+        (toolbar as HTMLElement).style.opacity = '1';
+        (toolbar as HTMLElement).style.zIndex = '12000';
+      });
+    };
+    
+    // Run immediately and set up an interval to maintain visibility
+    ensureControlsVisibility();
+    const intervalId = setInterval(ensureControlsVisibility, 500);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
   
   // Make sure the edit control is properly disposed when component unmounts
   useEffect(() => {

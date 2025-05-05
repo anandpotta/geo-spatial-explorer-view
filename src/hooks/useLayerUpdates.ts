@@ -95,6 +95,21 @@ export function useLayerUpdates({
           console.error(`Error creating layer for drawing ${drawing.id}:`, err);
         }
       });
+      
+      // Additional step: ensure drawing controls remain visible after layer updates
+      setTimeout(() => {
+        try {
+          const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
+          drawControls.forEach(control => {
+            (control as HTMLElement).style.display = 'block';
+            (control as HTMLElement).style.visibility = 'visible';
+            (control as HTMLElement).style.opacity = '1';
+            (control as HTMLElement).style.zIndex = '12000';
+          });
+        } catch (err) {
+          console.error('Error ensuring draw controls visibility:', err);
+        }
+      }, 100);
     } catch (err) {
       console.error('Error updating layers:', err);
     }
@@ -124,14 +139,36 @@ export function useLayerUpdates({
       }
     };
     
+    // Add event listener for z-index interference
+    const handleZIndexChange = () => {
+      if (!isMountedRef.current) return;
+      
+      // Ensure drawing controls are visible
+      setTimeout(() => {
+        try {
+          const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
+          drawControls.forEach(control => {
+            (control as HTMLElement).style.display = 'block';
+            (control as HTMLElement).style.visibility = 'visible';
+            (control as HTMLElement).style.opacity = '1';
+            (control as HTMLElement).style.zIndex = '12000';
+          });
+        } catch (err) {
+          console.error('Error handling z-index change:', err);
+        }
+      }, 100);
+    };
+    
     window.addEventListener('markersUpdated', handleMarkerUpdated);
     window.addEventListener('image-uploaded', handleImageUpdated as EventListener);
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
+    window.addEventListener('click', handleZIndexChange);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkerUpdated);
       window.removeEventListener('image-uploaded', handleImageUpdated as EventListener);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
+      window.removeEventListener('click', handleZIndexChange);
     };
   }, []);
 
@@ -155,8 +192,26 @@ export function useLayerUpdates({
     
     window.addEventListener('storage', handleStorageChange);
     
+    // Set up an interval to ensure controls remain visible
+    const visibilityInterval = setInterval(() => {
+      if (!isMountedRef.current) return;
+      
+      try {
+        const drawControls = document.querySelectorAll('.leaflet-draw.leaflet-control');
+        drawControls.forEach(control => {
+          (control as HTMLElement).style.display = 'block';
+          (control as HTMLElement).style.visibility = 'visible';
+          (control as HTMLElement).style.opacity = '1';
+          (control as HTMLElement).style.zIndex = '12000';
+        });
+      } catch (err) {
+        console.error('Error in visibility interval:', err);
+      }
+    }, 1000);
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      clearInterval(visibilityInterval);
       
       // Only try to clear layers if the featureGroup is still valid
       if (featureGroup && featureGroup.clearLayers && typeof featureGroup.clearLayers === 'function') {

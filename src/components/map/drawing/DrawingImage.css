@@ -67,3 +67,34 @@
   clip-path: url(#floor-plan-clip);
   -webkit-clip-path: url(#floor-plan-clip);
 }
+
+/* Fix for drawing controls disappearing */
+.leaflet-draw.leaflet-control {
+  z-index: 12000 !important; 
+  position: relative !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.leaflet-draw-toolbar {
+  z-index: 12000 !important;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+/* Ensure draw toolbar buttons remain visible */
+.leaflet-draw-toolbar a {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Add extra visibility for the draw control container */
+.leaflet-control-container .leaflet-top.leaflet-right {
+  z-index: 11000 !important;
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
