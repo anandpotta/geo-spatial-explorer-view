@@ -9,11 +9,8 @@ interface LayerControlsProps {
   activeTool: string | null;
   featureGroup: L.FeatureGroup;
   uploadButtonRoots: Map<string, any>;
-  removeButtonRoots?: Map<string, any>;
-  imageControlRoots?: Map<string, any>;
   isMounted: boolean;
   onUploadRequest: (drawingId: string) => void;
-  onRemoveShape?: (drawingId: string) => void;
 }
 
 export const createLayerControls = ({
@@ -22,11 +19,8 @@ export const createLayerControls = ({
   activeTool,
   featureGroup,
   uploadButtonRoots,
-  removeButtonRoots,
-  imageControlRoots,
   isMounted,
-  onUploadRequest,
-  onRemoveShape
+  onUploadRequest
 }: LayerControlsProps) => {
   // Check if the map is valid
   if (!validateFeatureGroupMap(featureGroup)) {
