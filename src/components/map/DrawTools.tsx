@@ -18,7 +18,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const editControlRef = useRef<any>(null);
   
   // Use hooks for separated functionality
-  const { getPathElements, getSVGPathData } = usePathElements(featureGroup);
+  const { getPathElements, getSVGPathData, restorePathVisibility } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
   
   // Configure SVG renderer and optimize polygon drawing
@@ -88,14 +88,60 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       `;
       document.head.appendChild(styleEl);
       
-      // Force the browser to acknowledge these changes
+      // Force a reflow to ensure the browser acknowledges these changes
       mapContainer.getBoundingClientRect();
     }
+    
+    // Set up a MutationObserver to watch for SVG changes and preserve paths
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList' && mutation.target.nodeName === 'svg') {
+          // Use type assertion to correctly type the SVG element
+          const svgElement = mutation.target as SVGElement;
+          const paths = svgElement.querySelectorAll('path.leaflet-interactive');
+          paths.forEach(path => {
+            if (!path.classList.contains('visible-path-stroke')) {
+              path.classList.add('visible-path-stroke');
+            }
+          });
+        }
+      });
+    });
+    
+    // Set up event listeners for map interactions that might affect paths
+    const handleMapInteraction = () => {
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        restorePathVisibility();
+      });
+    };
+    
+    // Listen for events that might cause path visibility issues
+    map.on('zoomend moveend dragend', handleMapInteraction);
+    
+    // Observe SVG elements in the overlay pane
+    const overlayPane = map.getContainer().querySelector('.leaflet-overlay-pane');
+    if (overlayPane) {
+      observer.observe(overlayPane, { 
+        childList: true, 
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['d', 'class', 'style']
+      });
+    }
+    
+    // Also check after a short delay to catch any paths that might appear after initial drawing
+    const checkPathsInterval = setInterval(() => {
+      restorePathVisibility();
+    }, 1000);
     
     // Cleanup function
     return () => {
       cleanupSvgRenderer();
       cleanupPathPreservation();
+      observer.disconnect();
+      map.off('zoomend moveend dragend', handleMapInteraction);
+      clearInterval(checkPathsInterval);
       
       // Restore original marker drag handler if it was modified
       if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
@@ -115,11 +161,12 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         mapContainer.classList.remove('optimize-svg-rendering');
       }
     };
-  }, [featureGroup]);
+  }, [featureGroup, restorePathVisibility]);
   
   useImperativeHandle(ref, () => ({
     getPathElements,
-    getSVGPathData
+    getSVGPathData,
+    restorePathVisibility
   }));
 
   // Create draw-only options with edit/remove disabled

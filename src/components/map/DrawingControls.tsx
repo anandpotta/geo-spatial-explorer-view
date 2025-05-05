@@ -11,6 +11,7 @@ import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
 import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
 import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
+import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -56,7 +57,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     }
   };
   
-  const { svgPaths, setSvgPaths } = useSvgPathTracking({
+  const { svgPaths, setSvgPaths, activePathsRef } = useSvgPathTracking({
     isInitialized,
     drawToolsRef,
     mountedRef,
@@ -72,12 +73,83 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
         return drawToolsRef.current.getSVGPathData();
       }
       return [];
+    },
+    restorePathVisibility: () => {
+      if (drawToolsRef.current && drawToolsRef.current.getPathElements) {
+        const paths = drawToolsRef.current.getPathElements();
+        paths.forEach((path: SVGPathElement) => {
+          if (!path.classList.contains('visible-path-stroke')) {
+            path.classList.add('visible-path-stroke');
+          }
+        });
+      }
     }
   }));
+  
+  // Add an effect to monitor for layer visibility issues and fix them
+  useEffect(() => {
+    if (!isInitialized || !featureGroupRef.current) return;
+    
+    // Check for and fix path visibility issues every few seconds
+    const checkInterval = setInterval(() => {
+      if (drawToolsRef.current && drawToolsRef.current.getPathElements) {
+        const paths = drawToolsRef.current.getPathElements();
+        let fixedPaths = false;
+        
+        paths.forEach((path: SVGPathElement) => {
+          // Fix styling if needed
+          if (!path.classList.contains('visible-path-stroke')) {
+            path.classList.add('visible-path-stroke');
+            fixedPaths = true;
+          }
+          
+          // Ensure stroke is visible
+          if (path.getAttribute('stroke-opacity') === '0') {
+            path.setAttribute('stroke-opacity', '1');
+            fixedPaths = true;
+          }
+        });
+        
+        if (fixedPaths) {
+          console.log('Fixed visibility for SVG paths');
+        }
+      }
+    }, 2000);
+    
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, [isInitialized, featureGroupRef, drawToolsRef]);
   
   useEffect(() => {
     if (featureGroupRef.current) {
       setIsInitialized(true);
+    }
+    
+    // Register map event listeners to help maintain path visibility
+    if (featureGroupRef.current && featureGroupRef.current._map) {
+      const map = featureGroupRef.current._map;
+      
+      const handleMapEvent = () => {
+        // Use requestAnimationFrame to avoid blocking the UI
+        requestAnimationFrame(() => {
+          if (drawToolsRef.current && drawToolsRef.current.getPathElements) {
+            const paths = drawToolsRef.current.getPathElements();
+            paths.forEach((path: SVGPathElement) => {
+              if (!path.classList.contains('visible-path-stroke')) {
+                path.classList.add('visible-path-stroke');
+              }
+            });
+          }
+        });
+      };
+      
+      map.on('zoomend moveend dragend', handleMapEvent);
+      
+      return () => {
+        map.off('zoomend moveend dragend', handleMapEvent);
+        mountedRef.current = false;
+      };
     }
     
     return () => {
@@ -126,6 +198,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
             onRegionClick={handleDrawingClick}
             onRemoveShape={handleRemoveShape}
             onUploadRequest={handleUploadRequest}
+            onClearAll={onClearAll}
           />
         )}
         <DrawTools 

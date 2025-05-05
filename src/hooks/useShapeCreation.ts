@@ -1,5 +1,6 @@
 
 import { toast } from 'sonner';
+import { SVGPathElementWithAttributes } from '@/utils/svg-types';
 
 export function useShapeCreation(onCreated: (shape: any) => void) {
   const handleCreated = (e: any) => {
@@ -17,7 +18,35 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
       // Get the SVG path data if available
       let svgPath = null;
       if (layer._path && layer._path.getAttribute) {
-        svgPath = layer._path.getAttribute('d');
+        const pathElement = layer._path as SVGPathElement;
+        svgPath = pathElement.getAttribute('d');
+        
+        // Apply visible-path-stroke class to ensure path visibility
+        pathElement.classList.add('visible-path-stroke');
+        
+        // Force a reflow to ensure the browser renders the path
+        pathElement.getBoundingClientRect();
+      }
+      
+      // Enhanced path finding for polygon layers
+      if (!svgPath && layer.getLatLngs) {
+        // For polygon or rectangle layers, try to find the path from the DOM
+        setTimeout(() => {
+          if (layer._path && layer._path.getAttribute) {
+            const pathElement = layer._path as SVGPathElementWithAttributes;
+            const updatedPath = pathElement.getAttribute('d');
+            if (updatedPath) {
+              // Update the layer with the path data
+              layer.svgPath = updatedPath;
+              
+              // Apply visible-path-stroke class to ensure path visibility
+              pathElement.classList.add('visible-path-stroke');
+              
+              // Force a reflow to ensure the path is displayed
+              pathElement.getBoundingClientRect();
+            }
+          }
+        }, 50);
       }
       
       // Create a shape object with additional properties
