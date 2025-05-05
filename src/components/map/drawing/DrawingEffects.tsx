@@ -1,8 +1,7 @@
-
 import { useEffect, useState, useCallback } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { toast } from 'sonner';
-import { ensureEditControlsVisibility, persistentlyActivateEditMode } from '../draw-tools/hooks/utils/editControlsVisibility';
+import { ensureEditControlsVisibility, ensureImageControlsVisibility, persistentlyActivateEditMode } from '../draw-tools/hooks/utils/editControlsVisibility';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
@@ -23,6 +22,11 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
   // Function to ensure edit controls are always visible
   const ensureEditControlsVisible = useCallback(() => {
     ensureEditControlsVisibility();
+  }, []);
+  
+  // Function to ensure image controls are always visible
+  const ensureImageControlsVisible = useCallback(() => {
+    ensureImageControlsVisibility();
   }, []);
   
   // Effect to load floor plans on mount and track storage changes
@@ -107,12 +111,12 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
     }
     
     // Always ensure controls are visible when in edit mode
-    const visibilityInterval = setInterval(ensureEditControlsVisible, 500);
+    const visibilityInterval = setInterval(ensureEditControlsVisible, 300);
     
     // Only proceed with activation if not already activated and within attempt limit
     if (activeTool === 'edit' && isInitialized && !hasActivated && activationAttempts < maxActivationAttempts) {
       const now = Date.now();
-      if (now - lastEditActivation < 1000) {
+      if (now - lastEditActivation < 500) {
         // Skip if we just tried
         return;
       }
@@ -123,6 +127,10 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
       // Use setTimeout to delay the activation attempt
       const timeoutId = setTimeout(() => {
         try {
+          // First make sure controls are visible
+          ensureEditControlsVisible();
+          
+          // Then try to activate edit mode
           const activated = activateEditMode();
           
           if (activated) {
@@ -133,7 +141,7 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
             // Force SVG path updates after successful activation
             window.dispatchEvent(new CustomEvent('force-svg-path-update'));
             
-            // Ensure controls are visible after successful activation
+            // Make sure controls are visible after successful activation
             setTimeout(ensureEditControlsVisible, 100);
           } else {
             console.log("Failed to activate edit mode from DrawingEffects");
@@ -149,13 +157,16 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
             } else {
               // After max attempts, dispatch custom event for another activation strategy
               window.dispatchEvent(new CustomEvent('set-edit-active'));
+              
+              // Also force show controls
+              window.dispatchEvent(new CustomEvent('force-show-leaflet-controls'));
             }
           }
         } catch (err) {
           console.error('Error activating edit mode from DrawingEffects:', err);
           setActivationAttempts(prev => prev + 1);
         }
-      }, 300); // Short initial delay
+      }, 200); // Short initial delay
       
       return () => {
         clearTimeout(timeoutId);
@@ -166,31 +177,19 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
     return () => {
       clearInterval(visibilityInterval);
     };
-  }, [activeTool, isInitialized, activateEditMode, hasActivated, ensureEditControlsVisible, activationAttempts, lastEditActivation]);
+  }, [activeTool, isInitialized, activateEditMode, hasActivated, 
+      ensureEditControlsVisible, activationAttempts, lastEditActivation]);
 
   // Keep image controls always visible
   useEffect(() => {
-    const ensureImageControlsVisible = () => {
-      document.querySelectorAll('.image-controls-wrapper').forEach(el => {
-        const element = el as HTMLElement;
-        element.style.cssText = `
-          opacity: 1 !important;
-          visibility: visible !important; 
-          display: block !important;
-          pointer-events: auto !important;
-          z-index: 9999 !important;
-        `;
-      });
-    };
-    
     // Ensure controls are visible on a regular interval
-    const intervalId = setInterval(ensureImageControlsVisible, 500);
+    const intervalId = setInterval(ensureImageControlsVisible, 300);
     
     // Also ensure controls are visible immediately
     ensureImageControlsVisible();
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [ensureImageControlsVisible]);
 
   return null;
 };

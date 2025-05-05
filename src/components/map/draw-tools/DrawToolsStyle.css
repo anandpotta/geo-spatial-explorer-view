@@ -9,8 +9,9 @@
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
-  z-index: 9999 !important;
+  z-index: 1000 !important; /* Increased z-index */
   width: 30px !important; /* Single consistent width */
+  position: relative !important;
 }
 
 /* Ensure edit and delete buttons are visible */
@@ -24,6 +25,7 @@
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+  background-color: white !important; /* Add background color for visibility */
 }
 
 /* Image controls always visible */
@@ -85,10 +87,39 @@ svg path.leaflet-interactive.leaflet-editing-icon {
   width: 30px !important;
   height: 30px !important;
   background-size: 270px 30px !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Ensure stable positioning of control elements */
 .leaflet-control {
   position: absolute !important;
   transform: none !important; /* Prevent transform changes */
+}
+
+/* Force absolute positioning to prevent controls from being hidden */
+.leaflet-top {
+  position: absolute !important;
+  top: 0 !important;
+  z-index: 1000 !important;
+}
+
+.leaflet-right {
+  position: absolute !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+}
+
+/* Ensure toolbar is properly visible */
+.leaflet-draw-toolbar.leaflet-bar {
+  box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
+  border-radius: 4px !important;
+  background-color: white !important;
+  border: 2px solid rgba(0,0,0,0.2) !important;
+  margin-top: 10px !important;
+}
+
+/* Make toolbar buttons stand out more */
+.leaflet-draw a {
+  background-color: white !important;
+  color: #333 !important;
 }

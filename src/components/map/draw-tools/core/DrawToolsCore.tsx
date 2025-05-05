@@ -6,6 +6,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import { useDrawToolsOptions } from '../hooks/useDrawToolsOptions';
 import { useDrawToolsOptimization } from '../hooks/useDrawToolsOptimization';
 import '../DrawToolsStyle.css';  // Import the custom styles
+import { ensureEditControlsVisibility } from '../hooks/utils/editControlsVisibility';
 
 interface DrawToolsCoreProps {
   onCreated: (shape: any) => void;
@@ -21,6 +22,7 @@ const DrawToolsCore = forwardRef(({
 }: DrawToolsCoreProps, ref) => {
   const editControlRef = useRef<any>(null);
   const initializationAttempts = useRef(0);
+  const controlsInitialized = useRef(false);
   
   // Get map instance from feature group
   const map = featureGroup ? (featureGroup as any)._map : null;
@@ -30,76 +32,58 @@ const DrawToolsCore = forwardRef(({
   
   // Get drawing and editing options
   const { editOptions, drawOptions } = useDrawToolsOptions(featureGroup);
-  
+
   // Force edit controls to be visible with correct width
   useEffect(() => {
-    const ensureEditControlsVisibility = () => {
-      try {
-        // Find the edit control container
-        const editControlContainer = document.querySelector('.leaflet-draw.leaflet-control') as HTMLElement;
-        if (editControlContainer) {
-          // Set width and position as requested
-          editControlContainer.style.width = '30px';
-          editControlContainer.style.top = '50px';
-          editControlContainer.style.display = 'block';
-          editControlContainer.style.visibility = 'visible';
-          editControlContainer.style.opacity = '1';
-          editControlContainer.style.pointerEvents = 'auto';
-          editControlContainer.style.zIndex = '9999';
-          
-          // Make sure all buttons inside are visible and properly sized
-          const buttons = editControlContainer.querySelectorAll('a');
-          buttons.forEach(button => {
-            (button as HTMLElement).style.display = 'inline-block';
-            (button as HTMLElement).style.visibility = 'visible';
-            (button as HTMLElement).style.opacity = '1';
-          });
-          
-          // Ensure toolbar is visible
-          const toolbar = editControlContainer.querySelector('.leaflet-draw-toolbar') as HTMLElement;
-          if (toolbar) {
-            toolbar.style.display = 'block';
-            toolbar.style.visibility = 'visible';
-            toolbar.style.opacity = '1';
-          }
-          
-          // Make edit and delete buttons specifically visible
-          const editEditBtn = editControlContainer.querySelector('.leaflet-draw-edit-edit') as HTMLElement;
-          if (editEditBtn) {
-            editEditBtn.style.display = 'inline-block';
-            editEditBtn.style.visibility = 'visible';
-            editEditBtn.style.opacity = '1';
-          }
-          
-          const editDeleteBtn = editControlContainer.querySelector('.leaflet-draw-edit-remove') as HTMLElement;
-          if (editDeleteBtn) {
-            editDeleteBtn.style.display = 'inline-block';
-            editDeleteBtn.style.visibility = 'visible';
-            editDeleteBtn.style.opacity = '1';
-          }
+    // Immediately ensure controls are visible
+    const checkForControls = () => {
+      // Search for the controls both by class and by ref
+      const controlExists = document.querySelector('.leaflet-draw.leaflet-control') !== null;
+      const refExists = editControlRef.current !== null;
+      
+      if (controlExists || refExists) {
+        controlsInitialized.current = true;
+        console.log('Leaflet draw controls found, ensuring visibility');
+        ensureEditControlsVisibility();
+      } else {
+        console.log('Leaflet draw controls not found yet');
+        if (initializationAttempts.current < 20) {
+          initializationAttempts.current += 1;
+        } else {
+          console.warn('Maximum attempts reached but controls still not found');
         }
-      } catch (err) {
-        console.error('Error ensuring edit controls visibility:', err);
       }
     };
     
-    // More aggressive approach to ensure edit controls visibility
-    // Call immediately
-    ensureEditControlsVisibility();
+    // First check immediately
+    checkForControls();
     
-    // Set up multiple checks at different intervals
-    const fastIntervalId = setInterval(ensureEditControlsVisibility, 500);
-    const slowIntervalId = setInterval(ensureEditControlsVisibility, 2000);
+    // Set up many checks at different intervals and with different methods
+    const fastInterval = setInterval(checkForControls, 300);
+    const slowInterval = setInterval(ensureEditControlsVisibility, 1000);
     
-    // Also run after specific delays to catch various timing issues
-    setTimeout(ensureEditControlsVisibility, 100);
-    setTimeout(ensureEditControlsVisibility, 500);
-    setTimeout(ensureEditControlsVisibility, 1000);
-    setTimeout(ensureEditControlsVisibility, 3000);
+    // Also check after specific time delays
+    const timeouts = [
+      setTimeout(() => ensureEditControlsVisibility(), 100),
+      setTimeout(() => ensureEditControlsVisibility(), 500),
+      setTimeout(() => ensureEditControlsVisibility(), 1000),
+      setTimeout(() => ensureEditControlsVisibility(), 2000),
+      setTimeout(() => ensureEditControlsVisibility(), 5000)
+    ];
+    
+    // Listen for force show event
+    const handleForceShow = () => {
+      console.log('Force show leaflet controls event received');
+      ensureEditControlsVisibility();
+    };
+    
+    window.addEventListener('force-show-leaflet-controls', handleForceShow);
     
     return () => {
-      clearInterval(fastIntervalId);
-      clearInterval(slowIntervalId);
+      clearInterval(fastInterval);
+      clearInterval(slowInterval);
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      window.removeEventListener('force-show-leaflet-controls', handleForceShow);
     };
   }, []);
   
@@ -176,6 +160,45 @@ const DrawToolsCore = forwardRef(({
     }
   }, [activeTool]);
 
+  // Create styles directly in the DOM to ensure they take precedence
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .leaflet-draw.leaflet-control {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 1000 !important;
+        position: absolute !important;
+        top: 50px !important;
+        right: 10px !important;
+        width: 30px !important;
+      }
+      .leaflet-draw-toolbar {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        background-color: white !important;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
+        border-radius: 4px !important;
+        border: 2px solid rgba(0,0,0,0.2) !important;
+      }
+      .leaflet-draw-toolbar a {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        background-color: white !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
     activateEditMode: () => {
@@ -200,16 +223,7 @@ const DrawToolsCore = forwardRef(({
             editHandler.enable();
             
             // Ensure the controls are visible after activation
-            setTimeout(() => {
-              const editControlContainer = document.querySelector('.leaflet-draw.leaflet-control') as HTMLElement;
-              if (editControlContainer) {
-                editControlContainer.style.width = '30px';
-                editControlContainer.style.top = '50px';
-                editControlContainer.style.display = 'block';
-                editControlContainer.style.visibility = 'visible';
-                editControlContainer.style.opacity = '1';
-              }
-            }, 100);
+            setTimeout(ensureEditControlsVisibility, 100);
             
             return true;
           }
@@ -223,14 +237,28 @@ const DrawToolsCore = forwardRef(({
   }));
 
   return (
-    <EditControl
-      ref={editControlRef}
-      position="topright"
-      onCreated={onCreated}
-      draw={drawOptions}
-      edit={editOptions}
-      featureGroup={featureGroup}
-    />
+    <>
+      <EditControl
+        ref={editControlRef}
+        position="topright"
+        onCreated={onCreated}
+        draw={drawOptions}
+        edit={editOptions}
+        featureGroup={featureGroup}
+      />
+      
+      {/* Additional rendering hook to ensure controls are visible */}
+      {useEffect(() => {
+        // Additional check after component is fully rendered
+        const timeoutId = setTimeout(() => {
+          ensureEditControlsVisibility();
+          // Also dispatch event to force SVG path updates
+          window.dispatchEvent(new CustomEvent('force-svg-path-update'));
+        }, 1000);
+        
+        return () => clearTimeout(timeoutId);
+      }, [])}
+    </>
   );
 });
 

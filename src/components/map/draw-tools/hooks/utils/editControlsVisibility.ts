@@ -29,7 +29,8 @@ export function ensureEditControlsVisibility(): boolean {
     const editControlSelectors = [
       '.leaflet-draw.leaflet-control',
       '.leaflet-draw',
-      '.leaflet-control-draw'
+      '.leaflet-control-draw',
+      '.leaflet-top.leaflet-right .leaflet-control' // More general selector
     ];
     
     let found = false;
@@ -41,6 +42,21 @@ export function ensureEditControlsVisibility(): boolean {
       elements.forEach(editControlContainer => {
         if (!(editControlContainer instanceof HTMLElement)) return;
         
+        // Unhide parent containers if any
+        let parent = editControlContainer.parentElement;
+        while (parent) {
+          if (parent instanceof HTMLElement) {
+            parent.style.cssText = `
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              pointer-events: auto !important;
+              z-index: 9999 !important;
+            `;
+          }
+          parent = parent.parentElement;
+        }
+        
         // Force visibility with !important styles
         editControlContainer.style.cssText = `
           display: block !important;
@@ -48,17 +64,44 @@ export function ensureEditControlsVisibility(): boolean {
           opacity: 1 !important;
           pointer-events: auto !important;
           z-index: 9999 !important;
+          position: absolute !important;
+          top: 50px !important;
+          right: 10px !important;
+          width: 30px !important;
         `;
         
         // Make all children visible
         Array.from(editControlContainer.querySelectorAll('*')).forEach(child => {
           if (child instanceof HTMLElement) {
             child.style.cssText = `
-              display: block !important;
               visibility: visible !important;
               opacity: 1 !important;
               pointer-events: auto !important;
             `;
+            
+            // Special handling for specific elements
+            if (child.classList.contains('leaflet-draw-toolbar') || 
+                child.classList.contains('leaflet-draw-edit-toolbar')) {
+              child.style.cssText += `
+                display: block !important;
+                background-color: white !important;
+                border: 2px solid rgba(0,0,0,0.2) !important;
+                box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
+              `;
+            }
+            
+            // Fix buttons specifically
+            if (child.tagName.toLowerCase() === 'a') {
+              child.style.cssText += `
+                display: inline-block !important;
+                background-color: white !important;
+                width: 26px !important;
+                height: 26px !important;
+                line-height: 26px !important;
+                text-align: center !important;
+                text-decoration: none !important;
+              `;
+            }
           }
         });
         
@@ -70,6 +113,10 @@ export function ensureEditControlsVisibility(): boolean {
               display: block !important;
               visibility: visible !important;
               opacity: 1 !important;
+              background-color: white !important;
+              box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
+              border-radius: 4px !important;
+              border: 2px solid rgba(0,0,0,0.2) !important;
             `;
           }
         });
@@ -83,6 +130,9 @@ export function ensureEditControlsVisibility(): boolean {
               visibility: visible !important;
               opacity: 1 !important;
               pointer-events: auto !important;
+              background-color: white !important;
+              width: 26px !important;
+              height: 26px !important;
             `;
           }
         });
@@ -91,10 +141,35 @@ export function ensureEditControlsVisibility(): boolean {
       });
     }
     
-    // Always maintain visibility
+    // Force visibility of the entire Leaflet container
+    const map = document.querySelector('.leaflet-container') as HTMLElement;
+    if (map) {
+      const controls = map.querySelectorAll('.leaflet-control-container, .leaflet-top, .leaflet-right');
+      controls.forEach(control => {
+        if (control instanceof HTMLElement) {
+          control.style.cssText = `
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            z-index: 1000 !important;
+            position: absolute !important;
+          `;
+        }
+      });
+    }
+    
+    // Always maintain visibility with a more aggressive approach
     window._controlsVisibilityTimeout = window.setTimeout(() => {
       ensureEditControlsVisibility();
-    }, 500); // More frequent checks
+    }, 300); // More frequent checks
+    
+    // If we didn't find any controls but map exists, try to force their creation
+    if (!found && map) {
+      console.log('Controls not found, attempting to force Leaflet to redraw controls');
+      // Dispatch custom event to indicate controls need to be shown
+      window.dispatchEvent(new CustomEvent('force-show-leaflet-controls'));
+    }
     
     return found;
   } catch (err) {
@@ -189,6 +264,10 @@ export function persistentlyActivateEditMode(editControlRef: React.RefObject<any
         if (!editHandler.enabled || !editHandler.enabled()) {
           editHandler.enable();
           console.log("Edit mode successfully activated permanently");
+          
+          // Ensure edit controls are visible after activation
+          setTimeout(() => ensureEditControlsVisibility(), 100);
+          
           return true;
         }
         return true; // Already enabled
