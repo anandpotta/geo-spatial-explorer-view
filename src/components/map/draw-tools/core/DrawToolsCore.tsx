@@ -1,4 +1,3 @@
-
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 import { EditControl } from "../../LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -6,7 +5,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import { useDrawToolsOptions } from '../hooks/useDrawToolsOptions';
 import { useDrawToolsOptimization } from '../hooks/useDrawToolsOptimization';
 import '../DrawToolsStyle.css';  // Import the custom styles
-import { ensureEditControlsVisibility } from '../hooks/utils/editControlsVisibility';
+import { ensureEditControlsVisibility } from '../hooks/utils/visibility';
 
 interface DrawToolsCoreProps {
   onCreated: (shape: any) => void;
