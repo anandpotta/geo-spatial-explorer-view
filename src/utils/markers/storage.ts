@@ -1,6 +1,6 @@
 
 import { LocationMarker } from './types';
-import { syncMarkersWithBackend, fetchMarkersFromBackend } from './sync';
+import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
 
 /**
  * Saves a marker to localStorage and triggers sync events
