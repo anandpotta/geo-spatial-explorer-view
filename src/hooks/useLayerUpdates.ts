@@ -16,7 +16,6 @@ interface LayerUpdatesProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
-  onClearAll?: () => void;
 }
 
 export function useLayerUpdates({
@@ -30,8 +29,7 @@ export function useLayerUpdates({
   imageControlRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest,
-  onClearAll
+  onUploadRequest
 }: LayerUpdatesProps) {
   // Use refs for debouncing and tracking updates
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,8 +124,7 @@ export function useLayerUpdates({
             imageControlRoots,
             onRegionClick,
             onRemoveShape,
-            onUploadRequest,
-            onClearAll
+            onUploadRequest
           });
         });
       }
@@ -139,7 +136,7 @@ export function useLayerUpdates({
         isUpdatingRef.current = false;
       }, 250);
     }
-  }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest, onClearAll]);
+  }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
 
   // Add a new debounced update function that's safer to call frequently
   const debouncedUpdateLayers = useCallback(() => {

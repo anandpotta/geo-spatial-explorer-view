@@ -1,18 +1,19 @@
 
-import { useEffect, forwardRef } from 'react';
+import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
-import { DrawingData } from '@/utils/drawing-types';
+import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
+import DrawTools from './DrawTools';
+import LayerManager from './drawing/LayerManager';
+import { handleClearAll } from './drawing/ClearAllHandler';
 import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
-import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
-import { useDrawingPathUpdates } from '@/hooks/useDrawingPathUpdates';
-import { useDrawingControlsMethods } from '@/hooks/useDrawingControlsMethods';
-import { getMapFromLayer } from '@/utils/leaflet-type-utils';
-import FileUploadHandler from './drawing/FileUploadHandler';
+import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
-import DrawingToolsWrapper from './drawing/DrawingToolsWrapper';
-import LayerManagerWrapper from './drawing/LayerManagerWrapper';
+import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
+import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
 import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -34,6 +35,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onPathsUpdated
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
+  const { isAuthenticated } = useAuth();
   
   const {
     featureGroupRef,
@@ -45,62 +47,48 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     openFileUploadDialog
   } = useDrawingControls();
   
-  const { handleFileChange, handleUploadRequest } = useFileUploadHandling({ onUploadToDrawing });
+  const {
+    handleFileChange,
+    handleUploadRequest,
+    fileInputRef: uploadFileInputRef
+  } = useFileUploadHandling({ onUploadToDrawing });
   
-  const { handlePathsUpdated } = useDrawingPathUpdates({ onPathsUpdated });
+  // Use a wrapper function to prevent redundant updates
+  const handlePathsUpdated = (paths: string[]) => {
+    if (onPathsUpdated) {
+      // Only log once rather than every time
+      onPathsUpdated(paths);
+    }
+  };
   
-  const { svgPaths, setSvgPaths, activePathsRef } = useSvgPathTracking({
+  const { svgPaths, setSvgPaths } = useSvgPathTracking({
     isInitialized,
     drawToolsRef,
     mountedRef,
     onPathsUpdated: handlePathsUpdated
   });
   
-  // Setup imperative methods
-  useDrawingControlsMethods(ref, {
-    featureGroupRef,
-    drawToolsRef,
-    openFileUploadDialog,
+  useImperativeHandle(ref, () => ({
+    getFeatureGroup: () => featureGroupRef.current,
+    getDrawTools: () => drawToolsRef.current,
+    openFileUploadDialog: () => {
+      if (!isAuthenticated) {
+        toast.error('Please log in to upload files');
+        return;
+      }
+      openFileUploadDialog();
+    },
     getSvgPaths: () => {
       if (drawToolsRef.current) {
         return drawToolsRef.current.getSVGPathData();
       }
       return [];
     }
-  });
+  }));
   
-  // Initialize the feature group
   useEffect(() => {
     if (featureGroupRef.current) {
       setIsInitialized(true);
-    }
-    
-    // Register map event listeners to help maintain path visibility
-    if (featureGroupRef.current) {
-      const map = getMapFromLayer(featureGroupRef.current);
-      
-      if (map) {
-        const handleMapEvent = () => {
-          // Use requestAnimationFrame to avoid blocking the UI
-          requestAnimationFrame(() => {
-            if (drawToolsRef.current && drawToolsRef.current.getPathElements) {
-              const paths = drawToolsRef.current.getPathElements();
-              paths.forEach((path: SVGPathElement) => {
-                if (!path.classList.contains('visible-path-stroke')) {
-                  path.classList.add('visible-path-stroke');
-                }
-              });
-            }
-          });
-        };
-        
-        map.on('zoomend moveend dragend', handleMapEvent);
-        
-        return () => {
-          map.off('zoomend moveend dragend', handleMapEvent);
-          mountedRef.current = false;
-        };
-      }
     }
     
     return () => {
@@ -108,35 +96,74 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     };
   }, []);
 
+  const handleCreatedWrapper = (shape: any) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to save drawings');
+      return;
+    }
+    
+    const wrappedHandler = createShapeCreationHandler({
+      onCreated,
+      onPathsUpdated: handlePathsUpdated,
+      svgPaths
+    });
+    
+    wrappedHandler(shape);
+  };
+
+  const handleClearAllWrapper = () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to clear drawings');
+      return;
+    }
+    
+    handleClearAll({
+      featureGroup: featureGroupRef.current,
+      onClearAll
+    });
+  };
+
+  const handleRemoveShape = (drawingId: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to remove shapes');
+      return;
+    }
+    
+    if (onRemoveShape) {
+      onRemoveShape(drawingId);
+    }
+  };
+
+  const handleDrawingClick = (drawing: DrawingData) => {
+    if (onRegionClick) {
+      onRegionClick(drawing);
+    }
+  };
+
   return (
     <>
-      <FileUploadHandler 
-        fileInputRef={fileInputRef} 
-        onUploadToDrawing={onUploadToDrawing} 
-      />
+      <FileUploadInput ref={uploadFileInputRef} onChange={handleFileChange} />
       <DrawingEffects 
         activeTool={activeTool} 
         isInitialized={isInitialized}
       />
       <FeatureGroup ref={featureGroupRef}>
-        <LayerManagerWrapper 
+        {featureGroupRef.current && isInitialized && (
+          <LayerManager 
+            featureGroup={featureGroupRef.current}
+            savedDrawings={savedDrawings}
+            activeTool={activeTool}
+            onRegionClick={handleDrawingClick}
+            onRemoveShape={handleRemoveShape}
+            onUploadRequest={handleUploadRequest}
+          />
+        )}
+        <DrawTools 
+          ref={drawToolsRef}
+          onCreated={handleCreatedWrapper} 
+          activeTool={activeTool} 
+          onClearAll={handleClearAllWrapper}
           featureGroup={featureGroupRef.current}
-          savedDrawings={savedDrawings}
-          activeTool={activeTool}
-          onRegionClick={onRegionClick}
-          onRemoveShape={onRemoveShape}
-          onUploadRequest={handleUploadRequest}
-          onClearAll={onClearAll}
-          isInitialized={isInitialized}
-        />
-        <DrawingToolsWrapper 
-          drawToolsRef={drawToolsRef}
-          featureGroup={featureGroupRef.current}
-          activeTool={activeTool}
-          onCreated={onCreated}
-          onClearAll={onClearAll}
-          onPathsUpdated={handlePathsUpdated}
-          svgPaths={svgPaths}
         />
       </FeatureGroup>
     </>

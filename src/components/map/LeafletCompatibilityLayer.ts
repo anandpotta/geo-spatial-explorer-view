@@ -9,34 +9,44 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Define the default selectedPathOptions
-  const defaultSelectedPathOptions = {
-    maintainColor: true,
-    opacity: 0.7
-  };
-  
   // Format the edit options properly based on what was passed
-  let editOptions = { 
-    featureGroup: featureGroup,
-    selectedPathOptions: defaultSelectedPathOptions
-  };
+  let editOptions;
   
   // Handle different types of edit parameters
-  if (edit === false) {
-    // Even when edit is false, we need to include selectedPathOptions
+  if (edit === true) {
+    // If edit is boolean true, create a proper object structure
     editOptions = { 
       featureGroup: featureGroup,
-      selectedPathOptions: defaultSelectedPathOptions 
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
     };
+  } else if (edit === false) {
+    // If edit is boolean false, pass it as false
+    editOptions = false;
   } else if (edit && typeof edit === 'object') {
     // If edit is an object, merge with featureGroup but don't overwrite featureGroup
     editOptions = {
       ...edit,
+      featureGroup: featureGroup
+    };
+    
+    // Ensure selectedPathOptions is properly defined if not already
+    if (!editOptions.selectedPathOptions) {
+      editOptions.selectedPathOptions = {
+        maintainColor: true,
+        opacity: 0.7
+      };
+    }
+  } else {
+    // Default case if edit is undefined or null
+    editOptions = {
       featureGroup: featureGroup,
-      // Ensure selectedPathOptions is defined by merging with defaults if it exists
-      selectedPathOptions: edit.selectedPathOptions 
-        ? edit.selectedPathOptions 
-        : defaultSelectedPathOptions
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
     };
   }
   
