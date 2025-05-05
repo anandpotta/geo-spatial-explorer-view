@@ -24,9 +24,14 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
+  // Create a memoized version of markers with unique IDs to prevent duplicates
+  const uniqueMarkers = markers.filter(
+    (marker, index, self) => index === self.findIndex(m => m.id === marker.id)
+  );
+  
   return (
     <MarkersList
-      markers={markers}
+      markers={uniqueMarkers}
       tempMarker={tempMarker}
       markerName={markerName}
       markerType={markerType}
@@ -35,6 +40,16 @@ const MarkersContainer = memo(({
       setMarkerName={setMarkerName}
       setMarkerType={setMarkerType}
     />
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for memo
+  // Only re-render if the keys that we care about changed
+  return (
+    prevProps.tempMarker === nextProps.tempMarker &&
+    prevProps.markerName === nextProps.markerName &&
+    prevProps.markerType === nextProps.markerType &&
+    JSON.stringify(prevProps.markers.map(m => m.id)) === 
+    JSON.stringify(nextProps.markers.map(m => m.id))
   );
 });
 

@@ -28,7 +28,21 @@ export function useMapState(selectedLocation?: Location) {
     
     // Listen for marker updates
     const handleMarkersUpdated = () => {
-      setMarkers(getSavedMarkers());
+      // Get updated markers from storage
+      const updatedMarkers = getSavedMarkers();
+      
+      // Deduplicate markers by ID
+      const uniqueMarkers = [];
+      const seenIds = new Set();
+      
+      for (const marker of updatedMarkers) {
+        if (!seenIds.has(marker.id)) {
+          seenIds.add(marker.id);
+          uniqueMarkers.push(marker);
+        }
+      }
+      
+      setMarkers(uniqueMarkers);
     };
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);
@@ -90,9 +104,16 @@ export function useMapState(selectedLocation?: Location) {
     setCurrentDrawing(null);
     
     // Update the markers state with the new marker - no need to fetch again as we already have the updated marker
-    // setMarkers(getSavedMarkers()); - Removing this line as it causes duplicate marker rendering
-    // Instead, update the local state directly
-    setMarkers(prevMarkers => [...prevMarkers, newMarker]);
+    // Instead of calling getSavedMarkers(), which might reintroduce duplicates
+    // Add the new marker directly to state to avoid duplicates
+    setMarkers(prevMarkers => {
+      // Check if marker with this ID already exists (shouldn't happen with uuidv4 but just in case)
+      const exists = prevMarkers.some(m => m.id === newMarker.id);
+      if (exists) {
+        return prevMarkers; // Don't add duplicate
+      }
+      return [...prevMarkers, newMarker];
+    });
     
     toast.success("Location saved successfully");
   };
