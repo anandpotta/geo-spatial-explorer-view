@@ -34,14 +34,9 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             
             // Check if map is valid before trying to invalidate size
             try {
-              // Cast to internal map type to access private properties
-              const internalMap = map as LeafletMapInternal;
-              
-              // Only invalidate size if map is properly initialized
-              if (internalMap && 
-                  internalMap._panes && 
-                  internalMap._panes.mapPane && 
-                  internalMap._panes.mapPane._leaflet_pos) {
+              // Only invalidate size if the map contains valid panes
+              // Use safe optional chaining to prevent errors
+              if (map._panes?.mapPane?._leaflet_pos) {
                 console.log('Map panes initialized, calling invalidateSize');
                 map.invalidateSize();
               } else {
@@ -59,7 +54,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         } catch (err) {
           console.error('Error in map initialization:', err);
         }
-      }, 250); // Increase timeout to ensure map is initialized
+      }, 300); // Increase timeout to ensure map is initialized
       
       return () => clearTimeout(timer);
     }
