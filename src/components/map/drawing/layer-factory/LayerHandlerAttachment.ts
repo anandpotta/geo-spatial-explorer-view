@@ -1,7 +1,8 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { ImageTransformOptions, getDefaultTransformOptions } from '@/utils/image-transform-utils';
-import { addImageToLayer } from '@/utils/layer-image-utils';
+import { addImageToLayer } from '@/utils/layer-images/image-attachment';
 import { createLayerControls } from '../LayerControls';
 import { getFloorPlanById } from '@/utils/floor-plan-utils';
 import { LayerFactoryOptions } from './LayerCreator';
