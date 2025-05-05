@@ -24,3 +24,24 @@ export const setupLayerClickHandlers = (
     }
   });
 };
+
+/**
+ * Sets up all event handlers for layers
+ */
+export const setupLayerEvents = (
+  layer: L.Layer, 
+  drawing: DrawingData, 
+  onRegionClick?: (drawing: DrawingData) => void
+): void => {
+  if (!layer || !onRegionClick) return;
+  
+  // Set up click handler
+  layer.on('click', (e) => {
+    // Stop event propagation to prevent map click
+    if (e.originalEvent) {
+      L.DomEvent.stopPropagation(e.originalEvent);
+    }
+    
+    onRegionClick(drawing);
+  });
+};

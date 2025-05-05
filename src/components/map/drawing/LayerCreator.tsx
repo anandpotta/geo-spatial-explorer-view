@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { createLayerControls } from './LayerControls';
@@ -34,13 +35,22 @@ export const createLayerFromDrawing = ({
 }: LayerCreatorProps) => {
   try {
     const getLayerFromDrawing = (drawing: DrawingData): L.Layer | null => {
-      if (!drawing || !drawing.shapeType || !drawing.data) {
+      if (!drawing || !drawing.type || !drawing.coordinates) {
         console.warn("Invalid drawing data, cannot create layer");
         return null;
       }
       
       try {
-        const geoJson = JSON.parse(drawing.data);
+        // Create GeoJSON object from drawing data
+        const geoJson = drawing.geoJSON || {
+          type: "Feature",
+          properties: drawing.properties,
+          geometry: {
+            type: drawing.type === 'circle' ? 'Point' : 'Polygon',
+            coordinates: drawing.coordinates
+          }
+        };
+        
         if (!geoJson || typeof geoJson !== 'object') {
           console.warn("Invalid GeoJSON data, cannot create layer");
           return null;
@@ -48,21 +58,26 @@ export const createLayerFromDrawing = ({
         
         let layer: L.Layer | null = null;
         
-        switch (drawing.shapeType) {
+        switch (drawing.type) {
           case 'rectangle':
-            layer = L.rectangle(geoJson.geometry.coordinates, geoJson.properties);
+            layer = L.rectangle(drawing.coordinates as any, drawing.properties);
             break;
           case 'polygon':
-            layer = L.polygon(geoJson.geometry.coordinates, geoJson.properties);
+            layer = L.polygon(drawing.coordinates, drawing.properties);
             break;
           case 'circle':
-            layer = L.circle([geoJson.geometry.coordinates[1], geoJson.geometry.coordinates[0]], geoJson.geometry.radius, geoJson.properties);
+            // For circle, first coordinate is center, properties should contain radius
+            const radius = drawing.properties?.radius || 500; // Default radius if not specified
+            layer = L.circle(drawing.coordinates[0], {
+              ...drawing.properties,
+              radius
+            });
             break;
           case 'marker':
-            layer = L.marker([geoJson.geometry.coordinates[1], geoJson.geometry.coordinates[0]], geoJson.properties);
+            layer = L.marker(drawing.coordinates[0], drawing.properties);
             break;
           default:
-            console.warn(`Unsupported shape type: ${drawing.shapeType}`);
+            console.warn(`Unsupported shape type: ${drawing.type}`);
             return null;
         }
         
@@ -89,7 +104,9 @@ export const createLayerFromDrawing = ({
       layersRef.set(drawing.id, layer);
       
       // Set up layer events
-      setupLayerEvents(layer, drawing, onRegionClick);
+      if (onRegionClick) {
+        setupLayerEvents(layer, drawing, onRegionClick);
+      }
       
       // Create layer controls
       createLayerControls({
