@@ -63,6 +63,13 @@
   pointer-events: none;
 }
 
+/* Important: Add specific class for clipped content */
+.clipped-image-container {
+  overflow: visible !important;
+  z-index: 650 !important;
+}
+
+/* Enhanced clip path styling */
 .floor-plan-clipped {
   clip-path: url(#floor-plan-clip);
   -webkit-clip-path: url(#floor-plan-clip);
@@ -122,3 +129,9 @@
   pointer-events: auto !important;
   cursor: pointer !important;
 }
+
+/* Improved clip path visibility */
+.leaflet-pane svg clipPath {
+  display: block !important;
+}
+

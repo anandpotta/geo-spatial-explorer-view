@@ -92,6 +92,7 @@ function setupDrawingOptions(drawing: DrawingData): L.PathOptions {
     options.fillOpacity = 0.1; // Make it more transparent to see floor plan better
     options.color = '#1d4ed8';
     options.weight = 2;
+    options.className = 'has-floor-plan'; // Add a class for additional styling
   }
   
   // Always ensure opacity is set to visible values
@@ -116,76 +117,84 @@ function attachLayerHandlers({
   onUploadRequest,
   onImageTransform
 }: LayerFactoryOptions & { layer: L.GeoJSON }) {
-  // Add the layer to the feature group first to ensure it's properly initialized
   try {
+    // Add the layer to the feature group first to ensure it's properly initialized
     layer.addTo(featureGroup);
-  } catch (err) {
-    console.error('Error adding layer to featureGroup:', err);
-  }
-  
-  // Store the layer reference
-  layersRef.set(drawing.id, layer);
-  
-  layer.eachLayer((l: L.Layer) => {
-    if (l && isMounted) {
-      (l as any).drawingId = drawing.id;
-      
-      // Check for floor plan first
-      const floorPlan = getFloorPlanById(drawing.id);
-      
-      // If we have a floor plan, add it as the primary image
-      if (floorPlan && floorPlan.data) {
-        console.log('Adding floor plan to layer for drawing:', drawing.id);
-        addImageToLayer(
-          l, 
-          drawing.id, 
-          floorPlan.data,
-          drawing.imageTransform || getDefaultTransformOptions(),
-          imageControlsRoots,
-          onImageTransform
-        );
-      }
-      // Otherwise fall back to any image data on the drawing itself
-      else if (drawing.imageData) {
-        console.log('Adding image to layer for drawing:', drawing.id);
-        addImageToLayer(
-          l, 
-          drawing.id, 
-          drawing.imageData, 
-          drawing.imageTransform || getDefaultTransformOptions(),
-          imageControlsRoots,
-          onImageTransform
-        );
-      }
-      
-      // Add the remove and upload buttons when in edit mode
-      if (onRemoveShape && onUploadRequest) {
-        createLayerControls({
-          layer: l,
-          drawingId: drawing.id,
-          activeTool,
-          featureGroup,
-          removeButtonRoots,
-          uploadButtonRoots,
-          isMounted,
-          onRemoveShape,
-          onUploadRequest
-        });
-      }
-      
-      // Make clicking on any shape trigger the click handler
-      if (onRegionClick && isMounted) {
-        l.on('click', (e) => {
-          // Stop event propagation to prevent map click
-          if (e.originalEvent) {
-            L.DomEvent.stopPropagation(e.originalEvent);
-          }
+    
+    // Store the layer reference
+    layersRef.set(drawing.id, layer);
+    
+    layer.eachLayer((l: L.Layer) => {
+      if (l && isMounted) {
+        (l as any).drawingId = drawing.id;
+        
+        // Check for floor plan first
+        const floorPlan = getFloorPlanById(drawing.id);
+        
+        // If we have a floor plan, add it as the primary image
+        if (floorPlan && floorPlan.data) {
+          console.log('Adding floor plan to layer for drawing:', drawing.id);
           
-          if (isMounted) {
-            onRegionClick(drawing);
-          }
-        });
+          // Add a small delay to ensure the layer is fully rendered
+          setTimeout(() => {
+            addImageToLayer(
+              l, 
+              drawing.id, 
+              floorPlan.data,
+              drawing.imageTransform || getDefaultTransformOptions(),
+              imageControlsRoots,
+              onImageTransform
+            );
+          }, 100);
+        }
+        // Otherwise fall back to any image data on the drawing itself
+        else if (drawing.imageData) {
+          console.log('Adding image to layer for drawing:', drawing.id);
+          
+          // Add a small delay to ensure the layer is fully rendered
+          setTimeout(() => {
+            addImageToLayer(
+              l, 
+              drawing.id, 
+              drawing.imageData, 
+              drawing.imageTransform || getDefaultTransformOptions(),
+              imageControlsRoots,
+              onImageTransform
+            );
+          }, 100);
+        }
+        
+        // Add the remove and upload buttons when in edit mode
+        if (onRemoveShape && onUploadRequest) {
+          createLayerControls({
+            layer: l,
+            drawingId: drawing.id,
+            activeTool,
+            featureGroup,
+            removeButtonRoots,
+            uploadButtonRoots,
+            isMounted,
+            onRemoveShape,
+            onUploadRequest
+          });
+        }
+        
+        // Make clicking on any shape trigger the click handler
+        if (onRegionClick && isMounted) {
+          l.on('click', (e) => {
+            // Stop event propagation to prevent map click
+            if (e.originalEvent) {
+              L.DomEvent.stopPropagation(e.originalEvent);
+            }
+            
+            if (isMounted) {
+              onRegionClick(drawing);
+            }
+          });
+        }
       }
-    }
-  });
+    });
+  } catch (err) {
+    console.error('Error attaching layer handlers:', err);
+  }
 }

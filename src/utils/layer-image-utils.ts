@@ -15,6 +15,8 @@ export const addImageToLayer = (
   onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void
 ) => {
   try {
+    console.log(`Adding image to layer for drawing: ${drawingId}`);
+    
     // Handle layers without _path property
     if (!(layer as any)._path) {
       console.log(`Layer has no _path property for drawing ${drawingId}, trying to find path in child layers`);
@@ -78,9 +80,9 @@ export const addImageToLayer = (
       }
     });
     
-    // Create container for the image
+    // Create container for the image with enhanced styles
     const containerDiv = document.createElement('div');
-    containerDiv.className = 'leaflet-drawing-image-container';
+    containerDiv.className = 'leaflet-drawing-image-container clipped-image-container';
     containerDiv.dataset.drawingId = drawingId;
     
     // Get overlay pane for proper positioning
@@ -93,17 +95,26 @@ export const addImageToLayer = (
     // Append container to the overlay pane
     overlayPane.appendChild(containerDiv);
     
-    // Define updatePosition function
+    // Define updatePosition function with improved positioning
     const updatePosition = () => {
       if (!pathElement || !svgElement) return;
       
-      const newPathRect = pathElement.getBoundingClientRect();
-      const newSvgRect = svgElement.getBoundingClientRect();
-      
-      containerDiv.style.left = `${newPathRect.left - newSvgRect.left}px`;
-      containerDiv.style.top = `${newPathRect.top - newSvgRect.top}px`;
-      containerDiv.style.width = `${newPathRect.width}px`;
-      containerDiv.style.height = `${newPathRect.height}px`;
+      try {
+        const newPathRect = pathElement.getBoundingClientRect();
+        const newSvgRect = svgElement.getBoundingClientRect();
+        
+        // Account for map offsets and panning
+        const map = (layer as any)._map;
+        const mapContainer = map.getContainer();
+        const mapRect = mapContainer.getBoundingClientRect();
+        
+        containerDiv.style.left = `${newPathRect.left - mapRect.left}px`;
+        containerDiv.style.top = `${newPathRect.top - mapRect.top}px`;
+        containerDiv.style.width = `${newPathRect.width}px`;
+        containerDiv.style.height = `${newPathRect.height}px`;
+      } catch (err) {
+        console.error('Error updating position:', err);
+      }
     };
     
     // Create and add image element with improved positioning
@@ -111,12 +122,13 @@ export const addImageToLayer = (
       // Initial positioning
       updatePosition();
       
-      // Position image in container
+      // Position image in container with absolute positioning
       img.style.position = 'absolute';
       img.style.left = '50%';
       img.style.top = '50%';
       img.style.maxWidth = '100%';
       img.style.maxHeight = '100%';
+      img.style.zIndex = '650'; // Set appropriate z-index
       
       // Apply transformation
       transformImage(img, transformOptions);
@@ -124,26 +136,28 @@ export const addImageToLayer = (
     
     containerDiv.appendChild(imgElement);
     
-    // Apply clipping mask using SVG path data
+    // Apply clipping mask using SVG path data with improved method
     if (pathElement && pathElement.getAttribute('d')) {
       const pathData = pathElement.getAttribute('d') || '';
       
-      // Create a SVG clipPath
-      const clipPathId = `clip-path-${drawingId}`;
-      let clipPathEl = svgElement.querySelector(`#${clipPathId}`);
+      // Create a unique ID for the clip path
+      const clipPathId = `clip-path-${drawingId}-${Date.now()}`;
       
-      // Remove existing clip path if present
-      if (clipPathEl) {
-        clipPathEl.remove();
-      }
-      
-      // Create new clip path
-      const defs = svgElement.querySelector('defs') || document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-      if (!svgElement.querySelector('defs')) {
+      // Create or find SVG defs element
+      let defs = svgElement.querySelector('defs');
+      if (!defs) {
+        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         svgElement.appendChild(defs);
       }
       
-      clipPathEl = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+      // Remove existing clip path if present
+      const existingClipPath = svgElement.querySelector(`#clip-path-${drawingId}`);
+      if (existingClipPath && existingClipPath.parentElement) {
+        existingClipPath.parentElement.removeChild(existingClipPath);
+      }
+      
+      // Create new clip path
+      const clipPathEl = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
       clipPathEl.setAttribute('id', clipPathId);
       
       const clipPathShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -151,8 +165,12 @@ export const addImageToLayer = (
       clipPathEl.appendChild(clipPathShape);
       defs.appendChild(clipPathEl);
       
-      // Apply clip path to image container
+      // Apply clip path to image container with correct URL format
       containerDiv.style.clipPath = `url(#${clipPathId})`;
+      containerDiv.style.webkitClipPath = `url(#${clipPathId})`;
+      
+      // Log for debugging
+      console.log(`Applied clip path: ${clipPathId} with path data: ${pathData.substring(0, 50)}...`);
     }
     
     // Create image edit controls - always visible
@@ -161,7 +179,6 @@ export const addImageToLayer = (
     containerDiv.appendChild(controlsContainer);
     
     // Create React root for image controls through a delegate function
-    // Moved the actual JSX rendering to a separate file
     import('@/components/map/drawing/ImageControlsRenderer').then(module => {
       try {
         module.renderImageControls(
@@ -198,10 +215,15 @@ export const addImageToLayer = (
     
     window.addEventListener('image-transform-updated', handleTransformUpdate as EventListener);
     
-    // Update position on map events
+    // Update position on map events with improved event handling
     const map = (layer as any)._map;
     if (map) {
-      map.on('zoom move moveend', updatePosition);
+      map.on('zoom move moveend viewreset zoomend', updatePosition);
+      // Initial update
+      setTimeout(updatePosition, 100);
+      // Additional updates to ensure positioning
+      setTimeout(updatePosition, 500);
+      setTimeout(updatePosition, 1000);
     }
     
     // Return a cleanup function
@@ -226,7 +248,7 @@ export const addImageToLayer = (
       
       // Remove map event listeners
       if (map) {
-        map.off('zoom move moveend', updatePosition);
+        map.off('zoom move moveend viewreset zoomend', updatePosition);
       }
       
       // Remove clip path if exists
