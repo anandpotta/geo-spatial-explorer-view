@@ -3,6 +3,15 @@
  * Utility function to ensure edit controls are visible
  */
 
+// Global state to track if controls are visible
+declare global {
+  interface Window {
+    _controlsVisibilityTimeout?: number;
+    _editModeActivating?: boolean;
+    _editControlsForceVisible?: boolean;
+  }
+}
+
 /**
  * Ensures edit controls are visible by directly manipulating the DOM
  */
@@ -11,6 +20,9 @@ export function ensureEditControlsVisibility(): boolean {
   if (window._controlsVisibilityTimeout) {
     clearTimeout(window._controlsVisibilityTimeout);
   }
+  
+  // Set the global flag to indicate we want controls to be visible
+  window._editControlsForceVisible = true;
   
   try {
     // Find the edit control container with broader selectors
@@ -79,10 +91,10 @@ export function ensureEditControlsVisibility(): boolean {
       });
     }
     
-    // Set up a delayed check to ensure visibility persists
+    // Always maintain visibility
     window._controlsVisibilityTimeout = window.setTimeout(() => {
       ensureEditControlsVisibility();
-    }, 1000);
+    }, 500); // More frequent checks
     
     return found;
   } catch (err) {
@@ -141,4 +153,53 @@ export function ensureImageControlsVisibility(): boolean {
     console.error('Error ensuring image controls visibility:', err);
     return false;
   }
+}
+
+/**
+ * Force activate edit mode on a persistent basis
+ */
+export function persistentlyActivateEditMode(editControlRef: React.RefObject<any>): boolean {
+  if (!editControlRef.current) return false;
+  
+  try {
+    const editControl = editControlRef.current;
+    const editToolbar = editControl._toolbars?.edit;
+    
+    if (!editToolbar || !editToolbar._modes) {
+      return false;
+    }
+    
+    const editHandler = editToolbar._modes?.edit?.handler;
+    
+    if (!editHandler || !editHandler.enable || typeof editHandler.enable !== 'function') {
+      return false;
+    }
+    
+    // First ensure all layers are selected to make them eligible for editing
+    if (editHandler._featureGroup) {
+      try {
+        // Select all layers
+        editHandler._featureGroup.eachLayer((layer: any) => {
+          if (typeof layer._path !== 'undefined') {
+            editHandler._selectableLayers.addLayer(layer);
+          }
+        });
+        
+        // Then enable edit mode
+        if (!editHandler.enabled || !editHandler.enabled()) {
+          editHandler.enable();
+          console.log("Edit mode successfully activated permanently");
+          return true;
+        }
+        return true; // Already enabled
+      } catch (e) {
+        console.error("Error selecting layers or enabling edit mode:", e);
+        return false;
+      }
+    }
+  } catch (e) {
+    console.error("Error in persistently activating edit mode:", e);
+  }
+  
+  return false;
 }

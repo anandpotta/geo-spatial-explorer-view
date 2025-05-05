@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Trash2, Edit3, Image } from 'lucide-react';
 import { toast } from 'sonner';
 import { useToolbarPosition } from './hooks/useToolbarPosition';
@@ -31,6 +31,48 @@ const DrawingToolbar = ({
     handleMouseDown 
   } = useToolbarPosition();
   
+  // Handle custom event to set edit mode active
+  useEffect(() => {
+    const handleSetEditActive = () => {
+      if (!isEditActive) {
+        console.log("Setting edit mode active from custom event");
+        setIsEditActive(true);
+        onToolSelect('edit');
+      }
+    };
+    
+    window.addEventListener('set-edit-active', handleSetEditActive);
+    
+    return () => {
+      window.removeEventListener('set-edit-active', handleSetEditActive);
+    };
+  }, [isEditActive, onToolSelect]);
+  
+  // Check floor plans on load and when storage changes
+  useEffect(() => {
+    const checkFloorPlans = () => {
+      try {
+        const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+        if (Object.keys(floorPlans).length > 0 && !isEditActive) {
+          console.log("Setting edit mode active due to existing floor plans");
+          setIsEditActive(true);
+          onToolSelect('edit');
+        }
+      } catch (e) {
+        console.error("Error checking floor plans:", e);
+      }
+    };
+    
+    window.addEventListener('storage', checkFloorPlans);
+    
+    // Check on initial load
+    checkFloorPlans();
+    
+    return () => {
+      window.removeEventListener('storage', checkFloorPlans);
+    };
+  }, [isEditActive, onToolSelect]);
+
   const handleToolClick = (tool: string) => {
     if (tool === 'edit') {
       setIsEditActive(!isEditActive);
