@@ -1,6 +1,6 @@
 
 export type { Location } from './location-utils';
-export type { LocationMarker } from './marker-utils';
+export type { LocationMarker } from './markers/types';
 export type { DrawingData } from './drawing-utils';
 export type { FloorPlanData } from './floor-plan-utils';
 
@@ -14,7 +14,7 @@ export {
   saveMarker,
   getSavedMarkers,
   deleteMarker,
-} from './marker-utils';
+} from './markers/index';
 
 export {
   saveDrawing,
