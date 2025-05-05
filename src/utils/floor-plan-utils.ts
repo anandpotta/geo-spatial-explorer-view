@@ -1,4 +1,3 @@
-
 import { getCurrentUser } from '@/services/auth-service';
 
 // Define FloorPlanData type that was missing
@@ -20,42 +19,91 @@ export function storeFloorPlan(drawingId: string, imageData: string): void {
     return;
   }
   
-  // Get existing floor plans or initialize empty object
-  const floorPlansJson = localStorage.getItem(FLOOR_PLAN_STORAGE_KEY);
-  const floorPlans = floorPlansJson ? JSON.parse(floorPlansJson) : {};
+  try {
+    // Get existing floor plans or initialize empty object
+    const floorPlansJson = localStorage.getItem(FLOOR_PLAN_STORAGE_KEY);
+    const floorPlans = floorPlansJson ? JSON.parse(floorPlansJson) : {};
 
-  // Store with user ID prefix to keep floor plans separated by user
-  const userDrawingKey = `${currentUser.id}-${drawingId}`;
-  
-  // Add or update the floor plan for this drawing
-  floorPlans[userDrawingKey] = {
-    imageData,
-    drawingId,
-    userId: currentUser.id,
-    timestamp: Date.now()
-  };
+    // Store with user ID prefix to keep floor plans separated by user
+    const userDrawingKey = `${currentUser.id}-${drawingId}`;
+    
+    // Add or update the floor plan for this drawing
+    floorPlans[userDrawingKey] = {
+      imageData,
+      drawingId,
+      userId: currentUser.id,
+      timestamp: Date.now()
+    };
 
-  // Save back to localStorage
-  localStorage.setItem(FLOOR_PLAN_STORAGE_KEY, JSON.stringify(floorPlans));
-  
-  // Dispatch an event to notify components that a floor plan has been updated
-  window.dispatchEvent(new CustomEvent('floorPlanUpdated'));
+    // Save back to localStorage
+    localStorage.setItem(FLOOR_PLAN_STORAGE_KEY, JSON.stringify(floorPlans));
+    
+    // Dispatch an event to notify components that a floor plan has been updated
+    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+      detail: { drawingId } 
+    }));
+  } catch (e) {
+    console.error('Error storing floor plan:', e);
+    // Handle quota exceeded error gracefully
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      console.warn('Storage quota exceeded. Trying to free up space...');
+      // Remove oldest floor plans until we have enough space
+      try {
+        cleanupOldestFloorPlans();
+      } catch (cleanupError) {
+        console.error('Failed to clean up storage:', cleanupError);
+      }
+    }
+  }
+}
+
+// Helper function to clean up oldest floor plans
+function cleanupOldestFloorPlans(): void {
+  try {
+    const floorPlansJson = localStorage.getItem(FLOOR_PLAN_STORAGE_KEY);
+    if (!floorPlansJson) return;
+    
+    const floorPlans = JSON.parse(floorPlansJson);
+    const entries = Object.entries(floorPlans);
+    
+    // Sort by timestamp (oldest first)
+    entries.sort((a, b) => (a[1] as FloorPlanData).timestamp - (b[1] as FloorPlanData).timestamp);
+    
+    // Remove the oldest 20% of entries
+    const removeCount = Math.max(1, Math.ceil(entries.length * 0.2));
+    for (let i = 0; i < removeCount; i++) {
+      if (entries[i]) {
+        delete floorPlans[entries[i][0]];
+      }
+    }
+    
+    // Save the updated floor plans back to localStorage
+    localStorage.setItem(FLOOR_PLAN_STORAGE_KEY, JSON.stringify(floorPlans));
+    console.log(`Removed ${removeCount} oldest floor plans to free up space`);
+  } catch (e) {
+    console.error('Error cleaning up floor plans:', e);
+  }
 }
 
 // Get a floor plan image for a drawing
-export function getFloorPlan(drawingId: string): string | null {
+export function getFloorPlan(drawingId: string): FloorPlanData | null {
   const currentUser = getCurrentUser();
   if (!currentUser) return null;
   
-  const floorPlansJson = localStorage.getItem(FLOOR_PLAN_STORAGE_KEY);
-  if (!floorPlansJson) return null;
-  
-  const floorPlans = JSON.parse(floorPlansJson);
-  
-  // Use the user-specific key
-  const userDrawingKey = `${currentUser.id}-${drawingId}`;
-  
-  return floorPlans[userDrawingKey]?.imageData || null;
+  try {
+    const floorPlansJson = localStorage.getItem(FLOOR_PLAN_STORAGE_KEY);
+    if (!floorPlansJson) return null;
+    
+    const floorPlans = JSON.parse(floorPlansJson);
+    
+    // Use the user-specific key
+    const userDrawingKey = `${currentUser.id}-${drawingId}`;
+    
+    return floorPlans[userDrawingKey] || null;
+  } catch (e) {
+    console.error('Error getting floor plan:', e);
+    return null;
+  }
 }
 
 // Delete a floor plan for a drawing

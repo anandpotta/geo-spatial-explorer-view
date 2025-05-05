@@ -76,7 +76,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
         toast.error('Please log in to upload files');
         return;
       }
-      openFileUploadDialog(drawingId); // Pass drawingId here to fix the parameter count issue
+      openFileUploadDialog(drawingId);
     },
     getSvgPaths: () => {
       if (drawToolsRef.current) {

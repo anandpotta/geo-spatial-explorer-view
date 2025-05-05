@@ -36,7 +36,8 @@ export const applyClipMaskToDrawing = ({
     
     // Apply the clip mask
     console.log(`Applying clip mask for drawing ${drawingId}`);
-    const applied = applyImageClipMask(pathElement, floorPlanData, drawingId);
+    const imageData = floorPlanData.imageData;
+    const applied = applyImageClipMask(pathElement, imageData, drawingId);
     
     if (!applied) {
       console.warn(`Failed to apply clip mask for drawing ${drawingId}`);
