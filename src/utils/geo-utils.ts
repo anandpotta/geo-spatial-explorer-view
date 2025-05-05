@@ -25,7 +25,7 @@ export {
 export {
   saveFloorPlan,
   getFloorPlanById,
-  getSavedFloorPlans,
+  hasFloorPlan,
   getDrawingIdsWithFloorPlans,
 } from './floor-plan-utils';
 

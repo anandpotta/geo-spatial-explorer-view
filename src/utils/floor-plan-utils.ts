@@ -1,10 +1,11 @@
+
 import { getCurrentUser } from '@/services/auth-service';
 
 // Key for storing floor plans in localStorage
 const FLOOR_PLAN_STORAGE_KEY = 'floorPlans';
 
 // Store a floor plan image for a drawing
-export function storeFloorPlan(drawingId: string, imageData: string): void {
+export function saveFloorPlan(drawingId: string, imageData: string, isPdf: boolean = false, fileName: string = ''): void {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     console.error('Cannot store floor plan: No user is logged in');
@@ -23,6 +24,8 @@ export function storeFloorPlan(drawingId: string, imageData: string): void {
     imageData,
     drawingId,
     userId: currentUser.id,
+    isPdf: isPdf,
+    fileName: fileName,
     timestamp: Date.now()
   };
 
@@ -34,7 +37,7 @@ export function storeFloorPlan(drawingId: string, imageData: string): void {
 }
 
 // Get a floor plan image for a drawing
-export function getFloorPlan(drawingId: string): string | null {
+export function getFloorPlanById(drawingId: string): { data: string; isPdf: boolean; fileName: string } | null {
   const currentUser = getCurrentUser();
   if (!currentUser) return null;
   
@@ -45,8 +48,15 @@ export function getFloorPlan(drawingId: string): string | null {
   
   // Use the user-specific key
   const userDrawingKey = `${currentUser.id}-${drawingId}`;
+  const floorPlan = floorPlans[userDrawingKey];
   
-  return floorPlans[userDrawingKey]?.imageData || null;
+  if (!floorPlan) return null;
+  
+  return {
+    data: floorPlan.imageData,
+    isPdf: floorPlan.isPdf || false,
+    fileName: floorPlan.fileName || ''
+  };
 }
 
 // Delete a floor plan for a drawing
@@ -74,7 +84,7 @@ export function deleteFloorPlan(drawingId: string): void {
 
 // Check if a floor plan exists for a drawing
 export function hasFloorPlan(drawingId: string): boolean {
-  return getFloorPlan(drawingId) !== null;
+  return getFloorPlanById(drawingId) !== null;
 }
 
 // Get all drawing IDs that have floor plans
@@ -92,3 +102,6 @@ export function getDrawingIdsWithFloorPlans(): string[] {
     .filter(key => key.startsWith(`${currentUser.id}-`))
     .map(key => key.split('-')[1]);
 }
+
+// For backward compatibility
+export { saveFloorPlan as storeFloorPlan };
