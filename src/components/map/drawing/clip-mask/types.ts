@@ -7,6 +7,7 @@ export interface ApplyClipMaskOptions {
   drawingId: string;
   isMounted: boolean;
   layer: L.Layer;
+  imageUrl?: string;
 }
 
 export interface ApplyWithStabilityOptions {

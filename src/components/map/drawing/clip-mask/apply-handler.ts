@@ -19,6 +19,7 @@ export interface ApplyClipMaskOptions {
   layer: L.Layer;
   imageUrl: string;
   retryOnFailure?: boolean;
+  isMounted?: boolean;
 }
 
 export interface ApplyWithStabilityOptions extends ApplyClipMaskOptions {
@@ -38,9 +39,16 @@ export const applyClipMaskToDrawing = ({
   layer, 
   imageUrl, 
   retryOnFailure = true,
+  isMounted = true,
   stabilityWaitTime = 500,
   maxRetries = 3
 }: ApplyWithStabilityOptions): boolean => {
+  // Skip if component is no longer mounted
+  if (!isMounted) {
+    console.log(`Skipping clip mask application for unmounted component: ${drawingId}`);
+    return false;
+  }
+  
   // Global rate limiting to prevent too many clip mask applications at once
   const now = Date.now();
   if (now - lastGlobalApplyTime < GLOBAL_RATE_LIMIT) {
@@ -115,6 +123,7 @@ export const applyClipMaskToDrawing = ({
           layer,
           imageUrl,
           retryOnFailure,
+          isMounted,
           stabilityWaitTime,
           maxRetries
         });
