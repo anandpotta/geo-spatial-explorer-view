@@ -87,7 +87,9 @@ const LayerManager = ({
           // Check if there's a clip image for this drawing
           const floorPlan = getFloorPlanById(drawing.id);
           if (floorPlan && floorPlan.clipImage) {
+            console.log('Found clip image for drawing', drawing.id);
             options.clipImage = floorPlan.clipImage;
+            drawing.clipImage = floorPlan.clipImage; // Add the clip image to the drawing itself
           }
           
           const layer = createDrawingLayer(drawing, options);

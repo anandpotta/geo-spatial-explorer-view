@@ -40,10 +40,13 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
     });
     
     // Add the image clip mask if available
-    if (options.clipImage) {
+    if (options.clipImage || (drawing && drawing.clipImage)) {
+      const clipImageToUse = options.clipImage || drawing.clipImage;
+      console.log('Drawing has clip image, will apply on add:', !!clipImageToUse);
+      
       layer.on('add', (event) => {
         setTimeout(() => {
-          applyClipMaskToLayer(layer, options.clipImage as string, drawing.svgPath);
+          applyClipMaskToLayer(layer, clipImageToUse as string, drawing.svgPath);
         }, 100); // Small delay to ensure the layer is fully rendered
       });
     }

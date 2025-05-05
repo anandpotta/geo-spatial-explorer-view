@@ -58,8 +58,12 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     }
     
     // Save file name and check if it's a PDF
-    setFileName(file.name);
-    setIsPdf(file.type.includes('pdf'));
+    const isPdfFile = file.type.includes('pdf');
+    
+    if (fileType === 'floor-plan') {
+      setFileName(file.name);
+      setIsPdf(isPdfFile);
+    }
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -67,18 +71,25 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       if (result && drawing?.id) {
         const dataUrl = result as string;
         
+        console.log(`Processing ${fileType} upload`);
+        
         if (fileType === 'floor-plan') {
           setSelectedImage(dataUrl);
+          
           // Save to utils for this specific building
           saveFloorPlan(
             drawing.id,
             dataUrl,
-            file.type.includes('pdf'),
+            isPdfFile,
             file.name,
             clipImage
           );
+          
+          toast.success('Floor plan uploaded successfully');
         } else {
+          // For map overlay
           setClipImage(dataUrl);
+          
           // Save the clip image to the floor plan
           saveFloorPlan(
             drawing.id,
@@ -88,13 +99,12 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             dataUrl
           );
           
-          // Dispatch the floorPlanUpdated event to refresh the map
-          window.dispatchEvent(new Event('floorPlanUpdated'));
+          // Make sure we trigger a re-render of the map
+          console.log('Dispatching floorPlanUpdated event');
+          window.dispatchEvent(new CustomEvent('floorPlanUpdated'));
+          
+          toast.success('Map overlay uploaded successfully');
         }
-        
-        toast.success(fileType === 'floor-plan' ? 
-          'Floor plan uploaded successfully' : 
-          'Map overlay uploaded successfully');
       }
     };
     reader.readAsDataURL(file);
