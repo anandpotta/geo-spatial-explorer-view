@@ -18,9 +18,18 @@ export function useFileUpload({ onUploadToDrawing }: {
     if (e.target.files && e.target.files.length > 0 && selectedDrawingId) {
       const file = e.target.files[0];
       
+      console.log(`File selected: ${file.name} (${file.type}, ${file.size} bytes) for drawing ${selectedDrawingId}`);
+      
       // Skip if currently processing this drawing ID
       if (processingRef.current.has(selectedDrawingId)) {
         console.log(`Already processing drawing ${selectedDrawingId}, skipping duplicate request`);
+        e.target.value = ''; // Reset file input
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
         e.target.value = ''; // Reset file input
         return;
       }
@@ -35,8 +44,22 @@ export function useFileUpload({ onUploadToDrawing }: {
       const imageUrl = URL.createObjectURL(file);
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
+      // Show loading toast
+      toast.loading('Applying image to drawing...', { id: `uploading-${selectedDrawingId}` });
+      
       // First check if path already has clip mask
       const svgPathElement = findSvgPathByDrawingId(selectedDrawingId);
+      
+      if (!svgPathElement) {
+        console.error(`Could not find SVG path element for drawing ${selectedDrawingId}`);
+        processingRef.current.delete(selectedDrawingId);
+        toast.error('Could not find the drawing on the map', { id: `uploading-${selectedDrawingId}` });
+        e.target.value = ''; // Reset file input
+        return;
+      }
+      
+      console.log(`Found SVG path element:`, svgPathElement);
+      
       if (svgPathElement && hasClipMaskApplied(svgPathElement)) {
         console.log(`Drawing ${selectedDrawingId} already has clip mask, refreshing view`);
         // Just update the last-updated timestamp to trigger a repaint
@@ -45,7 +68,7 @@ export function useFileUpload({ onUploadToDrawing }: {
             svgPathElement.setAttribute('data-last-updated', Date.now().toString());
             
             // Only show toast if we found the element
-            toast.success(`${file.name} applied to drawing`);
+            toast.success(`${file.name} applied to drawing`, { id: `uploading-${selectedDrawingId}` });
             imageAppliedRef.current.add(selectedDrawingId);
           }
         });
@@ -70,7 +93,7 @@ export function useFileUpload({ onUploadToDrawing }: {
             if (hasClipMaskApplied(svgPathElement)) {
               console.log(`Drawing ${selectedDrawingId} already has clip mask, skipping application`);
               processingRef.current.delete(selectedDrawingId);
-              toast.success(`${file.name} applied to drawing`);
+              toast.success(`${file.name} applied to drawing`, { id: `uploading-${selectedDrawingId}` });
               return;
             }
             
@@ -78,9 +101,17 @@ export function useFileUpload({ onUploadToDrawing }: {
             const result = applyImageClipMask(svgPathElement, imageUrl, selectedDrawingId);
             
             if (result) {
-              toast.success(`${file.name} applied to drawing`);
+              toast.success(`${file.name} applied to drawing`, { id: `uploading-${selectedDrawingId}` });
               imageAppliedRef.current.add(selectedDrawingId);
               processingRef.current.delete(selectedDrawingId);
+              
+              // Force the browser to recognize changes
+              setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+                window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+                  detail: { drawingId: selectedDrawingId } 
+                }));
+              }, 200);
             } else {
               console.error('Failed to apply image as clip mask');
               
@@ -91,7 +122,7 @@ export function useFileUpload({ onUploadToDrawing }: {
                 setTimeout(attemptApplyClipMask, 250 * currentRetry); // Increasing delay with each retry
               } else {
                 processingRef.current.delete(selectedDrawingId);
-                toast.error('Could not apply image to drawing');
+                toast.error('Could not apply image to drawing', { id: `uploading-${selectedDrawingId}` });
               }
             }
           } else {
@@ -104,7 +135,7 @@ export function useFileUpload({ onUploadToDrawing }: {
               setTimeout(attemptApplyClipMask, 250 * currentRetry); // Increasing delay with each retry
             } else {
               processingRef.current.delete(selectedDrawingId);
-              toast.error('Could not find the drawing on the map');
+              toast.error('Could not find the drawing on the map', { id: `uploading-${selectedDrawingId}` });
             }
           }
         } catch (err) {
@@ -116,7 +147,7 @@ export function useFileUpload({ onUploadToDrawing }: {
             setTimeout(attemptApplyClipMask, 250 * currentRetry);
           } else {
             processingRef.current.delete(selectedDrawingId);
-            toast.error('Error processing the uploaded file');
+            toast.error('Error processing the uploaded file', { id: `uploading-${selectedDrawingId}` });
           }
         }
       };

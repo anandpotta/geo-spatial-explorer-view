@@ -1,52 +1,105 @@
 
 /**
- * Utilities for finding SVG path elements
+ * Utilities for finding SVG path elements in the DOM
  */
 
 /**
- * Finds an SVG path element by its drawing ID
+ * Searches for an SVG path element associated with a drawing ID
+ * Uses multiple strategies to find the element
  */
-export const findSvgPathByDrawingId = (
-  drawingId: string, 
-  container?: HTMLElement | null
-): SVGPathElement | null => {
+export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null => {
   try {
-    // If no container provided, use document body
-    const searchRoot = container || document.body;
-    
-    // Search for paths with the data attribute first (most reliable)
-    let path = searchRoot.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
-    
-    // If not found, try with class name
-    if (!path) {
-      path = searchRoot.querySelector(`.drawing-path-${drawingId.substring(0, 8)}`) as SVGPathElement;
+    // First try finding by the data attribute (most reliable)
+    let path = document.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+    if (path) {
+      console.log(`Found path with data-drawing-id attribute for ${drawingId}`);
+      return path;
     }
     
-    // If still not found, look in all leaflet interactive paths
-    if (!path) {
-      const allPaths = Array.from(searchRoot.querySelectorAll('path.leaflet-interactive'));
+    // Try finding by ID
+    path = document.getElementById(`drawing-path-${drawingId}`) as SVGPathElement;
+    if (path) {
+      console.log(`Found path with id for ${drawingId}`);
+      return path;
+    }
+    
+    // Try finding by class
+    const shortId = drawingId.substring(0, 8);
+    path = document.querySelector(`.drawing-path-${shortId}`) as SVGPathElement;
+    if (path) {
+      console.log(`Found path with class for ${drawingId}`);
+      return path;
+    }
+    
+    // Look in the leaflet overlay pane
+    const overlayPanes = document.querySelectorAll('.leaflet-overlay-pane');
+    for (const pane of Array.from(overlayPanes)) {
+      // Try by data attribute
+      path = pane.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+      if (path) {
+        console.log(`Found path in overlay pane with data attribute for ${drawingId}`);
+        return path;
+      }
       
-      // Check if any path has the drawing ID in any attribute
-      path = allPaths.find(p => {
-        const attrs = Array.from(p.attributes);
-        return attrs.some(attr => attr.value.includes(drawingId));
-      }) as SVGPathElement || null;
+      // Try by id
+      path = pane.querySelector(`#drawing-path-${drawingId}`) as SVGPathElement;
+      if (path) {
+        console.log(`Found path in overlay pane with id for ${drawingId}`);
+        return path;
+      }
       
-      // Fall back to searching in parent elements
-      if (!path) {
-        const parentElements = Array.from(searchRoot.querySelectorAll('[data-drawing-container]'));
-        for (const parent of parentElements) {
-          if (parent.getAttribute('data-drawing-container') === drawingId) {
-            path = parent.querySelector('path') as SVGPathElement;
-            if (path) break;
-          }
+      // Try by class
+      path = pane.querySelector(`.drawing-path-${shortId}`) as SVGPathElement;
+      if (path) {
+        console.log(`Found path in overlay pane with class for ${drawingId}`);
+        return path;
+      }
+      
+      // If still not found, try all interactive paths and check attributes
+      const interactivePaths = pane.querySelectorAll('path.leaflet-interactive');
+      for (const interactivePath of Array.from(interactivePaths)) {
+        if (interactivePath.getAttribute('data-drawing-id') === drawingId ||
+            interactivePath.id === `drawing-path-${drawingId}` ||
+            interactivePath.classList.contains(`drawing-path-${shortId}`)) {
+          console.log(`Found interactive path for ${drawingId}`);
+          return interactivePath as SVGPathElement;
         }
       }
     }
     
-    return path;
+    console.warn(`Could not find SVG path for drawing ${drawingId}`);
+    return null;
   } catch (err) {
-    console.error(`Error finding SVG path for drawing ${drawingId}:`, err);
+    console.error('Error finding SVG path:', err);
     return null;
   }
+};
+
+/**
+ * Finds all SVG paths in the document that have clip masks applied
+ */
+export const findAllClipMaskedPaths = (): SVGPathElement[] => {
+  const paths: SVGPathElement[] = [];
+  
+  // Find paths with data-has-clip-mask attribute
+  const maskedPaths = document.querySelectorAll('path[data-has-clip-mask="true"]');
+  maskedPaths.forEach(path => paths.push(path as SVGPathElement));
+  
+  // Find paths with clip-path style or attribute
+  const clipPaths = document.querySelectorAll('path[clip-path^="url(#clip-"]');
+  clipPaths.forEach(path => {
+    if (!paths.includes(path as SVGPathElement)) {
+      paths.push(path as SVGPathElement);
+    }
+  });
+  
+  // Find paths with pattern fill
+  const patternPaths = document.querySelectorAll('path[fill^="url(#pattern-"]');
+  patternPaths.forEach(path => {
+    if (!paths.includes(path as SVGPathElement)) {
+      paths.push(path as SVGPathElement);
+    }
+  });
+  
+  return paths;
 };

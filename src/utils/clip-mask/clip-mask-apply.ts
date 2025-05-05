@@ -21,7 +21,7 @@ export const applyImageClipMask = (
   id: string
 ): boolean => {
   if (!pathElement || !imageUrl) {
-    console.error('Cannot apply clip mask: missing path or image URL');
+    console.error('Cannot apply clip mask: missing path or image URL', {pathElement, imageUrl});
     return false;
   }
   
@@ -55,6 +55,8 @@ export const applyImageClipMask = (
       loadingImages.set(id, false);
       return false;
     }
+    
+    console.log(`Using image URL: ${imageUrlString}`);
     
     // Check if already has clip mask (improved check)
     if (hasClipMaskApplied(pathElement)) {
@@ -184,6 +186,7 @@ export const applyImageClipMask = (
         pattern.setAttribute('y', String(offsetY));
         pattern.setAttribute('width', String(scaledWidth));
         pattern.setAttribute('height', String(scaledHeight));
+        pattern.setAttribute('preserveAspectRatio', 'none');
         defs.appendChild(pattern);
         
         // Create an image element for the pattern
@@ -211,12 +214,12 @@ export const applyImageClipMask = (
         
         // Add error handler
         image.onerror = () => {
-          console.error(`Failed to load image for pattern-${id}`);
+          console.error(`Failed to load image for pattern-${id}`, { imageUrlString });
           pathElement.classList.remove('loading-clip-mask');
           pathElement.setAttribute('data-image-error', 'true');
           
           // Add a placeholder with error message
-          image.setAttribute('href', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" font-size="14">Image failed</text></svg>');
+          image.setAttribute('href', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="red" font-size="14">Image failed</text></svg>');
         };
         
         pattern.appendChild(image);
@@ -234,6 +237,9 @@ export const applyImageClipMask = (
           // Apply all changes in a single batch to reduce visual flickering
           const fill = `url(#pattern-${id})`;
           const clipPathUrl = `url(#clip-${id})`;
+          
+          console.log(`Setting fill to: ${fill}`);
+          console.log(`Setting clip-path to: ${clipPathUrl}`);
           
           // Set fill first
           pathElement.style.fill = fill;
@@ -255,6 +261,9 @@ export const applyImageClipMask = (
           // Force a repaint to ensure the image renders
           setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
+            window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+              detail: { drawingId: id, refreshed: true } 
+            }));
             
             // Double-check the visibility after a slight delay
             setTimeout(() => {
@@ -283,7 +292,7 @@ export const applyImageClipMask = (
     }
     
     // Start loading the image
-    console.log(`Starting image load for ${id}`);
+    console.log(`Starting image load for ${id} with URL: ${imageUrlString}`);
     tempImg.src = imageUrlString;
     
     return true;

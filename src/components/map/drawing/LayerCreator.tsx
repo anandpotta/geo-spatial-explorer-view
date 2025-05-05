@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -127,22 +128,44 @@ export const createLayerFromDrawing = async ({
       const lastApplied = floorPlanApplied.get(drawing.id) || 0;
       const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
       
+      // Check if this drawing has a floor plan
+      const hasFloorPlanResult = await hasFloorPlan(drawing.id);
+      console.log(`Drawing ${drawing.id} has floor plan: ${hasFloorPlanResult}`);
+      
       // Add a small delay before applying clip mask to ensure the path is rendered
-      if (await hasFloorPlan(drawing.id) && isMounted && shouldApply) {
+      if (hasFloorPlanResult && isMounted && shouldApply) {
         floorPlanApplied.set(drawing.id, now);
         
-        setTimeout(() => {
-          // Apply clip mask if a floor plan exists
-          if (isMounted) {
-            // This is now an async function but we don't need to await it here
-            applyClipMaskToDrawing({
-              drawingId: drawing.id,
-              isMounted,
-              layer
-              // imageUrl is now optional, so we don't need to provide it
-            });
-          }
-        }, 300); // Delay to let the DOM update
+        // Apply with increasing timeouts to ensure SVG is ready
+        const attemptApplication = (attempt = 1) => {
+          if (attempt > 3 || !isMounted) return;
+          
+          console.log(`Attempting to apply clip mask for ${drawing.id}, attempt ${attempt}`);
+          
+          setTimeout(() => {
+            // Apply clip mask if a floor plan exists
+            if (isMounted) {
+              applyClipMaskToDrawing({
+                drawingId: drawing.id,
+                isMounted,
+                layer
+              }).then(success => {
+                if (!success && isMounted) {
+                  console.log(`Attempt ${attempt} failed, trying again with longer timeout`);
+                  attemptApplication(attempt + 1);
+                } else if (success) {
+                  console.log(`Successfully applied clip mask on attempt ${attempt}`);
+                  // Force an update
+                  window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+                    detail: { drawingId: drawing.id }
+                  }));
+                }
+              });
+            }
+          }, 300 * attempt); // Increasing delay with each attempt
+        };
+        
+        attemptApplication();
       }
     }
   } catch (err) {
