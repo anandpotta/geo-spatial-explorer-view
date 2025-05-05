@@ -9,7 +9,6 @@ import { handleClearAll } from './drawing/ClearAllHandler';
 import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
 import FileUploadInput from './drawing/FileUploadInput';
 import DrawingEffects from './drawing/DrawingEffects';
-import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
 import { createShapeCreationHandler } from './drawing/ShapeCreationHandler';
 import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
 
@@ -41,7 +40,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     isInitialized,
     setIsInitialized,
     fileInputRef,
-    activateEditMode,
     openFileUploadDialog
   } = useDrawingControls();
   
@@ -68,7 +66,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
-    activateEditMode,
     openFileUploadDialog,
     getSvgPaths: () => {
       if (drawToolsRef.current) {
@@ -119,7 +116,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       <DrawingEffects 
         activeTool={activeTool} 
         isInitialized={isInitialized}
-        activateEditMode={activateEditMode}
       />
       <FeatureGroup ref={featureGroupRef}>
         {featureGroupRef.current && isInitialized && (

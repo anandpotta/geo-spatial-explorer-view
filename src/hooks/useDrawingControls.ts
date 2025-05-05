@@ -8,7 +8,6 @@ import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
   getDrawTools: () => any;
-  activateEditMode: () => boolean;
   openFileUploadDialog: (drawingId: string) => void;
   getSvgPaths: () => string[];
 }
@@ -47,47 +46,6 @@ export function useDrawingControls() {
     }
   };
 
-  const activateEditMode = (): boolean => {
-    if (!isMapValidCheck()) return false;
-
-    if (drawToolsRef.current) {
-      try {
-        console.log("Attempting to activate edit mode");
-        
-        // Use the new activateEditMode method if available
-        if (typeof drawToolsRef.current.activateEditMode === 'function') {
-          const result = drawToolsRef.current.activateEditMode();
-          if (result) {
-            console.log("Edit mode activated successfully using new method");
-            return true;
-          }
-        }
-        
-        // Fall back to direct access if method not available
-        const editControl = drawToolsRef.current.getEditControl?.();
-        if (editControl) {
-          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
-          if (editHandler && typeof editHandler.enable === 'function') {
-            editHandler.enable();
-            console.log("Edit mode activated successfully");
-            return true;
-          } else {
-            console.warn("Edit handler not found or not a function", editHandler);
-          }
-        } else {
-          console.warn("Edit control not available", drawToolsRef.current);
-        }
-      } catch (err) {
-        console.error('Failed to activate edit mode:', err);
-        toast.error('Could not enable edit mode');
-      }
-    } else {
-      console.warn("Draw tools ref not available");
-    }
-    
-    return false;
-  };
-
   const openFileUploadDialog = (drawingId: string) => {
     if (!isMapValidCheck()) return;
     
@@ -106,7 +64,6 @@ export function useDrawingControls() {
     selectedDrawing,
     setSelectedDrawing,
     fileInputRef,
-    activateEditMode,
     openFileUploadDialog
   };
 }

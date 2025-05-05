@@ -1,12 +1,11 @@
+
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
-import { useEditMode } from '@/hooks/useEditMode';
 import { usePathElements } from '@/hooks/usePathElements';
 import { useShapeCreation } from '@/hooks/useShapeCreation';
-import { toast } from 'sonner';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -19,7 +18,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const editControlRef = useRef<any>(null);
   
   // Use hooks for separated functionality
-  const isEditActive = useEditMode(editControlRef, activeTool);
   const { getPathElements, getSVGPathData } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
   
@@ -76,7 +74,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         }
         .visible-path-stroke {
           stroke-width: 4px !important;
-          stroke: #8B5CF6 !important;
+          stroke: #33C3F0 !important;
           stroke-opacity: 1 !important;
           stroke-linecap: round !important;
           stroke-linejoin: round !important;
@@ -119,63 +117,12 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     };
   }, [featureGroup]);
   
-  // Effect to handle edit mode activation
-  useEffect(() => {
-    if (activeTool === 'edit' && editControlRef.current) {
-      try {
-        console.log('Attempting to activate edit mode from effect');
-        const editControl = editControlRef.current;
-        const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
-        
-        if (editHandler && typeof editHandler.enable === 'function') {
-          // Add a small delay to avoid race conditions
-          setTimeout(() => {
-            editHandler.enable();
-            console.log('Edit mode activated from effect');
-          }, 150);
-        }
-      } catch (err) {
-        console.error('Error activating edit mode from effect:', err);
-      }
-    }
-  }, [activeTool]);
-  
   useImperativeHandle(ref, () => ({
-    getEditControl: () => editControlRef.current,
     getPathElements,
-    getSVGPathData,
-    activateEditMode: () => {
-      try {
-        if (editControlRef.current) {
-          const editControl = editControlRef.current;
-          const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
-          
-          if (editHandler && typeof editHandler.enable === 'function') {
-            console.log('Manually activating edit mode');
-            editHandler.enable();
-            return true;
-          }
-        }
-        return false;
-      } catch (err) {
-        console.error('Error manually activating edit mode:', err);
-        return false;
-      }
-    }
+    getSVGPathData
   }));
 
-  // Create a properly structured edit object
-  const editOptions = {
-    featureGroup: featureGroup,
-    edit: {
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
-      }
-    },
-    remove: true
-  };
-
+  // Create draw-only options with edit/remove disabled
   const drawOptions = {
     rectangle: {
       shapeOptions: {
@@ -225,7 +172,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       position="topright"
       onCreated={handleCreated}
       draw={drawOptions}
-      edit={editOptions}
+      edit={false}
       featureGroup={featureGroup}
     />
   );

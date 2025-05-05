@@ -1,56 +1,33 @@
 
 import { useEffect } from 'react';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
   isInitialized: boolean;
-  activateEditMode: () => boolean;
 }
 
-const DrawingEffects: React.FC<DrawingEffectsProps> = ({ 
-  activeTool, 
-  isInitialized,
-  activateEditMode
-}) => {
-  // Effect to load floor plans on mount
+const DrawingEffects = ({
+  activeTool,
+  isInitialized
+}: DrawingEffectsProps) => {
+  // Apply special effects based on the active tool
   useEffect(() => {
-    getDrawingIdsWithFloorPlans();
+    if (!isInitialized) return;
     
-    const handleFloorPlanUpdated = () => {
-      try {
-        window.dispatchEvent(new Event('storage'));
-      } catch (err) {
-        console.error('Error handling floor plan update:', err);
-      }
-    };
-    
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    // Add classes to body to indicate active tool
+    if (activeTool) {
+      document.body.classList.add(`tool-${activeTool}-active`);
+    }
     
     return () => {
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+      // Clean up tool classes
+      if (activeTool) {
+        document.body.classList.remove(`tool-${activeTool}-active`);
+      }
     };
-  }, []);
-
-  // Effect to activate edit mode when activeTool changes to 'edit'
-  useEffect(() => {
-    if (activeTool === 'edit' && isInitialized) {
-      setTimeout(() => {
-        try {
-          console.log("Activating edit mode from effect");
-          const activated = activateEditMode();
-          if (activated) {
-            console.log("Edit mode successfully activated");
-          } else {
-            console.log("Failed to activate edit mode");
-          }
-        } catch (err) {
-          console.error('Error activating edit mode:', err);
-        }
-      }, 300);
-    }
-  }, [activeTool, isInitialized, activateEditMode]);
-
+  }, [activeTool, isInitialized]);
+  
+  // This is now a pure effect component with no rendering
   return null;
 };
 

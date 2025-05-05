@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Trash2, Edit3 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -40,7 +40,6 @@ const DrawingTools = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
-  const [isEditActive, setIsEditActive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -84,10 +83,6 @@ const DrawingTools = ({
     if (tool === 'clear') {
       setIsClearDialogOpen(true);
       return;
-    }
-    
-    if (tool === 'edit') {
-      setIsEditActive(!isEditActive);
     }
     
     onToolSelect(tool);
@@ -148,17 +143,6 @@ const DrawingTools = ({
         >
           <Trash2 className="h-5 w-5" />
           <span className="ml-2">Clear All</span>
-        </button>
-        
-        <div className="h-4" />
-        
-        <button
-          className={`w-full p-2 rounded-md ${isEditActive ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'} text-white transition-colors flex items-center justify-center`}
-          onClick={() => handleToolClick('edit')}
-          aria-label="Edit layers"
-        >
-          <Edit3 className="h-5 w-5 mr-2" />
-          <span>{isEditActive ? 'Editing Active' : 'Edit Layers'}</span>
         </button>
       </div>
 
