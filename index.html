@@ -18,6 +18,22 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.110.0/Build/Cesium/Widgets/widgets.css" />
+    
+    <!-- Block analytics tracking -->
+    <meta name="robots" content="noindex,nofollow" />
+    <script>
+      // Prevent external analytics
+      window.addEventListener('error', function(e) {
+        if (e.target && (e.target.src || e.target.href)) {
+          const url = e.target.src || e.target.href;
+          if (url.includes('facebook.com/tr') || url.includes('lovable.dev/ingest')) {
+            e.preventDefault();
+            console.log('Blocked external tracking request:', url);
+            return true;
+          }
+        }
+      }, true);
+    </script>
   </head>
 
   <body>
