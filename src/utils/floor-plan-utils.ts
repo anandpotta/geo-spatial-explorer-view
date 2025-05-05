@@ -1,13 +1,17 @@
 import { toast } from 'sonner';
 import { getCurrentUser } from '@/services/auth-service';
 
-interface FloorPlan {
+// Define the FloorPlan interface as a type that can be exported
+export interface FloorPlan {
   data: string;
   isPdf: boolean;
   fileName: string;
   userId?: string;
   timestamp?: string;
 }
+
+// Export the type as FloorPlanData for backward compatibility
+export type FloorPlanData = FloorPlan;
 
 /**
  * Save a floor plan for a specific drawing
@@ -187,5 +191,37 @@ export function clearUserFloorPlans(): boolean {
   } catch (error) {
     console.error('Error clearing user floor plans:', error);
     return false;
+  }
+}
+
+/**
+ * Check if a drawing has a floor plan
+ */
+export async function hasFloorPlan(drawingId: string): Promise<boolean> {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return false;
+  
+  try {
+    const floorPlan = await getFloorPlanById(drawingId);
+    return !!floorPlan;
+  } catch (error) {
+    console.error('Error checking floor plan status:', error);
+    return false;
+  }
+}
+
+/**
+ * Get all drawing IDs that have floor plans for the current user
+ */
+export async function getDrawingIdsWithFloorPlans(): Promise<string[]> {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return [];
+  
+  try {
+    const userFloorPlans = getUserFloorPlans();
+    return Object.keys(userFloorPlans);
+  } catch (error) {
+    console.error('Error getting drawing IDs with floor plans:', error);
+    return [];
   }
 }
