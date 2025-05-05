@@ -27,16 +27,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Initialize default users
     initializeDefaultUsers();
+    console.log('AuthProvider initialized');
     
     // Check if user is already logged in
     const user = getCurrentUser();
     const isAuth = checkAuth();
+    
+    console.log('Auth check on init:', isAuth ? 'Authenticated' : 'Not authenticated');
     
     setCurrentUser(user);
     setIsAuthenticated(isAuth);
   }, []);
   
   const login = async (username: string, password: string) => {
+    console.log('Login requested for:', username);
     const user = authLogin(username, password);
     
     if (user) {
@@ -61,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   const logout = () => {
+    console.log('Logout requested');
     authLogout();
     setCurrentUser(null);
     setIsAuthenticated(false);

@@ -38,9 +38,12 @@ export const getUsers = (): User[] => {
 
 export const login = (username: string, password: string): User | null => {
   const users = getUsers();
+  console.log('Attempting login for:', username);
+  console.log('Available users:', users.length);
   const user = users.find(u => u.username === username && u.password === password);
   
   if (user) {
+    console.log('Login successful for user:', user.username);
     // Set authentication state
     const authState: AuthState = {
       currentUser: user,
@@ -50,6 +53,7 @@ export const login = (username: string, password: string): User | null => {
     return user;
   }
   
+  console.log('Login failed: Invalid credentials');
   return null;
 };
 

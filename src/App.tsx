@@ -8,6 +8,8 @@ import Header from './components/auth/Header';
 const AppContent = () => {
   const { isAuthenticated } = useAuth();
   
+  console.log('AppContent render - authenticated:', isAuthenticated);
+  
   return (
     <div className="h-screen flex flex-col">
       {isAuthenticated && <Header />}
@@ -17,6 +19,8 @@ const AppContent = () => {
 };
 
 function App() {
+  console.log('App component rendering');
+  
   return (
     <AuthProvider>
       <AppContent />

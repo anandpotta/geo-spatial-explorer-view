@@ -1,16 +1,24 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
+import { getUsers, initializeDefaultUsers } from '@/services/auth-service';
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Initialize default users on component mount
+  useEffect(() => {
+    initializeDefaultUsers();
+    const users = getUsers();
+    console.log('Available users:', users.length);
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,9 +27,14 @@ const LoginPage: React.FC = () => {
       return;
     }
     
+    console.log('Login attempt for user:', username);
     setIsLoading(true);
-    await login(username, password);
-    setIsLoading(false);
+    
+    // Add delay to ensure UI updates
+    setTimeout(async () => {
+      await login(username, password);
+      setIsLoading(false);
+    }, 500);
   };
   
   return (
