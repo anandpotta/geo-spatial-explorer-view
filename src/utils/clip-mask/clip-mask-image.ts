@@ -64,6 +64,8 @@ export const createPatternWithImage = (
   pattern.setAttribute('height', String(height));
   defs.appendChild(pattern);
   
+  console.log(`Created pattern: x=${offsetX}, y=${offsetY}, width=${width}, height=${height}`);
+  
   // Create an image element for the pattern
   const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
   image.setAttribute('href', imageUrl);

@@ -14,6 +14,10 @@ export const createClipPath = (
   // Create a clip path element
   const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
   clipPath.setAttribute('id', `clip-${id}`);
+  
+  // Enable userSpaceOnUse to use the absolute coordinates of the path
+  clipPath.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  
   defs.appendChild(clipPath);
   
   // Create a path for the clip path
@@ -50,6 +54,9 @@ export const applyClipPathAndFill = (
     const fill = `url(#pattern-${id})`;
     const clipPathUrl = `url(#clip-${id})`;
     
+    console.log(`Applying clip path and fill to path: ${id}`);
+    
+    // Apply inline styles first (higher precedence)
     pathElement.style.fill = fill;
     pathElement.style.stroke = 'none';
     pathElement.style.clipPath = clipPathUrl;
@@ -58,5 +65,11 @@ export const applyClipPathAndFill = (
     pathElement.setAttribute('fill', fill);
     pathElement.setAttribute('stroke', 'none');
     pathElement.setAttribute('clip-path', clipPathUrl);
+    
+    // Force a redraw of the path
+    const displayValue = pathElement.style.display;
+    pathElement.style.display = 'none';
+    pathElement.getBoundingClientRect(); // Force reflow
+    pathElement.style.display = displayValue;
   });
 };

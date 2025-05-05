@@ -37,11 +37,28 @@ export const applyClipMaskToDrawing = ({
     // Apply the clip mask
     console.log(`Applying clip mask for drawing ${drawingId}`);
     const imageData = floorPlanData.imageData;
-    const applied = applyImageClipMask(pathElement, imageData, drawingId);
     
-    if (!applied) {
-      console.warn(`Failed to apply clip mask for drawing ${drawingId}`);
-    }
+    // Make multiple attempts to apply the clip mask
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    const tryApply = () => {
+      if (attempts >= maxAttempts) return;
+      
+      attempts++;
+      const applied = applyImageClipMask(pathElement, imageData, drawingId);
+      
+      if (!applied && attempts < maxAttempts) {
+        console.log(`Attempt ${attempts} failed, trying again in 300ms`);
+        setTimeout(tryApply, 300);
+      } else if (!applied) {
+        console.warn(`Failed to apply clip mask for drawing ${drawingId} after ${maxAttempts} attempts`);
+      } else {
+        console.log(`Successfully applied clip mask on attempt ${attempts}`);
+      }
+    };
+    
+    tryApply();
   } catch (err) {
     console.error('Error applying clip mask to drawing:', err);
     toast.error('Could not apply floor plan to drawing');

@@ -22,6 +22,9 @@ export const applyImageClipMask = (
   }
   
   try {
+    // Debug check
+    console.log('Applying image clip mask to path', id, typeof imageUrl);
+    
     // Ensure imageUrl is a string before attempting to use string methods
     const imageUrlString = typeof imageUrl === 'string' ? imageUrl : 
       (typeof imageUrl === 'object' && imageUrl !== null ? JSON.stringify(imageUrl) : '');
@@ -35,7 +38,14 @@ export const applyImageClipMask = (
     if (hasClipMaskApplied(pathElement)) {
       console.log('Path already has clip mask, updating timestamp');
       pathElement.setAttribute('data-last-updated', Date.now().toString());
-      return true;
+      
+      // Even if it has a clip mask, we should update the image - the old one might be stale
+      if (!pathElement.getAttribute('clip-path') || !pathElement.style.fill) {
+        console.log('Clip mask exists but attributes missing, reapplying');
+      } else {
+        // If everything looks good, just return - no need to reapply
+        return true;
+      }
     }
     
     // Get the SVG element that contains this path
@@ -51,6 +61,8 @@ export const applyImageClipMask = (
       console.error('SVG path has no path data (d attribute)');
       return false;
     }
+    
+    console.log('Found path data:', pathData.substring(0, 20) + '...');
     
     // Store original path data and style for potential restoration
     storeOriginalAttributes(pathElement);
@@ -88,12 +100,13 @@ export const applyImageClipMask = (
     
     tempImg.onload = () => {
       clearTimeout(imageTimeout);
+      console.log(`Image loaded successfully: ${tempImg.width}x${tempImg.height}`);
       applyImageWithDimensions(tempImg.width, tempImg.height);
     };
     
-    tempImg.onerror = () => {
+    tempImg.onerror = (e) => {
       clearTimeout(imageTimeout);
-      console.error('Failed to load image for clip mask');
+      console.error('Failed to load image for clip mask', e);
       // Don't show error toasts for image load errors to reduce spam
       // Apply default dimensions as fallback
       applyImageWithDimensions(300, 300);
@@ -102,16 +115,20 @@ export const applyImageClipMask = (
     // Function to apply the image with known dimensions
     function applyImageWithDimensions(imgWidth: number, imgHeight: number) {
       try {
-        if (!svg || !pathElement || !document.contains(pathElement) || !defs) return; // Safety check
+        if (!svg || !pathElement || !document.contains(pathElement) || !defs) {
+          console.error('Elements no longer in DOM, cannot apply clip mask');
+          return false;
+        }
         
         // Get the bounding box to properly size the pattern
         const bbox = pathElement.getBBox();
+        console.log(`Path bounding box: ${bbox.x},${bbox.y} ${bbox.width}x${bbox.height}`);
         
         // Calculate placement for the image
         const placement = calculateImagePlacement(bbox, imgWidth, imgHeight);
         
         // Create pattern and image elements
-        createPatternWithImage(
+        const { pattern, image } = createPatternWithImage(
           defs, 
           id, 
           imageUrlString, 
@@ -130,8 +147,18 @@ export const applyImageClipMask = (
         // Apply the clip path and fill
         applyClipPathAndFill(pathElement, id);
         
+        // Force a redraw
+        svg.style.display = 'none';
+        svg.offsetHeight; // Force reflow
+        svg.style.display = '';
+        
         // Show success toast (only once per drawing)
         showClipMaskSuccessToast(id);
+        
+        // Dispatch an event to notify that the clip mask was updated
+        window.dispatchEvent(new CustomEvent('clipMaskUpdated', {
+          detail: { drawingId: id }
+        }));
         
         return true;
       } catch (err) {
