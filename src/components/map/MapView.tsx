@@ -32,6 +32,7 @@ interface MapViewProps {
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
   isMapReady?: boolean;
+  containerKey?: string;
 }
 
 const MapView = ({
@@ -52,11 +53,11 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
-  isMapReady = false
+  isMapReady = false,
+  containerKey = 'default-map'
 }: MapViewProps) => {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
-  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
   const drawingControlsRef = useRef(null);
 
   const handleRegionClick = (drawing: DrawingData) => {
@@ -80,6 +81,8 @@ const MapView = ({
     );
   }
 
+  // Use unique containerKey to ensure React properly unmounts/remounts
+  // the MapContainer when needed
   return (
     <div className="w-full h-full relative">
       <div className="absolute top-4 right-4 z-[1000]">
@@ -90,7 +93,8 @@ const MapView = ({
       </div>
       
       <MapContainer 
-        key={mapKey}
+        key={containerKey}
+        id={containerKey}
         className="w-full h-full"
         attributionControl={false}
         center={position}
@@ -99,6 +103,11 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
+        whenCreated={(map) => {
+          // Force immediate resize to ensure proper container dimensions
+          setTimeout(() => map.invalidateSize(), 100);
+          return map;
+        }}
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 

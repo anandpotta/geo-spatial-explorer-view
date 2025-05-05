@@ -44,7 +44,7 @@ const MarkersList = ({
     <>
       {Array.isArray(uniqueMarkers) && uniqueMarkers.map((marker) => (
         <UserMarker 
-          key={`marker-${marker.id}-${Date.now()}`} 
+          key={`marker-${marker.id}`} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />
