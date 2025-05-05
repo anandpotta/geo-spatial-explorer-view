@@ -14,7 +14,7 @@ const DrawingControlsEffects: React.FC<DrawingControlsEffectsProps> = ({
     <>
       {/* Add any global effects or styling that are conditional based on activeTool or initialization state */}
       {isInitialized && (
-        <style jsx global>{`
+        <style type="text/css">{`
           .leaflet-draw-tooltip {
             visibility: ${activeTool ? 'visible' : 'hidden'} !important;
           }

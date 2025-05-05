@@ -10,6 +10,7 @@ import { createShapeCreationHandler } from './ShapeCreationHandler';
 import { useDrawingControlsState } from '@/hooks/useDrawingControlsState';
 import { usePathVisibilityEffect } from '@/hooks/usePathVisibilityEffect';
 import { useMapEventListeners } from '@/hooks/useMapEventListeners';
+import { useDrawings } from '@/hooks/useDrawings';
 
 interface DrawingControlsCoreProps {
   onCreated: (shape: any) => void;
@@ -40,6 +41,9 @@ const DrawingControlsCore = forwardRef<DrawingControlsRef, DrawingControlsCorePr
     svgPaths,
     setSvgPaths
   } = useDrawingControlsState({ onPathsUpdated });
+
+  // Get saved drawings data
+  const { savedDrawings } = useDrawings();
 
   // Set up path visibility monitoring
   usePathVisibilityEffect({
@@ -98,6 +102,7 @@ const DrawingControlsCore = forwardRef<DrawingControlsRef, DrawingControlsCorePr
       {featureGroupRef.current && isInitialized && (
         <LayerManager 
           featureGroup={featureGroupRef.current}
+          savedDrawings={savedDrawings}
           activeTool={activeTool}
           onRegionClick={onRegionClick}
           onRemoveShape={onRemoveShape}
