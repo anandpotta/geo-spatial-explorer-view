@@ -105,9 +105,8 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
         // Save the file data to localStorage with user association
         saveFloorPlan(drawingId, {
           data: e.target.result as string,
-          name: file.name,
-          type: file.type,
-          uploaded: new Date().toISOString()
+          isPdf: fileType === 'application/pdf',
+          fileName: file.name
         });
         
         console.log(`Saved floor plan to localStorage for drawing ${drawingId}`);
