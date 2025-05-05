@@ -89,12 +89,23 @@ export const createLayerFromDrawing = ({
             layer = L.circle(drawing.coordinates[0], circleOptions);
             break;
           case 'marker':
-            // Create proper marker options from properties
+            // Create proper marker options that match Leaflet's MarkerOptions interface
             const markerOptions: L.MarkerOptions = {
-              ...options
+              // Only include properties that are valid for MarkerOptions
+              title: drawing.properties?.name || 'Marker',
+              alt: drawing.properties?.description || 'Map marker',
+              opacity: 1,
+              draggable: false,
+              interactive: true,
+              keyboard: true
             };
             
+            // Create the marker with coordinates and valid options
             layer = L.marker(drawing.coordinates[0], markerOptions);
+            
+            // Attach drawing ID as a custom property after creation
+            (layer as any).drawingId = drawing.id;
+            
             break;
           default:
             console.warn(`Unsupported shape type: ${drawing.type}`);
