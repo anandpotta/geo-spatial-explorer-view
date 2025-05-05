@@ -3,10 +3,10 @@ import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { EditControl } from "../LeafletCompatibilityLayer";
 import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { useDrawToolsOptions } from '@/hooks/useDrawToolsOptions';
-import { useDrawToolsEditMode } from '@/hooks/useDrawToolsEditMode';
+import { useDrawToolsOptions } from '../draw-tools/hooks/useDrawToolsOptions';
+import { useEditMode } from '../draw-tools/hooks/useEditMode';
 import { getMapFromLayer } from '@/utils/leaflet-type-utils';
-import { useDrawToolsOptimization } from '@/hooks/useDrawToolsOptimization';
+import { useDrawToolsOptimization } from '../draw-tools/hooks/useDrawToolsOptimization';
 
 interface DrawToolsCoreProps {
   onCreated: (shape: any) => void;
@@ -29,7 +29,7 @@ const DrawToolsCore = forwardRef(({
   useDrawToolsOptimization(map);
   
   // Handle edit mode activation
-  useDrawToolsEditMode(editControlRef, activeTool);
+  useEditMode(editControlRef, activeTool);
   
   // Get drawing and editing options
   const { editOptions, drawOptions } = useDrawToolsOptions(featureGroup);
