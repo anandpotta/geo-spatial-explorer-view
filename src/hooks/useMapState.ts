@@ -89,8 +89,10 @@ export function useMapState(selectedLocation?: Location) {
     setMarkerName('');
     setCurrentDrawing(null);
     
-    // Update the markers state with the new marker
-    setMarkers(getSavedMarkers());
+    // Update the markers state with the new marker - no need to fetch again as we already have the updated marker
+    // setMarkers(getSavedMarkers()); - Removing this line as it causes duplicate marker rendering
+    // Instead, update the local state directly
+    setMarkers(prevMarkers => [...prevMarkers, newMarker]);
     
     toast.success("Location saved successfully");
   };

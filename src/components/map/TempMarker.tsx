@@ -2,7 +2,6 @@
 import React from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
-import L from 'leaflet';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -47,4 +46,4 @@ const TempMarker = ({
   );
 };
 
-export default TempMarker;
+export default React.memo(TempMarker);
