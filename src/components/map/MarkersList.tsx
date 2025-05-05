@@ -1,4 +1,3 @@
-
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
@@ -35,11 +34,12 @@ const MarkersList = ({
     }
     
     // Create a Map using the ID as keys to naturally eliminate duplicates
-    const uniqueMap = new Map();
+    const uniqueMap = new Map<string, LocationMarker>();
     
-    // Process markers to keep the ones with unique IDs
-    markers.forEach(marker => {
-      if (marker && marker.id) {
+    // Process markers to keep only the latest version of each ID
+    // Reverse the array to process newer markers first, then older ones won't overwrite
+    [...markers].reverse().forEach(marker => {
+      if (marker && marker.id && !uniqueMap.has(marker.id)) {
         uniqueMap.set(marker.id, marker);
       }
     });

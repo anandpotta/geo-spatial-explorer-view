@@ -1,4 +1,3 @@
-
 import { LocationMarker } from './types';
 import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
 
@@ -20,15 +19,7 @@ export function saveMarker(marker: LocationMarker): void {
   }
   
   // Ensure we have unique markers in localStorage by ID
-  const uniqueMarkers = [];
-  const seenIds = new Set();
-  
-  for (const m of savedMarkers) {
-    if (!seenIds.has(m.id)) {
-      seenIds.add(m.id);
-      uniqueMarkers.push(m);
-    }
-  }
+  const uniqueMarkers = deduplicateMarkers(savedMarkers);
   
   localStorage.setItem('savedMarkers', JSON.stringify(uniqueMarkers));
   
@@ -37,7 +28,28 @@ export function saveMarker(marker: LocationMarker): void {
   const event = new CustomEvent('markersUpdated', { detail: eventDetail });
   window.dispatchEvent(event);
   
+  // Only sync the unique markers with backend
   syncMarkersWithBackend(uniqueMarkers);
+}
+
+/**
+ * Deduplicates markers by ID, keeping the most recent version
+ */
+function deduplicateMarkers(markers: LocationMarker[]): LocationMarker[] {
+  const uniqueMarkers: LocationMarker[] = [];
+  const seenIds = new Set<string>();
+  
+  // Process markers in reverse order to keep the most recent version of duplicates
+  // This ensures we keep the most up-to-date version of each marker
+  for (let i = markers.length - 1; i >= 0; i--) {
+    const marker = markers[i];
+    if (!seenIds.has(marker.id)) {
+      seenIds.add(marker.id);
+      uniqueMarkers.unshift(marker); // Add to front to maintain original order
+    }
+  }
+  
+  return uniqueMarkers;
 }
 
 /**
@@ -54,21 +66,11 @@ export function getSavedMarkers(): LocationMarker[] {
   
   try {
     const markers = JSON.parse(markersJson);
-    // Ensure each marker has a unique ID
-    const uniqueMarkers = [];
-    const seenIds = new Set();
-    
-    for (const marker of markers) {
-      if (!seenIds.has(marker.id)) {
-        seenIds.add(marker.id);
-        uniqueMarkers.push({
-          ...marker,
-          createdAt: new Date(marker.createdAt)
-        });
-      }
-    }
-    
-    return uniqueMarkers;
+    // Ensure each marker has appropriate properties
+    return deduplicateMarkers(markers.map((marker: any) => ({
+      ...marker,
+      createdAt: new Date(marker.createdAt)
+    })));
   } catch (e) {
     console.error('Failed to parse saved markers', e);
     return [];
