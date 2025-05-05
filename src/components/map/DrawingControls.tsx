@@ -1,3 +1,4 @@
+
 import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -126,7 +127,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
             onRegionClick={handleDrawingClick}
             onRemoveShape={handleRemoveShape}
             onUploadRequest={handleUploadRequest}
-            onClearAll={onClearAll}
           />
         )}
         <DrawTools 
