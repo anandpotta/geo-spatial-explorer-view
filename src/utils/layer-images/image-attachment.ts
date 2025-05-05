@@ -14,6 +14,7 @@ import {
   getOverlayPane 
 } from '@/utils/layer-path-finder';
 import { setupImageEventListeners, createPositionUpdater } from '@/utils/layer-images/image-event-utils';
+import { addImageToMapContainer } from '@/utils/layer-images/map-container-image';
 
 /**
  * Adds an image to a Leaflet layer
@@ -140,3 +141,4 @@ export const addImageToLayer = (
 
 // Import here to avoid circular dependencies
 import { transformImage } from '@/utils/image-transform-utils';
+
