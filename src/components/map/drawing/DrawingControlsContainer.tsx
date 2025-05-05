@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
 import { debugSvgElement } from '@/utils/svg-debug-utils';
-import { storeFloorPlan, getFloorPlan } from '@/utils/floor-plan-utils';
+import { storeFloorPlan, getFloorPlan, getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { getCurrentUser } from '@/services/auth-service';
 
 interface DrawingControlsContainerProps {
@@ -27,6 +27,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   const drawingControlsRef = useRef<DrawingControlsRef>(null);
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   const attemptQueueRef = useRef<Map<string, number>>(new Map());
+  const [reapplyTriggered, setReapplyTriggered] = useState(false);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => {
@@ -132,15 +133,52 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
         }, 100);
       }
     };
+    
+    // Listen for visibility changes to reapply clip masks when returning to the page
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('Page became visible, checking for drawings with floor plans to reapply');
+        setReapplyTriggered(prev => !prev); // Toggle to trigger useEffect
+      }
+    };
 
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     window.addEventListener('clipMaskUpdated', handleClipMaskUpdated as EventListener);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Initial application of clip masks
+    setTimeout(() => {
+      setReapplyTriggered(prev => !prev);
+    }, 1000);
     
     return () => {
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
       window.removeEventListener('clipMaskUpdated', handleClipMaskUpdated as EventListener);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+  
+  // Effect to reapply all clip masks when needed
+  useEffect(() => {
+    // This will run when reapplyTriggered changes (on page visibility or component mount)
+    const reapplyAllClipMasks = () => {
+      const drawingIds = getDrawingIdsWithFloorPlans();
+      console.log(`Attempting to reapply all clip masks for ${drawingIds.length} drawings`);
+      
+      if (drawingIds.length === 0) return;
+      
+      // Stagger applications to avoid overwhelming the browser
+      drawingIds.forEach((drawingId, index) => {
+        setTimeout(() => {
+          applyClipMaskWithRetry(drawingId);
+        }, index * 200);
+      });
+    };
+    
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(reapplyAllClipMasks, 500);
+    return () => clearTimeout(timer);
+  }, [reapplyTriggered]);
   
   const handleUploadToDrawing = (drawingId: string, file: File) => {
     console.log(`Processing upload for drawing ${drawingId}, file: ${file.name}`);
@@ -182,6 +220,7 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
           
           // Dismiss loading toast
           toast.dismiss(loadingId);
+          toast.success(`Floor plan "${file.name}" saved`);
           
           // Initialize retry counter
           attemptQueueRef.current.set(drawingId, 0);

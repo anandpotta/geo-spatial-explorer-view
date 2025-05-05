@@ -89,6 +89,19 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     
     reader.readAsDataURL(file);
   };
+  
+  const handleBackClick = () => {
+    // When going back to map, trigger reapplication of all floor plans
+    if (drawing?.id) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
+          detail: { drawingId: drawing.id }
+        }));
+      }, 300);
+    }
+    
+    onBack();
+  };
 
   // Helper function to calculate proper scaling for the image
   const calculateFitScale = (imgWidth: number, imgHeight: number, containerWidth: number, containerHeight: number) => {
@@ -102,7 +115,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       <div className="absolute top-4 right-4 z-50 flex gap-2">
         <Button
           variant="outline"
-          onClick={onBack}
+          onClick={handleBackClick}
           className="bg-white/80 backdrop-blur-sm"
         >
           <FlipHorizontal className="mr-2 h-4 w-4" />
