@@ -47,7 +47,6 @@ export const resolveImageUrl = (
       imageUrlString = storedUrl;
       console.log(`Using stored image URL: ${imageUrlString}`);
     } else {
-      // No need to check fallback as retrieveFloorPlanImageUrl already does this
       console.error(`No valid imageUrl and no stored URL found for ${drawingId}`);
       return getDefaultImageUrl(drawingId);
     }
