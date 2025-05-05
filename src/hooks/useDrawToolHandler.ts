@@ -1,11 +1,11 @@
 
-import { useRef, useImperativeHandle, RefObject } from 'react';
+import { useRef, useImperativeHandle, RefObject, ForwardedRef } from 'react';
 import L from 'leaflet';
 
 /**
  * Hook to provide path element access methods and refs
  */
-export function useDrawToolHandler(ref: RefObject<any>) {
+export function useDrawToolHandler(ref: ForwardedRef<any>) {
   const drawToolsRef = useRef<any>(null);
   
   /**
