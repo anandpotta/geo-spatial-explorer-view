@@ -15,15 +15,11 @@ export function createShapeCreationHandler({
   const handleCreatedWrapper = (shape: any) => {
     // Process the shape and check for SVG path data
     if (shape.svgPath) {
-      // Skip path updates during edit mode activation
-      if (activeTool === 'edit') {
-        console.log('Shape created during edit mode, SVG path updates temporarily suppressed');
-      } else {
-        // Only add path to state if not in edit mode
-        const updatedPaths = [...svgPaths, shape.svgPath];
-        if (onPathsUpdated) {
-          onPathsUpdated(updatedPaths);
-        }
+      // Always add path to state regardless of edit mode
+      const updatedPaths = [...svgPaths, shape.svgPath];
+      if (onPathsUpdated) {
+        console.log("Updating paths on shape creation:", updatedPaths);
+        onPathsUpdated(updatedPaths);
       }
     }
     onCreated(shape);

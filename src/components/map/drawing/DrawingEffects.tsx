@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { toast } from 'sonner';
@@ -44,6 +45,8 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
         setTimeout(() => {
           activateEditMode();
           window.dispatchEvent(new CustomEvent('set-edit-active'));
+          // Dispatch custom event to force SVG path updates
+          window.dispatchEvent(new CustomEvent('force-svg-path-update'));
         }, 500);
       } catch (err) {
         console.error('Error handling floor plan update:', err);
@@ -57,6 +60,8 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
         setTimeout(() => {
           activateEditMode();
           window.dispatchEvent(new CustomEvent('set-edit-active'));
+          // Dispatch custom event to force SVG path updates
+          window.dispatchEvent(new CustomEvent('force-svg-path-update'));
         }, 500);
       }
     };
@@ -79,6 +84,8 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
         if (success) {
           setHasActivated(true);
           toast.success("Edit mode activated", { id: "edit-mode-success" });
+          // Dispatch custom event to force SVG path updates
+          window.dispatchEvent(new CustomEvent('force-svg-path-update'));
         }
       }, 300);
     };
@@ -122,6 +129,9 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
             console.log("Edit mode successfully activated from DrawingEffects");
             setHasActivated(true);
             toast.success("Edit mode activated", { duration: 2000, id: "edit-mode-success" });
+            
+            // Force SVG path updates after successful activation
+            window.dispatchEvent(new CustomEvent('force-svg-path-update'));
             
             // Ensure controls are visible after successful activation
             setTimeout(ensureEditControlsVisible, 100);
