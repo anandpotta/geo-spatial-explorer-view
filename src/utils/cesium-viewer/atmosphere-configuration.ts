@@ -146,7 +146,43 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       }
     }
     
-    // Force immediate render multiple times
+    // Set black background for better contrast
+    viewer.scene.backgroundColor = Cesium.Color.BLACK;
+    
+    // Attempt to avoid normalization errors by setting a guaranteed non-zero position
+    if (viewer.camera) {
+      try {
+        // Always set camera values to safe non-zero values
+        viewer.camera.position = new Cesium.Cartesian3(0, 0, 20000000);
+        
+        // Use predefined unit vectors to avoid normalization issues
+        viewer.camera.direction = new Cesium.Cartesian3(0, 0, -1);
+        viewer.camera.up = new Cesium.Cartesian3(0, 1, 0);
+        viewer.camera.right = new Cesium.Cartesian3(1, 0, 0);
+        
+        // Prevent deep updates
+        viewer.camera.setView({
+          destination: viewer.camera.position.clone(),
+          orientation: {
+            direction: viewer.camera.direction.clone(),
+            up: viewer.camera.up.clone()
+          }
+        });
+      } catch (cameraError) {
+        console.warn("Camera setup error caught and handled:", cameraError);
+      }
+    }
+    
+    // Disable depth plane which can cause normalization errors
+    try {
+      if (viewer.scene && (viewer.scene as any)._depthPlane) {
+        (viewer.scene as any)._depthPlane.enabled = false;
+      }
+    } catch (e) {
+      console.warn("Error disabling depth plane:", e);
+    }
+    
+    // Force immediate render multiple times with error handling
     for (let i = 0; i < 5; i++) {
       try {
         viewer.scene.requestRender();
@@ -167,21 +203,7 @@ export function forceGlobeVisibility(viewer: Cesium.Viewer): void {
       viewer.canvas.style.height = '100%';
     }
     
-    // Set black background for better contrast
-    viewer.scene.backgroundColor = Cesium.Color.BLACK;
-    
-    // Adjust camera if needed to see the globe - using safer approach to avoid normalization errors
-    if (viewer.camera) {
-      // Set a safe initial position
-      viewer.camera.position = new Cesium.Cartesian3(0, 0, 20000000);
-      
-      // Use unit vectors directly to avoid normalization errors
-      viewer.camera.direction = new Cesium.Cartesian3(0, 0, -1);
-      viewer.camera.up = new Cesium.Cartesian3(0, 1, 0);
-      viewer.camera.right = new Cesium.Cartesian3(1, 0, 0);
-    }
-    
-    // Force another render
+    // Force another render with error handling
     try {
       viewer.scene.requestRender();
     } catch (e) {
