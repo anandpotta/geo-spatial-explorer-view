@@ -1,5 +1,5 @@
 
-import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
+import { useEffect, forwardRef, useImperativeHandle } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
@@ -19,7 +19,6 @@ interface DrawingControlsProps {
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadToDrawing?: (drawingId: string, file: File) => void;
-  onPathsUpdated?: (paths: string[]) => void;
 }
 
 const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({ 
@@ -28,12 +27,9 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onRegionClick, 
   onClearAll, 
   onRemoveShape,
-  onUploadToDrawing,
-  onPathsUpdated
+  onUploadToDrawing
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
-  const [svgPaths, setSvgPaths] = useState<string[]>([]);
-  
   const {
     featureGroupRef,
     drawToolsRef,
@@ -54,13 +50,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
     activateEditMode,
-    openFileUploadDialog,
-    getSvgPaths: () => {
-      if (drawToolsRef.current) {
-        return drawToolsRef.current.getSVGPathData();
-      }
-      return [];
-    }
+    openFileUploadDialog
   }));
   
   useEffect(() => {
@@ -72,32 +62,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       mountedRef.current = false;
     };
   }, []);
-
-  // Periodically check for SVG paths when tools are active
-  useEffect(() => {
-    if (!isInitialized || !drawToolsRef.current) return;
-    
-    const checkForPaths = () => {
-      if (!mountedRef.current) return;
-      
-      try {
-        if (drawToolsRef.current) {
-          const paths = drawToolsRef.current.getSVGPathData();
-          if (paths && paths.length > 0) {
-            setSvgPaths(paths);
-            if (onPathsUpdated) {
-              onPathsUpdated(paths);
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error getting SVG paths:', err);
-      }
-    };
-    
-    const intervalId = setInterval(checkForPaths, 1000);
-    return () => clearInterval(intervalId);
-  }, [isInitialized, activeTool]);
 
   const handleClearAll = () => {
     if (featureGroupRef.current) {
@@ -134,18 +98,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     }
   };
 
-  const handleCreatedWrapper = (shape: any) => {
-    // Process the shape and check for SVG path data
-    if (shape.svgPath) {
-      // Add path to state
-      setSvgPaths(prev => [...prev, shape.svgPath]);
-      if (onPathsUpdated) {
-        onPathsUpdated([...svgPaths, shape.svgPath]);
-      }
-    }
-    onCreated(shape);
-  };
-
   return (
     <>
       <FileUploadInput ref={fileInputRef} onChange={handleFileChange} />
@@ -167,7 +119,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
         )}
         <DrawTools 
           ref={drawToolsRef}
-          onCreated={handleCreatedWrapper} 
+          onCreated={onCreated} 
           activeTool={activeTool} 
           onClearAll={handleClearAll}
           featureGroup={featureGroupRef.current}
