@@ -1,3 +1,4 @@
+
 import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
@@ -117,8 +118,7 @@ const MapView = ({
         zoomControl={false}
         fadeAnimation={true}
         markerZoomAnimation={true}
-        preferCanvas={false} // Ensure SVG rendering is used
-        renderer={L.svg()} // Force SVG renderer for the whole map
+        preferCanvas={true}
         whenReady={() => {
           // Force immediate resize to ensure proper container dimensions
           setTimeout(() => {
