@@ -22,6 +22,7 @@ const ImageEditControls: React.FC<ImageEditControlsProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [translateX, setTranslateX] = useState(initialTransform?.translateX || 0);
   const [translateY, setTranslateY] = useState(initialTransform?.translateY || 0);
+  const [scale, setScale] = useState(initialTransform?.scale || 1);
   
   // Update local state when initialTransform changes
   useEffect(() => {
@@ -29,6 +30,7 @@ const ImageEditControls: React.FC<ImageEditControlsProps> = ({
       setRotation(initialTransform.rotation);
       setTranslateX(initialTransform.translateX);
       setTranslateY(initialTransform.translateY);
+      setScale(initialTransform.scale || 1);
     }
   }, [initialTransform]);
 
@@ -38,7 +40,14 @@ const ImageEditControls: React.FC<ImageEditControlsProps> = ({
     onTransformChange({ rotation: newRotation });
   };
   
+  const handleScaleChange = (amount: number) => {
+    const newScale = Math.max(0.1, Math.min(3, scale + amount));
+    setScale(newScale);
+    onTransformChange({ scale: newScale });
+  };
+  
   const startDrag = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default to avoid text selection during drag
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
   };
@@ -76,7 +85,7 @@ const ImageEditControls: React.FC<ImageEditControlsProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart, translateX, translateY]);
+  }, [isDragging, dragStart, translateX, translateY, onTransformChange]);
 
   return (
     <div className={`flex gap-2 bg-white/90 backdrop-blur-sm p-2 rounded shadow-md z-[2000] ${className}`}>

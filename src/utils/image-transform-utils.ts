@@ -14,12 +14,21 @@ export const transformImage = (
 
   const { rotation, scale, translateX, translateY } = transformOptions;
   
-  // Apply CSS transformations
+  // Apply CSS transformations - fixed the transform order for better results
   imgElement.style.transform = `
+    translate(-50%, -50%)
+    translate(${translateX}px, ${translateY}px)
     rotate(${rotation}deg)
     scale(${scale})
-    translate(${translateX}px, ${translateY}px)
   `;
+  
+  // Ensure image is visible
+  imgElement.style.display = 'block';
+  imgElement.style.opacity = '1';
+  imgElement.style.visibility = 'visible';
+  
+  // Log transformation for debugging
+  console.log(`Applied transform: rotation=${rotation}, scale=${scale}, translateX=${translateX}, translateY=${translateY}`);
 };
 
 /**
@@ -60,10 +69,20 @@ export const createImageElement = (
   img.style.position = 'absolute';
   img.style.transformOrigin = 'center';
   img.style.pointerEvents = 'auto';
+  img.style.display = 'block'; // Ensure image is visible
+  img.style.opacity = '1';
+  img.style.visibility = 'visible';
+  img.alt = "Drawing image";
   
-  if (onLoad) {
-    img.onload = () => onLoad(img);
-  }
+  // Add console log to debug image loading
+  img.onload = () => {
+    console.log('Image loaded successfully', img.naturalWidth, img.naturalHeight);
+    if (onLoad) onLoad(img);
+  };
+  
+  img.onerror = (e) => {
+    console.error('Error loading image:', e);
+  };
   
   return img;
 };
