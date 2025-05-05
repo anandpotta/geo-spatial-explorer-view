@@ -4,20 +4,38 @@
  */
 
 /**
+ * Safely cast an HTMLElement to SVGPathElement with type checking
+ */
+const safeCastToSVGPath = (element: Element | null): SVGPathElement | null => {
+  if (!element) return null;
+  
+  // Check if the element is indeed an SVG path element before casting
+  if (element.tagName.toLowerCase() === 'path' && 
+      element instanceof SVGElement && 
+      'getTotalLength' in element) {
+    return element as SVGPathElement;
+  }
+  
+  return null;
+};
+
+/**
  * Searches for an SVG path element associated with a drawing ID
  * Uses multiple strategies to find the element
  */
 export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null => {
   try {
     // First try finding by the data attribute (most reliable)
-    let path = document.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+    let pathElement = document.querySelector(`path[data-drawing-id="${drawingId}"]`);
+    let path = safeCastToSVGPath(pathElement);
     if (path) {
       console.log(`Found path with data-drawing-id attribute for ${drawingId}`);
       return path;
     }
     
     // Try finding by ID
-    path = document.getElementById(`drawing-path-${drawingId}`) as SVGPathElement;
+    pathElement = document.getElementById(`drawing-path-${drawingId}`);
+    path = safeCastToSVGPath(pathElement);
     if (path) {
       console.log(`Found path with id for ${drawingId}`);
       return path;
@@ -25,7 +43,8 @@ export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null
     
     // Try finding by class
     const shortId = drawingId.substring(0, 8);
-    path = document.querySelector(`.drawing-path-${shortId}`) as SVGPathElement;
+    pathElement = document.querySelector(`.drawing-path-${shortId}`);
+    path = safeCastToSVGPath(pathElement);
     if (path) {
       console.log(`Found path with class for ${drawingId}`);
       return path;
@@ -35,21 +54,24 @@ export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null
     const overlayPanes = document.querySelectorAll('.leaflet-overlay-pane');
     for (const pane of Array.from(overlayPanes)) {
       // Try by data attribute
-      path = pane.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+      pathElement = pane.querySelector(`path[data-drawing-id="${drawingId}"]`);
+      path = safeCastToSVGPath(pathElement);
       if (path) {
         console.log(`Found path in overlay pane with data attribute for ${drawingId}`);
         return path;
       }
       
       // Try by id
-      path = pane.querySelector(`#drawing-path-${drawingId}`) as SVGPathElement;
+      pathElement = pane.querySelector(`#drawing-path-${drawingId}`);
+      path = safeCastToSVGPath(pathElement);
       if (path) {
         console.log(`Found path in overlay pane with id for ${drawingId}`);
         return path;
       }
       
       // Try by class
-      path = pane.querySelector(`.drawing-path-${shortId}`) as SVGPathElement;
+      pathElement = pane.querySelector(`.drawing-path-${shortId}`);
+      path = safeCastToSVGPath(pathElement);
       if (path) {
         console.log(`Found path in overlay pane with class for ${drawingId}`);
         return path;
@@ -61,8 +83,11 @@ export const findSvgPathByDrawingId = (drawingId: string): SVGPathElement | null
         if (interactivePath.getAttribute('data-drawing-id') === drawingId ||
             interactivePath.id === `drawing-path-${drawingId}` ||
             interactivePath.classList.contains(`drawing-path-${shortId}`)) {
-          console.log(`Found interactive path for ${drawingId}`);
-          return interactivePath as SVGPathElement;
+          path = safeCastToSVGPath(interactivePath);
+          if (path) {
+            console.log(`Found interactive path for ${drawingId}`);
+            return path;
+          }
         }
       }
     }
@@ -83,21 +108,28 @@ export const findAllClipMaskedPaths = (): SVGPathElement[] => {
   
   // Find paths with data-has-clip-mask attribute
   const maskedPaths = document.querySelectorAll('path[data-has-clip-mask="true"]');
-  maskedPaths.forEach(path => paths.push(path as SVGPathElement));
+  maskedPaths.forEach(path => {
+    const svgPath = safeCastToSVGPath(path);
+    if (svgPath) {
+      paths.push(svgPath);
+    }
+  });
   
   // Find paths with clip-path style or attribute
   const clipPaths = document.querySelectorAll('path[clip-path^="url(#clip-"]');
   clipPaths.forEach(path => {
-    if (!paths.includes(path as SVGPathElement)) {
-      paths.push(path as SVGPathElement);
+    const svgPath = safeCastToSVGPath(path);
+    if (svgPath && !paths.includes(svgPath)) {
+      paths.push(svgPath);
     }
   });
   
   // Find paths with pattern fill
   const patternPaths = document.querySelectorAll('path[fill^="url(#pattern-"]');
   patternPaths.forEach(path => {
-    if (!paths.includes(path as SVGPathElement)) {
-      paths.push(path as SVGPathElement);
+    const svgPath = safeCastToSVGPath(path);
+    if (svgPath && !paths.includes(svgPath)) {
+      paths.push(svgPath);
     }
   });
   
