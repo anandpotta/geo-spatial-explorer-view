@@ -1,11 +1,17 @@
 import { LocationMarker } from './types';
 import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Saves a marker to localStorage and triggers sync events
  */
 export function saveMarker(marker: LocationMarker): void {
   const savedMarkers = getSavedMarkers();
+  
+  // Ensure marker has a truly unique ID
+  if (!marker.id || marker.id.trim() === '') {
+    marker.id = `${Date.now().toString(36)}-${uuidv4()}`;
+  }
   
   // Check if marker already exists (for updates)
   const existingIndex = savedMarkers.findIndex(m => m.id === marker.id);
@@ -23,8 +29,8 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(uniqueMarkers));
   
-  // Use a custom event to signal marker updates with a timestamp to prevent duplicate events
-  const eventDetail = { timestamp: Date.now() };
+  // Use a custom event with a unique timestamp to prevent duplicate events
+  const eventDetail = { timestamp: Date.now(), source: 'saveMarker' };
   const event = new CustomEvent('markersUpdated', { detail: eventDetail });
   window.dispatchEvent(event);
   
@@ -87,7 +93,7 @@ export function deleteMarker(id: string): void {
     localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
     
     // Ensure both events are dispatched with unique timestamps
-    const eventDetail = { timestamp: Date.now() };
+    const eventDetail = { timestamp: Date.now(), source: 'deleteMarker' };
     try {
       // Use requestAnimationFrame to avoid blocking the UI thread
       requestAnimationFrame(() => {

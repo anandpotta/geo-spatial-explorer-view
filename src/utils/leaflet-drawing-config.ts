@@ -1,8 +1,15 @@
+
 import L from 'leaflet';
 
 export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
   try {
     const layer = L.geoJSON(drawing.geoJSON, { style: options });
+    
+    // Store SVG path data if available
+    if (drawing.svgPath) {
+      layer.options.svgPath = drawing.svgPath;
+    }
+    
     return layer;
   } catch (error) {
     console.error('Error creating drawing layer:', error);
@@ -36,4 +43,46 @@ export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[n
     return [[center.lat, center.lng]];
   }
   return [];
+};
+
+/**
+ * Extract SVG path data from a Leaflet path element
+ */
+export const extractSvgPathData = (pathElement: SVGPathElement | null): string => {
+  if (!pathElement) return '';
+  
+  try {
+    return pathElement.getAttribute('d') || '';
+  } catch (error) {
+    console.error('Error extracting SVG path data:', error);
+    return '';
+  }
+};
+
+/**
+ * Convert GeoJSON coordinates to SVG path data
+ * This is a fallback when direct SVG extraction is not possible
+ */
+export const geoJsonToSvgPath = (coordinates: Array<[number, number]>, map: L.Map | null): string => {
+  if (!coordinates || coordinates.length < 3 || !map) return '';
+  
+  try {
+    // Convert geo coordinates to pixel coordinates on the map
+    const points = coordinates.map(coord => {
+      const point = map.latLngToLayerPoint(new L.LatLng(coord[0], coord[1]));
+      return [point.x, point.y];
+    });
+    
+    // Create SVG path data
+    let pathData = `M ${points[0][0]} ${points[0][1]}`;
+    for (let i = 1; i < points.length; i++) {
+      pathData += ` L ${points[i][0]} ${points[i][1]}`;
+    }
+    pathData += ' Z'; // Close the path
+    
+    return pathData;
+  } catch (error) {
+    console.error('Error converting GeoJSON to SVG path:', error);
+    return '';
+  }
 };

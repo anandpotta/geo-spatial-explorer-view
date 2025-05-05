@@ -114,7 +114,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
 
   const handleCreated = (e: any) => {
     const { layerType, layer } = e;
-    const id = uuidv4();
+    const id = `${Date.now().toString(36)}-${uuidv4()}`;
     
     try {
       if (layerType === 'marker' && 'getLatLng' in layer) {
@@ -145,11 +145,28 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         coordinates = [];
       }
       
+      // Extract SVG path data for polygons and rectangles
+      let svgPath = '';
+      if ((layerType === 'polygon' || layerType === 'rectangle') && layer._path) {
+        try {
+          // Get the SVG path element
+          const pathElement = layer._path;
+          if (pathElement && pathElement.getAttribute) {
+            // Extract the 'd' attribute which contains the SVG path data
+            svgPath = pathElement.getAttribute('d') || '';
+            console.log(`Extracted SVG path: ${svgPath}`);
+          }
+        } catch (err) {
+          console.warn('Error extracting SVG path:', err);
+        }
+      }
+      
       // Create the drawing data object
       const drawingData = {
         id,
         type: layerType,
         coordinates,
+        svgPath, // Add SVG path data
         geoJSON: layer.toGeoJSON ? layer.toGeoJSON() : null,
         options: {
           color: options.color,
@@ -167,7 +184,13 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
       if (drawingData.geoJSON) {
         saveDrawing(drawingData);
         toast.success(`${layerType} created successfully`);
-        onCreated({ type: layerType, layer, geoJSON: drawingData.geoJSON, id });
+        onCreated({ 
+          type: layerType, 
+          layer, 
+          geoJSON: drawingData.geoJSON, 
+          svgPath: drawingData.svgPath, 
+          id 
+        });
       } else {
         toast.error(`Error creating ${layerType}`);
       }
