@@ -1,80 +1,67 @@
 
-/**
- * Utilities for handling image URLs in clip masks
- */
 import { retrieveFloorPlanImageUrl } from './image-loading';
+import { getCurrentUser } from '@/services/auth-service';
 
 /**
- * Resolves image URL from various inputs
- * Returns a valid string URL or null if it can't be resolved
+ * Get a default pattern image URL for a drawing ID
  */
-export const resolveImageUrl = (
-  imageUrl: string | object | null | undefined, 
-  drawingId: string
-): string | null => {
-  // Handle different image URL types
-  let imageUrlString: string | null = null;
-  
-  // First check if we have a valid direct URL
-  if (typeof imageUrl === 'string') {
-    if (imageUrl === drawingId || 
-        (!imageUrl.startsWith('blob:') && !imageUrl.startsWith('data:') && !imageUrl.startsWith('http'))) {
-      console.log(`Looking up stored image URL for drawing ID: ${drawingId}`);
-      const storedUrl = retrieveFloorPlanImageUrl(drawingId);
-      if (storedUrl) {
-        imageUrlString = storedUrl;
-        console.log(`Found stored image URL: ${imageUrlString}`);
-      } else {
-        console.error(`No stored image URL found for drawing ID: ${drawingId}`);
-        return getDefaultImageUrl(drawingId);
-      }
-    } else {
-      imageUrlString = imageUrl;
-    }
-  } else if (typeof imageUrl === 'object' && imageUrl !== null) {
-    console.warn('Object passed as imageUrl, trying to convert to string:', imageUrl);
-    try {
-      imageUrlString = JSON.stringify(imageUrl);
-    } catch (err) {
-      console.error('Failed to convert imageUrl object to string:', err);
-      return getDefaultImageUrl(drawingId);
-    }
-  } else {
-    // If no valid imageUrl, try to get the stored URL from the new function
-    console.log(`No valid imageUrl provided, trying to get stored URL for ${drawingId}`);
-    const storedUrl = retrieveFloorPlanImageUrl(drawingId);
-    if (storedUrl) {
-      imageUrlString = storedUrl;
-      console.log(`Using stored image URL: ${imageUrlString}`);
-    } else {
-      console.error(`No valid imageUrl and no stored URL found for ${drawingId}`);
-      return getDefaultImageUrl(drawingId);
-    }
-  }
-  
-  return imageUrlString;
-};
-
-/**
- * Gets a fallback image URL by checking multiple storage locations
- * This function is kept for backward compatibility but delegates to retrieveFloorPlanImageUrl
- */
-export const getFallbackImageUrl = (drawingId: string): string | null => {
-  return retrieveFloorPlanImageUrl(drawingId);
-};
-
-/**
- * Returns a default placeholder image URL when no real image is available
- */
-export const getDefaultImageUrl = (drawingId: string): string | null => {
-  // Create a data URL for a placeholder pattern
-  // This ensures we always have something to display rather than an error
+export const getDefaultImageUrl = (id: string): string => {
+  // Create a simple SVG pattern as a default background
   return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
     <pattern id="pattern" patternUnits="userSpaceOnUse" width="10" height="10">
       <rect width="5" height="5" fill="%233b82f6" fill-opacity="0.5" />
       <rect x="5" y="5" width="5" height="5" fill="%233b82f6" fill-opacity="0.5" />
     </pattern>
     <rect width="100" height="100" fill="url(%23pattern)" />
-    <text x="10" y="50" font-family="sans-serif" font-size="10" fill="%23000">ID: ${drawingId.substring(0, 8)}</text>
+    <text x="10" y="50" font-family="sans-serif" font-size="10" fill="%23000">ID: ${id.substring(0, 8)}</text>
   </svg>`;
+};
+
+/**
+ * Resolve an image URL from various possible inputs
+ */
+export const resolveImageUrl = (
+  imageUrl: string | object | null | undefined, 
+  id: string
+): string | null => {
+  if (!imageUrl) {
+    // First try to get a stored URL
+    console.log(`No valid imageUrl provided, trying to get stored URL for ${id}`);
+    const storedUrl = retrieveFloorPlanImageUrl(id);
+    
+    if (!storedUrl) {
+      console.log(`No valid imageUrl and no stored URL found for ${id}`);
+      return null;
+    }
+    
+    return storedUrl;
+  }
+  
+  // If it's already a string, use it directly
+  if (typeof imageUrl === 'string') {
+    return imageUrl;
+  }
+  
+  // If it's an object, we need to extract the URL
+  if (typeof imageUrl === 'object' && imageUrl !== null) {
+    // Try various possible object structures
+    if ('url' in imageUrl && typeof (imageUrl as any).url === 'string') {
+      return (imageUrl as any).url;
+    }
+    
+    if ('src' in imageUrl && typeof (imageUrl as any).src === 'string') {
+      return (imageUrl as any).src;
+    }
+    
+    if ('data' in imageUrl && typeof (imageUrl as any).data === 'string') {
+      return (imageUrl as any).data;
+    }
+    
+    if ('imageUrl' in imageUrl && typeof (imageUrl as any).imageUrl === 'string') {
+      return (imageUrl as any).imageUrl;
+    }
+  }
+  
+  console.log(`Could not resolve image URL from`, imageUrl);
+  return null;
 };

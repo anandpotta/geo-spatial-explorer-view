@@ -51,6 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));
       window.dispatchEvent(new Event('drawingsUpdated'));
+      window.dispatchEvent(new CustomEvent('userChanged', { detail: { userId: user.id } }));
       
       return true;
     } else {
@@ -66,6 +67,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Clear image cache on logout
     clearImageUrlCache();
+    
+    // Trigger clear events
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('markersUpdated'));
+    window.dispatchEvent(new Event('drawingsUpdated'));
+    window.dispatchEvent(new Event('userLoggedOut'));
     
     toast.info('You have been logged out');
   };

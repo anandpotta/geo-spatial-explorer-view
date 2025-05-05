@@ -4,6 +4,29 @@ import L from 'leaflet';
 import { getCurrentUser } from '@/services/auth-service';
 
 /**
+ * Save SVG paths for current user
+ */
+export const saveSvgPaths = (paths: string[]): void => {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return;
+  
+  try {
+    // Get existing paths data
+    const pathsData = localStorage.getItem('svgPaths') || '{}';
+    const parsedData = JSON.parse(pathsData);
+    
+    // Store paths for current user
+    parsedData[currentUser.id] = paths;
+    
+    // Save back to localStorage
+    localStorage.setItem('svgPaths', JSON.stringify(parsedData));
+    console.log(`Saved ${paths.length} SVG paths for user ${currentUser.id}`);
+  } catch (err) {
+    console.error('Error saving SVG paths:', err);
+  }
+};
+
+/**
  * Load SVG paths for current user
  */
 export const loadSvgPaths = (): string[] => {

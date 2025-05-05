@@ -1,3 +1,4 @@
+
 /**
  * Core functionality for applying clip masks to SVG elements
  * This file coordinates the clip mask application process using
@@ -84,6 +85,7 @@ export const applyImageClipMask = (
       // Just update timestamp to trigger a refresh
       pathElement.setAttribute('data-last-updated', Date.now().toString());
       pathElement.setAttribute('data-has-clip-mask', 'true');
+      pathElement.setAttribute('data-user-id', currentUser.id);
       loadingImages.set(id, false);
       pathElement.classList.remove('loading-clip-mask');
       
@@ -138,9 +140,10 @@ export const applyImageClipMask = (
         console.log(`Applying pattern and clip path for ${id}`);
         applyPatternAndClipPath(pathElement, `pattern-${id}`, `clip-${id}`);
         
-        // Mark as having a clip mask
+        // Mark as having a clip mask with user ID
         pathElement.setAttribute('data-has-clip-mask', 'true');
         pathElement.setAttribute('data-image-url', typeof imageUrl === 'string' ? imageUrl : imageUrlString);
+        pathElement.setAttribute('data-user-id', currentUser.id);
         
         // Remove loading class
         pathElement.classList.remove('loading-clip-mask');
@@ -158,7 +161,7 @@ export const applyImageClipMask = (
             window.dispatchEvent(new Event('resize'));
             // Trigger a custom event that the floor plan was updated
             window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-              detail: { drawingId: id }
+              detail: { drawingId: id, userId: currentUser.id }
             }));
           }
         });

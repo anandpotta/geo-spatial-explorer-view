@@ -119,8 +119,18 @@ export const clearImageUrlCache = (): void => {
   console.log('Image URL cache cleared');
 };
 
-// Clear cache when storage changes
+// Listen for user changes
 if (typeof window !== 'undefined') {
+  window.addEventListener('userChanged', () => {
+    clearImageUrlCache();
+  });
+  
+  window.addEventListener('userLoggedOut', () => {
+    clearImageUrlCache();
+    loadingImages.clear();
+    toastShown.clear();
+  });
+  
   window.addEventListener('storage', () => {
     clearImageUrlCache();
   });

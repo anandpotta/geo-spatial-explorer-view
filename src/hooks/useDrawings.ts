@@ -1,52 +1,69 @@
 
 import { useState, useEffect } from 'react';
-import { DrawingData, getSavedDrawings } from '@/utils/drawing-utils';
-import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { DrawingData, getSavedDrawings, deleteDrawing } from '@/utils/drawing-utils';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useDrawings() {
   const [savedDrawings, setSavedDrawings] = useState<DrawingData[]>([]);
-  const [drawingsWithFloorPlans, setDrawingsWithFloorPlans] = useState<string[]>([]);
+  const { currentUser } = useAuth();
+  
+  const loadDrawings = () => {
+    if (!currentUser) {
+      setSavedDrawings([]);
+      return;
+    }
+    
+    const drawings = getSavedDrawings();
+    setSavedDrawings(drawings);
+    console.log(`Loaded ${drawings.length} drawings for user ${currentUser.id}`);
+  };
   
   useEffect(() => {
-    const loadDrawings = () => {
-      const drawings = getSavedDrawings();
-      setSavedDrawings(drawings);
-      
-      // Handle the Promise correctly
-      getDrawingIdsWithFloorPlans().then(ids => {
-        setDrawingsWithFloorPlans(ids);
-      }).catch(err => {
-        console.error('Error loading drawings with floor plans:', err);
-        setDrawingsWithFloorPlans([]);
-      });
-    };
-    
+    // Initial load
     loadDrawings();
     
-    const handleStorageChange = () => {
+    // Set up listeners for drawing updates
+    const handleStorage = () => {
       loadDrawings();
     };
     
-    const handleFloorPlanUpdated = () => {
-      // Handle the Promise correctly here too
-      getDrawingIdsWithFloorPlans().then(ids => {
-        setDrawingsWithFloorPlans(ids);
-      }).catch(err => {
-        console.error('Error updating drawings with floor plans:', err);
-      });
+    const handleDrawingsUpdated = () => {
+      loadDrawings();
     };
     
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    const handleUserChanged = () => {
+      // Short delay to ensure auth state is updated
+      setTimeout(loadDrawings, 50);
+    };
+    
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
+    window.addEventListener('userChanged', handleUserChanged);
+    window.addEventListener('floorPlanUpdated', handleDrawingsUpdated);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
+      window.removeEventListener('userChanged', handleUserChanged);
+      window.removeEventListener('floorPlanUpdated', handleDrawingsUpdated);
     };
-  }, []);
-
-  return {
-    savedDrawings,
-    drawingsWithFloorPlans
+  }, [currentUser]);
+  
+  const handleDeleteDrawing = (id: string) => {
+    if (!currentUser) {
+      toast.error('Please log in to manage drawings');
+      return;
+    }
+    
+    deleteDrawing(id);
+    loadDrawings(); // Reload immediately
+    toast.success('Drawing deleted');
+  };
+  
+  return { 
+    savedDrawings, 
+    setSavedDrawings, 
+    deleteDrawing: handleDeleteDrawing 
   };
 }
