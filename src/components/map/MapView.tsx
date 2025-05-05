@@ -86,20 +86,6 @@ const MapView = ({
       onLocationSelect(position);
     }
   };
-  
-  // Re-render SVG clip paths when floor plan updates
-  useEffect(() => {
-    const handleFloorPlanUpdate = () => {
-      // Force redraw of the map to update any clip paths
-      console.log('Floor plan updated, refreshing map layers');
-    };
-    
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdate);
-    
-    return () => {
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdate);
-    };
-  }, []);
 
   if (showFloorPlan) {
     return (
@@ -132,8 +118,7 @@ const MapView = ({
         zoomControl={false}
         fadeAnimation={true}
         markerZoomAnimation={true}
-        preferCanvas={false}
-        renderer={L.svg()}
+        preferCanvas={true}
         whenReady={() => {
           // Force immediate resize to ensure proper container dimensions
           setTimeout(() => {

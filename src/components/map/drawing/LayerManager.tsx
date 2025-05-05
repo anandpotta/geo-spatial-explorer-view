@@ -3,20 +3,12 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
-import { getDrawingIdsWithFloorPlans, getFloorPlanById } from '@/utils/floor-plan-utils';
-import { createDrawingLayer, getDefaultDrawingOptions, applyClipMaskToLayer } from '@/utils/leaflet-drawing-config';
+import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { createDrawingLayer, getDefaultDrawingOptions } from '@/utils/leaflet-drawing-config';
 import { deleteDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import RemoveButton from './RemoveButton';
 import ReactDOM from 'react-dom/client';
-
-// Extend the Leaflet Layer interface to include the internal properties we need
-declare module 'leaflet' {
-  interface Layer {
-    drawingId?: string;
-    _path?: SVGPathElement; // Add the _path property that Leaflet uses internally
-  }
-}
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -84,12 +76,6 @@ const LayerManager = ({
             options.color = '#1d4ed8';
           }
           
-          // Check if there's a clip image for this drawing
-          const floorPlan = getFloorPlanById(drawing.id);
-          if (floorPlan && floorPlan.clipImage) {
-            options.clipImage = floorPlan.clipImage;
-          }
-          
           const layer = createDrawingLayer(drawing, options);
           
           if (layer) {
@@ -149,15 +135,6 @@ const LayerManager = ({
                     }
                   });
                 }
-                
-                // Apply clip mask if available
-                if (floorPlan && floorPlan.clipImage && l._path) {
-                  setTimeout(() => {
-                    if (isMountedRef.current) {
-                      applyClipMaskToLayer(layer, floorPlan.clipImage as string, drawing.svgPath);
-                    }
-                  }, 100); // Small delay to ensure the layer is fully rendered
-                }
               }
             });
             
@@ -191,22 +168,6 @@ const LayerManager = ({
       }
     };
   }, [savedDrawings, activeTool]);
-  
-  // Listen for floor plan updates to refresh the layers
-  useEffect(() => {
-    const handleFloorPlanUpdate = () => {
-      if (isMountedRef.current) {
-        console.log('Floor plan updated, refreshing layers');
-        updateLayers();
-      }
-    };
-    
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdate);
-    
-    return () => {
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdate);
-    };
-  }, [savedDrawings]);
 
   return null;
 };
