@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 
 // Extend the PathOptions and GeoJSONOptions interfaces to include our custom svgPath property
@@ -39,13 +40,10 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
     });
     
     // Add the image clip mask if available
-    if (options.clipImage || (drawing && drawing.clipImage)) {
-      const clipImageToUse = options.clipImage || drawing.clipImage;
-      console.log('Drawing has clip image, will apply on add:', !!clipImageToUse);
-      
+    if (drawing.clipImage) {
       layer.on('add', (event) => {
         setTimeout(() => {
-          applyClipMaskToLayer(layer, clipImageToUse as string, drawing.svgPath);
+          applyClipMaskToLayer(layer, drawing.clipImage, drawing.svgPath);
         }, 100); // Small delay to ensure the layer is fully rendered
       });
     }
@@ -64,36 +62,23 @@ export const applyClipMaskToLayer = (layer: L.GeoJSON | null, imageUrl: string, 
   if (!layer || !imageUrl) return;
   
   try {
-    console.log('Applying clip mask with image:', imageUrl);
-    
     // Process each path in the GeoJSON layer
     layer.eachLayer((l: any) => {
-      if (!l._path) {
-        console.warn('No _path found in layer:', l);
-        return;
-      }
+      if (!l._path) return;
       
       const svgElement = l._path;
       if (!svgElement) return;
       
       // Get the SVG parent element
       const svg = svgElement.ownerSVGElement;
-      if (!svg) {
-        console.warn('No SVG parent element found');
-        return;
-      }
+      if (!svg) return;
       
       // Create a unique ID for this clip path
       const clipId = `clip-path-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Get the path data from the element
       const pathData = svgElement.getAttribute('d');
-      if (!pathData) {
-        console.warn('No path data found in SVG element');
-        return;
-      }
-      
-      console.log('Creating clip path with ID:', clipId);
+      if (!pathData) return;
       
       // Create a defs element if it doesn't exist
       let defs = svg.querySelector('defs');
@@ -122,24 +107,20 @@ export const applyClipMaskToLayer = (layer: L.GeoJSON | null, imageUrl: string, 
       // Get the bounding box of the path
       const bbox = svgElement.getBBox();
       
-      // Set the image attributes with improved positioning
+      // Set the image attributes
       image.setAttribute('x', bbox.x.toString());
       image.setAttribute('y', bbox.y.toString());
       image.setAttribute('width', bbox.width.toString());
       image.setAttribute('height', bbox.height.toString());
-      image.setAttribute('preserveAspectRatio', 'xMidYMid slice'); // Ensure the image fills the clip area
+      image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       image.setAttribute('clip-path', `url(#${clipId})`);
       image.setAttribute('href', imageUrl);
       
-      console.log('Adding image with dimensions:', bbox.width, 'x', bbox.height);
-      
-      // Insert the image before the path in the SVG so it appears underneath
+      // Add the image before the path in the SVG
       svg.insertBefore(image, svgElement);
       
-      // Make the path semi-transparent to see the image but still show the border
-      svgElement.setAttribute('fill-opacity', '0');
-      svgElement.setAttribute('stroke-width', '2');
-      svgElement.setAttribute('stroke-opacity', '0.8');
+      // Reduce the opacity of the original path
+      svgElement.setAttribute('fill-opacity', '0.1');
     });
   } catch (error) {
     console.error('Error applying clip mask:', error);

@@ -177,7 +177,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsPr
         properties: {
           name: `New ${layerType}`,
           color: options.color || '#3388ff',
-          type: layerType, // Adding the required type property
           createdAt: new Date()
         }
       };

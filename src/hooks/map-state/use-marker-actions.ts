@@ -49,7 +49,6 @@ export function useMarkerActions(
         properties: {
           ...currentDrawing.properties,
           name: markerName,
-          // Using the property that exists in the interface
           associatedMarkerId: newMarker.id
         }
       };
