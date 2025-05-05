@@ -49,22 +49,26 @@ export const createLayerFromDrawing = ({
     // Prepare layer options
     const options = prepareLayerOptions(drawing);
     
-    // Add drawing ID to options to ensure it's available
-    options.drawingId = drawing.id;
+    // We can't directly add drawingId to options as it's not part of the PathOptions type
+    // Instead, let's use custom data attributes later
     
     // Create the layer
     const layer = createGeoJSONLayer(drawing, options);
     
     if (layer) {
-      // Store the drawing ID at the layer level
+      // Store the drawing ID at the layer level using a custom property
       (layer as any).drawingId = drawing.id;
       
       // Add feature properties with drawing ID
-      if (layer.feature && !layer.feature.properties) {
-        layer.feature.properties = {};
-      }
-      if (layer.feature && layer.feature.properties) {
-        layer.feature.properties.drawingId = drawing.id;
+      // We need to check if feature and feature.properties exist before using them
+      if (layer.feature) {
+        if (!layer.feature.properties) {
+          // Initialize properties safely
+          layer.feature.properties = {};
+        }
+        if (layer.feature.properties) {
+          layer.feature.properties.drawingId = drawing.id;
+        }
       }
       
       layer.eachLayer((l: L.Layer) => {
@@ -72,12 +76,14 @@ export const createLayerFromDrawing = ({
           // Store the drawing ID on each sublayer
           (l as any).drawingId = drawing.id;
           
-          // Store feature properties with drawing ID
-          if ((l as any).feature && !(l as any).feature.properties) {
-            (l as any).feature.properties = {};
-          }
-          if ((l as any).feature && (l as any).feature.properties) {
-            (l as any).feature.properties.drawingId = drawing.id;
+          // Store feature properties with drawing ID - check types first
+          if ((l as any).feature) {
+            if (!(l as any).feature.properties) {
+              (l as any).feature.properties = {};
+            }
+            if ((l as any).feature.properties) {
+              (l as any).feature.properties.drawingId = drawing.id;
+            }
           }
           
           // Add drawing ID attribute to the SVG path for identification
