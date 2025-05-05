@@ -1,5 +1,5 @@
 
-import { useEffect, forwardRef, useImperativeHandle, useState } from 'react';
+import { useEffect, forwardRef, useImperativeHandle, useState, useCallback } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
@@ -35,7 +35,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onPathsUpdated
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, currentUser } = useAuth();
   
   const {
     featureGroupRef,
@@ -55,13 +55,12 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     fileInputRef: uploadFileInputRef
   } = useFileUploadHandling({ onUploadToDrawing });
   
-  // Use a wrapper function to prevent redundant updates
-  const handlePathsUpdated = (paths: string[]) => {
+  // Memoize the callback to prevent unnecessary rerenders
+  const handlePathsUpdated = useCallback((paths: string[]) => {
     if (onPathsUpdated) {
-      // Only log once rather than every time
       onPathsUpdated(paths);
     }
-  };
+  }, [onPathsUpdated]);
   
   const { svgPaths, setSvgPaths } = useSvgPathTracking({
     isInitialized,
@@ -88,6 +87,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     }
   }));
   
+  // Effect for initialization
   useEffect(() => {
     if (featureGroupRef.current) {
       setIsInitialized(true);
@@ -97,6 +97,16 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       mountedRef.current = false;
     };
   }, []);
+
+  // Handle user changes - reload drawings when user changes
+  useEffect(() => {
+    if (isInitialized && currentUser && drawToolsRef.current) {
+      // When user logs in or changes, we need to refresh the map
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      window.dispatchEvent(new Event('drawingsUpdated'));
+    }
+  }, [currentUser, isInitialized]);
 
   const handleCreatedWrapper = (shape: any) => {
     if (!isAuthenticated) {

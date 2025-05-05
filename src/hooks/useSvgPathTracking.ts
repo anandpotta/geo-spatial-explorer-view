@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef, RefObject } from 'react';
+import { getCurrentUser } from '../services/auth-service';
 
 interface SvgPathTrackingProps {
   isInitialized: boolean;
@@ -14,6 +15,49 @@ const arePathsEqual = (paths1: string[], paths2: string[]): boolean => {
   return paths1.every((path, index) => path === paths2[index]);
 };
 
+// Save SVG paths to localStorage with user ID
+const saveSvgPaths = (paths: string[]) => {
+  if (!paths || paths.length === 0) return;
+  
+  const currentUser = getCurrentUser();
+  if (!currentUser) return;
+  
+  try {
+    // Get existing paths data (should be an object with userIds as keys)
+    const existingData = localStorage.getItem('svgPaths');
+    let pathsData: Record<string, string[]> = {};
+    
+    if (existingData) {
+      pathsData = JSON.parse(existingData);
+    }
+    
+    // Save paths for current user
+    pathsData[currentUser.id] = paths;
+    
+    // Store updated data
+    localStorage.setItem('svgPaths', JSON.stringify(pathsData));
+  } catch (err) {
+    console.error('Error saving SVG paths:', err);
+  }
+};
+
+// Load SVG paths for current user
+const loadSvgPaths = (): string[] => {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return [];
+  
+  try {
+    const pathsData = localStorage.getItem('svgPaths');
+    if (!pathsData) return [];
+    
+    const parsedData = JSON.parse(pathsData);
+    return parsedData[currentUser.id] || [];
+  } catch (err) {
+    console.error('Error loading SVG paths:', err);
+    return [];
+  }
+};
+
 export function useSvgPathTracking({
   isInitialized,
   drawToolsRef,
@@ -23,6 +67,22 @@ export function useSvgPathTracking({
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   const lastPathsRef = useRef<string[]>([]);
   const updateCountRef = useRef(0);
+
+  // Load saved paths when component initializes
+  useEffect(() => {
+    if (isInitialized) {
+      const savedPaths = loadSvgPaths();
+      if (savedPaths.length > 0) {
+        setSvgPaths(savedPaths);
+        lastPathsRef.current = savedPaths;
+        
+        // If we have onPathsUpdated callback, call it with loaded paths
+        if (onPathsUpdated) {
+          onPathsUpdated(savedPaths);
+        }
+      }
+    }
+  }, [isInitialized, onPathsUpdated]);
 
   // Handler for clear all event
   useEffect(() => {
@@ -58,6 +118,10 @@ export function useSvgPathTracking({
             if (!arePathsEqual(paths, lastPathsRef.current)) {
               lastPathsRef.current = [...paths];
               setSvgPaths(paths);
+              
+              // Save paths to localStorage
+              saveSvgPaths(paths);
+              
               if (onPathsUpdated) {
                 updateCountRef.current += 1;
                 

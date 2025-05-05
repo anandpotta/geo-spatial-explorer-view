@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -6,6 +5,7 @@ import 'leaflet-draw/dist/leaflet.draw.css';
 import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
 import { usePathElements } from '@/hooks/usePathElements';
 import { useShapeCreation } from '@/hooks/useShapeCreation';
+import { getCurrentUser } from '@/services/auth-service';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -13,6 +13,23 @@ interface DrawToolsProps {
   onClearAll?: () => void;
   featureGroup: L.FeatureGroup;
 }
+
+// Load SVG paths for current user
+const loadSvgPaths = (): string[] => {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return [];
+  
+  try {
+    const pathsData = localStorage.getItem('svgPaths');
+    if (!pathsData) return [];
+    
+    const parsedData = JSON.parse(pathsData);
+    return parsedData[currentUser.id] || [];
+  } catch (err) {
+    console.error('Error loading SVG paths:', err);
+    return [];
+  }
+};
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
@@ -35,6 +52,28 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       window.removeEventListener('clearAllSvgPaths', handleClearAllEvent);
     };
   }, [clearPathElements]);
+
+  // Restore saved paths when the component mounts
+  useEffect(() => {
+    if (!featureGroup) return;
+    
+    // Get the map from the feature group
+    const map = (featureGroup as any)._map;
+    if (!map) return;
+    
+    // Load saved paths
+    const savedPaths = loadSvgPaths();
+    if (savedPaths && savedPaths.length > 0) {
+      // We need to attempt to restore the paths
+      console.log('Restoring saved paths:', savedPaths.length);
+      
+      // This would need to be implemented with proper path restoration logic
+      // For now, we'll dispatch an event to signal that paths should be restored
+      window.dispatchEvent(new CustomEvent('restoreSavedPaths', { 
+        detail: { paths: savedPaths }
+      }));
+    }
+  }, [featureGroup]);
   
   // Configure SVG renderer and optimize polygon drawing
   useEffect(() => {

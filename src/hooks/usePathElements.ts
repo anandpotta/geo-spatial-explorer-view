@@ -1,6 +1,7 @@
 
 import L from 'leaflet';
 import { getMapFromLayer } from '@/utils/leaflet-type-utils';
+import { getCurrentUser } from '@/services/auth-service';
 
 /**
  * Hook to provide methods for accessing SVG path elements
@@ -79,6 +80,25 @@ export function usePathElements(featureGroup: L.FeatureGroup) {
             });
           });
         }
+      }
+    }
+    
+    // Also clear the SVG paths from localStorage for the current user
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      try {
+        // Get existing paths data
+        const existingData = localStorage.getItem('svgPaths');
+        if (existingData) {
+          let pathsData = JSON.parse(existingData);
+          // Delete current user's paths
+          if (pathsData[currentUser.id]) {
+            delete pathsData[currentUser.id];
+            localStorage.setItem('svgPaths', JSON.stringify(pathsData));
+          }
+        }
+      } catch (err) {
+        console.error('Error clearing SVG paths from storage:', err);
       }
     }
   };
