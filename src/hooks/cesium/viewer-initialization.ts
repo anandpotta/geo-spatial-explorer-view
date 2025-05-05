@@ -69,7 +69,7 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     viewerOptions.skyAtmosphere = false; // Disable problematic skyAtmosphere 
     viewerOptions.terrainProvider = undefined; // Disable terrain
     viewerOptions.skyBox = false; // Disable skybox
-    viewerOptions.globe = true; // Keep the globe
+    viewerOptions.globe = new Cesium.Globe(Cesium.Ellipsoid.WGS84); // Create a valid Globe object instead of boolean
     viewerOptions.sceneMode = Cesium.SceneMode.SCENE3D; // Use 3D mode
     
     // Create viewer with error handling
