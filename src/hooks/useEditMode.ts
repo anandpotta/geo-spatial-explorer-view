@@ -11,7 +11,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
   // More reliable way to update edit mode
   const updateEditMode = useCallback(() => {
     if (!editControlRef.current) {
-      console.log('Edit control not available yet');
+      // Reduce logging frequency
       return false;
     }
     
@@ -20,7 +20,6 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       const editToolbar = editControl._toolbars?.edit;
       
       if (!editToolbar) {
-        console.log('Edit toolbar not available');
         return false;
       }
       
@@ -32,8 +31,6 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       if (shouldEnableEdit && editHandler && typeof editHandler.enable === 'function') {
         const isAlreadyEnabled = editHandler.enabled && editHandler.enabled();
         if (!isAlreadyEnabled) {
-          console.log('Activating edit mode through useEditMode hook');
-          
           // First ensure all layers are selected to make them eligible for editing
           if (editHandler._featureGroup) {
             editHandler._featureGroup.eachLayer((layer: any) => {
@@ -54,14 +51,12 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       } else if (!shouldEnableEdit) {
         // Deactivate edit mode
         if (editHandler && typeof editHandler.disable === 'function' && editHandler.enabled && editHandler.enabled()) {
-          console.log('Deactivating edit mode');
           editHandler.disable();
           setIsEditActive(false);
         }
         
         // Deactivate delete mode
         if (deleteHandler && typeof deleteHandler.disable === 'function' && deleteHandler.enabled && deleteHandler.enabled()) {
-          console.log('Deactivating delete mode');
           deleteHandler.disable();
         }
       }
@@ -83,13 +78,13 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     }
   }, [editControlRef, activeTool, isEditActive]);
 
-  // Retry mechanism for edit mode activation with increased persistence
+  // Retry mechanism for edit mode activation with reduced persistence
   useEffect(() => {
     // Function to activate or deactivate edit mode with retries
-    const attemptUpdateEditMode = (retry = 0, maxRetries = 5) => {
+    const attemptUpdateEditMode = (retry = 0, maxRetries = 2) => { // Reduced max retries
       if (!editControlRef.current && retry < maxRetries) {
         // Retry with increasing delay
-        const delay = Math.min(Math.pow(2, retry) * 100, 2000);
+        const delay = Math.min(Math.pow(2, retry) * 200, 2000);
         setTimeout(() => attemptUpdateEditMode(retry + 1, maxRetries), delay);
         return;
       }
@@ -100,7 +95,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     // Initial update with retry logic
     attemptUpdateEditMode();
     
-    // Set up a timer that periodically ensures image controls are visible
+    // Set up a timer that periodically ensures image controls are visible, but less frequently
     const visibilityCheckId = setInterval(() => {
       document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
         (el as HTMLElement).style.opacity = '1';
@@ -108,7 +103,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         (el as HTMLElement).style.display = 'block';
         (el as HTMLElement).style.pointerEvents = 'auto';
       });
-    }, 1000);
+    }, 5000); // Increased to 5 seconds
     
     // Also set up a less frequent check for edit mode status
     const editCheckId = setInterval(() => {
@@ -116,7 +111,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       if (shouldBeActive !== isEditActive) {
         updateEditMode();
       }
-    }, 3000);
+    }, 10000); // Increased to 10 seconds
     
     return () => {
       clearInterval(visibilityCheckId);
@@ -124,7 +119,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     };
   }, [editControlRef, activeTool, updateEditMode, isEditActive]);
   
-  // Add a special effect to handle DOM changes
+  // Add a special effect to handle DOM changes with reduced sensitivity
   useEffect(() => {
     // Monitor for DOM changes that might remove our controls
     const observer = new MutationObserver((mutations) => {
@@ -132,7 +127,14 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       
       mutations.forEach((mutation) => {
         if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-          needsCheck = true;
+          // Check if any of the removed nodes are image controls
+          mutation.removedNodes.forEach(node => {
+            if (node instanceof Element && 
+                (node.classList.contains('image-controls-wrapper') || 
+                 node.classList.contains('image-controls-container'))) {
+              needsCheck = true;
+            }
+          });
         }
         
         // Also check for attribute changes on image controls
@@ -145,19 +147,20 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       });
       
       if (needsCheck) {
-        // Re-show any image controls that might have been hidden
-        setTimeout(() => {
+        // Re-show any image controls that might have been hidden, with a debounce
+        clearTimeout((window as any)._imageControlsVisibilityTimeout);
+        (window as any)._imageControlsVisibilityTimeout = setTimeout(() => {
           document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
             (el as HTMLElement).style.opacity = '1';
             (el as HTMLElement).style.visibility = 'visible';
             (el as HTMLElement).style.display = 'block';
             (el as HTMLElement).style.pointerEvents = 'auto';
           });
-        }, 10);
+        }, 100);
       }
     });
     
-    // Start observing the document with the configured parameters
+    // Start observing the document with the configured parameters, but with reduced sensitivity
     observer.observe(document.body, { 
       childList: true, 
       subtree: true,

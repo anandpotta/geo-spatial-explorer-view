@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { toast } from 'sonner';
 
 interface DrawingEffectsProps {
   activeTool: string | null;
@@ -45,21 +46,28 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
       return;
     }
     
-    // Only proceed if we're in edit mode, initialized, and haven't succeeded yet
-    if (activeTool === 'edit' && isInitialized && !activationSucceeded && activationAttempts < 5) {
-      const delay = Math.min(300 * (activationAttempts + 1), 2000); // Exponential backoff with max
+    // Only proceed if we're in edit mode, initialized, haven't succeeded yet, and haven't exceeded max attempts
+    // Limiting to 3 attempts maximum to prevent excessive retries
+    if (activeTool === 'edit' && isInitialized && !activationSucceeded && activationAttempts < 3) {
+      const delay = Math.min(500 * (activationAttempts + 1), 2000); // Increased initial delay
       
       const timer = setTimeout(() => {
         try {
-          console.log(`Attempting to activate edit mode (attempt ${activationAttempts + 1})`);
+          console.log(`Attempting to activate edit mode (attempt ${activationAttempts + 1} of 3)`);
           const activated = activateEditMode();
           
           if (activated) {
             console.log("Edit mode successfully activated");
             setActivationSucceeded(true);
+            toast.success("Edit mode activated", { duration: 2000, id: "edit-mode-success" });
           } else {
-            console.log("Failed to activate edit mode, may retry");
+            console.log("Failed to activate edit mode");
             setActivationAttempts(prev => prev + 1);
+            
+            // Show message only on final attempt
+            if (activationAttempts === 2) {
+              toast.info("Edit controls will be available momentarily", { duration: 3000, id: "edit-mode-info" });
+            }
           }
         } catch (err) {
           console.error('Error activating edit mode:', err);
@@ -71,7 +79,7 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
     }
   }, [activeTool, isInitialized, activateEditMode, activationAttempts, activationSucceeded]);
 
-  // Make sure image controls are always visible
+  // Make sure image controls are always visible but with reduced interval
   useEffect(() => {
     const ensureControlsVisible = () => {
       document.querySelectorAll('.image-controls-wrapper').forEach(el => {
@@ -81,8 +89,8 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
       });
     };
     
-    // Ensure controls are visible periodically
-    const intervalId = setInterval(ensureControlsVisible, 1000);
+    // Ensure controls are visible on a less frequent interval
+    const intervalId = setInterval(ensureControlsVisible, 3000); // Increased to 3 seconds
     
     // Also ensure controls are visible immediately
     ensureControlsVisible();
