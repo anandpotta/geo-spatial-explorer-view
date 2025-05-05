@@ -5,6 +5,7 @@ import { getDefaultDrawingOptions, createDrawingLayer } from '@/utils/leaflet-dr
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
+import { toast } from 'sonner';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 interface CreateLayerOptions {
@@ -59,12 +60,26 @@ export const createLayerFromDrawing = ({
     options.opacity = 1;
     options.fillOpacity = options.fillOpacity || 0.2;
     
+    // Remove transform property - it's not part of PathOptions
+    // Instead, ensure the layer is prepared for edit mode by other means
+    
     const layer = createDrawingLayer(drawing, options);
     
     if (layer) {
       layer.eachLayer((l: L.Layer) => {
         if (l && isMounted) {
+          // Store drawing ID on the layer for reference
           (l as any).drawingId = drawing.id;
+          
+          // Ensure each layer has editing capability
+          if (l instanceof L.Path && !(l as any).editing) {
+            (l as any).editing = new (L.Handler as any).PolyEdit(l);
+          }
+          
+          // Ensure the layer has necessary properties for edit mode
+          if ((l as any)._path) {
+            (l as any)._path.setAttribute('data-drawing-id', drawing.id);
+          }
           
           // Store the layer reference
           layersRef.set(drawing.id, l);

@@ -1,9 +1,8 @@
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
-import { DrawingData } from '@/utils/drawing-utils';
-import { getMapFromLayer, isMapValid, safelyEnableEditForLayer } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
@@ -20,14 +19,7 @@ export function useDrawingControls() {
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Ensure we clean up properly when unmounting
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const checkMapValidity = useCallback(() => {
+  const checkMapValidity = () => {
     // Check if the feature group is attached to a valid map
     const featureGroup = featureGroupRef.current;
     try {
@@ -51,87 +43,99 @@ export function useDrawingControls() {
       toast.error("Could not validate map state. Please refresh the page.");
       return false;
     }
-  }, []);
+  };
 
-  const activateEditMode = useCallback(() => {
+  const activateEditMode = () => {
     if (!checkMapValidity()) return;
     
-    console.log("Attempting to activate edit mode");
-    
-    // First try to enable edit mode through layers directly in case the toolbar isn't working
+    if (!featureGroupRef.current || !drawToolsRef.current) {
+      console.warn("Feature group or draw tools not available");
+      return;
+    }
+
     try {
-      const group = featureGroupRef.current;
-      if (group) {
-        let activatedAny = false;
-        group.eachLayer(layer => {
-          if (safelyEnableEditForLayer(layer)) {
-            activatedAny = true;
+      console.log("Attempting to activate edit mode");
+      const editControl = drawToolsRef.current?.getEditControl();
+      
+      if (editControl) {
+        // Get the map to ensure proper context
+        const map = getMapFromLayer(featureGroupRef.current);
+        if (!map) {
+          console.warn("Map not available for edit mode");
+          return;
+        }
+        
+        // First, ensure all layers have editing capabilities
+        featureGroupRef.current.eachLayer((layer: any) => {
+          if (layer && !layer.editing) {
+            // Initialize editing capability if missing
+            if (layer instanceof L.Path) {
+              // Use type assertion for PolyEdit
+              layer.editing = new (L.Handler as any).PolyEdit(layer);
+            }
           }
         });
         
-        if (activatedAny) {
-          console.log("Activated edit mode on at least one layer directly");
-          return;
+        // Access the edit toolbar and handler with proper checks
+        const toolbar = editControl._toolbars?.edit;
+        if (toolbar) {
+          // Make sure we have at least one layer to edit
+          if (featureGroupRef.current.getLayers().length === 0) {
+            console.warn("No layers to edit");
+            toast.error("No drawings to edit. Create a drawing first.");
+            return;
+          }
+          
+          // Get the edit handler
+          const editHandler = toolbar._modes?.edit?.handler;
+          if (editHandler) {
+            // Check if enable method exists
+            if (typeof editHandler.enable === 'function') {
+              // Initialize the edit handler with the feature group
+              editHandler._featureGroup = featureGroupRef.current;
+              
+              // Make sure all layers have valid edit properties
+              featureGroupRef.current.eachLayer((layer: any) => {
+                if (layer) {
+                  // Store layer reference on the handler for proper cleanup
+                  if (!editHandler._layers) {
+                    editHandler._layers = new Map();
+                  }
+                  
+                  if (!editHandler._layers.has(L.Util.stamp(layer))) {
+                    editHandler._layers.set(L.Util.stamp(layer), layer);
+                  }
+                }
+              });
+              
+              // Enable the edit mode
+              editHandler.enable();
+              console.log("Edit mode activated successfully");
+            } else {
+              console.warn("Edit handler enable method not found");
+              toast.error("Could not enable edit mode");
+            }
+          } else {
+            console.warn("Edit handler not found in toolbar");
+          }
+        } else {
+          console.warn("Edit toolbar not found");
         }
       }
     } catch (err) {
-      console.error("Error activating edit mode directly on layers:", err);
+      console.error('Failed to activate edit mode:', err);
+      toast.error('Could not enable edit mode');
     }
+  };
 
-    // Try to enable edit mode through edit control
-    if (drawToolsRef.current?.getEditControl()) {
-      try {
-        const editControl = drawToolsRef.current.getEditControl();
-        if (editControl) {
-          // First make sure the edit toolbar is visible
-          if (editControl._map && typeof editControl._showToolbar === 'function') {
-            try {
-              editControl._showToolbar();
-            } catch (err) {
-              console.warn("Could not show toolbar:", err);
-            }
-          }
-          
-          // Then try to activate the edit handler
-          const editHandlers = [
-            // Try multiple paths to find the edit handler
-            editControl._toolbars?.edit?._modes?.edit?.handler,
-            editControl._handler,
-            editControl._modes?.edit?.handler
-          ];
-          
-          for (const handler of editHandlers) {
-            if (handler && typeof handler.enable === 'function') {
-              try {
-                handler.enable();
-                console.log("Edit mode activated successfully");
-                return;
-              } catch (e) {
-                console.warn("Failed to enable this edit handler:", e);
-                // Continue to next handler if this one fails
-              }
-            }
-          }
-          
-          console.warn("None of the edit handlers could be activated");
-        }
-      } catch (err) {
-        console.error('Failed to activate edit mode:', err);
-        toast.error('Could not enable edit mode');
-      }
-    } else {
-      console.warn("Draw tools ref or edit control not available");
-    }
-  }, [checkMapValidity]);
-
-  const openFileUploadDialog = useCallback((drawingId: string) => {
+  const openFileUploadDialog = (drawingId: string) => {
     if (!checkMapValidity()) return;
     
     setSelectedDrawing(drawingId);
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-  }, [checkMapValidity]);
+  };
 
   return {
     featureGroupRef,
@@ -143,7 +147,6 @@ export function useDrawingControls() {
     setSelectedDrawing,
     fileInputRef,
     activateEditMode,
-    openFileUploadDialog,
-    checkMapValidity
+    openFileUploadDialog
   };
 }

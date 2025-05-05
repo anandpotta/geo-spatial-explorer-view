@@ -2,48 +2,68 @@
 // This file provides compatibility with newer versions of react-leaflet-draw
 // by ensuring that we can still pass certain props like featureGroup to EditControl
 import { EditControl as OriginalEditControl } from "react-leaflet-draw";
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useEffect } from 'react';
+import L from 'leaflet';
 
 // Create a wrapper component that forwards the ref and handles the featureGroup prop
 export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Make sure we have a valid featureGroup to prevent errors
-  if (!featureGroup) {
-    console.warn('EditControl received null or undefined featureGroup');
+  // Make sure we have a valid featureGroup before proceeding
+  if (!featureGroup || !featureGroup.getLayers) {
+    console.warn("EditControl: Invalid featureGroup provided");
     return null;
   }
   
-  // Setup proper edit options with safe fallbacks
-  const editOptions = {
-    featureGroup: featureGroup,
-    edit: {
-      featureGroup: featureGroup,
-      edit: true,
-      remove: true,
-      poly: {
-        allowIntersection: false
-      },
-      selectedPathOptions: {
-        maintainColor: false,
-        opacity: 0.7
+  // Ensure all layers in the feature group have edit handlers
+  useEffect(() => {
+    if (featureGroup) {
+      try {
+        // Ensure each layer has the necessary edit properties
+        featureGroup.eachLayer((layer: any) => {
+          if (layer && !layer.editing) {
+            // Initialize editing capability if not present
+            if (layer instanceof L.Path) {
+              // Use type assertion to handle the PolyEdit constructor
+              layer.editing = new (L.Handler as any).PolyEdit(layer);
+            }
+          }
+        });
+      } catch (err) {
+        console.error("Error preparing layers for edit mode:", err);
       }
     }
+    
+    return () => {
+      // Cleanup on unmount - ensure we disable edit mode properly
+      if (featureGroup) {
+        try {
+          featureGroup.eachLayer((layer: any) => {
+            if (layer && layer.editing && layer.editing.disable) {
+              layer.editing.disable();
+            }
+          });
+        } catch (err) {
+          console.error("Error cleaning up edit mode:", err);
+        }
+      }
+    };
+  }, [featureGroup]);
+  
+  // Ensure we have a proper edit options structure
+  const editOptions = {
+    featureGroup: featureGroup,
+    // Set some sensible defaults for edit handlers
+    edit: true,
+    remove: true,
+    // Ensure we have proper edit handler initialization
+    ...(typeof edit === 'object' ? edit : {})
   };
   
   // Return the original EditControl with proper prop structure
   return React.createElement(OriginalEditControl, {
     ...otherProps,
-    position: 'topright',
-    draw: {
-      rectangle: true,
-      polygon: true,
-      circle: true,
-      circlemarker: false,
-      marker: true,
-      polyline: false
-    },
     edit: editOptions,
     ref
   });
