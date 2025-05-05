@@ -7,6 +7,7 @@ import { toast } from 'sonner';
  */
 export function useEditMode(editControlRef: RefObject<any>, activeTool: string | null) {
   const [isEditActive, setIsEditActive] = useState(false);
+  const [activationAttempts, setActivationAttempts] = useState(0);
   
   // Function to ensure edit controls are always visible with correct width
   const ensureEditControlsVisibility = useCallback(() => {
@@ -20,12 +21,14 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         editControlContainer.style.visibility = 'visible';
         editControlContainer.style.opacity = '1';
         editControlContainer.style.pointerEvents = 'auto';
+        editControlContainer.style.zIndex = '9999';
         
         // Make sure all buttons inside are visible and properly sized
         const buttons = editControlContainer.querySelectorAll('a');
         buttons.forEach(button => {
-          button.style.display = 'inline-block';
-          button.style.visibility = 'visible';
+          (button as HTMLElement).style.display = 'inline-block';
+          (button as HTMLElement).style.visibility = 'visible';
+          (button as HTMLElement).style.opacity = '1';
         });
         
         // Ensure the edit toolbar is visible
@@ -33,6 +36,22 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         if (toolbar) {
           toolbar.style.display = 'block';
           toolbar.style.visibility = 'visible';
+          toolbar.style.opacity = '1';
+        }
+        
+        // Make edit and delete buttons specifically visible
+        const editEditBtn = editControlContainer.querySelector('.leaflet-draw-edit-edit') as HTMLElement;
+        if (editEditBtn) {
+          editEditBtn.style.display = 'inline-block';
+          editEditBtn.style.visibility = 'visible';
+          editEditBtn.style.opacity = '1';
+        }
+        
+        const editDeleteBtn = editControlContainer.querySelector('.leaflet-draw-edit-remove') as HTMLElement;
+        if (editDeleteBtn) {
+          editDeleteBtn.style.display = 'inline-block';
+          editDeleteBtn.style.visibility = 'visible';
+          editDeleteBtn.style.opacity = '1';
         }
       }
     } catch (err) {
@@ -43,7 +62,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
   // More reliable way to update edit mode
   const updateEditMode = useCallback(() => {
     if (!editControlRef.current) {
-      // Reduce logging frequency
+      console.log('Edit control ref not available yet');
       return false;
     }
     
@@ -52,6 +71,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       const editToolbar = editControl._toolbars?.edit;
       
       if (!editToolbar) {
+        console.log('Edit toolbar not available yet');
         return false;
       }
       
@@ -63,6 +83,8 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       if (shouldEnableEdit && editHandler && typeof editHandler.enable === 'function') {
         const isAlreadyEnabled = editHandler.enabled && editHandler.enabled();
         if (!isAlreadyEnabled) {
+          console.log('Enabling edit mode');
+          
           // First ensure all layers are selected to make them eligible for editing
           if (editHandler._featureGroup) {
             editHandler._featureGroup.eachLayer((layer: any) => {
@@ -77,6 +99,10 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
           
           // Update state and show notification
           setIsEditActive(true);
+          toast.success('Edit mode activated', { 
+            id: 'edit-mode-success',
+            duration: 2000
+          });
           
           // Ensure edit controls are visible
           ensureEditControlsVisibility();
@@ -116,20 +142,35 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     }
   }, [editControlRef, activeTool, isEditActive, ensureEditControlsVisibility]);
 
-  // Retry mechanism for edit mode activation with reduced persistence
+  // More aggressive retry mechanism for edit mode activation
   useEffect(() => {
     // Function to activate or deactivate edit mode with retries
-    const attemptUpdateEditMode = (retry = 0, maxRetries = 2) => { // Reduced max retries
-      if (!editControlRef.current && retry < maxRetries) {
-        // Retry with increasing delay
-        const delay = Math.min(Math.pow(2, retry) * 200, 2000);
-        setTimeout(() => attemptUpdateEditMode(retry + 1, maxRetries), delay);
-        return;
+    const attemptUpdateEditMode = (retry = 0, maxRetries = 5) => {
+      if (activeTool !== 'edit') {
+        return; // Don't attempt if not in edit mode
       }
       
-      updateEditMode();
+      console.log(`Attempting to activate edit mode (attempt ${retry + 1} of ${maxRetries})`);
+      
+      const result = updateEditMode();
+      
+      if (!result && retry < maxRetries) {
+        // Retry with increasing delay
+        const delay = Math.min(Math.pow(1.5, retry) * 300, 2000);
+        setTimeout(() => attemptUpdateEditMode(retry + 1, maxRetries), delay);
+        setActivationAttempts(prev => prev + 1);
+      } else if (result) {
+        console.log('Edit mode activation successful');
+        setActivationAttempts(0);
+      }
     };
 
+    // Reset attempts when tool changes
+    if (activeTool !== 'edit') {
+      setActivationAttempts(0);
+      return;
+    }
+    
     // Initial update with retry logic
     attemptUpdateEditMode();
     
@@ -137,34 +178,27 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     ensureEditControlsVisibility();
     
     // Set up a timer that periodically ensures edit controls are visible
-    const controlsVisibilityId = setInterval(ensureEditControlsVisibility, 2000); // Check every 2 seconds
+    const controlsVisibilityId = setInterval(ensureEditControlsVisibility, 1000); // Check more frequently
     
-    // Set up a timer that periodically ensures image controls are visible, but less frequently
-    const visibilityCheckId = setInterval(() => {
-      document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
-        (el as HTMLElement).style.opacity = '1';
-        (el as HTMLElement).style.visibility = 'visible';
-        (el as HTMLElement).style.display = 'block';
-        (el as HTMLElement).style.pointerEvents = 'auto';
-      });
-    }, 5000); // Increased to 5 seconds
+    // Set up a timer to make periodic activation attempts
+    let editAttemptId: NodeJS.Timeout | null = null;
     
-    // Also set up a less frequent check for edit mode status
-    const editCheckId = setInterval(() => {
-      const shouldBeActive = activeTool === 'edit';
-      if (shouldBeActive !== isEditActive) {
-        updateEditMode();
-      }
-    }, 10000); // Increased to 10 seconds
+    if (activeTool === 'edit') {
+      editAttemptId = setInterval(() => {
+        if (!isEditActive && activeTool === 'edit') {
+          console.log('Periodically attempting to activate edit mode');
+          updateEditMode();
+        }
+      }, 3000);
+    }
     
     return () => {
       clearInterval(controlsVisibilityId);
-      clearInterval(visibilityCheckId);
-      clearInterval(editCheckId);
+      if (editAttemptId) clearInterval(editAttemptId);
     };
-  }, [editControlRef, activeTool, updateEditMode, isEditActive, ensureEditControlsVisibility]);
+  }, [editControlRef, activeTool, updateEditMode, isEditActive, ensureEditControlsVisibility, activationAttempts]);
   
-  // Add a special effect to handle DOM changes with reduced sensitivity
+  // Add a special effect to handle DOM changes with increased sensitivity
   useEffect(() => {
     // Monitor for DOM changes that might remove our controls
     const observer = new MutationObserver((mutations) => {
@@ -172,25 +206,12 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       
       mutations.forEach((mutation) => {
         if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-          // Check if any of the removed nodes are image controls or edit controls
-          mutation.removedNodes.forEach(node => {
-            if (node instanceof Element && 
-                (node.classList.contains('image-controls-wrapper') || 
-                 node.classList.contains('image-controls-container') ||
-                 node.classList.contains('leaflet-draw') ||
-                 node.classList.contains('leaflet-control'))) {
-              needsCheck = true;
-            }
-          });
+          needsCheck = true;
         }
         
         // Also check for attribute changes on controls
         if (mutation.type === 'attributes' && 
-            mutation.target instanceof Element && (
-            mutation.target.classList.contains('image-controls-wrapper') || 
-            mutation.target.classList.contains('image-controls-container') ||
-            mutation.target.classList.contains('leaflet-draw') ||
-            mutation.target.classList.contains('leaflet-control'))) {
+            mutation.target instanceof Element) {
           needsCheck = true;
         }
       });
@@ -200,13 +221,7 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         clearTimeout((window as any)._controlsVisibilityTimeout);
         (window as any)._controlsVisibilityTimeout = setTimeout(() => {
           ensureEditControlsVisibility();
-          document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
-            (el as HTMLElement).style.opacity = '1';
-            (el as HTMLElement).style.visibility = 'visible';
-            (el as HTMLElement).style.display = 'block';
-            (el as HTMLElement).style.pointerEvents = 'auto';
-          });
-        }, 100);
+        }, 50); // Faster response
       }
     });
     

@@ -44,27 +44,71 @@ const DrawToolsCore = forwardRef(({
           editControlContainer.style.visibility = 'visible';
           editControlContainer.style.opacity = '1';
           editControlContainer.style.pointerEvents = 'auto';
+          editControlContainer.style.zIndex = '9999';
           
           // Make sure all buttons inside are visible and properly sized
           const buttons = editControlContainer.querySelectorAll('a');
           buttons.forEach(button => {
             (button as HTMLElement).style.display = 'inline-block';
             (button as HTMLElement).style.visibility = 'visible';
+            (button as HTMLElement).style.opacity = '1';
           });
+          
+          // Ensure toolbar is visible
+          const toolbar = editControlContainer.querySelector('.leaflet-draw-toolbar') as HTMLElement;
+          if (toolbar) {
+            toolbar.style.display = 'block';
+            toolbar.style.visibility = 'visible';
+            toolbar.style.opacity = '1';
+          }
         }
       } catch (err) {
         console.error('Error ensuring edit controls visibility:', err);
       }
     };
     
-    // Call immediately and set up interval
+    // Call immediately and set up more frequent checks
     ensureEditControlsVisibility();
-    const intervalId = setInterval(ensureEditControlsVisibility, 2000);
+    const intervalId = setInterval(ensureEditControlsVisibility, 500); // More frequent checks
+    
+    // Run again after a short delay to handle race conditions
+    setTimeout(ensureEditControlsVisibility, 100);
+    setTimeout(ensureEditControlsVisibility, 1000);
     
     return () => {
       clearInterval(intervalId);
     };
   }, []);
+
+  // Handle edit mode activation when activeTool changes
+  useEffect(() => {
+    if (activeTool === 'edit' && editControlRef.current) {
+      try {
+        const editControl = editControlRef.current;
+        const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
+        
+        if (editHandler && typeof editHandler.enable === 'function') {
+          console.log('Activating edit mode based on activeTool change');
+          
+          // Add a small delay to ensure that the control is ready
+          setTimeout(() => {
+            if (editHandler._featureGroup) {
+              editHandler._featureGroup.eachLayer((layer: any) => {
+                if (typeof layer._path !== 'undefined') {
+                  editHandler._selectableLayers.addLayer(layer);
+                }
+              });
+            }
+            
+            editHandler.enable();
+            console.log('Edit mode activated successfully');
+          }, 200);
+        }
+      } catch (err) {
+        console.error('Error activating edit mode automatically:', err);
+      }
+    }
+  }, [activeTool]);
 
   useImperativeHandle(ref, () => ({
     getEditControl: () => editControlRef.current,
@@ -76,6 +120,17 @@ const DrawToolsCore = forwardRef(({
           
           if (editHandler && typeof editHandler.enable === 'function') {
             console.log('Manually activating edit mode');
+            
+            // First ensure all layers are selected
+            if (editHandler._featureGroup) {
+              editHandler._featureGroup.eachLayer((layer: any) => {
+                if (typeof layer._path !== 'undefined') {
+                  editHandler._selectableLayers.addLayer(layer);
+                }
+              });
+            }
+            
+            // Then enable edit mode
             editHandler.enable();
             
             // Ensure the controls are visible after activation
@@ -85,6 +140,7 @@ const DrawToolsCore = forwardRef(({
                 editControlContainer.style.width = '200px';
                 editControlContainer.style.display = 'block';
                 editControlContainer.style.visibility = 'visible';
+                editControlContainer.style.opacity = '1';
               }
             }, 100);
             

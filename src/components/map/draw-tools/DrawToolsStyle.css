@@ -1,18 +1,39 @@
 
+/* More aggressive styling to ensure edit controls are visible */
 .leaflet-draw.leaflet-control {
   width: 200px !important;
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+  z-index: 9999 !important; /* Ensure highest z-index */
+  position: relative !important;
 }
 
 .leaflet-draw-toolbar {
   display: block !important;
   visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .leaflet-draw-toolbar a {
   display: inline-block !important;
   visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Force edit controls to be visible */
+.leaflet-draw-edit-edit,
+.leaflet-draw-edit-remove {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Additional styles to ensure visibility */
+.leaflet-draw-actions {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 10000 !important;
 }
