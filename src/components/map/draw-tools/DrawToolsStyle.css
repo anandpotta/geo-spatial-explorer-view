@@ -1,15 +1,17 @@
 
 /* More aggressive styling to ensure edit controls are visible */
 .leaflet-draw.leaflet-control {
-  width: 200px !important;
+  width: 30px !important; /* Changed from 200px to 30px as requested */
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   z-index: 9999 !important; /* Ensure highest z-index */
   position: relative !important;
+  top: 50px !important; /* Added top position as requested */
 }
 
+/* Keep the rest of the styles the same */
 .leaflet-draw-toolbar {
   display: block !important;
   visibility: visible !important;

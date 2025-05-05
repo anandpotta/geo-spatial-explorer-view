@@ -24,8 +24,9 @@ const DrawingEffects: React.FC<DrawingEffectsProps> = ({
       // Find the edit control container
       const editControlContainer = document.querySelector('.leaflet-draw.leaflet-control') as HTMLElement;
       if (editControlContainer) {
-        // Set fixed width and ensure visibility
-        editControlContainer.style.width = '200px';
+        // Set width and position as requested
+        editControlContainer.style.width = '30px'; // Changed from 200px to 30px
+        editControlContainer.style.top = '50px'; // Added top position
         editControlContainer.style.display = 'block';
         editControlContainer.style.visibility = 'visible';
         editControlContainer.style.opacity = '1';
