@@ -5,7 +5,7 @@ import { useEffect } from 'react';
  * Hook to handle events for drawing tools
  */
 export function useDrawToolsEventHandlers(
-  getPathElements: (() => NodeListOf<SVGPathElement>) | undefined, 
+  getPathElements: (() => SVGPathElement[]) | undefined, 
 ) {
   useEffect(() => {
     // Add event listener to check for clip mask application
