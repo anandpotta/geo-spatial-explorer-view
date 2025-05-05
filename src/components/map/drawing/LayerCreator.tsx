@@ -67,14 +67,34 @@ export const createLayerFromDrawing = ({
             break;
           case 'circle':
             // For circle, first coordinate is center, properties should contain radius
-            const radius = drawing.properties?.radius || 500; // Default radius if not specified
-            layer = L.circle(drawing.coordinates[0], {
+            // Create circle options with radius explicitly defined
+            const circleOptions = {
               ...drawing.properties,
-              radius
-            });
+              radius: 500 // Default radius if not specified
+            };
+            
+            // Check if radius is defined in properties or geoJSON
+            if (drawing.properties && 'radius' in drawing.properties) {
+              circleOptions.radius = (drawing.properties as any).radius;
+            } else if (geoJson.properties && 'radius' in geoJson.properties) {
+              circleOptions.radius = geoJson.properties.radius;
+            }
+            
+            layer = L.circle(drawing.coordinates[0], circleOptions);
             break;
           case 'marker':
-            layer = L.marker(drawing.coordinates[0], drawing.properties);
+            // Create proper marker options from properties
+            const markerOptions: L.MarkerOptions = {};
+            
+            // Copy relevant properties if they exist
+            if (drawing.properties) {
+              if ('icon' in drawing.properties) markerOptions.icon = (drawing.properties as any).icon;
+              if ('draggable' in drawing.properties) markerOptions.draggable = (drawing.properties as any).draggable;
+              if ('opacity' in drawing.properties) markerOptions.opacity = (drawing.properties as any).opacity;
+              if ('zIndexOffset' in drawing.properties) markerOptions.zIndexOffset = (drawing.properties as any).zIndexOffset;
+            }
+            
+            layer = L.marker(drawing.coordinates[0], markerOptions);
             break;
           default:
             console.warn(`Unsupported shape type: ${drawing.type}`);
