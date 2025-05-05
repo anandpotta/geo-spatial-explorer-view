@@ -1,9 +1,7 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
-import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
-import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
+import { handleClearAll } from './map/drawing/ClearAllHandler';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -88,30 +86,30 @@ const DrawingTools = ({
     onToolSelect(tool);
   };
 
-  const handleClearAll = () => {
-    const markers = getSavedMarkers();
-    const drawings = getSavedDrawings();
-
-    markers.forEach(marker => {
-      deleteMarker(marker.id);
-    });
-
-    drawings.forEach(drawing => {
-      deleteDrawing(drawing.id);
-    });
-
-    localStorage.removeItem('savedMarkers');
-    localStorage.removeItem('savedDrawings');
-
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('markersUpdated'));
+  const processClientClearAll = () => {
+    if (!containerRef.current) return;
     
-    if (onClearAll) {
-      onClearAll();
+    // Use the enhanced clear all handler from ClearAllHandler
+    const featureGroup = window.featureGroup;
+    if (featureGroup) {
+      handleClearAll({ 
+        featureGroup,
+        onClearAll
+      });
+    } else {
+      // Fallback if featureGroup is not available
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('savedDrawings');
+      localStorage.removeItem('floorPlans');
+      
+      if (onClearAll) {
+        onClearAll();
+      }
+      
+      toast.success('All layers cleared');
     }
     
     setIsClearDialogOpen(false);
-    toast.success('All layers cleared');
   };
 
   return (
@@ -151,12 +149,12 @@ const DrawingTools = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to clear all drawings and markers? This action cannot be undone.
+              Are you sure you want to clear all drawings and markers? User accounts will be preserved, but all other data will be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleClearAll}>Clear All</AlertDialogAction>
+            <AlertDialogAction onClick={processClientClearAll}>Clear All</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
