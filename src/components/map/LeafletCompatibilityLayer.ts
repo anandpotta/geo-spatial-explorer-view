@@ -16,7 +16,13 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   if (edit === true) {
     // If edit is boolean true, create a proper object structure
     editOptions = {
-      featureGroup: featureGroup
+      featureGroup: featureGroup,
+      edit: {
+        selectedPathOptions: {
+          maintainColor: true,
+          opacity: 0.7
+        }
+      }
     };
   } else if (edit === false) {
     // If edit is boolean false, pass it as false
