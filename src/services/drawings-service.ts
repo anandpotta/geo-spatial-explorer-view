@@ -1,5 +1,5 @@
 
-import { DrawingData } from '@/utils/geo-utils';
+import { DrawingData } from '@/utils/drawing-types';
 import { apiCall, getConnectionStatus } from '@/utils/api-service';
 import { toast } from '@/components/ui/use-toast';
 

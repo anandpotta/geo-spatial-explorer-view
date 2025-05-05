@@ -1,7 +1,7 @@
 
 import { useEffect, forwardRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
-import { DrawingData } from '@/utils/drawing-utils';
+import { DrawingData } from '@/utils/drawing-types';
 import { useDrawings } from '@/hooks/useDrawings';
 import { useDrawingControls, DrawingControlsRef } from '@/hooks/useDrawingControls';
 import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
@@ -12,6 +12,7 @@ import FileUploadHandler from './drawing/FileUploadHandler';
 import DrawingEffects from './drawing/DrawingEffects';
 import DrawingToolsWrapper from './drawing/DrawingToolsWrapper';
 import LayerManagerWrapper from './drawing/LayerManagerWrapper';
+import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
