@@ -5,7 +5,6 @@ import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { useDrawToolsOptions } from '../hooks/useDrawToolsOptions';
 import { useDrawToolsOptimization } from '../hooks/useDrawToolsOptimization';
-import { getMapFromLayer } from '@/utils/leaflet-type-utils';
 import '../DrawToolsStyle.css';  // Import the custom styles
 
 interface DrawToolsCoreProps {
@@ -21,6 +20,7 @@ const DrawToolsCore = forwardRef(({
   featureGroup 
 }: DrawToolsCoreProps, ref) => {
   const editControlRef = useRef<any>(null);
+  const initializationAttempts = useRef(0);
   
   // Get map instance from feature group
   const map = featureGroup ? (featureGroup as any)._map : null;
@@ -39,8 +39,8 @@ const DrawToolsCore = forwardRef(({
         const editControlContainer = document.querySelector('.leaflet-draw.leaflet-control') as HTMLElement;
         if (editControlContainer) {
           // Set width and position as requested
-          editControlContainer.style.width = '30px'; // Changed from 200px to 30px
-          editControlContainer.style.top = '50px'; // Added top position
+          editControlContainer.style.width = '30px';
+          editControlContainer.style.top = '50px';
           editControlContainer.style.display = 'block';
           editControlContainer.style.visibility = 'visible';
           editControlContainer.style.opacity = '1';
@@ -62,24 +62,89 @@ const DrawToolsCore = forwardRef(({
             toolbar.style.visibility = 'visible';
             toolbar.style.opacity = '1';
           }
+          
+          // Make edit and delete buttons specifically visible
+          const editEditBtn = editControlContainer.querySelector('.leaflet-draw-edit-edit') as HTMLElement;
+          if (editEditBtn) {
+            editEditBtn.style.display = 'inline-block';
+            editEditBtn.style.visibility = 'visible';
+            editEditBtn.style.opacity = '1';
+          }
+          
+          const editDeleteBtn = editControlContainer.querySelector('.leaflet-draw-edit-remove') as HTMLElement;
+          if (editDeleteBtn) {
+            editDeleteBtn.style.display = 'inline-block';
+            editDeleteBtn.style.visibility = 'visible';
+            editDeleteBtn.style.opacity = '1';
+          }
         }
       } catch (err) {
         console.error('Error ensuring edit controls visibility:', err);
       }
     };
     
-    // Call immediately and set up more frequent checks
+    // More aggressive approach to ensure edit controls visibility
+    // Call immediately
     ensureEditControlsVisibility();
-    const intervalId = setInterval(ensureEditControlsVisibility, 500); // More frequent checks
     
-    // Run again after a short delay to handle race conditions
+    // Set up multiple checks at different intervals
+    const fastIntervalId = setInterval(ensureEditControlsVisibility, 500);
+    const slowIntervalId = setInterval(ensureEditControlsVisibility, 2000);
+    
+    // Also run after specific delays to catch various timing issues
     setTimeout(ensureEditControlsVisibility, 100);
+    setTimeout(ensureEditControlsVisibility, 500);
     setTimeout(ensureEditControlsVisibility, 1000);
+    setTimeout(ensureEditControlsVisibility, 3000);
     
     return () => {
-      clearInterval(intervalId);
+      clearInterval(fastIntervalId);
+      clearInterval(slowIntervalId);
     };
   }, []);
+  
+  // Enhanced check for edit control initialization
+  useEffect(() => {
+    const checkEditControlInitialization = () => {
+      if (!editControlRef.current) return false;
+      
+      try {
+        const editControl = editControlRef.current;
+        // Debug output of edit control internal structure
+        if (initializationAttempts.current % 5 === 0) { // Log only occasionally
+          console.log('Edit control structure check:', {
+            hasToolbars: !!editControl._toolbars,
+            editToolbar: !!editControl._toolbars?.edit, 
+            editModes: !!editControl._toolbars?.edit?._modes,
+            editHandler: !!editControl._toolbars?.edit?._modes?.edit?.handler
+          });
+        }
+        
+        initializationAttempts.current += 1;
+        
+        // Return success if edit toolbar is properly initialized
+        return !!editControl._toolbars?.edit?._modes?.edit?.handler;
+      } catch (err) {
+        console.error('Error checking edit control initialization:', err);
+        return false;
+      }
+    };
+    
+    // Check initialization status on a schedule
+    const initCheckId = setInterval(() => {
+      if (checkEditControlInitialization()) {
+        clearInterval(initCheckId);
+        console.log('Edit control successfully initialized');
+      } else if (initializationAttempts.current > 20) {
+        clearInterval(initCheckId);
+        console.log('Maximum edit control initialization checks reached');
+      }
+    }, 500);
+    
+    return () => {
+      clearInterval(initCheckId);
+    };
+  }, [editControlRef.current]);
 
   // Handle edit mode activation when activeTool changes
   useEffect(() => {
@@ -103,7 +168,7 @@ const DrawToolsCore = forwardRef(({
             
             editHandler.enable();
             console.log('Edit mode activated successfully');
-          }, 200);
+          }, 500);
         }
       } catch (err) {
         console.error('Error activating edit mode automatically:', err);
@@ -138,8 +203,8 @@ const DrawToolsCore = forwardRef(({
             setTimeout(() => {
               const editControlContainer = document.querySelector('.leaflet-draw.leaflet-control') as HTMLElement;
               if (editControlContainer) {
-                editControlContainer.style.width = '30px'; // Changed from 200px to 30px
-                editControlContainer.style.top = '50px'; // Added top position
+                editControlContainer.style.width = '30px';
+                editControlContainer.style.top = '50px';
                 editControlContainer.style.display = 'block';
                 editControlContainer.style.visibility = 'visible';
                 editControlContainer.style.opacity = '1';

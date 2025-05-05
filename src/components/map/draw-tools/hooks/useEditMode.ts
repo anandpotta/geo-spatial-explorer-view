@@ -1,6 +1,6 @@
 
 import { useEffect, RefObject, useState } from 'react';
-import { ensureEditControlsVisibility, ensureImageControlsVisibility } from './utils/editControlsVisibility';
+import { ensureEditControlsVisibility } from './utils/editControlsVisibility';
 import { useEditModeActivation } from './useEditModeActivation';
 import { useDomObserver } from './useDomObserver';
 
@@ -9,6 +9,8 @@ import { useDomObserver } from './useDomObserver';
  */
 export function useEditMode(editControlRef: RefObject<any>, activeTool: string | null) {
   const [isEditActive, setIsEditActive] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const maxAttempts = 20; // Increase max attempts
   
   // Use the edit mode activation hook
   const { updateEditMode } = useEditModeActivation(editControlRef, activeTool, isEditActive);
@@ -18,25 +20,38 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
 
   // More controlled activation mechanism for edit mode
   useEffect(() => {
+    // Reset attempts when tool changes
+    if (activeTool !== 'edit') {
+      setAttempts(0);
+      setIsEditActive(false);
+      return;
+    }
+    
     // Only attempt activation if we're in edit mode and not already active
-    if (activeTool !== 'edit' || isEditActive) {
-      if (activeTool !== 'edit') {
-        setIsEditActive(false);
-      }
+    if (isEditActive) {
       return;
     }
     
     // Initial visibility check
     ensureEditControlsVisibility();
     
-    // Function to activate edit mode with limited retries
+    // Function to activate edit mode
     const attemptUpdateEditMode = () => {
-      console.log('Attempting to activate edit mode');
+      // Check if max attempts reached
+      if (attempts >= maxAttempts) {
+        console.log(`Maximum attempts (${maxAttempts}) reached. Stopping edit mode activation attempts.`);
+        return;
+      }
+      
+      console.log(`Attempting to activate edit mode (attempt ${attempts + 1} of ${maxAttempts})`);
       const result = updateEditMode();
       
       if (result) {
         console.log('Edit mode activation successful');
         setIsEditActive(true);
+        setAttempts(0); // Reset attempts after success
+      } else {
+        setAttempts(prev => prev + 1);
       }
     };
 
@@ -44,20 +59,20 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
     attemptUpdateEditMode();
     
     // Set up a timer that periodically ensures edit controls are visible
-    const controlsVisibilityId = setInterval(ensureEditControlsVisibility, 2000);
+    const controlsVisibilityId = setInterval(ensureEditControlsVisibility, 1000);
     
-    // Set up a timer for occasional activation attempts (limited frequency)
-    const editAttemptId = setInterval(() => {
-      if (!isEditActive && activeTool === 'edit' && editControlRef.current) {
+    // Retry logic with progressive backoff
+    const retryTimeoutId = setTimeout(() => {
+      if (!isEditActive && activeTool === 'edit' && editControlRef.current && attempts < maxAttempts) {
         attemptUpdateEditMode();
       }
-    }, 5000); // Less frequent attempts to avoid overwhelming the system
+    }, Math.min(1000 + attempts * 200, 3000)); // Progressive backoff but capped at 3s
     
     return () => {
       clearInterval(controlsVisibilityId);
-      clearInterval(editAttemptId);
+      clearTimeout(retryTimeoutId);
     };
-  }, [editControlRef, activeTool, updateEditMode, isEditActive]);
+  }, [editControlRef, activeTool, updateEditMode, isEditActive, attempts, maxAttempts]);
   
   return isEditActive;
 }

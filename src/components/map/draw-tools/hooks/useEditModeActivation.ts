@@ -45,15 +45,27 @@ export function useEditModeActivation(
     
     try {
       const editControl = editControlRef.current;
-      const editToolbar = editControl?._toolbars?.edit;
       
-      if (!editToolbar) {
-        console.log('Edit toolbar not available yet');
+      // Check if edit control has been properly initialized with toolbars
+      if (!editControl._toolbars || !editControl._toolbars.edit) {
+        console.log('Edit control toolbars not initialized yet');
+        return false;
+      }
+      
+      const editToolbar = editControl._toolbars.edit;
+      
+      if (!editToolbar || !editToolbar._modes) {
+        console.log('Edit toolbar or modes not available yet');
         return false;
       }
       
       const editHandler = editToolbar._modes?.edit?.handler;
       const deleteHandler = editToolbar._modes?.remove?.handler;
+      
+      if (!editHandler) {
+        console.log('Edit handler not available yet');
+        return false;
+      }
       
       const shouldEnableEdit = activeTool === 'edit';
       
