@@ -9,6 +9,7 @@ export interface DrawingData {
   coordinates: Array<[number, number]>;
   geoJSON?: any;
   options?: any;
+  svgPath?: string; // Added svgPath property
   properties: {
     name?: string;
     description?: string;

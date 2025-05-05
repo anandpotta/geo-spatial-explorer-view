@@ -10,6 +10,14 @@ import { toast } from 'sonner';
 import RemoveButton from './RemoveButton';
 import ReactDOM from 'react-dom/client';
 
+// Extend the Leaflet Layer interface to include the internal properties we need
+declare module 'leaflet' {
+  interface Layer {
+    drawingId?: string;
+    _path?: SVGPathElement; // Add the _path property that Leaflet uses internally
+  }
+}
+
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
   savedDrawings: DrawingData[];
