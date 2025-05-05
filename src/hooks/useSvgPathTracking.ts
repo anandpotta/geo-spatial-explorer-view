@@ -58,8 +58,29 @@ export function useSvgPathTracking({
     // Set up interval for path checking but at a much lower frequency
     const intervalId = setInterval(updatePaths, 5000); // Check every 5 seconds
     
+    // Listen for force update events
+    const handleForceUpdate = () => {
+      console.log("Force SVG path update triggered");
+      try {
+        if (drawToolsRef.current) {
+          const paths = drawToolsRef.current.getSVGPathData();
+          console.log("Forced path update:", paths);
+          setSvgPaths(paths);
+          
+          if (onPathsUpdated) {
+            onPathsUpdated(paths);
+          }
+        }
+      } catch (err) {
+        console.error('Error during forced SVG path update:', err);
+      }
+    };
+    
+    window.addEventListener('force-svg-path-update', handleForceUpdate);
+    
     return () => {
       clearInterval(intervalId);
+      window.removeEventListener('force-svg-path-update', handleForceUpdate);
     };
   }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated, svgPaths, lastUpdateTime, activeTool]);
   

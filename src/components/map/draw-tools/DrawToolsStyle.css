@@ -48,7 +48,7 @@ svg path.leaflet-interactive {
   fill-opacity: 1 !important; /* Increased from 0.2 to 1 for full image visibility */
   stroke-width: 2px; /* Reduced from 3 to be less intrusive */
   stroke-opacity: 0.7; /* Increased from 0.5 for better boundary visibility */
-  stroke: #333; /* Darker stroke color for better contrast */
+  stroke: #3388ff; /* Use default Leaflet blue color for better visibility */
   opacity: 1 !important; /* Ensure full opacity */
 }
 

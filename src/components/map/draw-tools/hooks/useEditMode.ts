@@ -54,6 +54,8 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         if (success) {
           setIsEditActive(true);
           setAttempts(0);
+          // Force SVG path update when edit mode is activated
+          window.dispatchEvent(new CustomEvent('force-svg-path-update'));
         }
       }
     };
@@ -109,6 +111,8 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         if (success) {
           setIsEditActive(true);
           setAttempts(0);
+          // Force SVG path update
+          window.dispatchEvent(new CustomEvent('force-svg-path-update'));
         }
         return;
       }
@@ -120,6 +124,8 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
         console.log('Edit mode activation successful');
         setIsEditActive(true);
         setAttempts(0); // Reset attempts after success
+        // Force SVG path update
+        window.dispatchEvent(new CustomEvent('force-svg-path-update'));
       } else {
         setAttempts(prev => prev + 1);
         
@@ -129,6 +135,8 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
           if (success) {
             setIsEditActive(true);
             setAttempts(0);
+            // Force SVG path update
+            window.dispatchEvent(new CustomEvent('force-svg-path-update'));
           }
         }
       }
