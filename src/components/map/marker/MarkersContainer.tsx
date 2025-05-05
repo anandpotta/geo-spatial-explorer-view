@@ -26,37 +26,38 @@ const MarkersContainer = memo(({
 }: MarkersContainerProps) => {
   // Use a state to store deduplicated markers
   const [uniqueMarkers, setUniqueMarkers] = useState<LocationMarker[]>([]);
-  const processedMarkersRef = useRef<string>("");
+  const processedMarkersRef = useRef<Set<string>>(new Set());
+  const instanceIdRef = useRef(`marker-container-${Date.now()}`);
   
   // Update unique markers whenever the markers prop changes
   useEffect(() => {
-    // Skip processing if we already processed this exact set of markers
-    const markersSignature = JSON.stringify(markers.map(m => m.id).sort());
-    if (markersSignature === processedMarkersRef.current) {
-      return;
-    }
+    // For debugging only
+    console.log(`MarkersContainer ${instanceIdRef.current} received ${markers.length} markers`);
     
-    // Create a map to ensure uniqueness by ID
+    // Create a map to ensure uniqueness by ID, using the last (most recent) occurrence of each ID
     const markerMap = new Map<string, LocationMarker>();
     
-    // Process markers in original order to maintain consistency
+    // First pass - process all markers to get the latest version
     markers.forEach(marker => {
-      // Only add if not already in the map
-      if (!markerMap.has(marker.id)) {
+      if (marker && marker.id) {
         markerMap.set(marker.id, marker);
       }
     });
     
     // Convert map back to array
     const deduplicatedMarkers = Array.from(markerMap.values());
-    console.log(`Deduplicated ${markers.length} markers down to ${deduplicatedMarkers.length}`);
     
+    console.log(`Deduplicated ${markers.length} markers down to ${deduplicatedMarkers.length}`);
     setUniqueMarkers(deduplicatedMarkers);
-    processedMarkersRef.current = markersSignature;
+    
+    // Update processed markers reference
+    processedMarkersRef.current = new Set(deduplicatedMarkers.map(m => m.id));
+    
   }, [markers]);
   
   return (
     <MarkersList
+      key={`marker-list-${instanceIdRef.current}`}
       markers={uniqueMarkers}
       tempMarker={tempMarker}
       markerName={markerName}
@@ -70,18 +71,31 @@ const MarkersContainer = memo(({
 }, (prevProps, nextProps) => {
   // Custom comparison function for memo
   // Only re-render if the keys that we care about changed
-  const markersChanged = prevProps.markers.length !== nextProps.markers.length ||
-    JSON.stringify(prevProps.markers.map(m => m.id).sort()) !== 
-    JSON.stringify(nextProps.markers.map(m => m.id).sort());
+  
+  // Check if marker arrays have the same IDs
+  const prevIds = new Set(prevProps.markers.map(m => m.id));
+  const nextIds = new Set(nextProps.markers.map(m => m.id));
+  
+  // Different number of unique IDs means we need to re-render
+  if (prevIds.size !== nextIds.size) return false;
+  
+  // Check if any IDs are different
+  for (const id of prevIds) {
+    if (!nextIds.has(id)) return false;
+  }
   
   const tempMarkerChanged = 
-    prevProps.tempMarker !== nextProps.tempMarker;
+    (prevProps.tempMarker === null && nextProps.tempMarker !== null) ||
+    (prevProps.tempMarker !== null && nextProps.tempMarker === null) ||
+    (prevProps.tempMarker && nextProps.tempMarker && 
+      (prevProps.tempMarker[0] !== nextProps.tempMarker[0] || 
+       prevProps.tempMarker[1] !== nextProps.tempMarker[1]));
   
   const otherPropsChanged =
     prevProps.markerName !== nextProps.markerName ||
     prevProps.markerType !== nextProps.markerType;
   
-  return !(markersChanged || tempMarkerChanged || otherPropsChanged);
+  return !(tempMarkerChanged || otherPropsChanged);
 });
 
 MarkersContainer.displayName = 'MarkersContainer';

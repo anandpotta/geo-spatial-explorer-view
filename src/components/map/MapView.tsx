@@ -62,17 +62,30 @@ const MapView = ({
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const drawingControlsRef = useRef(null);
   const instanceId = useMemo(() => `map-instance-${Date.now().toString(36)}`, []);
+  const markersRef = useRef<LocationMarker[]>([]);
   
   // Use a stable reference for markers with useMemo to avoid unnecessary rerenders
   const stableMarkers = useMemo(() => {
+    // Skip processing if the marker arrays are identical by reference
+    if (markersRef.current === markers) {
+      return markersRef.current;
+    }
+    
     // Deduplicate markers by ID to ensure no duplicates are passed down
     const uniqueMarkers = new Map<string, LocationMarker>();
-    markers.forEach(marker => {
-      if (marker && marker.id) {
-        uniqueMarkers.set(marker.id, marker);
-      }
-    });
-    return Array.from(uniqueMarkers.values());
+    
+    if (Array.isArray(markers)) {
+      // Always use the last occurrence of each ID (most up-to-date)
+      markers.forEach(marker => {
+        if (marker && marker.id) {
+          uniqueMarkers.set(marker.id, marker);
+        }
+      });
+    }
+    
+    const result = Array.from(uniqueMarkers.values());
+    markersRef.current = result;
+    return result;
   }, [markers]);
 
   const handleRegionClick = (drawing: DrawingData) => {

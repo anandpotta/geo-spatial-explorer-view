@@ -33,40 +33,41 @@ export function useMarkerActions(
     
     console.log(`Saving new marker with ID: ${uniqueId}`);
     
-    // Save the marker to localStorage
-    saveMarker(newMarker);
-    
-    if (currentDrawing) {
-      // Create a safe copy of currentDrawing without circular references
-      const safeDrawing: DrawingData = {
-        ...currentDrawing,
-        // Remove any potential circular references from geoJSON
-        geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
-          type: currentDrawing.geoJSON.type,
-          geometry: currentDrawing.geoJSON.geometry,
-          properties: currentDrawing.geoJSON.properties
-        })) : undefined,
-        properties: {
-          ...currentDrawing.properties,
-          name: markerName,
-          associatedMarkerId: newMarker.id
-        }
-      };
-      
-      saveDrawing(safeDrawing);
-    }
-    
-    // Clear the temporary marker to allow placing a new one
+    // Clear the temporary marker first to prevent React from trying to render
+    // both the temp marker and the saved marker simultaneously
     setTempMarker(null);
     setMarkerName('');
     setCurrentDrawing(null);
     
-    // Important: DON'T update the markers state directly here
-    // Let the markersUpdated event handler handle state updates
-    // This prevents duplicate entries in the state
-    console.log("Marker saved, waiting for markersUpdated event");
-    
-    toast.success("Location saved successfully");
+    // After clearing temp marker state, save the marker to localStorage
+    // This should trigger only one update event
+    setTimeout(() => {
+      saveMarker(newMarker);
+      
+      if (currentDrawing) {
+        // Create a safe copy of currentDrawing without circular references
+        const safeDrawing: DrawingData = {
+          ...currentDrawing,
+          // Remove any potential circular references from geoJSON
+          geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
+            type: currentDrawing.geoJSON.type,
+            geometry: currentDrawing.geoJSON.geometry,
+            properties: currentDrawing.geoJSON.properties
+          })) : undefined,
+          properties: {
+            ...currentDrawing.properties,
+            name: markerName,
+            type: currentDrawing.properties?.type || 'region', // Ensure type is provided
+            associatedMarkerId: newMarker.id
+          }
+        };
+        
+        saveDrawing(safeDrawing);
+      }
+      
+      toast.success("Location saved successfully");
+      console.log("Marker saved, waiting for markersUpdated event");
+    }, 0);
   }, [tempMarker, markerName, markerType, currentDrawing, setTempMarker, setMarkerName, setCurrentDrawing]);
 
   const handleDeleteMarker = useCallback((id: string) => {

@@ -1,3 +1,4 @@
+
 import { LocationMarker } from './types';
 import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,9 +31,14 @@ export function saveMarker(marker: LocationMarker): void {
   localStorage.setItem('savedMarkers', JSON.stringify(uniqueMarkers));
   
   // Use a custom event with a unique timestamp to prevent duplicate events
-  const eventDetail = { timestamp: Date.now(), source: 'saveMarker' };
-  const event = new CustomEvent('markersUpdated', { detail: eventDetail });
-  window.dispatchEvent(event);
+  const timestamp = Date.now();
+  const eventDetail = { timestamp, source: 'saveMarker' };
+  
+  // Use setTimeout to ensure we don't fire too many events in quick succession
+  // This helps prevent duplicate rendering
+  setTimeout(() => {
+    window.dispatchEvent(new CustomEvent('markersUpdated', { detail: eventDetail }));
+  }, 0);
   
   // Only sync the unique markers with backend
   syncMarkersWithBackend(uniqueMarkers);
@@ -41,21 +47,23 @@ export function saveMarker(marker: LocationMarker): void {
 /**
  * Deduplicates markers by ID, keeping the most recent version
  */
-function deduplicateMarkers(markers: LocationMarker[]): LocationMarker[] {
-  const uniqueMarkers: LocationMarker[] = [];
-  const seenIds = new Set<string>();
-  
-  // Process markers in reverse order to keep the most recent version of duplicates
-  // This ensures we keep the most up-to-date version of each marker
-  for (let i = markers.length - 1; i >= 0; i--) {
-    const marker = markers[i];
-    if (!seenIds.has(marker.id)) {
-      seenIds.add(marker.id);
-      uniqueMarkers.unshift(marker); // Add to front to maintain original order
-    }
+export function deduplicateMarkers(markers: LocationMarker[]): LocationMarker[] {
+  if (!Array.isArray(markers)) {
+    console.warn('Attempted to deduplicate non-array markers', markers);
+    return [];
   }
   
-  return uniqueMarkers;
+  // Use a Map to naturally deduplicate by ID
+  const markerMap = new Map<string, LocationMarker>();
+  
+  // Process all markers
+  markers.forEach(marker => {
+    if (marker && marker.id) {
+      markerMap.set(marker.id, marker);
+    }
+  });
+  
+  return Array.from(markerMap.values());
 }
 
 /**
@@ -71,12 +79,22 @@ export function getSavedMarkers(): LocationMarker[] {
   }
   
   try {
-    const markers = JSON.parse(markersJson);
-    // Ensure each marker has appropriate properties
-    return deduplicateMarkers(markers.map((marker: any) => ({
-      ...marker,
-      createdAt: new Date(marker.createdAt)
-    })));
+    const parsedMarkers = JSON.parse(markersJson);
+    
+    if (!Array.isArray(parsedMarkers)) {
+      console.warn('Saved markers is not an array', parsedMarkers);
+      return [];
+    }
+    
+    // Ensure each marker has appropriate properties and is deduplicated
+    const processedMarkers = parsedMarkers
+      .filter(marker => marker && marker.id) // Filter out invalid markers
+      .map((marker: any) => ({
+        ...marker,
+        createdAt: new Date(marker.createdAt)
+      }));
+    
+    return deduplicateMarkers(processedMarkers);
   } catch (e) {
     console.error('Failed to parse saved markers', e);
     return [];
@@ -92,29 +110,21 @@ export function deleteMarker(id: string): void {
     const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
     localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
     
-    // Ensure both events are dispatched with unique timestamps
-    const eventDetail = { timestamp: Date.now(), source: 'deleteMarker' };
-    try {
-      // Use requestAnimationFrame to avoid blocking the UI thread
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new CustomEvent('storage', { detail: eventDetail }));
-        window.dispatchEvent(new CustomEvent('markersUpdated', { detail: eventDetail }));
-        
-        // Force re-enabling of interactions on the body
-        document.body.style.pointerEvents = '';
-        document.body.removeAttribute('aria-hidden');
-        
-        // Try to sync with backend in the background
-        deleteMarkerFromBackend(id);
-      });
-    } catch (e) {
-      console.error("Error dispatching events:", e);
-      // Fallback method for older browsers
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('storage', { detail: eventDetail }));
-        window.dispatchEvent(new CustomEvent('markersUpdated', { detail: eventDetail }));
-      }, 0);
-    }
+    // Ensure events are dispatched with unique timestamps and after a short delay
+    // to prevent event collision
+    const timestamp = Date.now();
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('markersUpdated', { 
+        detail: { timestamp, source: 'deleteMarker' } 
+      }));
+      
+      // Force re-enabling of interactions on the body
+      document.body.style.pointerEvents = '';
+      document.body.removeAttribute('aria-hidden');
+      
+      // Try to sync with backend in the background
+      deleteMarkerFromBackend(id);
+    }, 10);
   } catch (e) {
     console.error("Error deleting marker:", e);
   }

@@ -1,7 +1,8 @@
+
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
-import { useMemo, useId } from 'react';
+import { useMemo, useRef } from 'react';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -25,35 +26,13 @@ const MarkersList = ({
   setMarkerType
 }: MarkersListProps) => {
   // Generate a unique instance ID to ensure consistent marker keys
-  const instanceId = useId();
-  
-  // Use useMemo to deduplicate markers based on id
-  const uniqueMarkers = useMemo(() => {
-    if (!Array.isArray(markers) || markers.length === 0) {
-      return [];
-    }
-    
-    // Create a Map using the ID as keys to naturally eliminate duplicates
-    const uniqueMap = new Map<string, LocationMarker>();
-    
-    // Process markers to keep only the latest version of each ID
-    // Reverse the array to process newer markers first, then older ones won't overwrite
-    [...markers].reverse().forEach(marker => {
-      if (marker && marker.id && !uniqueMap.has(marker.id)) {
-        uniqueMap.set(marker.id, marker);
-      }
-    });
-    
-    const result = Array.from(uniqueMap.values());
-    console.log(`MarkersList: Deduplicated ${markers.length} markers to ${result.length} unique markers`);
-    return result;
-  }, [markers]);
-  
-  console.log(`MarkersList rendering ${uniqueMarkers.length} markers from ${markers.length} inputs`);
+  const instanceId = useRef<string>(`markers-${Date.now()}`).current;
+
+  console.log(`MarkersList rendering ${markers.length} markers from ${markers.length} inputs`);
   
   return (
     <>
-      {Array.isArray(uniqueMarkers) && uniqueMarkers.map((marker) => (
+      {markers.map((marker) => (
         <UserMarker 
           key={`user-marker-${instanceId}-${marker.id}`} 
           marker={marker} 
@@ -61,7 +40,7 @@ const MarkersList = ({
         />
       ))}
       
-      {tempMarker && Array.isArray(tempMarker) && (
+      {tempMarker && (
         <TempMarker 
           position={tempMarker}
           markerName={markerName}
