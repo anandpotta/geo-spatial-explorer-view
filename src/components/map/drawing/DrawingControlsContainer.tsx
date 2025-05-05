@@ -8,19 +8,19 @@ interface DrawingControlsContainerProps {
   activeTool: string | null;
   onRegionClick: (drawing: DrawingData) => void;
   onClearAll?: () => void;
+  onRemoveShape?: (drawingId: string) => void;
 }
 
 const DrawingControlsContainer = forwardRef(({
   onShapeCreated,
   activeTool,
   onRegionClick,
-  onClearAll
+  onClearAll,
+  onRemoveShape
 }: DrawingControlsContainerProps, ref) => {
   const drawingControlsRef = useRef(null);
   
-  // Forward the ref through to the inner DrawingControls component
   useImperativeHandle(ref, () => ({
-    // Forward any methods from DrawingControls
     ...drawingControlsRef.current
   }));
   
@@ -31,6 +31,7 @@ const DrawingControlsContainer = forwardRef(({
       activeTool={activeTool}
       onRegionClick={onRegionClick}
       onClearAll={onClearAll}
+      onRemoveShape={onRemoveShape}
     />
   );
 });
