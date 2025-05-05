@@ -10,9 +10,9 @@ export const hasClipMaskApplied = (pathElement: SVGPathElement): boolean => {
   // More reliable check using multiple indicators
   const hasDataAttribute = pathElement.hasAttribute('data-has-clip-mask');
   const hasClipPath = pathElement.hasAttribute('clip-path') || 
-                     pathElement.style.clipPath || 
-                     pathElement.getAttribute('clip-path');
-  const hasFillPattern = (pathElement.getAttribute('fill')?.includes('url(#pattern-') || 
+                     !!pathElement.style.clipPath || 
+                     !!pathElement.getAttribute('clip-path');
+  const hasFillPattern = !!(pathElement.getAttribute('fill')?.includes('url(#pattern-') || 
                           pathElement.style.fill?.includes('url(#pattern-'));
   
   // Debug info
@@ -28,6 +28,5 @@ export const hasClipMaskApplied = (pathElement: SVGPathElement): boolean => {
   
   // Return true if any of the indicators suggest a clip mask is present
   // To be extra safe, require at least two indicators to be present
-  return (hasDataAttribute && (hasClipPath || hasFillPattern));
+  return Boolean(hasDataAttribute && (hasClipPath || hasFillPattern));
 };
-
