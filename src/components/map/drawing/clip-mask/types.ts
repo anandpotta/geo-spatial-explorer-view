@@ -12,7 +12,7 @@ export interface ApplyClipMaskOptions {
 
 export interface ApplyWithStabilityOptions {
   drawingId: string;
-  imageUrl: string;
-  pathElement: SVGPathElement;
+  imageUrl?: string; // Make imageUrl optional here to match usage
+  pathElement?: SVGPathElement;
   isMounted: boolean;
 }

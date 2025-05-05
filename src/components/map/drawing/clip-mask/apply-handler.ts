@@ -1,4 +1,3 @@
-
 /**
  * Handles applying clip masks to SVG path elements
  */
@@ -17,7 +16,7 @@ import L from 'leaflet';
 export interface ApplyClipMaskOptions {
   drawingId: string;
   layer: L.Layer;
-  imageUrl: string;
+  imageUrl?: string; // Make imageUrl optional here to match usage
   retryOnFailure?: boolean;
   isMounted?: boolean;
 }
@@ -101,7 +100,7 @@ export const applyClipMaskToDrawing = ({
     }
     
     // Implementation would be here
-    console.log(`Applied clip mask to drawing ${drawingId} with image ${imageUrl}`);
+    console.log(`Applied clip mask to drawing ${drawingId} with image ${imageUrl || 'no image provided'}`);
     
     // Mark as successful
     successfulApplications.set(drawingId, true);

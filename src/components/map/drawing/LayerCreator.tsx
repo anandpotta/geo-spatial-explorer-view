@@ -139,6 +139,7 @@ export const createLayerFromDrawing = async ({
               drawingId: drawing.id,
               isMounted,
               layer
+              // imageUrl is now optional, so we don't need to provide it
             });
           }
         }, 300); // Delay to let the DOM update
