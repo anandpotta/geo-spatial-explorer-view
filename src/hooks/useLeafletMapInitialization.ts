@@ -29,11 +29,14 @@ export const useLeafletMapInitialization = ({
       containerRefHistory.current.add(container.id);
     }
     
-    // Cleanup any existing map before setting the new one
+    // Safely cleanup any existing map before setting the new one
     if (mapRef.current) {
       console.log('Map reference already exists, removing previous instance');
       try {
-        mapRef.current.remove();
+        // Check if we can safely remove the map
+        if (mapRef.current !== map) {
+          mapRef.current.remove();
+        }
       } catch (err) {
         console.warn('Error removing previous map instance:', err);
       }
@@ -46,6 +49,7 @@ export const useLeafletMapInitialization = ({
     setTimeout(() => {
       if (mapRef.current) {
         try {
+          // Only invalidate size if the map still exists
           mapRef.current.invalidateSize(true);
           setIsMapReady(true);
           
@@ -92,16 +96,25 @@ export const useLeafletMapInitialization = ({
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance on component unmount');
         try {
-          // Use setTimeout to ensure we're not removing the map while it's still being used
+          // Use a local reference for the timeout to avoid accessing potentially null references
+          const mapToRemove = mapRef.current;
+          
+          // Immediate removal with short timeout to prevent race conditions
           setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.remove();
-              mapRef.current = null;
+            try {
+              if (document.body.contains(mapToRemove.getContainer())) {
+                mapToRemove.remove();
+              }
+            } catch (e) {
+              // Silent catch for cleanup errors during unmount
             }
           }, 0);
         } catch (err) {
           console.error('Error cleaning up map:', err);
         }
+        
+        // Clear the reference immediately
+        mapRef.current = null;
         setIsMapReady(false);
       }
     };
@@ -109,17 +122,31 @@ export const useLeafletMapInitialization = ({
   
   // Force map remount when view changes
   const forceMapRemount = useCallback(() => {
+    // First, clean up any existing map
     if (mapRef.current) {
       try {
-        mapRef.current.remove();
+        // Capture and clear reference
+        const mapToRemove = mapRef.current;
+        mapRef.current = null;
+        
+        // Remove after a short delay
+        setTimeout(() => {
+          try {
+            if (document.body.contains(mapToRemove.getContainer())) {
+              mapToRemove.remove();
+            }
+          } catch (err) {
+            console.warn('Error removing map during forced remount:', err);
+          }
+        }, 0);
       } catch (err) {
-        console.warn('Error removing map during forced remount:', err);
+        console.warn('Error during map remount preparation:', err);
       }
-      mapRef.current = null;
     }
     
-    // Generate a new unique key to force remounting
-    setMapInstanceKey(`map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+    // Generate a new unique key with additional randomness
+    const newKey = `map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    setMapInstanceKey(newKey);
     setIsMapReady(false);
   }, []);
   

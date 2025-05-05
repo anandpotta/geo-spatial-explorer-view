@@ -30,7 +30,9 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       timerRef.current = setTimeout(() => {
         try {
           // Check if map container still exists and is attached to DOM
-          if (map && map.getContainer() && document.body.contains(map.getContainer())) {
+          const container = map.getContainer();
+          
+          if (map && container && document.body.contains(container)) {
             hasCalledOnReady.current = true;
             
             // Check if map is valid before trying to invalidate size

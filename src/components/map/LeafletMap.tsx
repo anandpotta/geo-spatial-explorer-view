@@ -47,12 +47,24 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
     const savedMarkers = getSavedMarkers();
     mapState.setMarkers(savedMarkers);
     
-    // Force map remount when selectedLocation changes
+    // Clean up map instance on unmount
     return () => {
       if (mapRef.current) {
         try {
-          mapRef.current.remove();
+          // Store a reference to avoid closure issues
+          const mapToRemove = mapRef.current;
           mapRef.current = null;
+          
+          // Use setTimeout to avoid potential cleanup issues
+          setTimeout(() => {
+            try {
+              if (mapToRemove && document.body.contains(mapToRemove.getContainer())) {
+                mapToRemove.remove();
+              }
+            } catch (err) {
+              console.error("Error cleaning up map on unmount:", err);
+            }
+          }, 0);
         } catch (err) {
           console.error("Error cleaning up map on unmount:", err);
         }
@@ -63,9 +75,12 @@ const LeafletMap = ({ selectedLocation, onMapReady, activeTool, onLocationSelect
   // If selectedLocation changes, force remount of the map to prevent container reuse issues
   useEffect(() => {
     if (selectedLocation) {
-      forceMapRemount();
+      // Add a small delay before remounting to ensure previous map is properly cleaned up
+      setTimeout(() => {
+        forceMapRemount();
+      }, 10);
     }
-  }, [selectedLocation, forceMapRemount]);
+  }, [selectedLocation?.id, forceMapRemount]);
 
   const handleClearAll = useCallback(() => {
     mapState.setTempMarker(null);
