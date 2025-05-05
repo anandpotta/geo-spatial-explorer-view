@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useMarkerUpdates } from './map-state/use-marker-updates';
@@ -22,7 +22,13 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Use smaller, focused hooks
+  // Clear temporary marker - useful when switching views or tools
+  const clearTempMarker = useCallback(() => {
+    setTempMarker(null);
+    setMarkerName('');
+  }, []);
+
+  // Enhanced marker updates hook
   useMarkerUpdates(setMarkers);
   useGlobalMarkerPosition(setTempMarker);
 
@@ -66,6 +72,7 @@ export function useMapState(selectedLocation?: Location) {
     setActiveTool,
     handleSaveMarker,
     handleDeleteMarker,
-    handleRegionClick
+    handleRegionClick,
+    clearTempMarker
   };
 }

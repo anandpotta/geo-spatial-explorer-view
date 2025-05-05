@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import React, { useEffect } from 'react';
+import { Marker } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 
 interface TempMarkerProps {
@@ -23,9 +23,19 @@ const TempMarker = ({
   // Create a stable instance ID to help React's reconciliation
   const instanceId = React.useRef(`temp-marker-${Date.now()}`).current;
   
+  // Clean up any potential global references when component unmounts
+  useEffect(() => {
+    return () => {
+      // Remove any global references to temp marker position
+      if (window.tempMarkerPositionUpdate) {
+        delete window.tempMarkerPositionUpdate;
+      }
+    };
+  }, []);
+  
   return (
     <Marker 
-      key={`temp-marker-${instanceId}`}
+      key={`temp-marker-${instanceId}-${position[0].toFixed(6)}-${position[1].toFixed(6)}`}
       position={position} 
       draggable={true}
       eventHandlers={{
@@ -51,12 +61,4 @@ const TempMarker = ({
 };
 
 // Use React.memo to prevent unnecessary re-renders
-export default React.memo(TempMarker, (prevProps, nextProps) => {
-  // Only re-render if essential props change
-  return (
-    prevProps.position[0] === nextProps.position[0] &&
-    prevProps.position[1] === nextProps.position[1] &&
-    prevProps.markerName === nextProps.markerName &&
-    prevProps.markerType === nextProps.markerType
-  );
-});
+export default React.memo(TempMarker);
