@@ -103,10 +103,10 @@ const MapView = ({
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenCreated={(map) => {
+        whenReady={(map) => {
           // Force immediate resize to ensure proper container dimensions
-          setTimeout(() => map.invalidateSize(), 100);
-          return map;
+          setTimeout(() => map.target.invalidateSize(), 100);
+          return map.target;
         }}
       >
         <TileLayer 
