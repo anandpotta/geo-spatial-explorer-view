@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
 
@@ -13,50 +13,29 @@ interface TempMarkerProps {
   onSave: () => void;
 }
 
-const TempMarker: React.FC<TempMarkerProps> = ({
+const TempMarker = ({
   position,
   markerName,
   setMarkerName,
   markerType,
   setMarkerType,
   onSave
-}) => {
-  // Create a custom marker with higher z-index to ensure it's on top
-  const markerOptions = {
-    draggable: true,
-    autoPan: true,
-    zIndexOffset: 9999, // Higher z-index to ensure visibility
-    eventHandlers: {
-      dragend: (e: L.LeafletEvent) => {
-        // Update marker position when dragged
-        const marker = e.target;
-        if (marker && marker.getLatLng) {
-          const position = marker.getLatLng();
-          // Update the position through the global handler
+}: TempMarkerProps) => {
+  return (
+    <Marker 
+      position={position} 
+      draggable={true}
+      eventHandlers={{
+        dragend: (e) => {
+          const marker = e.target;
+          const newPosition = marker.getLatLng();
+          // Update the marker position in parent component state
           if (window.tempMarkerPositionUpdate) {
-            window.tempMarkerPositionUpdate([position.lat, position.lng]);
-            console.log("Marker position updated:", [position.lat, position.lng]);
+            window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
           }
         }
-      },
-      add: () => {
-        // Force popup to open when marker is added to the map
-        setTimeout(() => {
-          const markerElement = document.querySelector('.leaflet-marker-draggable');
-          if (markerElement) {
-            markerElement.dispatchEvent(new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window
-            }));
-          }
-        }, 100);
-      }
-    }
-  };
-  
-  return (
-    <Marker position={position} {...markerOptions}>
+      }}
+    >
       <NewMarkerForm
         markerName={markerName}
         setMarkerName={setMarkerName}

@@ -1,67 +1,101 @@
 
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { EditControl } from "./LeafletCompatibilityLayer";
-import L from 'leaflet';
+import { EditControl } from "react-leaflet-draw";
+import { v4 as uuidv4 } from 'uuid';
+import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
+import { getCoordinatesFromLayer } from '@/utils/leaflet-drawing-config';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;
   onClearAll?: () => void;
-  featureGroup: L.FeatureGroup;
 }
 
-const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
+// Convert DrawTools to use forwardRef
+const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   
+  // Expose the editControlRef to parent components
   useImperativeHandle(ref, () => ({
-    getEditControl: () => editControlRef.current
+    getEditControl: () => editControlRef.current,
   }));
 
-  const handleCreated = (e: any) => {
-    try {
-      const { layerType, layer } = e;
-      
-      if (!layer) {
-        console.error('No layer created');
-        return;
-      }
-      
-      // Create a properly structured shape object
-      let shape: any = { type: layerType, layer };
-      
-      // For markers, extract position information
-      if (layerType === 'marker' && layer.getLatLng) {
-        const position = layer.getLatLng();
-        shape.position = [position.lat, position.lng];
-      }
-      
-      // For polygons, rectangles, and circles
-      else if (['polygon', 'rectangle', 'circle'].includes(layerType)) {
-        // Convert to GeoJSON to have a consistent format
-        shape.geoJSON = layer.toGeoJSON();
-        
-        // Extract coordinates based on shape type
-        if (layerType === 'polygon' || layerType === 'rectangle') {
-          const latLngs = layer.getLatLngs();
-          if (Array.isArray(latLngs) && latLngs.length > 0) {
-            // Handle potentially nested arrays (multi-polygons)
-            const firstRing = Array.isArray(latLngs[0]) ? latLngs[0] : latLngs;
-            shape.coordinates = firstRing.map((ll: L.LatLng) => [ll.lat, ll.lng]);
-          }
-        } else if (layerType === 'circle') {
-          const center = layer.getLatLng();
-          shape.coordinates = [[center.lat, center.lng]];
-          shape.radius = layer.getRadius();
+  useEffect(() => {
+    if (!editControlRef.current || !activeTool) return;
+    
+    const leafletElement = editControlRef.current.leafletElement;
+    if (!leafletElement || !leafletElement._modes) return;
+    
+    // Disable all active tools first
+    Object.keys(leafletElement._modes).forEach((mode) => {
+      if (leafletElement._modes[mode].handler && 
+          leafletElement._modes[mode].handler.enabled && 
+          leafletElement._modes[mode].handler.enabled()) {
+        try {
+          leafletElement._modes[mode].handler.disable();
+        } catch (err) {
+          console.warn('Error disabling drawing handler:', err);
         }
       }
-      
-      onCreated(shape);
-    } catch (err) {
-      console.error('Error handling created shape:', err);
-      toast.error('Error creating shape');
+    });
+
+    const toolMessages = {
+      polygon: "Click on map to start drawing polygon",
+      marker: "Click on map to place marker",
+      circle: "Click on map to draw circle",
+      rectangle: "Click on map to draw rectangle"
+    };
+
+    // Enable the requested tool if it exists
+    if (leafletElement._modes[activeTool] && leafletElement._modes[activeTool].handler) {
+      try {
+        leafletElement._modes[activeTool].handler.enable();
+        toast.info(toolMessages[activeTool as keyof typeof toolMessages] || "Drawing mode activated");
+      } catch (err) {
+        console.warn('Error enabling drawing handler:', err);
+      }
     }
+  }, [activeTool]);
+
+  const handleCreated = (e: any) => {
+    const { layerType, layer } = e;
+    const id = uuidv4();
+    
+    if (layerType === 'marker' && 'getLatLng' in layer) {
+      const markerLayer = layer as L.Marker;
+      const { lat, lng } = markerLayer.getLatLng();
+      onCreated({ type: 'marker', position: [lat, lng], id });
+      return;
+    }
+
+    const layerWithOptions = layer as L.Path;
+    const options = layerWithOptions.options || {};
+    
+    layer.drawingId = id;
+    
+    const drawingData = {
+      id,
+      type: layerType,
+      coordinates: getCoordinatesFromLayer(layer, layerType),
+      geoJSON: layer.toGeoJSON(),
+      options: {
+        color: options.color,
+        weight: options.weight,
+        opacity: options.opacity,
+        fillOpacity: options.fillOpacity
+      },
+      properties: {
+        name: `New ${layerType}`,
+        color: options.color || '#3388ff',
+        createdAt: new Date()
+      }
+    };
+    
+    saveDrawing(drawingData);
+    toast.success(`${layerType} created successfully`);
+    onCreated({ type: layerType, layer, geoJSON: layer.toGeoJSON(), id });
   };
 
   return (
@@ -77,14 +111,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         marker: true,
         polyline: false
       }}
-      edit={{
-        remove: true
-      }}
-      featureGroup={featureGroup}  // Pass featureGroup at the top level for our wrapper to use
     />
   );
 });
 
+// Set a display name for the component
 DrawTools.displayName = 'DrawTools';
 
 export default DrawTools;

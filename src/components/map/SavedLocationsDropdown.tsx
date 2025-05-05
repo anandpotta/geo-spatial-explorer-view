@@ -108,26 +108,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       toast.warning("Map is not ready yet, please wait a moment and try again");
       return;
     }
-    
-    // Log to confirm the position data
-    console.log("Selected location from dropdown:", position);
-    
-    // Call onLocationSelect with the position
     onLocationSelect(position);
-    
-    // Show success toast
-    toast.success(`Navigating to selected location`);
-    
-    // Close dropdown menu after selection
-    const dropdownTrigger = document.querySelector('[data-state="open"]');
-    if (dropdownTrigger) {
-      const closeEvent = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      });
-      dropdownTrigger.dispatchEvent(closeEvent);
-    }
   };
 
   return (
