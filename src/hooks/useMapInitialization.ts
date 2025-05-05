@@ -2,15 +2,40 @@
 import { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
-import { getSavedMarkers } from '@/utils/marker-utils';
+import { setupMapValidityChecks } from '@/utils/map-validation-utils';
+import { useMapReferenceHandler } from '@/hooks/useMapReferenceHandler';
 
 export function useMapInitialization(selectedLocation?: { x: number, y: number }) {
+  // State refs
   const mapRef = useRef<L.Map | null>(null);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const [isMapReady, setIsMapReady] = useState(false);
   
+  // Tracking refs
+  const mapAttachedRef = useRef(false);
+  const validityChecksRef = useRef(0);
+  const recoveryAttemptRef = useRef(0);
+  const initialFlyComplete = useRef(false);
+  const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Handler for setting map reference
+  const handleSetMapRef = useMapReferenceHandler(
+    mapRef,
+    mapAttachedRef,
+    validityChecksRef,
+    recoveryAttemptRef,
+    initialFlyComplete,
+    setIsMapReady,
+    selectedLocation
+  );
+
+  // Setup and cleanup
   useEffect(() => {
     setupLeafletIcons();
+    mapAttachedRef.current = false;
+    validityChecksRef.current = 0;
+    recoveryAttemptRef.current = 0;
+    initialFlyComplete.current = false;
     
     if (!document.querySelector('link[href*="leaflet.css"]')) {
       const link = document.createElement('link');
@@ -20,6 +45,9 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       link.crossOrigin = '';
       document.head.appendChild(link);
     }
+    
+    // Reset map ready state when key changes
+    setIsMapReady(false);
     
     return () => {
       if (mapRef.current) {
@@ -42,61 +70,44 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         }
         
         mapRef.current = null;
+        mapAttachedRef.current = false;
         setIsMapReady(false);
+      }
+      
+      // Clear validity check interval
+      if (validityCheckIntervalRef.current) {
+        clearInterval(validityCheckIntervalRef.current);
+        validityCheckIntervalRef.current = null;
       }
     };
   }, [mapInstanceKey]);
 
-  const handleSetMapRef = (map: L.Map) => {
-    console.log('Map reference provided');
+  // Set up map validity checking
+  useEffect(() => {
+    // Only set up the validation check if needed
+    if (isMapReady) return;
     
-    if (mapRef.current) {
-      console.log('Map reference already exists, skipping assignment');
-      return;
-    }
+    const checkMapValidity = setupMapValidityChecks(
+      mapRef,
+      isMapReady,
+      setIsMapReady,
+      mapAttachedRef,
+      validityChecksRef,
+      recoveryAttemptRef
+    );
     
-    try {
-      const container = map.getContainer();
-      if (container && document.body.contains(container)) {
-        console.log('Map container verified, storing reference');
-        mapRef.current = map;
-        
-        setTimeout(() => {
-          if (mapRef.current) {
-            try {
-              mapRef.current.invalidateSize(true);
-              setIsMapReady(true);
-            } catch (err) {
-              console.warn('Error invalidating map size:', err);
-            }
-          }
-        }, 300);
-        
-        if (selectedLocation) {
-          console.log('Flying to initial location');
-          setTimeout(() => {
-            if (mapRef.current) {
-              try {
-                const container = mapRef.current.getContainer();
-                if (container && document.body.contains(container)) {
-                  mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-                    animate: true,
-                    duration: 1.5
-                  });
-                }
-              } catch (err) {
-                console.warn('Error flying to initial location:', err);
-              }
-            }
-          }, 500);
-        }
-      } else {
-        console.warn('Map container not verified, skipping reference assignment');
+    if (!checkMapValidity) return;
+    
+    // Check validity less frequently (10 seconds) and only when needed
+    validityCheckIntervalRef.current = setInterval(checkMapValidity, 10000);
+    
+    return () => {
+      if (validityCheckIntervalRef.current) {
+        clearInterval(validityCheckIntervalRef.current);
+        validityCheckIntervalRef.current = null;
       }
-    } catch (err) {
-      console.error('Error setting map reference:', err);
-    }
-  };
+    };
+  }, [isMapReady]);
 
   return {
     mapRef,
