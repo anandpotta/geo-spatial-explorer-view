@@ -17,7 +17,7 @@ interface LeafletMapInternal extends L.Map {
 }
 
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
-  const map = useMap();
+  const map = useMap() as LeafletMapInternal;
   const hasCalledOnReady = useRef(false);
   
   useEffect(() => {
