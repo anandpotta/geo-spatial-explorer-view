@@ -1,9 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 interface RemoveButtonProps {
-  onClick: (e: React.MouseEvent) => void;
+  onClick: () => void;
   className?: string;
 }
 
@@ -12,13 +12,13 @@ const RemoveButton = ({ onClick, className = '' }: RemoveButtonProps) => {
     <Button
       onClick={(e) => {
         e.stopPropagation();
-        onClick(e);
+        onClick();
       }}
       variant="destructive"
       size="icon"
-      className={`h-8 w-8 rounded-full p-1 shadow-md hover:bg-red-600 animate-pulse ${className}`}
+      className={`absolute -top-2 -right-2 h-6 w-6 rounded-full p-0.5 ${className}`}
     >
-      <X className="h-6 w-6" strokeWidth={3} />
+      <XCircle className="h-5 w-5" />
     </Button>
   );
 };

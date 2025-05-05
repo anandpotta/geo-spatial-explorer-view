@@ -30,11 +30,6 @@ export function saveFloorPlan(drawingId: string, data: string, isPdf: boolean, f
   window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
     detail: { drawingId }
   }));
-  
-  // Dispatch an image-uploaded event to trigger layer updates
-  window.dispatchEvent(new CustomEvent('image-uploaded', {
-    detail: { drawingId }
-  }));
 }
 
 /**
@@ -71,12 +66,8 @@ export function deleteFloorPlan(drawingId: string): void {
     delete savedFloorPlans[drawingId];
     localStorage.setItem('floorPlans', JSON.stringify(savedFloorPlans));
     
-    // Dispatch events to notify components about the floor plan update
+    // Dispatch an event to notify components about the floor plan update
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-      detail: { drawingId }
-    }));
-    
-    window.dispatchEvent(new CustomEvent('image-uploaded', {
       detail: { drawingId }
     }));
   }
@@ -88,22 +79,4 @@ export function deleteFloorPlan(drawingId: string): void {
 export function getDrawingIdsWithFloorPlans(): string[] {
   const savedFloorPlans = getSavedFloorPlans();
   return Object.keys(savedFloorPlans);
-}
-
-/**
- * Check if a drawing has a floor plan
- */
-export function hasFloorPlan(drawingId: string): boolean {
-  return getFloorPlanById(drawingId) !== null;
-}
-
-/**
- * Create SVG clip path for a floor plan
- */
-export function createClipPathForDrawing(pathData: string, drawingId: string): string {
-  return `
-    <clipPath id="clip-path-${drawingId}">
-      <path d="${pathData}" />
-    </clipPath>
-  `;
 }

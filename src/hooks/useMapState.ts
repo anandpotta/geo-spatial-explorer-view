@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
-import { DrawingData, saveDrawing, getSavedDrawings, deleteDrawing } from '@/utils/drawing-utils';
+import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -26,27 +26,17 @@ export function useMapState(selectedLocation?: Location) {
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     
-    const savedDrawings = getSavedDrawings();
-    setDrawings(savedDrawings);
-    
     // Listen for marker updates
     const handleMarkersUpdated = () => {
       setMarkers(getSavedMarkers());
     };
-
-    // Listen for drawing updates
-    const handleDrawingsUpdated = () => {
-      setDrawings(getSavedDrawings());
-    };
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     window.addEventListener('storage', handleMarkersUpdated);
-    window.addEventListener('storage', handleDrawingsUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('storage', handleMarkersUpdated);
-      window.removeEventListener('storage', handleDrawingsUpdated);
     };
   }, []);
 
@@ -91,25 +81,18 @@ export function useMapState(selectedLocation?: Location) {
         }
       };
       
-      // Save or update the drawing but don't clear it from the map
       saveDrawing(safeDrawing);
     }
     
     // Clear the temporary marker to allow placing a new one
     setTempMarker(null);
     setMarkerName('');
-    
-    // Important: Don't reset currentDrawing here, 
-    // this keeps the connection between marker and drawing
-    // and prevents the drawing from disappearing
+    setCurrentDrawing(null);
     
     // Update the markers state with the new marker
     setMarkers(getSavedMarkers());
     
     toast.success("Location saved successfully");
-    
-    // Ensure drawings remain visible by dispatching a custom event
-    window.dispatchEvent(new Event('drawingsUpdated'));
   };
 
   const handleDeleteMarker = (id: string) => {
@@ -117,26 +100,6 @@ export function useMapState(selectedLocation?: Location) {
     // Update the markers state
     setMarkers(markers.filter(marker => marker.id !== id));
     toast.success("Location removed");
-  };
-  
-  const handleRemoveShape = (drawingId: string) => {
-    deleteDrawing(drawingId);
-    
-    // Also delete any associated marker
-    const associatedMarker = markers.find(m => m.associatedDrawing === drawingId);
-    if (associatedMarker) {
-      deleteMarker(associatedMarker.id);
-      setMarkers(markers.filter(m => m.id !== associatedMarker.id));
-    }
-    
-    // Update the drawings state
-    setDrawings(drawings.filter(d => d.id !== drawingId));
-    
-    toast.success("Shape removed");
-    
-    // Dispatch events to ensure UI updates
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('markersUpdated'));
   };
 
   const handleRegionClick = (drawing: DrawingData) => {
@@ -169,7 +132,6 @@ export function useMapState(selectedLocation?: Location) {
     setActiveTool,
     handleSaveMarker,
     handleDeleteMarker,
-    handleRemoveShape,
     handleRegionClick
   };
 }

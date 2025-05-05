@@ -1,15 +1,13 @@
 
-import { forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { FeatureGroup } from 'react-leaflet';
+import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
 import DrawTools from './DrawTools';
 import LayerManager from './drawing/LayerManager';
-import { DrawingControlsRef } from '@/hooks/useDrawingControls';
-import { useDrawingControlsState } from '@/hooks/useDrawingControlsState';
-import FileUploadHandling from './drawing/FileUploadHandling';
-import DrawingEffects from './drawing/DrawingEffects';
-import { ImageTransformOptions } from '@/utils/image-transform-utils';
+import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -17,94 +15,85 @@ interface DrawingControlsProps {
   onRegionClick?: (drawing: DrawingData) => void;
   onClearAll?: () => void;
   onRemoveShape?: (drawingId: string) => void;
-  onUploadToDrawing?: (drawingId: string, file: File, transformOptions?: ImageTransformOptions) => void;
-  onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void;
-  onPathsUpdated?: (paths: string[]) => void;
 }
 
-const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({ 
+declare module 'leaflet' {
+  interface Layer {
+    drawingId?: string;
+  }
+}
+
+const DrawingControls = forwardRef(({ 
   onCreated, 
   activeTool, 
   onRegionClick, 
   onClearAll, 
-  onRemoveShape,
-  onUploadToDrawing,
-  onImageTransform,
-  onPathsUpdated
+  onRemoveShape 
 }: DrawingControlsProps, ref) => {
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const drawToolsRef = useRef<any>(null);
   const { savedDrawings } = useDrawings();
-  
-  const {
-    featureGroupRef,
-    drawToolsRef,
-    fileInputRef,
-    isInitialized,
-    svgPaths,
-    handleFileChange,
-    handleUploadRequest,
-    handleImageTransform,
-    handleClearAll,
-    handleRemoveShape,
-    handleDrawingClick,
-    handleCreatedWrapper,
-    imageTransformOptions,
-    activateEditMode
-  } = useDrawingControlsState({
-    onCreated,
-    onClearAll,
-    onRemoveShape,
-    onRegionClick,
-    onUploadToDrawing, 
-    onPathsUpdated,
-  });
+  const mountedRef = useRef<boolean>(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
-    getDrawTools: () => drawToolsRef.current,
-    activateEditMode,
-    openFileUploadDialog: handleUploadRequest,
-    getSvgPaths: () => {
-      if (drawToolsRef.current) {
-        return drawToolsRef.current.getSVGPathData();
-      }
-      return [];
-    }
+    getDrawTools: () => drawToolsRef.current
   }));
+  
+  // Set up event listener for floor plan updates
+  useEffect(() => {
+    getDrawingIdsWithFloorPlans();
+    
+    const handleFloorPlanUpdated = () => {
+      if (featureGroupRef.current && mountedRef.current) {
+        try {
+          featureGroupRef.current.clearLayers();
+        } catch (err) {
+          console.error('Error clearing layers on floor plan update:', err);
+        }
+      }
+    };
+    
+    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    };
+  }, []);
+
+  // Initialize feature group ref when it's available
+  useEffect(() => {
+    if (featureGroupRef.current && !isInitialized) {
+      setIsInitialized(true);
+    }
+  }, [featureGroupRef.current]);
+
+  const handleRemoveShape = (drawingId: string) => {
+    if (onRemoveShape) {
+      onRemoveShape(drawingId);
+    }
+  };
 
   return (
-    <>
-      <FileUploadHandling
-        fileInputRef={fileInputRef}
-        onChange={handleFileChange}
-      />
-      
-      <DrawingEffects 
-        activeTool={activeTool}
-        isInitialized={isInitialized}
-        activateEditMode={activateEditMode}
-      />
-      
-      <FeatureGroup ref={featureGroupRef}>
-        {featureGroupRef.current && isInitialized && (
-          <LayerManager 
-            featureGroup={featureGroupRef.current}
-            savedDrawings={savedDrawings}
-            activeTool={activeTool}
-            onRegionClick={handleDrawingClick}
-            onRemoveShape={handleRemoveShape}
-            onUploadRequest={handleUploadRequest}
-            onImageTransform={handleImageTransform}
-          />
-        )}
-        <DrawTools 
-          ref={drawToolsRef}
-          onCreated={handleCreatedWrapper} 
-          activeTool={activeTool} 
-          onClearAll={handleClearAll}
+    <FeatureGroup ref={featureGroupRef}>
+      {featureGroupRef.current && isInitialized && (
+        <LayerManager 
           featureGroup={featureGroupRef.current}
+          savedDrawings={savedDrawings}
+          activeTool={activeTool}
+          onRegionClick={onRegionClick}
+          onRemoveShape={handleRemoveShape}
         />
-      </FeatureGroup>
-    </>
+      )}
+      <DrawTools 
+        ref={drawToolsRef}
+        onCreated={onCreated} 
+        activeTool={activeTool} 
+        onClearAll={onClearAll} 
+      />
+    </FeatureGroup>
   );
 });
 

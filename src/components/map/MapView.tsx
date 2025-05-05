@@ -1,16 +1,15 @@
 
-import { useState, useRef } from 'react';
-import { DrawingData } from '@/utils/drawing-utils';
-import { LocationMarker } from '@/utils/marker-utils';
-import FloorPlanView from './FloorPlanView';
-import { useFloorPlanState } from '@/hooks/useFloorPlanState';
-import MapHeader from './header/MapHeader';
-import MapContainer from './container/MapContainer';
+import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
+import SavedLocationsDropdown from './SavedLocationsDropdown';
 import MapReference from './MapReference';
+import MapEvents from './MapEvents';
+import { LocationMarker } from '@/utils/marker-utils';
+import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
-import MapEvents from './MapEvents';
-import L from 'leaflet';
+import FloorPlanView from './FloorPlanView';
+import { useState, useRef } from 'react';
+import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -32,7 +31,6 @@ interface MapViewProps {
   activeTool: string | null;
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
-  onRemoveShape?: (drawingId: string) => void;
   isMapReady?: boolean;
 }
 
@@ -54,17 +52,17 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
-  onRemoveShape,
   isMapReady = false
 }: MapViewProps) => {
+  const [showFloorPlan, setShowFloorPlan] = useState(false);
+  const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
   const drawingControlsRef = useRef(null);
-  const {
-    showFloorPlan,
-    setShowFloorPlan,
-    selectedDrawing,
-    handleRegionClick
-  } = useFloorPlanState();
+
+  const handleRegionClick = (drawing: DrawingData) => {
+    setSelectedDrawing(drawing);
+    setShowFloorPlan(true);
+  };
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
@@ -84,16 +82,33 @@ const MapView = ({
 
   return (
     <div className="w-full h-full relative">
-      <MapHeader 
-        onLocationSelect={handleLocationSelect} 
-        isMapReady={isMapReady} 
-      />
+      <div className="absolute top-4 right-4 z-[1000]">
+        <SavedLocationsDropdown 
+          onLocationSelect={handleLocationSelect} 
+          isMapReady={isMapReady}
+        />
+      </div>
       
-      <MapContainer
-        position={position}
+      <MapContainer 
+        key={mapKey}
+        className="w-full h-full"
+        attributionControl={false}
+        center={position}
         zoom={zoom}
-        mapKey={mapKey}
+        zoomControl={false}
+        fadeAnimation={true}
+        markerZoomAnimation={true}
+        preferCanvas={true}
       >
+        <TileLayer 
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
+          maxZoom={19}
+          subdomains={['a', 'b', 'c']}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          className="leaflet-tile-pane"
+        />
+        <AttributionControl position="bottomright" prefix={false} />
+        
         <MapReference onMapReady={onMapReady} />
         
         <DrawingControlsContainer
@@ -102,7 +117,6 @@ const MapView = ({
           activeTool={activeTool}
           onRegionClick={handleRegionClick}
           onClearAll={onClearAll}
-          onRemoveShape={onRemoveShape}
         />
         
         <MarkersContainer

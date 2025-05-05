@@ -1,137 +1,214 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { ImageTransformOptions, getDefaultTransformOptions } from './image-transform-utils';
-
-export interface DrawingProperties {
-  name?: string;
-  type?: string;
-  color?: string;
-  associatedMarkerId?: string;
-  [key: string]: any;
-}
+import { toast } from 'sonner';
+import { getConnectionStatus } from './api-service';
 
 export interface DrawingData {
   id: string;
-  type: string;
+  type: 'polygon' | 'circle' | 'rectangle' | 'marker';
   coordinates: Array<[number, number]>;
-  properties: DrawingProperties;
   geoJSON?: any;
-  svgPath?: string;
-  imageData?: string;
-  imageTransform?: ImageTransformOptions;
-  createdAt: Date;
+  options?: any;
+  properties: {
+    name?: string;
+    description?: string;
+    color?: string;
+    createdAt: Date;
+    associatedMarkerId?: string;
+  };
 }
 
-// Function to save a drawing to localStorage
-export const saveDrawing = (drawing: DrawingData): void => {
-  try {
-    const drawings = getSavedDrawings();
-    
-    // Check if drawing already exists
-    const existingIndex = drawings.findIndex(d => d.id === drawing.id);
-    
-    if (existingIndex >= 0) {
-      // Update existing drawing
-      drawings[existingIndex] = {
-        ...drawings[existingIndex],
-        ...drawing,
-        // Preserve image data if not provided in the update
-        imageData: drawing.imageData || drawings[existingIndex].imageData,
-        imageTransform: drawing.imageTransform || drawings[existingIndex].imageTransform
-      };
-    } else {
-      // Add new drawing
-      drawings.push(drawing);
-    }
-    
-    localStorage.setItem('savedDrawings', JSON.stringify(drawings));
-    
-    // Dispatch event to notify other components
-    window.dispatchEvent(new Event('storage'));
-  } catch (err) {
-    console.error('Error saving drawing:', err);
+export function saveDrawing(drawing: DrawingData): void {
+  const savedDrawings = getSavedDrawings();
+  
+  // Check if drawing with same ID exists and update it
+  const existingIndex = savedDrawings.findIndex(d => d.id === drawing.id);
+  
+  if (existingIndex >= 0) {
+    savedDrawings[existingIndex] = drawing;
+  } else {
+    savedDrawings.push(drawing);
   }
-};
+  
+  localStorage.setItem('savedDrawings', JSON.stringify(savedDrawings));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  
+  // Only attempt to sync if we're online
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    syncDrawingsWithBackend(savedDrawings)
+      .catch(err => {
+        // Don't show toast for expected offline errors
+        if (navigator.onLine) {
+          console.warn('Failed to sync drawings, will retry later:', err);
+        }
+      });
+  }
+}
 
-// Function to get all saved drawings from localStorage
-export const getSavedDrawings = (): DrawingData[] => {
-  try {
-    const drawingsJson = localStorage.getItem('savedDrawings');
-    if (!drawingsJson) return [];
-    
-    const drawings = JSON.parse(drawingsJson);
-    return Array.isArray(drawings) ? drawings : [];
-  } catch (err) {
-    console.error('Error getting saved drawings:', err);
+export function getSavedDrawings(): DrawingData[] {
+  const drawingsJson = localStorage.getItem('savedDrawings');
+  if (!drawingsJson) {
+    // Try to fetch from backend first if localStorage is empty
+    const { isOnline, isBackendAvailable } = getConnectionStatus();
+    if (isOnline && isBackendAvailable) {
+      fetchDrawingsFromBackend().catch(err => {
+        // Silent fail for initial load
+        console.log('Could not fetch drawings from backend, using local storage');
+      });
+    }
     return [];
   }
-};
-
-// Function to delete a drawing from localStorage
-export const deleteDrawing = (id: string): void => {
-  try {
-    const drawings = getSavedDrawings().filter(drawing => drawing.id !== id);
-    localStorage.setItem('savedDrawings', JSON.stringify(drawings));
-    
-    // Dispatch event to notify other components
-    window.dispatchEvent(new Event('storage'));
-  } catch (err) {
-    console.error('Error deleting drawing:', err);
-  }
-};
-
-// Function to create a new drawing
-export const createDrawing = (data: Partial<DrawingData>): DrawingData => {
-  return {
-    id: data.id || uuidv4(),
-    type: data.type || 'polygon',
-    coordinates: data.coordinates || [],
-    properties: data.properties || { color: '#3388ff' },
-    geoJSON: data.geoJSON || undefined,
-    svgPath: data.svgPath || undefined,
-    createdAt: data.createdAt || new Date()
-  };
-};
-
-// Function to update a drawing's image data
-export const updateDrawingImage = (drawingId: string, imageData: string): void => {
-  const drawings = getSavedDrawings();
-  const drawing = drawings.find(d => d.id === drawingId);
   
-  if (drawing) {
-    drawing.imageData = imageData;
+  try {
+    const drawings = JSON.parse(drawingsJson);
+    return drawings.map((drawing: any) => ({
+      ...drawing,
+      properties: {
+        ...drawing.properties,
+        createdAt: new Date(drawing.properties.createdAt)
+      }
+    }));
+  } catch (e) {
+    console.error('Failed to parse saved drawings', e);
+    return [];
+  }
+}
+
+export function deleteDrawing(id: string): void {
+  const savedDrawings = getSavedDrawings();
+  const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);
+  localStorage.setItem('savedDrawings', JSON.stringify(filteredDrawings));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  
+  // Only attempt to sync delete if we're online
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    deleteDrawingFromBackend(id).catch(err => {
+      // Don't show toast for expected offline errors
+      if (navigator.onLine) {
+        console.warn('Failed to delete drawing from backend, will retry later:', err);
+      }
+    });
+  }
+}
+
+async function syncDrawingsWithBackend(drawings: DrawingData[]): Promise<void> {
+  // Check connection status first
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (!isOnline || !isBackendAvailable) {
+    return; // Silently return if offline
+  }
+  
+  try {
+    // Add a timeout to the fetch to avoid hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    // Initialize transform if not already set
-    if (!drawing.imageTransform) {
-      drawing.imageTransform = getDefaultTransformOptions();
+    const response = await fetch('/api/drawings/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(drawings),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
     }
     
-    localStorage.setItem('savedDrawings', JSON.stringify(drawings));
+    console.log('Drawings successfully synced with backend');
+  } catch (error) {
+    // Check if this is a network error 
+    if (!navigator.onLine || error instanceof TypeError) {
+      // Silently handle expected offline errors
+      console.log('Cannot sync drawings while offline');
+      return;
+    }
     
-    // Dispatch events to notify components
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new CustomEvent('image-updated', { 
-      detail: { drawingId, imageData }
-    }));
+    console.error('Error syncing drawings with backend:', error);
+    throw new Error('Failed to sync drawings with backend');
   }
-};
+}
 
-// Function to update a drawing's image transform
-export const updateDrawingImageTransform = (
-  drawingId: string, 
-  transformOptions: ImageTransformOptions
-): void => {
-  const drawings = getSavedDrawings();
-  const drawing = drawings.find(d => d.id === drawingId);
-  
-  if (drawing) {
-    drawing.imageTransform = transformOptions;
-    localStorage.setItem('savedDrawings', JSON.stringify(drawings));
-    
-    // Dispatch events
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new CustomEvent('image-transform-updated', { 
-      detail: { drawingId, transformOptions }
-    }));
+async function fetchDrawingsFromBackend(): Promise<void> {
+  // Check connection status first
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (!isOnline || !isBackendAvailable) {
+    return; // Silently return if offline
   }
-};
+  
+  try {
+    // Add a timeout to the fetch to avoid hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch('/api/drawings', {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    const drawings = await response.json();
+    localStorage.setItem('savedDrawings', JSON.stringify(drawings));
+    console.log('Drawings successfully fetched from backend');
+  } catch (error) {
+    // Check if this is a network error
+    if (!navigator.onLine || error instanceof TypeError) {
+      // Silently handle expected offline errors
+      console.log('Cannot fetch drawings while offline');
+      return;
+    }
+    
+    console.error('Error fetching drawings from backend:', error);
+    throw new Error('Failed to fetch drawings from backend');
+  }
+}
+
+async function deleteDrawingFromBackend(id: string): Promise<void> {
+  // Check connection status first
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (!isOnline || !isBackendAvailable) {
+    return; // Silently return if offline
+  }
+  
+  try {
+    // Add a timeout to the fetch to avoid hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`/api/drawings/${id}`, {
+      method: 'DELETE',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    console.log('Drawing successfully deleted from backend');
+  } catch (error) {
+    // Check if this is a network error
+    if (!navigator.onLine || error instanceof TypeError) {
+      // Silently handle expected offline errors
+      console.log('Cannot delete drawing while offline');
+      return;
+    }
+    
+    console.error('Error deleting drawing from backend:', error);
+    throw new Error('Failed to delete drawing from backend');
+  }
+}
