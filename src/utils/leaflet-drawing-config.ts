@@ -40,10 +40,10 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
     });
     
     // Add the image clip mask if available
-    if (drawing.clipImage) {
+    if (options.clipImage) {
       layer.on('add', (event) => {
         setTimeout(() => {
-          applyClipMaskToLayer(layer, drawing.clipImage, drawing.svgPath);
+          applyClipMaskToLayer(layer, options.clipImage as string, drawing.svgPath);
         }, 100); // Small delay to ensure the layer is fully rendered
       });
     }
@@ -62,23 +62,36 @@ export const applyClipMaskToLayer = (layer: L.GeoJSON | null, imageUrl: string, 
   if (!layer || !imageUrl) return;
   
   try {
+    console.log('Applying clip mask with image:', imageUrl);
+    
     // Process each path in the GeoJSON layer
     layer.eachLayer((l: any) => {
-      if (!l._path) return;
+      if (!l._path) {
+        console.warn('No _path found in layer:', l);
+        return;
+      }
       
       const svgElement = l._path;
       if (!svgElement) return;
       
       // Get the SVG parent element
       const svg = svgElement.ownerSVGElement;
-      if (!svg) return;
+      if (!svg) {
+        console.warn('No SVG parent element found');
+        return;
+      }
       
       // Create a unique ID for this clip path
       const clipId = `clip-path-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Get the path data from the element
       const pathData = svgElement.getAttribute('d');
-      if (!pathData) return;
+      if (!pathData) {
+        console.warn('No path data found in SVG element');
+        return;
+      }
+      
+      console.log('Creating clip path with ID:', clipId);
       
       // Create a defs element if it doesn't exist
       let defs = svg.querySelector('defs');
@@ -115,6 +128,8 @@ export const applyClipMaskToLayer = (layer: L.GeoJSON | null, imageUrl: string, 
       image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
       image.setAttribute('clip-path', `url(#${clipId})`);
       image.setAttribute('href', imageUrl);
+      
+      console.log('Adding image with dimensions:', bbox.width, 'x', bbox.height);
       
       // Add the image before the path in the SVG
       svg.insertBefore(image, svgElement);

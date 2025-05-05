@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
-import { DrawingData } from "@/utils/geo-utils";
+import { DrawingData } from "@/utils/drawing-utils";
 import { saveFloorPlan, getFloorPlanById } from "@/utils/floor-plan-utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -69,21 +69,26 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         
         if (fileType === 'floor-plan') {
           setSelectedImage(dataUrl);
+          // Save to utils for this specific building
+          saveFloorPlan(
+            drawing.id,
+            dataUrl,
+            file.type.includes('pdf'),
+            file.name,
+            clipImage
+          );
         } else {
           setClipImage(dataUrl);
-        }
-        
-        // Save to utils for this specific building
-        saveFloorPlan(
-          drawing.id,
-          fileType === 'floor-plan' ? dataUrl : selectedImage || '',
-          file.type.includes('pdf'),
-          file.name,
-          fileType === 'map-overlay' ? dataUrl : clipImage || undefined
-        );
-        
-        // Dispatch the floorPlanUpdated event to refresh the map
-        if (fileType === 'map-overlay') {
+          // Save the clip image to the floor plan
+          saveFloorPlan(
+            drawing.id,
+            selectedImage || '',
+            isPdf,
+            fileName,
+            dataUrl
+          );
+          
+          // Dispatch the floorPlanUpdated event to refresh the map
           window.dispatchEvent(new Event('floorPlanUpdated'));
         }
         
