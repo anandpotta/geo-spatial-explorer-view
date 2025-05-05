@@ -1,12 +1,11 @@
 
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { useEditMode } from '@/hooks/useEditMode';
-import { usePathElements } from '@/hooks/usePathElements';
-import { useShapeCreation } from '@/hooks/useShapeCreation';
-import { toast } from 'sonner';
-import DrawToolsCore from './drawing/DrawToolsCore';
+import { useEditMode } from './hooks/useEditMode';
+import { usePathElements } from './hooks/usePathElements';
+import { useShapeCreation } from './hooks/useShapeCreation';
+import DrawToolsCore from './core/DrawToolsCore';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
@@ -15,7 +14,7 @@ interface DrawToolsProps {
   featureGroup: L.FeatureGroup;
 }
 
-const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
+const DrawToolsMain = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const drawToolsCoreRef = useRef<any>(null);
   
   // Use hooks for separated functionality
@@ -43,6 +42,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   );
 });
 
-DrawTools.displayName = 'DrawTools';
+DrawToolsMain.displayName = 'DrawToolsMain';
 
-export default DrawTools;
+export default DrawToolsMain;
