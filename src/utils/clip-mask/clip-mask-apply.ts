@@ -1,4 +1,3 @@
-
 /**
  * Core functionality for applying clip masks to SVG elements
  * This file coordinates the clip mask application process using
@@ -148,7 +147,8 @@ export const applyImageClipMask = (
         
         // Store the URL for future reference if it's not already stored
         if (typeof imageUrl === 'string' && imageUrl.startsWith('blob:')) {
-          storeImageUrl(id, imageUrl);
+          // Make sure to provide a filename or default to 'uploaded-image'
+          storeImageUrl(id, imageUrl, 'uploaded-image');
         }
         
         // Force a repaint to ensure changes are rendered

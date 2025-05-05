@@ -10,5 +10,6 @@ export { applyImageClipMask } from './clip-mask-apply';
 export { removeClipMask } from './clip-mask-remove';
 
 // Export additional utilities that might be needed externally
-export { getStoredImageUrl } from './core/image-loading';
+export { storeImageUrl, retrieveFloorPlanImageUrl } from './core/image-loading';
 export { resolveImageUrl } from './core/url-handling';
+
