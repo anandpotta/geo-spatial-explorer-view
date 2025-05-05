@@ -34,9 +34,13 @@ export const createImageControlsLayer = ({
   const imageControlContainer = document.createElement('div');
   imageControlContainer.className = 'image-controls-wrapper';
   
-  if (isPersistent) {
-    imageControlContainer.classList.add('persistent-control');
-  }
+  // Always add persistent-control class to ensure visibility
+  imageControlContainer.classList.add('persistent-control');
+  
+  // Make sure styles are applied immediately
+  imageControlContainer.style.opacity = '1';
+  imageControlContainer.style.visibility = 'visible';
+  imageControlContainer.style.display = 'block';
   
   const imageControlLayer = L.marker(imageControlsPosition, {
     icon: L.divIcon({
@@ -49,10 +53,8 @@ export const createImageControlsLayer = ({
     zIndexOffset: 1000
   });
   
-  // Store the layer reference so we can access it later
-  if (isPersistent) {
-    (imageControlLayer as any)._isPersistent = true;
-  }
+  // Always mark as persistent
+  (imageControlLayer as any)._isPersistent = true;
   
   if (isMounted) {
     try {
@@ -64,15 +66,9 @@ export const createImageControlsLayer = ({
         <ImageControls 
           drawingId={drawingId} 
           onRemoveShape={onRemoveShape} 
+          alwaysExpanded={true} // Always show all controls
         />
       );
-      
-      // Force a small delay to ensure visibility
-      setTimeout(() => {
-        if (imageControlContainer.style) {
-          imageControlContainer.style.opacity = '1';
-        }
-      }, 50);
     } catch (err) {
       console.error('Error rendering image controls:', err);
     }

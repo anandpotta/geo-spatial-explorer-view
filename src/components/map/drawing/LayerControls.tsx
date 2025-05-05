@@ -32,8 +32,8 @@ export const createLayerControls = ({
   onRemoveShape,
   onUploadRequest
 }: LayerControlsProps) => {
-  // Only proceed if we're in edit mode and component is mounted
-  if (activeTool !== 'edit' || !isMounted) return;
+  // Only proceed if component is mounted (we removed the edit mode check here)
+  if (!isMounted) return;
 
   // Check if the map is valid
   if (!validateFeatureGroupMap(featureGroup)) {
@@ -47,19 +47,21 @@ export const createLayerControls = ({
   
   if (!buttonPosition) return;
   
-  // Create remove button control
-  createRemoveButtonControl({
-    layer,
-    drawingId,
-    buttonPosition,
-    featureGroup,
-    removeButtonRoots,
-    isMounted,
-    onRemoveShape
-  });
+  // Create remove button control - only in edit mode
+  if (activeTool === 'edit') {
+    createRemoveButtonControl({
+      layer,
+      drawingId,
+      buttonPosition,
+      featureGroup,
+      removeButtonRoots,
+      isMounted,
+      onRemoveShape
+    });
+  }
   
-  // Create upload button control
-  if (uploadButtonPosition) {
+  // Create upload button control - only in edit mode
+  if (activeTool === 'edit' && uploadButtonPosition) {
     createUploadButtonControl({
       drawingId,
       uploadButtonPosition,
@@ -70,22 +72,22 @@ export const createLayerControls = ({
     });
   }
   
-  // Create image controls for all drawings in edit mode
-  // This ensures the controls are always available in edit mode
+  // Create image controls for all drawings with images, regardless of edit mode
   if (imageControlsPosition) {
-    // Add a small delay to ensure image controls are created after edit mode is activated
-    setTimeout(() => {
-      if (isMounted && activeTool === 'edit') {
-        createImageControlsLayer({
-          drawingId,
-          imageControlsPosition,
-          featureGroup,
-          imageControlRoots,
-          isMounted,
-          onRemoveShape,
-          isPersistent: true  // Mark as persistent to prevent removal
-        });
-      }
-    }, 100);
+    // Check if there is a floor plan for this drawing
+    const hasImage = hasFloorPlan(drawingId);
+    
+    if (hasImage) {
+      // Create image controls immediately and mark as persistent
+      createImageControlsLayer({
+        drawingId,
+        imageControlsPosition,
+        featureGroup,
+        imageControlRoots,
+        isMounted,
+        onRemoveShape,
+        isPersistent: true  // Always mark as persistent
+      });
+    }
   }
 };

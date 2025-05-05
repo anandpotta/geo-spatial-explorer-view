@@ -49,15 +49,6 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
           // Update state and show notification
           setIsEditActive(true);
           toast.success('Edit mode activated. Select a shape to modify it.');
-          
-          // Make sure any image controls are visible
-          setTimeout(() => {
-            document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
-              (el as HTMLElement).style.opacity = '1';
-              (el as HTMLElement).style.visibility = 'visible';
-              (el as HTMLElement).style.display = 'block';
-            });
-          }, 200);
         }
       } else if (!shouldEnableEdit) {
         // Deactivate edit mode
@@ -73,6 +64,15 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
           deleteHandler.disable();
         }
       }
+      
+      // Always ensure image controls are visible regardless of edit mode
+      setTimeout(() => {
+        document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
+          (el as HTMLElement).style.opacity = '1';
+          (el as HTMLElement).style.visibility = 'visible';
+          (el as HTMLElement).style.display = 'block';
+        });
+      }, 200);
     } catch (err) {
       console.error('Error updating edit mode:', err);
     }
@@ -101,40 +101,45 @@ export function useEditMode(editControlRef: RefObject<any>, activeTool: string |
       if (shouldBeActive !== isEditActive) {
         updateEditMode();
       }
-    }, 500); // Check more frequently (was 1000)
+      
+      // Always ensure image controls are visible
+      document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
+        (el as HTMLElement).style.opacity = '1';
+        (el as HTMLElement).style.visibility = 'visible';
+        (el as HTMLElement).style.display = 'block';
+      });
+    }, 500);
     
     return () => {
       clearInterval(intervalId);
     };
   }, [editControlRef, activeTool, updateEditMode, isEditActive]);
   
-  // Add a special effect to handle DOM cleanup and preserve image controls
+  // Add a special effect to handle DOM changes
   useEffect(() => {
-    if (activeTool === 'edit') {
-      // Monitor for DOM changes that might remove our controls
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-            // Re-show any image controls that might have been hidden
-            setTimeout(() => {
-              document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
-                (el as HTMLElement).style.opacity = '1';
-                (el as HTMLElement).style.visibility = 'visible';
-                (el as HTMLElement).style.display = 'block';
-              });
-            }, 10);
-          }
-        });
+    // Monitor for DOM changes that might remove our controls
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
+          // Re-show any image controls that might have been hidden
+          setTimeout(() => {
+            document.querySelectorAll('.image-controls-wrapper').forEach((el) => {
+              (el as HTMLElement).style.opacity = '1';
+              (el as HTMLElement).style.visibility = 'visible';
+              (el as HTMLElement).style.display = 'block';
+            });
+          }, 10);
+        }
       });
-      
-      // Start observing the document with the configured parameters
-      observer.observe(document.body, { childList: true, subtree: true });
-      
-      return () => {
-        observer.disconnect();
-      };
-    }
-  }, [activeTool]);
+    });
+    
+    // Start observing the document with the configured parameters
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   
   return isEditActive;
 }

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -69,11 +68,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           transition: opacity 0.2s ease-in-out;
           z-index: 1000 !important;
           pointer-events: auto !important;
+          visibility: visible !important;
+          display: block !important;
         }
         .persistent-control {
           visibility: visible !important;
           display: block !important;
           opacity: 1 !important;
+          z-index: 9999 !important;
+          position: relative !important;
+        }
+        .image-controls-container {
+          z-index: 9000 !important;
+          pointer-events: auto !important;
         }
       `;
       document.head.appendChild(styleEl);

@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from 'react';
-import { Trash2, Edit3 } from 'lucide-react';
+import { Trash2, Edit3, Image } from 'lucide-react';
 import MapControls from './drawing/MapControls';
 import { deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
 import { deleteDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -41,7 +41,27 @@ const DrawingTools = ({
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [isEditActive, setIsEditActive] = useState(false);
+  const [hasImagesWithControls, setHasImagesWithControls] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Check if we have any images with controls
+  useEffect(() => {
+    const checkForImages = () => {
+      const floorPlans = JSON.parse(localStorage.getItem('floorPlans') || '{}');
+      setHasImagesWithControls(Object.keys(floorPlans).length > 0);
+    };
+    
+    checkForImages();
+    
+    // Listen for storage changes and visibility changes
+    window.addEventListener('storage', checkForImages);
+    window.addEventListener('floorPlanUpdated', checkForImages);
+    
+    return () => {
+      window.removeEventListener('storage', checkForImages);
+      window.removeEventListener('floorPlanUpdated', checkForImages);
+    };
+  }, []);
   
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -107,9 +127,11 @@ const DrawingTools = ({
 
     localStorage.removeItem('savedMarkers');
     localStorage.removeItem('savedDrawings');
+    localStorage.removeItem('floorPlans');
 
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('markersUpdated'));
+    window.dispatchEvent(new Event('floorPlanUpdated'));
     
     if (onClearAll) {
       onClearAll();
@@ -160,6 +182,16 @@ const DrawingTools = ({
           <Edit3 className="h-5 w-5 mr-2" />
           <span>{isEditActive ? 'Editing Active' : 'Edit Layers'}</span>
         </button>
+        
+        {hasImagesWithControls && (
+          <>
+            <div className="h-4" />
+            <div className="w-full p-2 rounded-md bg-purple-500 text-white flex items-center justify-center">
+              <Image className="h-5 w-5 mr-2" />
+              <span className="text-sm">Image Controls Active</span>
+            </div>
+          </>
+        )}
       </div>
 
       <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
