@@ -8,7 +8,7 @@ import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
-import FloorPlanView from './FloorPlanView';
+import FloorPlanView from './floor-plan/FloorPlanView';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
