@@ -1,5 +1,4 @@
-
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -8,9 +7,8 @@ import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;
   getDrawTools: () => any;
-  activateEditMode: () => boolean;
+  activateEditMode: () => void;
   openFileUploadDialog: (drawingId: string) => void;
-  getSvgPaths: () => string[];
 }
 
 export function useDrawingControls() {
@@ -20,90 +18,60 @@ export function useDrawingControls() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editActivationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [activationAttemptCount, setActivationAttemptCount] = useState(0);
 
-  const isMapValidCheck = () => {
+  const isMapValid = () => {
     // Check if the feature group is attached to a valid map
     const featureGroup = featureGroupRef.current;
     try {
       const map = getMapFromLayer(featureGroup);
       if (!map || !(map as any)._loaded) {
+        console.warn("Map is not fully loaded, cannot proceed");
+        toast.error("Map view is not ready. Please try again in a moment.");
         return false;
       }
 
       // Check if map container is valid
       if (!map.getContainer() || !document.body.contains(map.getContainer())) {
+        console.warn("Map container is not in DOM, cannot proceed");
+        toast.error("Map view is not available. Please refresh the page.");
         return false;
       }
       
       return true;
     } catch (err) {
       console.error('Error checking map validity:', err);
+      toast.error("Could not validate map state. Please refresh the page.");
       return false;
     }
   };
 
-  const activateEditMode = useCallback((): boolean => {
-    if (!isMapValidCheck()) return false;
-    
-    // Clear any existing timeout
-    if (editActivationTimeoutRef.current) {
-      clearTimeout(editActivationTimeoutRef.current);
-      editActivationTimeoutRef.current = null;
-    }
+  const activateEditMode = () => {
+    if (!isMapValid()) return;
 
-    // Track attempts to prevent excessive logging
-    setActivationAttemptCount(count => {
-      const newCount = count + 1;
-      
+    if (drawToolsRef.current?.getEditControl()) {
       try {
-        if (!drawToolsRef.current) {
-          // Only log on first few attempts
-          if (newCount <= 3) {
-            console.log("Edit control not available yet");
-          }
-          return newCount;
-        }
-        
-        // Use the new activateEditMode method if available
-        if (typeof drawToolsRef.current.activateEditMode === 'function') {
-          const result = drawToolsRef.current.activateEditMode();
-          if (result) {
-            // Always ensure image controls are visible
-            setTimeout(() => {
-              document.querySelectorAll('.image-controls-wrapper').forEach(el => {
-                (el as HTMLElement).style.opacity = '1';
-                (el as HTMLElement).style.visibility = 'visible';
-                (el as HTMLElement).style.display = 'block';
-              });
-            }, 100);
-            
-            return 0; // Reset counter on success
-          }
-        }
-        
-        // Fall back to direct access if method not available
-        const editControl = drawToolsRef.current.getEditControl?.();
+        console.log("Attempting to activate edit mode");
+        const editControl = drawToolsRef.current.getEditControl();
         if (editControl) {
           const editHandler = editControl._toolbars?.edit?._modes?.edit?.handler;
           if (editHandler && typeof editHandler.enable === 'function') {
             editHandler.enable();
-            return 0; // Reset counter on success
+            console.log("Edit mode activated successfully");
+          } else {
+            console.warn("Edit handler not found or not a function");
           }
         }
       } catch (err) {
         console.error('Failed to activate edit mode:', err);
+        toast.error('Could not enable edit mode');
       }
-      
-      return newCount;
-    });
-    
-    return false;
-  }, []);
+    } else {
+      console.warn("Draw tools ref or edit control not available");
+    }
+  };
 
   const openFileUploadDialog = (drawingId: string) => {
-    if (!isMapValidCheck()) return;
+    if (!isMapValid()) return;
     
     setSelectedDrawing(drawingId);
     if (fileInputRef.current) {

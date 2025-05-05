@@ -6,31 +6,51 @@ export function useLayerReferences() {
   const isMountedRef = useRef(true);
   const removeButtonRoots = useRef<Map<string, any>>(new Map());
   const uploadButtonRoots = useRef<Map<string, any>>(new Map());
-  const imageControlRoots = useRef<Map<string, any>>(new Map());
   const layersRef = useRef<Map<string, L.Layer>>(new Map());
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
       
-      // Cleanup all React roots
-      const cleanup = (rootsMap: Map<string, any>) => {
-        rootsMap.forEach(root => {
-          try {
-            if (typeof root.unmount === 'function') {
+      // Safely unmount React roots with proper error handling
+      const safelyUnmountRoot = (root: any) => {
+        if (!root) return;
+        
+        try {
+          // Check if root has unmount method before calling
+          if (root.unmount && typeof root.unmount === 'function') {
+            // Use a try-catch to prevent errors during unmounting
+            try {
               root.unmount();
+            } catch (err) {
+              console.error('Error unmounting React root:', err);
             }
-          } catch (err) {
-            console.error('Error unmounting root:', err);
           }
-        });
-        rootsMap.clear();
+        } catch (err) {
+          console.error('Error accessing React root:', err);
+        }
       };
       
-      cleanup(removeButtonRoots.current);
-      cleanup(uploadButtonRoots.current);
-      cleanup(imageControlRoots.current);
+      // Safely clean up all React roots
+      try {
+        removeButtonRoots.current.forEach(root => {
+          safelyUnmountRoot(root);
+        });
+      } catch (err) {
+        console.error('Error cleaning up remove button roots:', err);
+      }
       
+      removeButtonRoots.current.clear();
+      
+      try {
+        uploadButtonRoots.current.forEach(root => {
+          safelyUnmountRoot(root);
+        });
+      } catch (err) {
+        console.error('Error cleaning up upload button roots:', err);
+      }
+      
+      uploadButtonRoots.current.clear();
       layersRef.current.clear();
     };
   }, []);
@@ -39,7 +59,6 @@ export function useLayerReferences() {
     isMountedRef,
     removeButtonRoots,
     uploadButtonRoots,
-    imageControlRoots,
     layersRef
   };
 }
