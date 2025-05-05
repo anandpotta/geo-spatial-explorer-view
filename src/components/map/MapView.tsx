@@ -8,7 +8,7 @@ import L from 'leaflet';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import FloorPlanView from './FloorPlanView';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -59,6 +59,14 @@ const MapView = ({
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const drawingControlsRef = useRef(null);
+  
+  // Added a key for MarkersContainer to force remount when markers change
+  const [markersKey, setMarkersKey] = useState(0);
+  
+  // Update the key when markers change to force a clean remount
+  useEffect(() => {
+    setMarkersKey(prev => prev + 1);
+  }, [markers.length]);
 
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
@@ -134,6 +142,7 @@ const MapView = ({
         />
         
         <MarkersContainer
+          key={`markers-container-${markersKey}`}
           markers={markers}
           tempMarker={tempMarker}
           markerName={markerName}

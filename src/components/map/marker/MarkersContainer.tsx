@@ -1,7 +1,7 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 
 interface MarkersContainerProps {
   markers: LocationMarker[];
@@ -24,10 +24,28 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
-  // Create a memoized version of markers with unique IDs to prevent duplicates
-  const uniqueMarkers = markers.filter(
-    (marker, index, self) => index === self.findIndex(m => m.id === marker.id)
-  );
+  // Use a state to store deduplicated markers
+  const [uniqueMarkers, setUniqueMarkers] = useState<LocationMarker[]>([]);
+  
+  // Update unique markers whenever the markers prop changes
+  useEffect(() => {
+    // Create a map to ensure uniqueness by ID
+    const markerMap = new Map<string, LocationMarker>();
+    
+    // Process markers in original order to maintain consistency
+    markers.forEach(marker => {
+      // Only add if not already in the map
+      if (!markerMap.has(marker.id)) {
+        markerMap.set(marker.id, marker);
+      }
+    });
+    
+    // Convert map back to array
+    const deduplicatedMarkers = Array.from(markerMap.values());
+    console.log(`Deduplicated ${markers.length} markers down to ${deduplicatedMarkers.length}`);
+    
+    setUniqueMarkers(deduplicatedMarkers);
+  }, [markers]);
   
   return (
     <MarkersList
@@ -44,13 +62,18 @@ const MarkersContainer = memo(({
 }, (prevProps, nextProps) => {
   // Custom comparison function for memo
   // Only re-render if the keys that we care about changed
-  return (
-    prevProps.tempMarker === nextProps.tempMarker &&
-    prevProps.markerName === nextProps.markerName &&
-    prevProps.markerType === nextProps.markerType &&
-    JSON.stringify(prevProps.markers.map(m => m.id)) === 
-    JSON.stringify(nextProps.markers.map(m => m.id))
-  );
+  const markersChanged = prevProps.markers.length !== nextProps.markers.length ||
+    JSON.stringify(prevProps.markers.map(m => m.id).sort()) !== 
+    JSON.stringify(nextProps.markers.map(m => m.id).sort());
+  
+  const tempMarkerChanged = 
+    prevProps.tempMarker !== nextProps.tempMarker;
+  
+  const otherPropsChanged =
+    prevProps.markerName !== nextProps.markerName ||
+    prevProps.markerType !== nextProps.markerType;
+  
+  return !(markersChanged || tempMarkerChanged || otherPropsChanged);
 });
 
 MarkersContainer.displayName = 'MarkersContainer';
