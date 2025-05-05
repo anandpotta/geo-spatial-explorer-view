@@ -1,7 +1,7 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
+import { createLayerFromDrawing } from '@/components/map/drawing/layer-factory/LayerCreator';
 import { cleanupLayers } from './layer-cleanup-utils';
 import { ImageTransformOptions } from '@/utils/image-transform-utils';
 

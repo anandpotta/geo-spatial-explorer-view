@@ -1,9 +1,10 @@
 
+import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { ImageTransformOptions } from '@/utils/image-transform-utils';
-import { createLayerFromDrawing } from './layer-factory/LayerCreator';
+import { layerFactoryCore } from './LayerFactoryCore';
 
-interface CreateLayerOptions {
+export interface LayerFactoryOptions {
   drawing: DrawingData;
   featureGroup: L.FeatureGroup;
   activeTool: string | null;
@@ -18,6 +19,15 @@ interface CreateLayerOptions {
   onImageTransform?: (drawingId: string, options: Partial<ImageTransformOptions>) => void;
 }
 
-// This file re-exports the createLayerFromDrawing function from LayerCreator.ts
-// for backward compatibility
-export { createLayerFromDrawing };
+/**
+ * Creates a new layer from a drawing and adds it to the feature group
+ */
+export const createLayerFromDrawing = (options: LayerFactoryOptions) => {
+  if (!options.drawing.geoJSON || !options.isMounted) return;
+  
+  try {
+    layerFactoryCore(options);
+  } catch (err) {
+    console.error('Error adding drawing layer:', err);
+  }
+};
