@@ -12,22 +12,9 @@ import {
 } from './cache-manager';
 import { generateElementIdentifier } from './element-utils';
 import { toast } from 'sonner';
-import L from 'leaflet';
 import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
 import { hasFloorPlan } from '@/utils/floor-plan-utils';
-
-export interface ApplyClipMaskOptions {
-  drawingId: string;
-  layer: L.Layer;
-  imageUrl?: string; // Optional imageUrl
-  retryOnFailure?: boolean;
-  isMounted?: boolean;
-}
-
-export interface ApplyWithStabilityOptions extends ApplyClipMaskOptions {
-  stabilityWaitTime?: number;
-  maxRetries?: number;
-}
+import { ApplyClipMaskOptions, ApplyWithStabilityOptions } from './types';
 
 // Track the last time a clip mask was applied to any drawing
 let lastGlobalApplyTime = 0;
