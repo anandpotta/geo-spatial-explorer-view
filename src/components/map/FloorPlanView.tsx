@@ -56,6 +56,11 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       toast('Large file detected, processing may take a moment...', {
         duration: 3000
       });
+      
+      // Early warning for very large files
+      if (file.size > 4 * 1024 * 1024) {
+        toast.warning('File size exceeds 4MB and may not be stored properly');
+      }
     }
     
     setIsUploading(true);
@@ -70,10 +75,9 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         const result = e.target?.result;
         if (result && drawing?.id) {
           const dataUrl = result as string;
-          setSelectedImage(dataUrl);
           
           // Save to utils for this specific building
-          saveFloorPlan(
+          const success = saveFloorPlan(
             drawing.id,
             {
               data: dataUrl,
@@ -82,12 +86,18 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             }
           );
           
-          toast.success('Floor plan uploaded successfully');
-          
-          // Trigger a custom event to ensure clip masks are applied
-          window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-            detail: { drawingId: drawing.id }
-          }));
+          if (success) {
+            setSelectedImage(dataUrl);
+            // Success toast is handled in saveFloorPlan function
+            
+            // Trigger a custom event to ensure clip masks are applied
+            window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
+              detail: { drawingId: drawing.id }
+            }));
+          } else {
+            // Error toast is handled in saveFloorPlan function
+            console.log('Failed to save floor plan due to storage constraints');
+          }
         }
         setIsUploading(false);
       };
