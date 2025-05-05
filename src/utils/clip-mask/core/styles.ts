@@ -36,6 +36,17 @@ if (typeof document !== 'undefined') {
       fill-opacity: 1 !important;
     }
     
+    /* Make sure pattern fills are visible */
+    svg path[fill^="url(#pattern-"] {
+      fill-opacity: 1 !important;
+      opacity: 1 !important;
+    }
+    
+    /* Ensure SVG patterns render correctly */
+    svg pattern {
+      patternUnits: userSpaceOnUse !important;
+    }
+    
     @keyframes dash {
       to {
         stroke-dashoffset: 8;

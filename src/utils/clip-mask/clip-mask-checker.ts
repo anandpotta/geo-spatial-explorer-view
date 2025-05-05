@@ -7,6 +7,8 @@
  * Checks if an SVG path element has a clip mask applied
  */
 export const hasClipMaskApplied = (svgPath: SVGPathElement): boolean => {
+  if (!svgPath) return false;
+  
   // Check for data attribute first (most reliable)
   if (svgPath.getAttribute('data-has-clip-mask') === 'true') {
     return true;
@@ -32,6 +34,49 @@ export const hasClipMaskApplied = (svgPath: SVGPathElement): boolean => {
   const clipPathAttr = svgPath.getAttribute('clip-path');
   if (clipPathAttr && clipPathAttr.includes('url(#clip-')) {
     return true;
+  }
+  
+  // Check for parent containing a pattern with this path's ID
+  try {
+    const svg = svgPath.closest('svg');
+    if (svg) {
+      const drawingId = svgPath.getAttribute('data-drawing-id');
+      if (drawingId) {
+        const pattern = svg.querySelector(`pattern[id^="pattern-${drawingId}"]`);
+        if (pattern) {
+          return true;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error checking for pattern in SVG:', e);
+  }
+  
+  return false;
+};
+
+/**
+ * Checks if an image exists in the clip mask pattern
+ */
+export const hasImageInClipMask = (svgPath: SVGPathElement): boolean => {
+  if (!svgPath) return false;
+  
+  try {
+    const svg = svgPath.closest('svg');
+    if (!svg) return false;
+    
+    const drawingId = svgPath.getAttribute('data-drawing-id');
+    if (!drawingId) return false;
+    
+    const patternId = `pattern-${drawingId}`;
+    const pattern = svg.querySelector(`#${patternId}`);
+    
+    if (pattern) {
+      const image = pattern.querySelector('image');
+      return !!image;
+    }
+  } catch (e) {
+    console.warn('Error checking for image in clip mask:', e);
   }
   
   return false;

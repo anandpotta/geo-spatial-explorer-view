@@ -3,8 +3,8 @@ import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import L from 'leaflet';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { applyImageClipMask, findSvgPathByDrawingId, hasClipMaskApplied } from '@/utils/svg-clip-mask';
-import { debugSvgElement } from '@/utils/svg-debug-utils';
+import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
+import { storeImageUrl } from '@/utils/clip-mask/core/image-loading';
 
 export function useFileUpload({ onUploadToDrawing }: { 
   onUploadToDrawing?: (drawingId: string, file: File) => void 
@@ -45,18 +45,7 @@ export function useFileUpload({ onUploadToDrawing }: {
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
       // Store the image URL in localStorage for future use
-      try {
-        const floorPlanKey = `floorplan-${selectedDrawingId}`;
-        const floorPlanData = { 
-          imageUrl, 
-          timestamp: Date.now(),
-          fileName: file.name
-        };
-        localStorage.setItem(floorPlanKey, JSON.stringify(floorPlanData));
-        console.log(`Stored image URL in localStorage with key: ${floorPlanKey}`);
-      } catch (err) {
-        console.error('Error storing image URL in localStorage:', err);
-      }
+      storeImageUrl(selectedDrawingId, imageUrl, file.name);
       
       // Show loading toast
       toast.loading('Applying image to drawing...', { id: `uploading-${selectedDrawingId}` });
@@ -97,6 +86,10 @@ export function useFileUpload({ onUploadToDrawing }: {
               toast.success(`${file.name} applied to drawing`, { id: `uploading-${selectedDrawingId}` });
               imageAppliedRef.current.add(selectedDrawingId);
               processingRef.current.delete(selectedDrawingId);
+              
+              // Add data attribute for clip mask
+              svgPathElement.setAttribute('data-has-clip-mask', 'true');
+              svgPathElement.setAttribute('data-image-url', imageUrl);
               
               // Force the browser to recognize changes
               setTimeout(() => {
