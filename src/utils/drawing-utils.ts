@@ -1,8 +1,10 @@
+
 // Add the clipImage property to the DrawingData interface
 export interface DrawingProperties {
   name: string;
   type: string;
   color: string;
+  associatedMarkerId?: string; // Added to support marker association
 }
 
 export interface DrawingData {
