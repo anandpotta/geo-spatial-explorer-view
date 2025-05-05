@@ -80,7 +80,7 @@ export function initializeViewer(options: ViewerInitializationOptions): void {
     setDefaultCameraView(viewer);
 
     // Force multiple render cycles to ensure the globe is visible
-    for (let i = A0; i < 30; i++) { // Increased render cycles
+    for (let i = 0; i < 30; i++) { // Fixed: Changed A0 to 0
       viewer.scene.requestRender();
     }
     
