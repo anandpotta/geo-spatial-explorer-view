@@ -8,8 +8,7 @@ import { hasClipMaskApplied } from './clip-mask-checker';
 import { 
   loadingImages, 
   toastShown,
-  storeImageUrl,
-  retrieveFloorPlanImageUrl
+  storeImageUrl 
 } from './core/image-loading';
 import { getCurrentUser } from '@/services/auth-service';
 import { 
@@ -59,12 +58,6 @@ export const applyImageClipMask = (
     // Log debugging info
     console.log(`Applying clip mask for drawing ${id}`);
     console.log(`Path element:`, pathElement);
-    
-    // Try to get a stored floor plan image URL if not provided
-    if (!imageUrl) {
-      console.log('No imageUrl provided, trying to retrieve from storage');
-      imageUrl = retrieveFloorPlanImageUrl(id);
-    }
     
     // Resolve the image URL
     let imageUrlString = resolveImageUrl(imageUrl, id);

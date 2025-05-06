@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
@@ -27,16 +27,6 @@ const MapViews: React.FC<MapViewsProps> = ({
   activeTool,
   handleClearAll
 }) => {
-  // Dispatch event when the view mode changes
-  useEffect(() => {
-    // Dispatch a custom event when the view changes
-    window.dispatchEvent(new CustomEvent('viewModeChanged', { 
-      detail: { view: currentView }
-    }));
-    
-    console.log(`View mode changed to: ${currentView}`);
-  }, [currentView]);
-
   return (
     <>
       <div 
