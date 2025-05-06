@@ -5,7 +5,7 @@ import { useThreeGlobe } from '@/hooks/useThreeGlobe';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
-  onMapReady?: () => void;
+  onMapReady?: (viewer?: any) => void;
   onFlyComplete?: () => void;
 }
 
@@ -29,7 +29,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   } = useThreeGlobe(containerRef, () => {
     console.log("ThreeGlobe: Scene initialized successfully");
     setIsGlobeReady(true);
-    if (onMapReady) onMapReady();
+    if (onMapReady) onMapReady({ scene, camera, renderer, globe });
   });
   
   // Handle flying to a location when selectedLocation changes

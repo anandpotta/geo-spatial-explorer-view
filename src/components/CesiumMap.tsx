@@ -21,7 +21,7 @@ const CesiumMap: React.FC<CesiumMapProps> = (props) => {
         selectedLocation={props.selectedLocation}
         onMapReady={(viewer) => {
           if (props.onMapReady) props.onMapReady();
-          if (props.onViewerReady) props.onViewerReady(viewer);
+          if (props.onViewerReady && viewer) props.onViewerReady(viewer);
         }}
         onFlyComplete={props.onFlyComplete}
       />

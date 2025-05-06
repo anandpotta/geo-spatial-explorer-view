@@ -5,7 +5,7 @@ import ThreeGlobe from '@/components/globe/ThreeGlobe';
 
 interface ThreeGlobeMapProps {
   selectedLocation?: Location;
-  onMapReady?: () => void;
+  onMapReady?: (viewer?: any) => void;
   onFlyComplete?: () => void;
 }
 
@@ -18,10 +18,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const [mapError, setMapError] = useState<string | null>(null);
   
   // Handle map ready state
-  const handleMapReady = () => {
+  const handleMapReady = (viewer?: any) => {
     console.log("ThreeGlobeMap: Globe is ready");
     setIsLoading(false);
-    if (onMapReady) onMapReady();
+    if (onMapReady) onMapReady(viewer);
   };
   
   // Clean up resources on unmount
