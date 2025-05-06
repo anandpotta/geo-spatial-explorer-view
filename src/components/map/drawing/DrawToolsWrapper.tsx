@@ -8,10 +8,10 @@ interface DrawToolsWrapperProps {
   activeTool: string | null;
   onClearAll?: () => void;
   featureGroup: L.FeatureGroup;
-  ref: ForwardedRef<any>;
 }
 
-const DrawToolsWrapper: React.FC<DrawToolsWrapperProps> = React.forwardRef(({
+// Using forwardRef properly without trying to assign it to a FC type directly
+const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
   onCreated,
   activeTool,
   onClearAll,
