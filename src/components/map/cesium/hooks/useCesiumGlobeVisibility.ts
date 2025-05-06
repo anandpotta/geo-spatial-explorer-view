@@ -56,7 +56,9 @@ export function useCesiumGlobeVisibility(
     const timeouts: number[] = [];
     
     renderIntervals.forEach(interval => {
-      const timeout = setTimeout(() => {
+      // Fix: Convert setTimeout return value to number using unary plus 
+      // or store as NodeJS.Timeout and use correct type for timeouts array
+      const timeoutId = setTimeout(() => {
         if (viewer && !viewer.isDestroyed()) {
           // Force multiple renders
           for (let i = 0; i < 5; i++) {
@@ -64,7 +66,9 @@ export function useCesiumGlobeVisibility(
           }
         }
       }, interval);
-      timeouts.push(timeout);
+      
+      // Fix: Store the timeout ID as a number
+      timeouts.push(Number(timeoutId));
     });
 
     return () => {

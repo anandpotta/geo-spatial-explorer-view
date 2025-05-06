@@ -39,7 +39,7 @@ export function flyToLocation(
     let entity = entityRef.current;
 
     // If we have an existing entity, update it rather than creating a new one
-    if (!entity || entity.isDestroyed) {
+    if (!entity || !viewer.entities.contains(entity)) {
       entity = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(location.x, location.y),
         point: {
