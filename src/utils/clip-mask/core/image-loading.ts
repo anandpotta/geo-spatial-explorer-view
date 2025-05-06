@@ -112,14 +112,14 @@ export const retrieveFloorPlanImageUrl = (drawingId: string): string | null => {
 };
 
 /**
- * Clear the cache when user changes
+ * Clear the cache when user changes or view mode changes
  */
 export const clearImageUrlCache = (): void => {
   imageUrlCache.clear();
   console.log('Image URL cache cleared');
 };
 
-// Listen for user changes
+// Listen for user changes and view mode changes
 if (typeof window !== 'undefined') {
   window.addEventListener('userChanged', () => {
     clearImageUrlCache();
@@ -133,5 +133,16 @@ if (typeof window !== 'undefined') {
   
   window.addEventListener('storage', () => {
     clearImageUrlCache();
+  });
+  
+  // Add listener for view mode changes (tiled view)
+  window.addEventListener('viewModeChanged', () => {
+    clearImageUrlCache();
+    console.log('Image URL cache cleared due to view mode change');
+    
+    // Dispatch event to reapply floor plans after a short delay
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('reapplyFloorPlans'));
+    }, 500);
   });
 }
