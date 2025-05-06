@@ -65,6 +65,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         overflow: 'hidden',
         zIndex: 0
       }}
+      data-globe-container="true"
     >
       {!isGlobeReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 text-white">

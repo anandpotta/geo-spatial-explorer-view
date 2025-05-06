@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
 
@@ -16,6 +16,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [key, setKey] = useState<number>(Date.now()); // Add a key to force remount when needed
   
   // Handle map ready state
   const handleMapReady = (viewer?: any) => {
@@ -25,11 +26,33 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   };
   
   // Clean up resources on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
     };
   }, []);
+
+  // Handle errors
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      // Only handle WebGL errors for our component
+      if (event.message && event.message.includes('WebGL')) {
+        setMapError("WebGL error: " + event.message);
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
+  
+  // Function to remount the component if needed
+  const handleRetry = () => {
+    setMapError(null);
+    setKey(Date.now());
+  };
   
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
@@ -51,12 +74,19 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
             <h3 className="text-xl font-bold text-white mb-2">Globe Error</h3>
             <p className="text-white mb-4">{mapError}</p>
+            <button 
+              onClick={handleRetry}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       )}
       
       {/* ThreeJS Globe */}
       <ThreeGlobe 
+        key={key}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
         onFlyComplete={onFlyComplete}

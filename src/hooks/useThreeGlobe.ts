@@ -28,6 +28,7 @@ export const useThreeGlobe = (
   const globeRef = useRef<THREE.Mesh | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isInitializedRef = useRef<boolean>(false);
+  const rendererDomElementRef = useRef<HTMLCanvasElement | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   
   // State for tracking flying animations
@@ -72,10 +73,15 @@ export const useThreeGlobe = (
       renderer.setSize(width, height);
       renderer.setPixelRatio(window.devicePixelRatio);
       
+      // Store a reference to the canvas element
+      rendererDomElementRef.current = renderer.domElement;
+      
       // Clear any existing canvas elements to prevent duplicates
-      while (container.firstChild) {
-        container.removeChild(container.firstChild);
-      }
+      Array.from(container.children).forEach(child => {
+        if (child instanceof HTMLCanvasElement) {
+          container.removeChild(child);
+        }
+      });
       
       // Append the renderer's canvas to the container
       container.appendChild(renderer.domElement);
@@ -155,11 +161,15 @@ export const useThreeGlobe = (
         
         window.removeEventListener('resize', handleResize);
         
-        if (rendererRef.current && rendererRef.current.domElement && containerRef.current) {
-          try {
-            containerRef.current.removeChild(rendererRef.current.domElement);
-          } catch (e) {
-            console.warn('Could not remove renderer DOM element', e);
+        // Important: Safely check if the canvas is still a child of the container
+        if (rendererDomElementRef.current && containerRef.current) {
+          const canvasIsChild = Array.from(containerRef.current.children).includes(rendererDomElementRef.current);
+          if (canvasIsChild) {
+            try {
+              containerRef.current.removeChild(rendererDomElementRef.current);
+            } catch (e) {
+              console.warn('Could not remove renderer DOM element', e);
+            }
           }
         }
         
@@ -175,6 +185,14 @@ export const useThreeGlobe = (
         if (rendererRef.current) {
           rendererRef.current.dispose();
         }
+        
+        // Clear references
+        rendererDomElementRef.current = null;
+        sceneRef.current = null;
+        cameraRef.current = null;
+        rendererRef.current = null;
+        globeRef.current = null;
+        isInitializedRef.current = false;
       };
     } catch (error) {
       console.error('Error initializing Three.js globe:', error);
