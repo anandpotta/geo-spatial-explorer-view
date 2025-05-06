@@ -23,8 +23,9 @@ export const EditControl = forwardRef((props: any, ref: any) => {
       }
     };
   } else if (edit === false) {
-    // If edit is boolean false, pass it as false
-    editOptions = false;
+    // If edit is boolean false, we need to use null instead
+    // react-leaflet-draw expects null or an object, not boolean false
+    editOptions = null;
   } else if (edit && typeof edit === 'object') {
     // If edit is an object, merge with featureGroup but don't overwrite featureGroup
     editOptions = {
