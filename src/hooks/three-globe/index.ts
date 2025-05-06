@@ -34,6 +34,48 @@ export const useThreeGlobe = (
     onComplete: null,
   });
 
+  // Clean up function to properly dispose resources
+  const cleanup = useCallback(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    // Safely remove the renderer's DOM element
+    try {
+      if (rendererDomElementRef.current && containerRef.current) {
+        // Check if the element is actually a child before attempting removal
+        if (containerRef.current.contains(rendererDomElementRef.current)) {
+          containerRef.current.removeChild(rendererDomElementRef.current);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not remove renderer DOM element', e);
+    }
+    
+    // Dispose of Three.js resources
+    if (globeRef.current) {
+      disposeObject(globeRef.current);
+      globeRef.current = null;
+    }
+    
+    if (sceneRef.current) {
+      disposeScene(sceneRef.current);
+      sceneRef.current = null;
+    }
+    
+    if (rendererRef.current) {
+      rendererRef.current.dispose();
+      rendererRef.current = null;
+    }
+    
+    // Clear other references
+    rendererDomElementRef.current = null;
+    cameraRef.current = null;
+    isInitializedRef.current = false;
+    setIsInitialized(false);
+  }, [containerRef]);
+
   // Initialize Three.js scene
   useEffect(() => {
     if (!containerRef.current || isInitializedRef.current) return;
@@ -49,18 +91,20 @@ export const useThreeGlobe = (
         return;
       }
       
+      // Clear any existing canvas elements to prevent duplicates
+      const existingCanvases = Array.from(container.children).filter(
+        child => child instanceof HTMLCanvasElement
+      );
+      
+      existingCanvases.forEach(canvas => {
+        container.removeChild(canvas);
+      });
+      
       // Initialize scene, camera, renderer, and globe
       const { scene, camera, renderer, globe } = initializeScene(width, height);
       
       // Store a reference to the canvas element
       rendererDomElementRef.current = renderer.domElement;
-      
-      // Clear any existing canvas elements to prevent duplicates
-      Array.from(container.children).forEach(child => {
-        if (child instanceof HTMLCanvasElement) {
-          container.removeChild(child);
-        }
-      });
       
       // Append the renderer's canvas to the container
       container.appendChild(renderer.domElement);
@@ -75,6 +119,10 @@ export const useThreeGlobe = (
       
       // Set up animation loop
       const animate = () => {
+        if (!rendererRef.current || !sceneRef.current || !cameraRef.current) {
+          return; // Early return if essential components are missing
+        }
+        
         if (globeRef.current && !flyingStateRef.current.isFlying) {
           // Auto-rotate when not flying
           globeRef.current.rotation.y += 0.001;
@@ -85,14 +133,11 @@ export const useThreeGlobe = (
           updateFlyingAnimation(flyingStateRef, cameraRef);
         }
         
-        if (rendererRef.current && sceneRef.current && cameraRef.current) {
-          rendererRef.current.render(sceneRef.current, cameraRef.current);
-        }
-        
+        rendererRef.current.render(sceneRef.current, cameraRef.current);
         animationFrameRef.current = requestAnimationFrame(animate);
       };
       
-      animate();
+      animationFrameRef.current = requestAnimationFrame(animate);
       
       // Add event listeners for resize
       const removeResizeHandler = setupResizeHandler(containerRef, cameraRef, rendererRef);
@@ -107,50 +152,15 @@ export const useThreeGlobe = (
       
       // Cleanup function
       return () => {
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-        
         // Remove resize handler
         removeResizeHandler();
-        
-        // Important: Safely check if the canvas is still a child of the container
-        if (rendererDomElementRef.current && containerRef.current) {
-          const canvasIsChild = Array.from(containerRef.current.children).includes(rendererDomElementRef.current);
-          if (canvasIsChild) {
-            try {
-              containerRef.current.removeChild(rendererDomElementRef.current);
-            } catch (e) {
-              console.warn('Could not remove renderer DOM element', e);
-            }
-          }
-        }
-        
-        // Dispose of Three.js resources
-        if (globeRef.current) {
-          disposeObject(globeRef.current);
-        }
-        
-        if (sceneRef.current) {
-          disposeScene(sceneRef.current);
-        }
-        
-        if (rendererRef.current) {
-          rendererRef.current.dispose();
-        }
-        
-        // Clear references
-        rendererDomElementRef.current = null;
-        sceneRef.current = null;
-        cameraRef.current = null;
-        rendererRef.current = null;
-        globeRef.current = null;
-        isInitializedRef.current = false;
+        cleanup();
       };
     } catch (error) {
       console.error('Error initializing Three.js globe:', error);
+      cleanup();
     }
-  }, [containerRef, onGlobeReady]);
+  }, [containerRef, onGlobeReady, cleanup]);
   
   // Initialize flyToLocation function
   const flyToLocation = useCallback(setupFlyToLocation(cameraRef, globeRef, flyingStateRef), []);

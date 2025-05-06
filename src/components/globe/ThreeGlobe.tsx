@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useThreeGlobe } from '@/hooks/three-globe';
 
@@ -17,6 +17,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isGlobeReady, setIsGlobeReady] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
+  const flyingCompleteRef = useRef(false);
   
   // Use our custom hook to handle Three.js setup and animation
   const { 
@@ -36,6 +37,9 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   useEffect(() => {
     if (!isInitialized || !selectedLocation || isFlying) return;
     
+    // Reset the flying complete flag for new location
+    flyingCompleteRef.current = false;
+    
     console.log('Flying to location:', selectedLocation);
     setIsFlying(true);
     
@@ -43,10 +47,18 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       selectedLocation.x,
       selectedLocation.y,
       () => {
+        if (flyingCompleteRef.current) return; // Prevent duplicate calls
+        
+        flyingCompleteRef.current = true;
         setIsFlying(false);
         if (onFlyComplete) onFlyComplete();
       }
     );
+    
+    // Cleanup function - if the component unmounts during flight
+    return () => {
+      flyingCompleteRef.current = true;
+    };
   }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);
 
   return (
