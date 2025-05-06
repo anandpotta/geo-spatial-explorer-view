@@ -3,6 +3,7 @@ import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
+import { ApiSyncProvider } from '@/contexts/ApiSyncContext';
 
 interface MapViewsProps {
   currentView: 'cesium' | 'leaflet';
@@ -28,7 +29,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   handleClearAll
 }) => {
   return (
-    <>
+    <ApiSyncProvider>
       <div 
         className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
         style={{ 
@@ -72,7 +73,7 @@ const MapViews: React.FC<MapViewsProps> = ({
           />
         )}
       </div>
-    </>
+    </ApiSyncProvider>
   );
 };
 

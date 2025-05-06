@@ -27,10 +27,32 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   const leafletMapRef = useRef<any>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
+  const previousViewRef = useRef<string>(currentView);
   
   // Reset map instance when view changes
   useEffect(() => {
     setMapKey(Date.now());
+    
+    // If view has changed, dispatch an event
+    if (previousViewRef.current !== currentView) {
+      previousViewRef.current = currentView;
+      
+      // Dispatch event for view change
+      const mapViewChangedEvent = new CustomEvent('mapViewChanged', {
+        detail: { currentView, timestamp: Date.now() }
+      });
+      window.dispatchEvent(mapViewChangedEvent);
+      
+      // Clear cached image URLs when view changes
+      if (typeof window !== 'undefined') {
+        try {
+          const event = new Event('clearImageCache');
+          window.dispatchEvent(event);
+        } catch (err) {
+          console.error('Error dispatching clearImageCache event:', err);
+        }
+      }
+    }
   }, [currentView]);
 
   const handleCesiumViewerRef = (viewer: any) => {
