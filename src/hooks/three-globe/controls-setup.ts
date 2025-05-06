@@ -72,7 +72,7 @@ export function setupControls(
       
       previousMousePosition = {
         x: event.touches[0].clientX,
-        y: event.clientY
+        y: event.touches[0].clientY
       };
       
       event.preventDefault();

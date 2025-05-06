@@ -1,6 +1,6 @@
 
 import * as THREE from 'three';
-import { OUTER_SPACE_DISTANCE } from './types';
+import { EARTH_RADIUS, OUTER_SPACE_DISTANCE } from './types';
 import { createGlobe, addStars } from './globe-creator';
 
 /**
