@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
-import { useThreeGlobe } from '@/hooks/useThreeGlobe';
+import { useThreeGlobe } from '@/hooks/three-globe';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
