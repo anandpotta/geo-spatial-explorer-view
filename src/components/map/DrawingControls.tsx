@@ -1,15 +1,15 @@
 
-import { forwardRef, useImperativeHandle, useState, useCallback, useEffect } from 'react';
+import { forwardRef, useImperativeHandle, useEffect } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
-import { DrawingControlsRef } from '@/hooks/useDrawingControls';
+import { DrawingControlsRef, useDrawingControls } from '@/hooks/useDrawingControls';
 import { useFileUploadHandling } from '@/hooks/useFileUploadHandling';
-import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
-import { useDrawingControlsState } from '@/hooks/useDrawingControlsState';
 import { useDrawingAuth } from '@/hooks/useDrawingAuth';
 import { useHandleShapeCreation } from '@/hooks/useHandleShapeCreation';
 import { useClearAllOperation } from '@/hooks/useClearAllOperation';
+import { useSvgPathTracking } from '@/hooks/useSvgPathTracking';
+import { useDrawingControlsState } from '@/hooks/useDrawingControlsState';
 import FileUploadHandler from './drawing/FileUploadHandler';
 import DrawingControlsEffects from './drawing/DrawingControlsEffects';
 import LayerManagerWrapper from './drawing/LayerManagerWrapper';
@@ -47,29 +47,20 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     openFileUploadDialog
   } = useDrawingControls();
   
-  const { selectedDrawing, setSelectedDrawing, handleUploadRequest } = useDrawingControlsState(onUploadToDrawing);
+  const { handleUploadRequest } = useDrawingControlsState(onUploadToDrawing);
   
-  const {
-    handleFileChange,
-    fileInputRef: uploadFileInputRef
-  } = useFileUploadHandling({ onUploadToDrawing });
+  const { handleFileChange, fileInputRef: uploadFileInputRef } = useFileUploadHandling({ onUploadToDrawing });
   
-  // Memoize the callback to prevent unnecessary rerenders
-  const handlePathsUpdated = useCallback((paths: string[]) => {
-    if (onPathsUpdated) {
-      onPathsUpdated(paths);
-    }
-  }, [onPathsUpdated]);
-  
-  const { svgPaths, setSvgPaths } = useSvgPathTracking({
+  // Track SVG paths
+  const { svgPaths } = useSvgPathTracking({
     isInitialized,
     drawToolsRef,
     mountedRef,
-    onPathsUpdated: handlePathsUpdated
+    onPathsUpdated
   });
   
   // Handle shape creation with authentication check
-  const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, handlePathsUpdated, svgPaths);
+  const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, onPathsUpdated, svgPaths);
   
   // Handle clear all operation with authentication check
   const { handleClearAllWrapper } = useClearAllOperation(onClearAll);
