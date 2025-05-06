@@ -84,18 +84,32 @@ function positionCameraForInitialView(viewer: Cesium.Viewer): void {
   if (!viewer || viewer.isDestroyed()) return;
   
   try {
-    // Set camera to view full globe
-    viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(0, 0, 20000000),
-      orientation: {
-        heading: 0.0,
-        pitch: -Cesium.Math.PI_OVER_TWO / 2, // Look down at 45 degrees
-        roll: 0.0
-      }
-    });
+    // Set camera to view full globe with a safe position that won't cause normalization errors
+    const ellipsoidCenter = Cesium.Cartesian3.ZERO;
+    const distance = 20000000.0; // 20,000 km - safe distance
+    const heading = 0.0;
+    const pitch = -0.5; // Slightly look down instead of straight down
+    const roll = 0.0;
     
-    // Update and request render
-    viewer.scene.requestRender();
+    // Explicitly define a position above the globe
+    const cameraPosition = new Cesium.Cartesian3(0, 0, distance);
+    
+    // Only proceed if we have a valid position
+    if (Cesium.Cartesian3.magnitude(cameraPosition) > 0) {
+      viewer.camera.setView({
+        destination: cameraPosition,
+        orientation: {
+          heading: heading,
+          pitch: pitch,
+          roll: roll
+        }
+      });
+      
+      // Update and request render
+      viewer.scene.requestRender();
+    } else {
+      console.warn('Could not set initial camera position: invalid coordinates');
+    }
   } catch (e) {
     console.error('Error positioning camera:', e);
   }
