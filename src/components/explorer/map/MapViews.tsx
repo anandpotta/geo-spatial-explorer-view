@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
-import CesiumMap from '../../CesiumMap';
+import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
 
 interface MapViewsProps {

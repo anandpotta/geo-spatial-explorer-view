@@ -1,22 +1,18 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import * as Cesium from 'cesium';
-import { useCesiumGlobeVisibility } from './hooks/useCesiumGlobeVisibility';
-import CesiumViewer from './CesiumViewer';
-import CesiumLocationHandler from './CesiumLocationHandler';
+import React, { useState, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
-import { forceGlobeVisibility } from '@/utils/cesium-viewer';
+import ThreeGlobeMap from '../ThreeGlobeMap';
 
 interface CesiumMapCoreProps {
   selectedLocation?: Location;
   onMapReady?: () => void;
   onFlyComplete?: () => void;
   cinematicFlight?: boolean;
-  onViewerReady?: (viewer: Cesium.Viewer) => void;
+  onViewerReady?: (viewer: any) => void;
 }
 
 /**
- * Core Cesium Map component that handles viewer and entity management
+ * Core map component (now using Three.js instead of Cesium)
  */
 const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({ 
   selectedLocation, 
@@ -27,50 +23,20 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
 }) => {
   const [isFlying, setIsFlying] = useState(false);
   const [viewerReady, setViewerReady] = useState(false);
-  const viewerRef = useRef<Cesium.Viewer | null>(null);
-  const entityRef = useRef<Cesium.Entity | null>(null);
-  
+  const viewerRef = useRef<any>(null);
+
   // Handle viewer being ready
-  const handleViewerReady = (viewer: Cesium.Viewer) => {
-    console.log("CesiumMapCore: Viewer is ready");
+  const handleViewerReady = (viewer: any) => {
+    console.log("ThreeGlobeMap: Viewer is ready");
     viewerRef.current = viewer;
     setViewerReady(true);
     
     if (onViewerReady) {
       onViewerReady(viewer);
     }
-
-    // Force multiple renders to ensure the globe is visible
-    for (let i = 0; i < 40; i++) {
-      if (!viewer.isDestroyed()) {
-        viewer.scene.requestRender();
-      }
-    }
-    
-    // Force immediate globe visibility
-    forceGlobeVisibility(viewer);
   };
 
-  // Use the globe visibility hook
-  useCesiumGlobeVisibility(viewerRef, viewerReady);
-
-  // Manual intervention to ensure globe visibility
-  useEffect(() => {
-    if (viewerRef.current && viewerReady) {
-      const intervals = [100, 300, 500, 1000, 2000, 3000];
-      intervals.forEach(interval => {
-        setTimeout(() => {
-          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-            forceGlobeVisibility(viewerRef.current);
-            viewerRef.current.resize();
-            console.log(`Forcing globe visibility at ${interval}ms`);
-          }
-        }, interval);
-      });
-    }
-  }, [viewerReady]);
-
-  // Handle fly operations start/end
+  // Handle flying operations completion
   const handleFlyComplete = () => {
     setIsFlying(false);
     if (onFlyComplete) {
@@ -78,28 +44,14 @@ const CesiumMapCore: React.FC<CesiumMapCoreProps> = ({
     }
   };
   
-  // This log helps diagnose when the component renders
-  console.log("CesiumMapCore rendering, viewerReady:", viewerReady);
-  
   return (
-    <>
-      <CesiumViewer
-        isFlying={isFlying}
-        onViewerReady={handleViewerReady}
-        onMapReady={onMapReady}
-      />
-      
-      {viewerReady && viewerRef.current && (
-        <CesiumLocationHandler
-          viewer={viewerRef.current}
-          selectedLocation={selectedLocation}
-          entityRef={entityRef}
-          isInitialized={viewerReady}
-          onFlyComplete={handleFlyComplete}
-          cinematicFlight={cinematicFlight}
-        />
-      )}
-    </>
+    <ThreeGlobeMap
+      selectedLocation={selectedLocation}
+      onMapReady={() => {
+        if (onMapReady) onMapReady();
+      }}
+      onFlyComplete={handleFlyComplete}
+    />
   );
 };
 

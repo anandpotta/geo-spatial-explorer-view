@@ -1,6 +1,5 @@
 
 import React from 'react';
-import * as Cesium from 'cesium';
 import { Location } from '@/utils/geo-utils';
 import CesiumMapCore from './CesiumMapCore';
 
@@ -9,11 +8,12 @@ interface CesiumMapProps {
   onMapReady?: () => void;
   onFlyComplete?: () => void;
   cinematicFlight?: boolean;
-  onViewerReady?: (viewer: Cesium.Viewer) => void;
+  onViewerReady?: (viewer: any) => void;
 }
 
 /**
- * Wrapper component for the Cesium map with proper styling
+ * Wrapper component for the 3D globe with proper styling
+ * (Previously Cesium, now using Three.js)
  */
 const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   return (
