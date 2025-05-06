@@ -34,12 +34,7 @@ export function updateFlyingAnimation(
   // If animation is complete
   if (progress >= 1.0) {
     flyingStateRef.current.isFlying = false;
-    if (onComplete) {
-      // Use setTimeout to avoid state updates during rendering
-      setTimeout(() => {
-        if (onComplete) onComplete();
-      }, 0);
-    }
+    if (onComplete) onComplete();
   }
 }
 
@@ -53,50 +48,41 @@ export function setupFlyToLocation(
 ): (longitude: number, latitude: number, onComplete?: () => void) => void {
   
   return (longitude: number, latitude: number, onComplete?: () => void): void => {
-    if (!cameraRef.current || !globeRef.current) {
-      console.warn('Cannot fly: camera or globe not initialized');
-      if (onComplete) setTimeout(onComplete, 100);
-      return;
-    }
+    if (!cameraRef.current || !globeRef.current) return;
     
-    try {
-      // Convert the latitude and longitude to a 3D position
-      const phi = (90 - latitude) * Math.PI / 180;
-      const theta = (longitude + 180) * Math.PI / 180;
-      
-      // Calculate position on globe
-      const x = -EARTH_RADIUS * Math.sin(phi) * Math.cos(theta);
-      const y = EARTH_RADIUS * Math.cos(phi);
-      const z = EARTH_RADIUS * Math.sin(phi) * Math.sin(theta);
-      
-      const targetPosition = new THREE.Vector3(x, y, z);
-      
-      // Adjust the globe's rotation to make the target point face the camera
-      globeRef.current.rotation.y = theta;
-      globeRef.current.rotation.x = phi - Math.PI/2;
-      
-      // Set up the camera position for flying animation
-      const startPosition = cameraRef.current.position.clone();
-      
-      // Target position should be just outside the surface of the globe
-      const direction = targetPosition.clone().normalize();
-      const targetCameraPosition = direction.multiplyScalar(EARTH_RADIUS * 1.5);
-      
-      // Store the animation state
-      flyingStateRef.current = {
-        ...flyingStateRef.current,
-        isFlying: true,
-        startPosition,
-        targetPosition: targetCameraPosition,
-        startTime: Date.now(),
-        duration: 2000, // 2 seconds
-        onComplete,
-      };
-      
-      console.log('Starting flight to:', { longitude, latitude });
-    } catch (error) {
-      console.error('Error during flight:', error);
-      if (onComplete) setTimeout(onComplete, 100);
-    }
+    // Convert the latitude and longitude to a 3D position
+    const phi = (90 - latitude) * Math.PI / 180;
+    const theta = (longitude + 180) * Math.PI / 180;
+    
+    // Calculate position on globe
+    const x = -EARTH_RADIUS * Math.sin(phi) * Math.cos(theta);
+    const y = EARTH_RADIUS * Math.cos(phi);
+    const z = EARTH_RADIUS * Math.sin(phi) * Math.sin(theta);
+    
+    const targetPosition = new THREE.Vector3(x, y, z);
+    
+    // Adjust the globe's rotation to make the target point face the camera
+    globeRef.current.rotation.y = theta;
+    globeRef.current.rotation.x = phi - Math.PI/2;
+    
+    // Set up the camera position for flying animation
+    const startPosition = cameraRef.current.position.clone();
+    
+    // Target position should be just outside the surface of the globe
+    const direction = targetPosition.clone().normalize();
+    const targetCameraPosition = direction.multiplyScalar(EARTH_RADIUS * 1.5);
+    
+    // Store the animation state
+    flyingStateRef.current = {
+      ...flyingStateRef.current,
+      isFlying: true,
+      startPosition,
+      targetPosition: targetCameraPosition,
+      startTime: Date.now(),
+      duration: 2000, // 2 seconds
+      onComplete,
+    };
+    
+    console.log('Starting flight to:', { longitude, latitude });
   };
 }

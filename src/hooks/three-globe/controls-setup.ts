@@ -1,4 +1,3 @@
-
 import * as THREE from 'three';
 import { MIN_DISTANCE, OUTER_SPACE_DISTANCE } from './types';
 
@@ -14,27 +13,16 @@ export function setupControls(
   let isDragging = false;
   let previousMousePosition = { x: 0, y: 0 };
   
-  // Clean up any existing event listeners
-  const cleanupOldListeners = () => {
-    const clone = container.cloneNode(false);
-    if (container.parentNode) {
-      container.parentNode.replaceChild(clone, container);
-      return clone as HTMLDivElement;
-    }
-    return container;
-  };
-  
-  // Setup mouse event listeners
-  const onMouseDown = (event: MouseEvent) => {
+  container.addEventListener('mousedown', (event) => {
     isDragging = true;
     previousMousePosition = {
       x: event.clientX,
       y: event.clientY
     };
     event.preventDefault();
-  };
+  });
   
-  const onMouseMove = (event: MouseEvent) => {
+  container.addEventListener('mousemove', (event) => {
     if (!isDragging || !globeRef.current || flyingStateRef.current.isFlying) return;
     
     const deltaMove = {
@@ -50,18 +38,18 @@ export function setupControls(
       x: event.clientX,
       y: event.clientY
     };
-  };
+  });
   
-  const onMouseUp = () => {
+  container.addEventListener('mouseup', () => {
     isDragging = false;
-  };
+  });
   
-  const onMouseLeave = () => {
+  container.addEventListener('mouseleave', () => {
     isDragging = false;
-  };
+  });
   
-  // Setup touch event listeners
-  const onTouchStart = (event: TouchEvent) => {
+  // Touch events for mobile support
+  container.addEventListener('touchstart', (event) => {
     if (event.touches.length === 1) {
       isDragging = true;
       previousMousePosition = {
@@ -70,9 +58,9 @@ export function setupControls(
       };
       event.preventDefault();
     }
-  };
+  });
   
-  const onTouchMove = (event: TouchEvent) => {
+  container.addEventListener('touchmove', (event) => {
     if (isDragging && event.touches.length === 1 && globeRef.current && !flyingStateRef.current.isFlying) {
       const deltaMove = {
         x: event.touches[0].clientX - previousMousePosition.x,
@@ -89,14 +77,14 @@ export function setupControls(
       
       event.preventDefault();
     }
-  };
+  });
   
-  const onTouchEnd = () => {
+  container.addEventListener('touchend', () => {
     isDragging = false;
-  };
+  });
   
-  // Setup wheel event listener
-  const onWheel = (event: WheelEvent) => {
+  // Add zoom controls
+  container.addEventListener('wheel', (event) => {
     if (!cameraRef.current || flyingStateRef.current.isFlying) return;
     
     const zoomSpeed = 0.1;
@@ -114,15 +102,5 @@ export function setupControls(
     cameraRef.current.position.multiplyScalar(newDistance);
     
     event.preventDefault();
-  };
-  
-  // Add event listeners
-  container.addEventListener('mousedown', onMouseDown);
-  container.addEventListener('mousemove', onMouseMove);
-  container.addEventListener('mouseup', onMouseUp);
-  container.addEventListener('mouseleave', onMouseLeave);
-  container.addEventListener('touchstart', onTouchStart);
-  container.addEventListener('touchmove', onTouchMove);
-  container.addEventListener('touchend', onTouchEnd);
-  container.addEventListener('wheel', onWheel);
+  });
 }

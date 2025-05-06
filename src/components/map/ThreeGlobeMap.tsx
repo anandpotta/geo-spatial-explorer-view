@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
-import { toast } from 'sonner';
 
 interface ThreeGlobeMapProps {
   selectedLocation?: Location;
@@ -17,92 +16,43 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [key, setKey] = useState<number>(Date.now());
-  const mountStateRef = useRef({ isMounted: true });
-  const flyCompletedRef = useRef(false);
+  const [key, setKey] = useState<number>(Date.now()); // Add a key to force remount when needed
   
-  // Cleanup function for component unmount
+  // Handle map ready state
+  const handleMapReady = (viewer?: any) => {
+    console.log("ThreeGlobeMap: Globe is ready");
+    setIsLoading(false);
+    if (onMapReady) onMapReady(viewer);
+  };
+  
+  // Clean up resources on unmount
   useEffect(() => {
     return () => {
-      mountStateRef.current.isMounted = false;
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
     };
   }, []);
-  
-  // Reset state when the component is remounted with a new key
-  useEffect(() => {
-    flyCompletedRef.current = false;
-  }, [key]);
-
-  // Handle map ready state
-  const handleMapReady = useCallback((viewer?: any) => {
-    if (!mountStateRef.current.isMounted) return;
-    
-    console.log("ThreeGlobeMap: Globe is ready");
-    setIsLoading(false);
-    
-    if (onMapReady && viewer) {
-      try {
-        onMapReady(viewer);
-      } catch (error) {
-        console.error('Error in onMapReady callback:', error);
-      }
-    }
-  }, [onMapReady]);
-  
-  // Handle fly complete
-  const handleFlyComplete = useCallback(() => {
-    if (!mountStateRef.current.isMounted || flyCompletedRef.current) return;
-    
-    flyCompletedRef.current = true;
-    
-    if (onFlyComplete) {
-      try {
-        onFlyComplete();
-      } catch (error) {
-        console.error('Error in onFlyComplete callback:', error);
-      }
-    }
-  }, [onFlyComplete]);
 
   // Handle errors
   useEffect(() => {
-    const handleGlobalError = (event: ErrorEvent) => {
+    const handleError = (event: ErrorEvent) => {
       // Only handle WebGL errors for our component
-      if (event.message && 
-         (event.message.includes('WebGL') || 
-          event.message.includes('THREE') || 
-          event.message.includes('removeChild'))) {
-        if (!mountStateRef.current.isMounted) return;
-        
-        setMapError("Rendering error: " + event.message);
-        toast.error("3D Globe encountered an error. Retrying...");
-        
-        // Auto-retry once
-        setTimeout(() => {
-          if (mountStateRef.current.isMounted) {
-            setMapError(null);
-            setKey(Date.now());
-          }
-        }, 1500);
+      if (event.message && event.message.includes('WebGL')) {
+        setMapError("WebGL error: " + event.message);
       }
     };
 
-    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('error', handleError);
     
     return () => {
-      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('error', handleError);
     };
   }, []);
   
-  // Function to manually remount the component if needed
-  const handleRetry = useCallback(() => {
-    if (!mountStateRef.current.isMounted) return;
-    
+  // Function to remount the component if needed
+  const handleRetry = () => {
     setMapError(null);
     setKey(Date.now());
-    setIsLoading(true);
-  }, []);
+  };
   
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
@@ -139,7 +89,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         key={key}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
-        onFlyComplete={handleFlyComplete}
+        onFlyComplete={onFlyComplete}
       />
     </div>
   );
