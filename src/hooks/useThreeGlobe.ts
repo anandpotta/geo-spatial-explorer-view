@@ -45,8 +45,8 @@ export const useThreeGlobe = (
     if (!containerRef.current || isInitializedRef.current) return;
     
     const container = containerRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = container.clientWidth || window.innerWidth;
+    const height = container.clientHeight || window.innerHeight;
     
     try {
       // Check for WebGL support
@@ -64,9 +64,20 @@ export const useThreeGlobe = (
       camera.position.z = OUTER_SPACE_DISTANCE;
       
       // Create renderer
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      const renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance'
+      });
       renderer.setSize(width, height);
       renderer.setPixelRatio(window.devicePixelRatio);
+      
+      // Clear any existing canvas elements to prevent duplicates
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+      
+      // Append the renderer's canvas to the container
       container.appendChild(renderer.domElement);
       
       // Create ambient light
@@ -118,8 +129,8 @@ export const useThreeGlobe = (
       const handleResize = () => {
         if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
         
-        const width = containerRef.current.clientWidth;
-        const height = containerRef.current.clientHeight;
+        const width = containerRef.current.clientWidth || window.innerWidth;
+        const height = containerRef.current.clientHeight || window.innerHeight;
         
         cameraRef.current.aspect = width / height;
         cameraRef.current.updateProjectionMatrix();
@@ -175,13 +186,22 @@ export const useThreeGlobe = (
     // Create a sphere geometry for the globe
     const geometry = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
     
-    // Create a shader material for better appearance
+    // Create a texture loader
+    const textureLoader = new THREE.TextureLoader();
+    
+    // Load earth textures
+    const earthTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg');
+    const bumpMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_normal_2048.jpg');
+    const specularMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_specular_2048.jpg');
+    
+    // Create material with textures
     const material = new THREE.MeshPhongMaterial({
-      color: 0x3399ff,
-      specular: 0x555555,
-      shininess: 30,
-      transparent: false,
-      opacity: 1.0
+      map: earthTexture,
+      bumpMap: bumpMap,
+      bumpScale: 0.05,
+      specularMap: specularMap,
+      specular: new THREE.Color(0x333333),
+      shininess: 25
     });
     
     // Create the mesh using the geometry and material

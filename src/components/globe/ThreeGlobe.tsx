@@ -63,6 +63,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         height: '100%',
         background: '#000',
         overflow: 'hidden',
+        zIndex: 0
       }}
     >
       {!isGlobeReady && (

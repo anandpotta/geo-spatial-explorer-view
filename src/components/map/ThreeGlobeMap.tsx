@@ -32,7 +32,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   }, []);
   
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
       {/* Loading overlay - only show while loading */}
       {isLoading && (
         <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
