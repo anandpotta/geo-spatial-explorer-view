@@ -1,67 +1,100 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import * as Cesium from 'cesium';
 
 /**
- * Hook to handle periodic rendering and globe visibility checks
+ * Hook to ensure the Cesium globe is visible with enhanced error handling
  */
-export const useCesiumGlobeVisibility = (
+export function useCesiumGlobeVisibility(
   viewerRef: React.MutableRefObject<Cesium.Viewer | null>,
   viewerReady: boolean
-) => {
-  const forceRenderRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Force renders periodically to ensure globe visibility
+): void {
   useEffect(() => {
-    if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-      const renderTimes = [100, 300, 500, 1000, 2000, 3000, 5000];
-      renderTimes.forEach(time => {
-        setTimeout(() => {
-          if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-            viewerRef.current.scene.requestRender();
-            
-            // Ensure the globe is visible with bright color
-            if (viewerRef.current.scene && viewerRef.current.scene.globe) {
-              viewerRef.current.scene.globe.show = true;
-              viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
-            }
-            
-            // Ensure canvas is visible
-            if (viewerRef.current.canvas) {
-              viewerRef.current.canvas.style.visibility = 'visible';
-              viewerRef.current.canvas.style.display = 'block';
-              viewerRef.current.canvas.style.opacity = '1';
-            }
-          }
-        }, time);
-      });
+    if (!viewerReady || !viewerRef.current || viewerRef.current.isDestroyed()) {
+      return;
     }
+
+    const viewer = viewerRef.current;
     
-    // Set a continuous render cycle to ensure globe visibility
-    if (forceRenderRef.current) {
-      clearInterval(forceRenderRef.current);
-    }
-    
-    forceRenderRef.current = setInterval(() => {
-      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-        viewerRef.current.scene.requestRender();
+    try {
+      // Make sure the globe is visible
+      if (viewer.scene && viewer.scene.globe) {
+        viewer.scene.globe.show = true;
         
-        // Ensure globe is visible
-        if (viewerRef.current.scene && viewerRef.current.scene.globe) {
-          viewerRef.current.scene.globe.show = true;
-          viewerRef.current.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
-        }
-      } else {
-        if (forceRenderRef.current) {
-          clearInterval(forceRenderRef.current);
-        }
+        // Set a bright blue color to ensure visibility
+        viewer.scene.globe.baseColor = new Cesium.Color(0.0, 0.5, 1.0, 1.0);
       }
-    }, 100);
+      
+      // Force immediate multiple renders
+      for (let i = 0; i < 30; i++) {
+        viewer.scene.requestRender();
+      }
+      
+      // Safe initial default position (if none is set)
+      if (!isCameraPositionValid(viewer.camera)) {
+        console.log('Setting default camera position to avoid normalization errors');
+        const defaultPosition = new Cesium.Cartesian3(0, 0, 25000000); // Far enough to avoid normalization issues
+        
+        viewer.camera.setView({
+          destination: defaultPosition,
+          orientation: {
+            heading: 0.0,
+            pitch: -0.4, // Look down slightly
+            roll: 0.0
+          }
+        });
+        
+        // Force render after position change
+        viewer.scene.requestRender();
+      }
+    } catch (e) {
+      console.error('Error in useCesiumGlobeVisibility hook:', e);
+    }
     
+    // Schedule additional renders to ensure visibility
+    const renderIntervals = [500, 1000, 2000];
+    const timeouts: number[] = [];
+    
+    renderIntervals.forEach(interval => {
+      const timeout = setTimeout(() => {
+        if (viewer && !viewer.isDestroyed()) {
+          // Force multiple renders
+          for (let i = 0; i < 5; i++) {
+            viewer.scene.requestRender();
+          }
+        }
+      }, interval);
+      timeouts.push(timeout);
+    });
+
     return () => {
-      if (forceRenderRef.current) {
-        clearInterval(forceRenderRef.current);
-      }
+      // Clean up timeouts
+      timeouts.forEach(clearTimeout);
     };
-  }, [viewerReady, viewerRef]);
-};
+  }, [viewerRef, viewerReady]);
+}
+
+/**
+ * Check if the camera position is valid to avoid normalization errors
+ */
+function isCameraPositionValid(camera: Cesium.Camera): boolean {
+  if (!camera) return false;
+  
+  try {
+    const position = camera.position;
+    if (!position) return false;
+    
+    // Check if position has valid coordinates
+    if (isNaN(position.x) || isNaN(position.y) || isNaN(position.z)) return false;
+    if (!isFinite(position.x) || !isFinite(position.y) || !isFinite(position.z)) return false;
+    
+    // Check magnitude is not zero or too small (which could cause normalization errors)
+    const magnitude = Cesium.Cartesian3.magnitude(position);
+    if (isNaN(magnitude) || magnitude < 1) return false;
+    
+    return true;
+  } catch (e) {
+    console.warn('Error checking camera position:', e);
+    return false;
+  }
+}

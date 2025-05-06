@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import { Location } from '@/utils/geo-utils';
-import { flyToLocation } from '@/utils/cesium-utils';
+import { flyToLocation, isValidCoordinate } from '@/utils/cesium-utils';
 
 interface CesiumLocationHandlerProps {
   viewer: Cesium.Viewer | null;
@@ -36,6 +36,16 @@ const CesiumLocationHandler = ({
     }
 
     const location = pendingLocationRef.current;
+    
+    // Validate location coordinates first
+    if (!isValidCoordinate(location.x) || !isValidCoordinate(location.y)) {
+      console.warn(`Cannot fly to invalid location: x=${location.x}, y=${location.y}`);
+      if (onFlyComplete) {
+        // Even with invalid coords, we should call the completion handler
+        setTimeout(onFlyComplete, 100);
+      }
+      return;
+    }
     
     setIsFlying(true);
     console.log("Starting cinematic flight to location:", location.label);

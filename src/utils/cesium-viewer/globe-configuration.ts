@@ -111,6 +111,9 @@ export function configureCameraControls(viewer: Cesium.Viewer): void {
     // Set minimum and maximum zoom distances for better user experience
     controller.minimumZoomDistance = 100000; // Don't let users zoom in too close
     controller.maximumZoomDistance = 25000000; // Don't let users zoom out too far
+    
+    // Prevent camera movements that could cause normalization errors
+    controller.minimumCollisionTerrainHeight = 100000; // Keep camera away from terrain
   } catch (e) {
     console.error('Error configuring camera controls:', e);
   }
