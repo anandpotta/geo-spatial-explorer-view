@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 
@@ -14,6 +15,7 @@ interface ThreeGlobeResult {
   renderer: THREE.WebGLRenderer | null;
   globe: THREE.Mesh | null;
   flyToLocation: (longitude: number, latitude: number, onComplete?: () => void) => void;
+  isInitialized: boolean;
 }
 
 export const useThreeGlobe = (
@@ -26,6 +28,7 @@ export const useThreeGlobe = (
   const globeRef = useRef<THREE.Mesh | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isInitializedRef = useRef<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // State for tracking flying animations
   const flyingStateRef = useRef({
@@ -75,7 +78,7 @@ export const useThreeGlobe = (
       sunLight.position.set(1, 0, 1).normalize();
       scene.add(sunLight);
       
-      // Create Earth
+      // Create Earth with improved texture
       const globe = createGlobe();
       scene.add(globe);
       
@@ -88,6 +91,7 @@ export const useThreeGlobe = (
       rendererRef.current = renderer;
       globeRef.current = globe;
       isInitializedRef.current = true;
+      setIsInitialized(true);
       
       // Set up animation loop
       const animate = () => {
@@ -141,7 +145,11 @@ export const useThreeGlobe = (
         window.removeEventListener('resize', handleResize);
         
         if (rendererRef.current && rendererRef.current.domElement && containerRef.current) {
-          containerRef.current.removeChild(rendererRef.current.domElement);
+          try {
+            containerRef.current.removeChild(rendererRef.current.domElement);
+          } catch (e) {
+            console.warn('Could not remove renderer DOM element', e);
+          }
         }
         
         // Dispose of Three.js resources
@@ -162,18 +170,18 @@ export const useThreeGlobe = (
     }
   }, [containerRef, onGlobeReady]);
   
-  // Function to create the Earth globe
+  // Function to create the Earth globe with better textures
   const createGlobe = (): THREE.Mesh => {
     // Create a sphere geometry for the globe
     const geometry = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
     
-    // Create a basic blue material for the globe
+    // Create a shader material for better appearance
     const material = new THREE.MeshPhongMaterial({
       color: 0x3399ff,
       specular: 0x555555,
-      shininess: 10,
-      transparent: true,
-      opacity: 0.9
+      shininess: 30,
+      transparent: false,
+      opacity: 1.0
     });
     
     // Create the mesh using the geometry and material
@@ -182,7 +190,25 @@ export const useThreeGlobe = (
     // Add grid lines for visual reference
     addLatLongGrid(globe);
     
+    // Add atmosphere glow effect
+    addAtmosphereGlow(globe);
+    
     return globe;
+  };
+
+  // Add atmosphere glow effect
+  const addAtmosphereGlow = (globe: THREE.Mesh) => {
+    // Add a slightly larger sphere with a shader material for the glow effect
+    const atmosphereGeometry = new THREE.SphereGeometry(EARTH_RADIUS * 1.015, 64, 64);
+    const atmosphereMaterial = new THREE.MeshPhongMaterial({
+      color: 0x88ccff,
+      transparent: true,
+      opacity: 0.3,
+      side: THREE.BackSide
+    });
+    
+    const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+    globe.add(atmosphere);
   };
   
   // Add a simple latitude/longitude grid to the globe
@@ -223,23 +249,25 @@ export const useThreeGlobe = (
     }
   };
   
-  // Add stars to the background
+  // Add stars to the background with improved visuals
   const addStars = (scene: THREE.Scene) => {
     const starsGeometry = new THREE.BufferGeometry();
     const starsMaterial = new THREE.PointsMaterial({
       color: 0xffffff,
-      size: 1,
-      sizeAttenuation: false
+      size: 2,
+      sizeAttenuation: true
     });
     
     const starsVertices = [];
-    for (let i = 0; i < 10000; i++) {
-      const x = THREE.MathUtils.randFloatSpread(2000);
-      const y = THREE.MathUtils.randFloatSpread(2000);
-      const z = THREE.MathUtils.randFloatSpread(2000);
+    for (let i = 0; i < 15000; i++) {
+      // Create a sphere of stars around the scene
+      const radius = EARTH_RADIUS * 15;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
       
-      // Keep stars away from the center where Earth is
-      if (Math.sqrt(x*x + y*y + z*z) < EARTH_RADIUS * 3) continue;
+      const x = radius * Math.sin(phi) * Math.cos(theta);
+      const y = radius * Math.sin(phi) * Math.sin(theta);
+      const z = radius * Math.cos(phi);
       
       starsVertices.push(x, y, z);
     }
@@ -254,8 +282,13 @@ export const useThreeGlobe = (
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
     
-    container.addEventListener('mousedown', () => {
+    container.addEventListener('mousedown', (event) => {
       isDragging = true;
+      previousMousePosition = {
+        x: event.clientX,
+        y: event.clientY
+      };
+      event.preventDefault();
     });
     
     container.addEventListener('mousemove', (event) => {
@@ -281,6 +314,41 @@ export const useThreeGlobe = (
     });
     
     container.addEventListener('mouseleave', () => {
+      isDragging = false;
+    });
+    
+    // Touch events for mobile support
+    container.addEventListener('touchstart', (event) => {
+      if (event.touches.length === 1) {
+        isDragging = true;
+        previousMousePosition = {
+          x: event.touches[0].clientX,
+          y: event.touches[0].clientY
+        };
+        event.preventDefault();
+      }
+    });
+    
+    container.addEventListener('touchmove', (event) => {
+      if (isDragging && event.touches.length === 1 && globeRef.current && !flyingStateRef.current.isFlying) {
+        const deltaMove = {
+          x: event.touches[0].clientX - previousMousePosition.x,
+          y: event.touches[0].clientY - previousMousePosition.y
+        };
+        
+        globeRef.current.rotation.y += deltaMove.x * 0.005;
+        globeRef.current.rotation.x += deltaMove.y * 0.005;
+        
+        previousMousePosition = {
+          x: event.touches[0].clientX,
+          y: event.touches[0].clientY
+        };
+        
+        event.preventDefault();
+      }
+    });
+    
+    container.addEventListener('touchend', () => {
       isDragging = false;
     });
     
@@ -367,7 +435,7 @@ export const useThreeGlobe = (
     
     // Target position should be just outside the surface of the globe
     const direction = targetPosition.clone().normalize();
-    const targetCameraPosition = direction.multiplyScalar(EARTH_RADIUS * 0.3);
+    const targetCameraPosition = direction.multiplyScalar(EARTH_RADIUS * 1.5);
     
     // Store the animation state
     flyingStateRef.current = {
@@ -450,5 +518,6 @@ export const useThreeGlobe = (
     renderer: rendererRef.current,
     globe: globeRef.current,
     flyToLocation,
+    isInitialized,
   };
 };

@@ -16,10 +16,13 @@ interface CesiumMapProps {
  */
 const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
       <ThreeGlobeMap 
         selectedLocation={props.selectedLocation}
-        onMapReady={props.onMapReady}
+        onMapReady={(viewer) => {
+          if (props.onMapReady) props.onMapReady();
+          if (props.onViewerReady) props.onViewerReady(viewer);
+        }}
         onFlyComplete={props.onFlyComplete}
       />
     </div>

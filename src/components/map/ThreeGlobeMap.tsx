@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
 
@@ -19,12 +19,13 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   
   // Handle map ready state
   const handleMapReady = () => {
+    console.log("ThreeGlobeMap: Globe is ready");
     setIsLoading(false);
     if (onMapReady) onMapReady();
   };
   
   // Clean up resources on unmount
-  useEffect(() => {
+  React.useEffect(() => {
     return () => {
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
     };
@@ -32,7 +33,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   
   return (
     <div className="w-full h-full relative">
-      {/* Loading overlay */}
+      {/* Loading overlay - only show while loading */}
       {isLoading && (
         <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="text-center p-6">
@@ -50,7 +51,6 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
             <h3 className="text-xl font-bold text-white mb-2">Globe Error</h3>
             <p className="text-white mb-4">{mapError}</p>
-            <p className="text-sm text-gray-300">Falling back to 2D map view...</p>
           </div>
         </div>
       )}
