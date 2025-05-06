@@ -1,4 +1,6 @@
 
+import { OpenStreetMapProvider } from 'leaflet-geosearch';
+
 export interface Location {
   id: string;
   label: string;
@@ -6,6 +8,9 @@ export interface Location {
   y: number; // latitude
   raw?: any;
 }
+
+// Initialize the provider
+const provider = new OpenStreetMapProvider();
 
 // Sample offline locations data for fallback
 const offlineLocations = [
@@ -46,88 +51,21 @@ const offlineLocations = [
   },
 ];
 
-// Google Places API key - replace with your own API key
-// Note: In production, you should handle this key securely
-const GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY";
-
-// Search for locations using Google Places API with offline fallback
+// Search for locations with offline fallback
 export async function searchLocations(query: string): Promise<Location[]> {
   if (!query || query.length < 3) return [];
   
-  // First try online search with Google Places API
+  // First try online search
   try {
-    // Check if we have network and API key
-    if (navigator.onLine && GOOGLE_API_KEY && GOOGLE_API_KEY !== "YOUR_GOOGLE_API_KEY") {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`,
-        { 
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Google Places API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-        throw new Error(`Google API error: ${data.status}`);
-      }
-      
-      if (!data.predictions || data.predictions.length === 0) {
-        return [];
-      }
-      
-      // We need to get details for each place to get coordinates
-      const results: Location[] = [];
-      
-      // For demonstration, we'll use Promise.all to fetch details for all predictions
-      // Note: In production, you might want to limit this or implement pagination
-      const detailsPromises = data.predictions.slice(0, 5).map(async (prediction: any) => {
-        try {
-          const detailsResponse = await fetch(
-            `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=geometry&key=${GOOGLE_API_KEY}`,
-            { 
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' }
-            }
-          );
-          
-          if (!detailsResponse.ok) {
-            return null;
-          }
-          
-          const detailsData = await detailsResponse.json();
-          
-          if (detailsData.status !== "OK" || !detailsData.result || !detailsData.result.geometry) {
-            return null;
-          }
-          
-          return {
-            id: prediction.place_id,
-            label: prediction.description,
-            x: detailsData.result.geometry.location.lng, // longitude
-            y: detailsData.result.geometry.location.lat, // latitude
-            raw: {
-              place_id: prediction.place_id,
-              display_name: prediction.description,
-              ...detailsData.result
-            }
-          };
-        } catch (error) {
-          console.error('Error fetching place details:', error);
-          return null;
-        }
-      });
-      
-      const detailsResults = await Promise.all(detailsPromises);
-      return detailsResults.filter((result): result is Location => result !== null);
-    } else {
-      // API key not set or offline, fall back to offline search
-      throw new Error('API key not set or offline');
-    }
+    const results = await provider.search({ query });
+    
+    return results.map((result) => ({
+      id: result.raw.place_id.toString(),
+      label: result.label,
+      x: result.x,  // longitude
+      y: result.y,  // latitude
+      raw: result.raw
+    }));
   } catch (error) {
     console.error('Error searching for locations:', error);
     
