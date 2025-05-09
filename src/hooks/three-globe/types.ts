@@ -22,6 +22,6 @@ export interface FlyingState {
 // Earth radius in km
 export const EARTH_RADIUS = 6371;
 // Distance to show the full Earth
-export const OUTER_SPACE_DISTANCE = EARTH_RADIUS * 2.8;
+export const OUTER_SPACE_DISTANCE = EARTH_RADIUS * 4;
 // Closest distance to Earth's surface when zoomed in
 export const MIN_DISTANCE = EARTH_RADIUS * 0.2;

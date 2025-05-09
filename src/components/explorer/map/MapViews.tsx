@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
-import CesiumMap from '../../CesiumMap'; // Using Three.js inside
+import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
 import { ApiSyncProvider } from '@/contexts/ApiSyncContext';
 
@@ -28,13 +28,10 @@ const MapViews: React.FC<MapViewsProps> = ({
   activeTool,
   handleClearAll
 }) => {
-  // Default to cesium (Three.js globe) for initial view and switch to leaflet when needed
-  const actualView = currentView;
-  
   return (
     <ApiSyncProvider>
       <div 
-        className={`absolute inset-0 transition-opacity duration-500 ${actualView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+        className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
         style={{ 
           position: 'absolute', 
           top: 0, 
@@ -43,11 +40,11 @@ const MapViews: React.FC<MapViewsProps> = ({
           bottom: 0, 
           width: '100%', 
           height: '100%',
-          visibility: actualView === 'cesium' ? 'visible' : 'hidden'
+          visibility: currentView === 'cesium' ? 'visible' : 'hidden'
         }}
         data-map-type="cesium"
       >
-        {actualView === 'cesium' && (
+        {currentView === 'cesium' && (
           <CesiumMap 
             selectedLocation={selectedLocation}
             onMapReady={onMapReady}
@@ -60,13 +57,13 @@ const MapViews: React.FC<MapViewsProps> = ({
       </div>
       
       <div 
-        className={`absolute inset-0 transition-opacity duration-500 ${actualView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
+        className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
         style={{ 
-          visibility: actualView === 'leaflet' ? 'visible' : 'hidden' 
+          visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
         }}
         data-map-type="leaflet"
       >
-        {actualView === 'leaflet' && (
+        {currentView === 'leaflet' && (
           <LeafletMap 
             selectedLocation={selectedLocation} 
             onMapReady={handleLeafletMapRef}

@@ -39,7 +39,6 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     console.log('Flying to location:', selectedLocation);
     setIsFlying(true);
     
-    // Fix: Pass only the required arguments to flyToLocation
     flyToLocation(
       selectedLocation.x,
       selectedLocation.y,

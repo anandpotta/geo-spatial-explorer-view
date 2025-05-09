@@ -36,8 +36,8 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       // Only handle WebGL errors for our component
-      if (event.message && (event.message.includes('WebGL') || event.message.includes('three'))) {
-        setMapError("3D rendering error: " + event.message);
+      if (event.message && event.message.includes('WebGL')) {
+        setMapError("WebGL error: " + event.message);
       }
     };
 
@@ -47,14 +47,6 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       window.removeEventListener('error', handleError);
     };
   }, []);
-  
-  // Handle navigation completion
-  const handleFlyComplete = () => {
-    console.log("ThreeGlobeMap: Fly complete, transitioning to map view");
-    if (onFlyComplete) {
-      onFlyComplete();
-    }
-  };
   
   // Function to remount the component if needed
   const handleRetry = () => {
@@ -97,7 +89,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         key={key}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
-        onFlyComplete={handleFlyComplete}
+        onFlyComplete={onFlyComplete}
       />
     </div>
   );
