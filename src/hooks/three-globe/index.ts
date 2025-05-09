@@ -1,7 +1,6 @@
-
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
-import { ThreeGlobeResult, FlyingState } from './types';
+import { ThreeGlobeResult, FlyingState, EARTH_RADIUS } from './types';
 import { isWebGLAvailable, disposeObject, disposeScene } from './utils';
 import { setupControls } from './controls-setup';
 import { updateFlyingAnimation, setupFlyToLocation } from './flight-controller';
