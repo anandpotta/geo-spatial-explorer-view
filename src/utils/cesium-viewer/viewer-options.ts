@@ -24,7 +24,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   globe.tileCacheSize = 1000; // Larger tile cache
 
   // Create sky atmosphere with correct constructor
-  const skyAtmosphere = new Cesium.SkyAtmosphere();
+  const skyAtmosphere = new Cesium.SkyAtmosphere(Cesium.Ellipsoid.WGS84, true);
   skyAtmosphere.show = true;
   skyAtmosphere.brightnessShift = 0.5; // Make atmosphere brighter
   
