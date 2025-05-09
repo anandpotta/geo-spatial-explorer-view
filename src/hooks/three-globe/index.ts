@@ -73,11 +73,40 @@ export const useThreeGlobe = (
       isInitializedRef.current = true;
       setIsInitialized(true);
       
+      // Initial camera position - start from farther out for dramatic effect
+      camera.position.z = EARTH_RADIUS * 4;
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
+      
+      // Add a subtle initial animation
+      setTimeout(() => {
+        if (cameraRef.current) {
+          const startPos = cameraRef.current.position.clone();
+          const endPos = new THREE.Vector3(0, 0, EARTH_RADIUS * 2.8);
+          
+          let startTime = Date.now();
+          const animateCameraIn = () => {
+            const now = Date.now();
+            const progress = Math.min((now - startTime) / 3000, 1.0);
+            
+            if (cameraRef.current) {
+              cameraRef.current.position.lerpVectors(startPos, endPos, progress);
+              cameraRef.current.lookAt(new THREE.Vector3(0, 0, 0));
+            }
+            
+            if (progress < 1.0) {
+              requestAnimationFrame(animateCameraIn);
+            }
+          };
+          
+          animateCameraIn();
+        }
+      }, 500);
+      
       // Set up animation loop
       const animate = () => {
         if (globeRef.current && !flyingStateRef.current.isFlying) {
           // Auto-rotate when not flying
-          globeRef.current.rotation.y += 0.001;
+          globeRef.current.rotation.y += 0.0005;
         }
         
         // Handle flying animation if active
@@ -102,7 +131,7 @@ export const useThreeGlobe = (
       
       // Signal that the globe is ready
       if (onGlobeReady) {
-        setTimeout(onGlobeReady, 500);
+        setTimeout(onGlobeReady, 2500); // Give time for initial animation
       }
       
       // Cleanup function

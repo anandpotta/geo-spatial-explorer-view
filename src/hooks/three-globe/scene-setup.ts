@@ -1,4 +1,3 @@
-
 import * as THREE from 'three';
 import { EARTH_RADIUS, OUTER_SPACE_DISTANCE } from './types';
 import { createGlobe, addStars } from './globe-creator';
@@ -15,15 +14,15 @@ export function initializeScene(
   renderer: THREE.WebGLRenderer;
   globe: THREE.Mesh;
 } {
-  // Create scene
+  // Create scene with dark space background
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000000);
+  scene.background = new THREE.Color(0x000011);
   
-  // Create camera
-  const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, EARTH_RADIUS * 20);
+  // Create camera with wider field of view for space perspective
+  const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, EARTH_RADIUS * 50);
   camera.position.z = OUTER_SPACE_DISTANCE;
   
-  // Create renderer
+  // Create renderer with better quality settings
   const renderer = new THREE.WebGLRenderer({ 
     antialias: true,
     alpha: true,
@@ -32,14 +31,18 @@ export function initializeScene(
   renderer.setSize(width, height);
   renderer.setPixelRatio(window.devicePixelRatio);
   
-  // Create ambient light
-  const ambientLight = new THREE.AmbientLight(0x404040, 1);
+  // Create ambient light (starlight)
+  const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
   scene.add(ambientLight);
   
   // Create directional light (sunlight)
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-  sunLight.position.set(1, 0, 1).normalize();
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  sunLight.position.set(1, 0.5, 1).normalize();
   scene.add(sunLight);
+  
+  // Add hemisphere light for more realistic lighting from space
+  const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x000000, 0.2);
+  scene.add(hemisphereLight);
   
   // Create Earth with improved texture
   const globe = createGlobe();
