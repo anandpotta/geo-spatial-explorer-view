@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const [showResults, setShowResults] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Check if we're online or offline
@@ -100,6 +101,18 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     setSelectedLocation(null);
     setResults([]);
     setShowResults(false);
+    
+    // Focus the input after clearing to allow immediate new search
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  const handleInputFocus = () => {
+    // When input gets focus and has content, show results if available
+    if (query.length >= 3 && results.length > 0) {
+      setShowResults(true);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -152,10 +165,12 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Input
+              ref={inputRef}
               type="text"
               placeholder="Enter location to navigate..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onFocus={handleInputFocus}
               className="pr-8 pl-10 w-full"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
@@ -175,7 +190,10 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         </div>
         
         {showResults && results.length > 0 && (
-          <ul className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+          <ul 
+            className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto" 
+            style={{ display: showResults ? 'block' : 'none' }}
+          >
             {results.map((location) => (
               <li 
                 key={location.id} 

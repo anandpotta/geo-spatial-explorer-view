@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
@@ -28,6 +28,17 @@ const MapViews: React.FC<MapViewsProps> = ({
   activeTool,
   handleClearAll
 }) => {
+  // Log view changes and location changes for debugging
+  useEffect(() => {
+    console.log(`MapViews: Current view changed to ${currentView}`);
+  }, [currentView]);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      console.log(`MapViews: Selected location changed to ${selectedLocation.label}`);
+    }
+  }, [selectedLocation]);
+
   return (
     <ApiSyncProvider>
       <div 
