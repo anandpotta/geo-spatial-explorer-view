@@ -59,9 +59,11 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     } else if (results.length > 0) {
       handleSelect(results[0]);
     } else if (query.length >= 3) {
-      setIsLoading(true);
+      // Use the searchLocations directly without manually managing loading state
+      // as it's now handled in the custom hook
+      const { searchLocations } = require('@/utils/location-utils');
+      
       searchLocations(query).then(locations => {
-        setIsLoading(false);
         if (locations.length > 0) {
           handleSelect(locations[0]);
         } else {
@@ -72,7 +74,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           });
         }
       }).catch(error => {
-        setIsLoading(false);
         toast({
           title: "Search error",
           description: "Could not complete the search request",
@@ -89,9 +90,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
       setShowResults(true);
     }
   };
-
-  // We need to import searchLocations for the submit handler
-  const { searchLocations } = require('@/utils/location-utils');
 
   return (
     <div className="w-full p-2 z-[10000] bg-background rounded-md shadow-lg">
