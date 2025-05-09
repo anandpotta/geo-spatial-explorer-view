@@ -39,16 +39,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     console.log('Flying to location:', selectedLocation);
     setIsFlying(true);
     
-    // Add a more dramatic flight animation with stages
+    // Fix: Pass only the required arguments to flyToLocation
     flyToLocation(
       selectedLocation.x,
       selectedLocation.y,
       () => {
         setIsFlying(false);
         if (onFlyComplete) onFlyComplete();
-      },
-      // Set a longer duration for more dramatic effect
-      3000
+      }
     );
   }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);
 
