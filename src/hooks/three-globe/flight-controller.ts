@@ -39,15 +39,15 @@ export function updateFlyingAnimation(
 }
 
 /**
- * Set up flying to a specific latitude and longitude
+ * Set up flying to a specific latitude and longitude with enhanced animation
  */
 export function setupFlyToLocation(
   cameraRef: React.MutableRefObject<THREE.PerspectiveCamera | null>,
   globeRef: React.MutableRefObject<THREE.Mesh | null>,
   flyingStateRef: React.MutableRefObject<FlyingState>
-): (longitude: number, latitude: number, onComplete?: () => void) => void {
+): (longitude: number, latitude: number, onComplete?: () => void, duration?: number) => void {
   
-  return (longitude: number, latitude: number, onComplete?: () => void): void => {
+  return (longitude: number, latitude: number, onComplete?: () => void, duration = 2000): void => {
     if (!cameraRef.current || !globeRef.current) return;
     
     // Convert the latitude and longitude to a 3D position
@@ -68,9 +68,9 @@ export function setupFlyToLocation(
     // Set up the camera position for flying animation
     const startPosition = cameraRef.current.position.clone();
     
-    // Target position should be just outside the surface of the globe
+    // Target position should be closer to the surface for a more immersive landing
     const direction = targetPosition.clone().normalize();
-    const targetCameraPosition = direction.multiplyScalar(EARTH_RADIUS * 1.5);
+    const targetCameraPosition = direction.multiplyScalar(EARTH_RADIUS * 1.3); // Closer to surface
     
     // Store the animation state
     flyingStateRef.current = {
@@ -79,10 +79,10 @@ export function setupFlyToLocation(
       startPosition,
       targetPosition: targetCameraPosition,
       startTime: Date.now(),
-      duration: 2000, // 2 seconds
+      duration: duration,
       onComplete,
     };
     
-    console.log('Starting flight to:', { longitude, latitude });
+    console.log('Starting enhanced flight to:', { longitude, latitude });
   };
 }

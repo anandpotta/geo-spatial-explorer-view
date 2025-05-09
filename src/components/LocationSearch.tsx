@@ -182,23 +182,23 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           </Button>
         </div>
         
-        {showResults && results.length > 0 && (
-          <ul 
-            className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto"
-            style={{ display: showResults ? 'block' : 'none' }}
-          >
-            {results.map((location) => (
-              <li 
-                key={location.id} 
-                className="px-3 py-2 hover:bg-accent cursor-pointer flex items-center"
-                onClick={() => handleSelect(location)}
-              >
-                <Search size={14} className="mr-2 text-muted-foreground" />
-                {location.label}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul 
+          className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto"
+          style={{ 
+            display: showResults ? 'block' : 'none' 
+          }}
+        >
+          {results.map((location) => (
+            <li 
+              key={location.id} 
+              className="px-3 py-2 hover:bg-accent cursor-pointer flex items-center"
+              onClick={() => handleSelect(location)}
+            >
+              <Search size={14} className="mr-2 text-muted-foreground" />
+              {location.label}
+            </li>
+          ))}
+        </ul>
       </form>
       
       {selectedLocation && (

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
-import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
+import CesiumMap from '../../CesiumMap'; // Using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
 import { ApiSyncProvider } from '@/contexts/ApiSyncContext';
 
@@ -28,8 +28,8 @@ const MapViews: React.FC<MapViewsProps> = ({
   activeTool,
   handleClearAll
 }) => {
-  // Default to leaflet if a location is selected
-  const actualView = selectedLocation ? 'leaflet' : currentView;
+  // Default to cesium (Three.js globe) for initial view and switch to leaflet when needed
+  const actualView = currentView;
   
   return (
     <ApiSyncProvider>

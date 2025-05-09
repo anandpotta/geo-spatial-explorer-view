@@ -13,16 +13,19 @@ interface CesiumMapProps {
 
 /**
  * Main Map component (previously CesiumMap, now using ThreeJS)
+ * Note: We keep the name "CesiumMap" for backward compatibility
  */
 const CesiumMap: React.FC<CesiumMapProps> = (props) => {
+  const handleMapReady = (viewer: any) => {
+    if (props.onMapReady) props.onMapReady();
+    if (props.onViewerReady && viewer) props.onViewerReady(viewer);
+  };
+
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
       <ThreeGlobeMap 
         selectedLocation={props.selectedLocation}
-        onMapReady={(viewer) => {
-          if (props.onMapReady) props.onMapReady();
-          if (props.onViewerReady && viewer) props.onViewerReady(viewer);
-        }}
+        onMapReady={handleMapReady}
         onFlyComplete={props.onFlyComplete}
       />
     </div>
