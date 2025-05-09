@@ -28,10 +28,13 @@ const MapViews: React.FC<MapViewsProps> = ({
   activeTool,
   handleClearAll
 }) => {
+  // Default to leaflet if a location is selected
+  const actualView = selectedLocation ? 'leaflet' : currentView;
+  
   return (
     <ApiSyncProvider>
       <div 
-        className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+        className={`absolute inset-0 transition-opacity duration-500 ${actualView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
         style={{ 
           position: 'absolute', 
           top: 0, 
@@ -40,11 +43,11 @@ const MapViews: React.FC<MapViewsProps> = ({
           bottom: 0, 
           width: '100%', 
           height: '100%',
-          visibility: currentView === 'cesium' ? 'visible' : 'hidden'
+          visibility: actualView === 'cesium' ? 'visible' : 'hidden'
         }}
         data-map-type="cesium"
       >
-        {currentView === 'cesium' && (
+        {actualView === 'cesium' && (
           <CesiumMap 
             selectedLocation={selectedLocation}
             onMapReady={onMapReady}
@@ -57,13 +60,13 @@ const MapViews: React.FC<MapViewsProps> = ({
       </div>
       
       <div 
-        className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
+        className={`absolute inset-0 transition-opacity duration-500 ${actualView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
         style={{ 
-          visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
+          visibility: actualView === 'leaflet' ? 'visible' : 'hidden' 
         }}
         data-map-type="leaflet"
       >
-        {currentView === 'leaflet' && (
+        {actualView === 'leaflet' && (
           <LeafletMap 
             selectedLocation={selectedLocation} 
             onMapReady={handleLeafletMapRef}

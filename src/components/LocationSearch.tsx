@@ -139,6 +139,13 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     }
   };
 
+  const handleFocusInput = () => {
+    // Show results again when user focuses on the input field
+    if (query.length >= 3 && results.length > 0) {
+      setShowResults(true);
+    }
+  };
+
   return (
     <div className="w-full p-2 z-[10000] bg-background rounded-md shadow-lg">
       {isOfflineMode && (
@@ -156,6 +163,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
               placeholder="Enter location to navigate..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onFocus={handleFocusInput}
               className="pr-8 pl-10 w-full"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
@@ -175,7 +183,10 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         </div>
         
         {showResults && results.length > 0 && (
-          <ul className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+          <ul 
+            className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto"
+            style={{ display: showResults ? 'block' : 'none' }}
+          >
             {results.map((location) => (
               <li 
                 key={location.id} 
