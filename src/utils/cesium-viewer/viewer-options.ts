@@ -24,9 +24,8 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   globe.tileCacheSize = 1000; // Larger tile cache
 
   // Create the sky atmosphere with the correct number of arguments
-  // Fix: Creating SkyAtmosphere with ellipsoid and a false second parameter
-  // The second parameter is 'computeEnvironmentTexture' which we'll set to false for performance
-  const skyAtmosphere = new Cesium.SkyAtmosphere(Cesium.Ellipsoid.WGS84, false);
+  // According to the error, SkyAtmosphere accepts 0-1 arguments, so we'll pass just the ellipsoid
+  const skyAtmosphere = new Cesium.SkyAtmosphere(Cesium.Ellipsoid.WGS84);
   skyAtmosphere.show = true;
   skyAtmosphere.brightnessShift = 0.5; // Make atmosphere brighter
   
