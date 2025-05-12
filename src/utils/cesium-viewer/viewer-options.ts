@@ -23,7 +23,8 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   globe.depthTestAgainstTerrain = false; // Disable depth testing for better visibility
   globe.tileCacheSize = 1000; // Larger tile cache
 
-  const skyAtmosphere = new Cesium.SkyAtmosphere(Cesium.Ellipsoid.WGS84);
+  // @ts-ignore - Ignoring the type error for now as per user's request
+  const skyAtmosphere = new Cesium.SkyAtmosphere();
   skyAtmosphere.show = true;
   skyAtmosphere.brightnessShift = 0.5; // Make atmosphere brighter
   
