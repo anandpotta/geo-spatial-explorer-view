@@ -1,5 +1,6 @@
 
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { createThreeViewerOptions } from '@/utils/threejs-viewer/viewer-options';
 
 // Earth radius in km (scaled)
@@ -101,7 +102,7 @@ export function setupLighting(scene: THREE.Scene): void {
  * Configures the orbit controls for the globe
  */
 export function configureControls(
-  controls: THREE.OrbitControls | null, 
+  controls: OrbitControls | null, 
   camera: THREE.PerspectiveCamera | null
 ): void {
   if (!controls || !camera) return;
