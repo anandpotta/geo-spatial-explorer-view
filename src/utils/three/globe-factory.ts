@@ -42,6 +42,8 @@ export function createEarthGlobe(scene: THREE.Scene): {
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
+  console.log('Earth globe created with basic material');
+  
   return {
     globeGroup,
     earthMesh,
@@ -49,7 +51,9 @@ export function createEarthGlobe(scene: THREE.Scene): {
       earthTextureLoaded = earthLoaded;
       bumpTextureLoaded = bumpLoaded;
       
-      return earthTextureLoaded && bumpTextureLoaded;
+      const allLoaded = earthTextureLoaded && bumpTextureLoaded;
+      console.log(`Textures loaded - Earth: ${earthLoaded}, Bump: ${bumpLoaded}, All: ${allLoaded}`);
+      return allLoaded;
     }
   };
 }
@@ -96,6 +100,11 @@ export function setupLighting(scene: THREE.Scene): void {
   );
   directionalLight.position.copy(options.lights.directional.position);
   scene.add(directionalLight);
+  
+  // Add a second light from the opposite direction for better illumination
+  const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  backLight.position.set(-1, -1, -1);
+  scene.add(backLight);
 }
 
 /**

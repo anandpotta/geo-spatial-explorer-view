@@ -20,6 +20,7 @@ export function useThreeGlobe(
   // Globe-specific refs
   const globeRef = useRef<THREE.Group | null>(null);
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
+  const earthMeshRef = useRef<THREE.Mesh | null>(null);
   
   // Use the scene hook
   const {
@@ -55,11 +56,13 @@ export function useThreeGlobe(
       globeGroup.rotation.y = Math.PI;
       scene.add(globeGroup);
       globeRef.current = globeGroup;
+      earthMeshRef.current = earthMesh;
       
       // Load textures
       loadEarthTextures(earthMesh.material as THREE.MeshPhongMaterial, (earthLoaded, bumpLoaded) => {
         const allLoaded = updateTextureLoadStatus(earthLoaded, bumpLoaded);
         if (allLoaded) {
+          console.log("All Earth textures loaded successfully");
           setTexturesLoaded(true);
         }
       });
@@ -109,6 +112,8 @@ export function useThreeGlobe(
         disposeObject3D(atmosphereRef.current);
         atmosphereRef.current = null;
       }
+      
+      earthMeshRef.current = null;
     };
   }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, isInitialized]);
   

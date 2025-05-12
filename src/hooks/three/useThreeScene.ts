@@ -61,12 +61,16 @@ export function useThreeScene(
       canvasElementRef.current = null;
     }
     
+    cameraRef.current = null;
     console.log("Three.js scene cleanup complete");
   }, []);
   
   // Initialize scene
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      console.warn("Container ref not available for Three.js scene");
+      return;
+    }
     
     console.log("Initializing Three.js scene");
     
@@ -92,21 +96,29 @@ export function useThreeScene(
     cameraRef.current = camera;
     
     // Create renderer
-    const renderer = new THREE.WebGLRenderer({
-      antialias: options.rendering.antialias,
-      alpha: options.rendering.alpha,
-      preserveDrawingBuffer: options.rendering.preserveDrawingBuffer,
-      powerPreference: options.rendering.powerPreference as WebGLPowerPreference,
-    });
-    renderer.setSize(clientWidth, clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    rendererRef.current = renderer;
-    
-    // Append renderer to container
-    containerRef.current.appendChild(renderer.domElement);
-    canvasElementRef.current = renderer.domElement;
-    
-    console.log("Three.js scene initialized");
+    try {
+      const renderer = new THREE.WebGLRenderer({
+        antialias: options.rendering.antialias,
+        alpha: options.rendering.alpha,
+        preserveDrawingBuffer: options.rendering.preserveDrawingBuffer,
+        powerPreference: options.rendering.powerPreference as WebGLPowerPreference,
+      });
+      renderer.setSize(clientWidth, clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      rendererRef.current = renderer;
+      
+      // Append renderer to container
+      containerRef.current.appendChild(renderer.domElement);
+      canvasElementRef.current = renderer.domElement;
+      
+      // Create orbit controls
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controlsRef.current = controls;
+      
+      console.log("Three.js scene initialized");
+    } catch (error) {
+      console.error("Failed to initialize WebGL renderer:", error);
+    }
     
     // Handle window resize
     const handleResize = () => {

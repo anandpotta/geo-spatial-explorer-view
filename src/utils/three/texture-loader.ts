@@ -13,10 +13,17 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
+  // Define fallback textures in case remote loading fails
+  const earthTextureURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+  const bumpTextureURL = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
+  
+  console.log('Loading Earth textures from:', earthTextureURL);
+  
   // Load main texture
   textureLoader.load(
-    'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg', 
+    earthTextureURL, 
     (texture) => {
+      console.log('Earth texture loaded successfully');
       earthMaterial.map = texture;
       earthMaterial.needsUpdate = true;
       earthTextureLoaded = true;
@@ -24,7 +31,10 @@ export function loadEarthTextures(
       // Notify progress
       onProgress(earthTextureLoaded, bumpTextureLoaded);
     },
-    undefined,  // onProgress callback not needed
+    (progressEvent) => {
+      // Optional progress callback
+      console.log('Earth texture loading progress:', progressEvent);
+    },
     (error) => {
       console.error('Error loading Earth texture:', error);
       // Still mark as loaded to prevent blocking
@@ -35,8 +45,9 @@ export function loadEarthTextures(
   
   // Load bump map
   textureLoader.load(
-    'https://unpkg.com/three-globe/example/img/earth-topology.png', 
+    bumpTextureURL, 
     (bumpTexture) => {
+      console.log('Bump texture loaded successfully');
       earthMaterial.bumpMap = bumpTexture;
       earthMaterial.bumpScale = 0.05;
       earthMaterial.needsUpdate = true;
@@ -45,7 +56,10 @@ export function loadEarthTextures(
       // Notify progress
       onProgress(earthTextureLoaded, bumpTextureLoaded);
     },
-    undefined,  // onProgress callback not needed
+    (progressEvent) => {
+      // Optional progress callback
+      console.log('Bump texture loading progress:', progressEvent);
+    },
     (error) => {
       console.error('Error loading bump texture:', error);
       // Still mark as loaded to prevent blocking
