@@ -43,8 +43,7 @@ export function useFlyToLocation(
     const targetPos = new THREE.Vector3(cameraTargetX, cameraTargetY, cameraTargetZ);
     
     // Save the current target of the controls
-    const currentTarget = new THREE.Vector3();
-    controlsRef.current.target.clone(currentTarget);
+    const currentTarget = controlsRef.current.target.clone();
     
     // Disable auto-rotation during transition
     controlsRef.current.autoRotate = false;
