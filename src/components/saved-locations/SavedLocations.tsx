@@ -2,6 +2,7 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSavedLocations } from '@/hooks/useSavedLocations';
 import DeleteLocationDialog from './DeleteLocationDialog';
+import RenameLocationDialog from './RenameLocationDialog';
 import LocationListItem from './LocationListItem';
 import { toast } from 'sonner';
 
@@ -15,9 +16,15 @@ const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
     markerToDelete,
+    isRenameDialogOpen,
+    setIsRenameDialogOpen,
+    markerToRename,
     handleDelete,
+    handleRename,
     confirmDelete,
-    cancelDelete
+    confirmRename,
+    cancelDelete,
+    cancelRename
   } = useSavedLocations();
   
   const handleSelect = (position: [number, number]) => {
@@ -43,6 +50,7 @@ const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
               marker={marker}
               onSelect={handleSelect}
               onDelete={(id, e) => handleDelete(id, e)}
+              onRename={(id, e) => handleRename(id, e)}
             />
           ))}
         </div>
@@ -54,6 +62,14 @@ const SavedLocations = ({ onLocationSelect }: SavedLocationsProps) => {
         markerToDelete={markerToDelete}
         onConfirmDelete={confirmDelete}
         onCancel={cancelDelete}
+      />
+
+      <RenameLocationDialog
+        isOpen={isRenameDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
+        markerToRename={markerToRename}
+        onConfirmRename={confirmRename}
+        onCancel={cancelRename}
       />
     </>
   );
