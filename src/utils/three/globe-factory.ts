@@ -24,15 +24,15 @@ export function createEarthGlobe(scene: THREE.Scene): {
   // Create Earth sphere with higher segment count for smoother appearance
   const earthGeometry = new THREE.SphereGeometry(
     EARTH_RADIUS,
-    96, // Higher segment count for smoother sphere
-    96
+    128, // Higher segment count for smoother sphere
+    128
   );
   
   // Create more realistic material with enhanced shininess and specular highlights
   const earthMaterial = new THREE.MeshPhongMaterial({
-    color: 0x2233aa,  // Ocean blue as a fallback
-    shininess: 25,    // Increase shininess for better realism
-    specular: new THREE.Color('#555555'), // Subtle specular highlights
+    color: 0x2233aa,  // Default ocean blue as a fallback
+    shininess: 30,    // Increase shininess for better realism
+    specular: new THREE.Color('#333333'), // Subtle specular highlights
   });
   
   // Create Earth mesh
@@ -69,16 +69,16 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   
   // Create slightly larger geometry for atmosphere
   const atmosphereGeometry = new THREE.SphereGeometry(
-    EARTH_RADIUS * 1.025, // Thinner atmosphere for more realism
-    96, // Higher segment count for smoother sphere
-    96
+    EARTH_RADIUS * 1.035, // Slightly thicker atmosphere for more realistic glow
+    128, // Higher segment count for smoother sphere
+    128
   );
   
-  // Use a more realistic atmosphere material
+  // Use a more realistic atmosphere material with subtle glow
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
     color: new THREE.Color(0x6699ff), // Light blue atmosphere
     transparent: true,
-    opacity: 0.12, // Reduced opacity for more subtle effect
+    opacity: 0.15, // Subtle opacity for better glow effect
     side: THREE.BackSide
   });
   

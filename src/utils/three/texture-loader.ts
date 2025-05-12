@@ -13,12 +13,13 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Use more reliable and realistic Earth textures from NASA Blue Marble collection
-  const earthTextureURL = 'https://raw.githubusercontent.com/ecomfe/echarts-gl/master/test/data/asset/earth.jpg';
-  // Use a bump texture for terrain elevation 
-  const bumpTextureURL = 'https://raw.githubusercontent.com/ecomfe/echarts-gl/master/test/data/asset/bathymetry_bw_composite_4k.jpg';
+  // Use NASA's Blue Marble Next Generation with topography and bathymetry
+  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74117/world.200412.3x5400x2700.jpg';
   
-  console.log('Loading Earth textures from:', earthTextureURL);
+  // Use a high-detail bump map
+  const bumpTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/gebco_08_rev_elev_21600x10800.png';
+  
+  console.log('Loading high-resolution Earth textures...');
   
   // Load main texture
   textureLoader.load(
@@ -42,14 +43,14 @@ export function loadEarthTextures(
     },
     (error) => {
       console.error('Error loading Earth texture:', error);
-      // Fallback to another reliable texture
-      const fallbackTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg';
-      console.log('Trying fallback texture:', fallbackTextureURL);
+      // Use the uploaded image as fallback
+      const fallbackTextureURL = 'public/lovable-uploads/40c69632-a13b-4264-886a-7ea756c3c93d.png';
+      console.log('Trying user-provided texture:', fallbackTextureURL);
       
       textureLoader.load(
         fallbackTextureURL,
         (fallbackTexture) => {
-          console.log('Fallback texture loaded successfully');
+          console.log('User-provided texture loaded successfully');
           fallbackTexture.anisotropy = 16;
           fallbackTexture.encoding = THREE.sRGBEncoding;
           fallbackTexture.needsUpdate = true;
@@ -60,8 +61,8 @@ export function loadEarthTextures(
         },
         undefined,
         () => {
-          // If both fail, use the standard Blue Marble as final fallback
-          const lastResortURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+          // If both fail, try another reliable source
+          const lastResortURL = 'https://unpkg.com/three-globe@2.27.1/example/img/earth-blue-marble.jpg';
           textureLoader.load(
             lastResortURL,
             (lastTexture) => {
@@ -107,7 +108,7 @@ export function loadEarthTextures(
     (error) => {
       console.error('Error loading bump texture:', error);
       // Try fallback bump texture
-      const fallbackBumpURL = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
+      const fallbackBumpURL = 'https://unpkg.com/three-globe@2.27.1/example/img/earth-topology.png';
       textureLoader.load(
         fallbackBumpURL,
         (fallbackBump) => {
