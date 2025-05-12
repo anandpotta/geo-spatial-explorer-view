@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import DrawingTools from '../../DrawingTools';
 import LocationSearch from '../../LocationSearch';
-import { zoomIn, zoomOut, resetCamera } from '@/utils/cesium-camera';
+import { zoomIn, zoomOut, resetCamera } from '@/utils/threejs-camera';
 import MapViews from './MapViews';
 import MapTools from './MapTools';
 import DrawingToolHandler from './DrawingToolHandler';
