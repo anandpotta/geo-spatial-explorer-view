@@ -23,8 +23,9 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   globe.depthTestAgainstTerrain = false; // Disable depth testing for better visibility
   globe.tileCacheSize = 1000; // Larger tile cache
 
-  // Fix: Add an empty object as the second parameter to SkyAtmosphere constructor
-  const skyAtmosphere = new Cesium.SkyAtmosphere(Cesium.Ellipsoid.WGS84, {});
+  // Fix: SkyAtmosphere constructor may take different arguments depending on Cesium version
+  // Using correct constructor signature that accepts either 0 or 1 argument
+  const skyAtmosphere = new Cesium.SkyAtmosphere(Cesium.Ellipsoid.WGS84);
   skyAtmosphere.show = true;
   skyAtmosphere.brightnessShift = 0.5; // Make atmosphere brighter
   
@@ -51,6 +52,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
+    // Fix: SkyAtmosphere expects correct parameter format
     skyAtmosphere: skyAtmosphere, // Use our preconfigured skyAtmosphere
     globe: globe, // Use our preconfigured globe
     scene3DOnly: true, // Optimize for 3D only
