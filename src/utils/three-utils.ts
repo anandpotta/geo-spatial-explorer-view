@@ -77,14 +77,18 @@ export function disposeObject3D(object: THREE.Object3D): void {
     
     if (Array.isArray(material)) {
       material.forEach(mat => {
-        if (mat.map) {
-          mat.map.dispose();
+        // Check if material has a map property (like MeshBasicMaterial, etc.)
+        const materialWithMap = mat as any;
+        if (materialWithMap.map) {
+          materialWithMap.map.dispose();
         }
         mat.dispose();
       });
     } else {
-      if (material.map) {
-        material.map.dispose();
+      // Check if material has a map property (like MeshBasicMaterial, etc.)
+      const materialWithMap = material as any;
+      if (materialWithMap.map) {
+        materialWithMap.map.dispose();
       }
       material.dispose();
     }
