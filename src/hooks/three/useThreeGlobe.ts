@@ -1,18 +1,17 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { createThreeViewerOptions } from '@/utils/threejs-viewer/viewer-options';
 import { useThreeScene } from './useThreeScene';
 import { useFlyToLocation } from './useFlyToLocation';
 import { disposeObject3D } from '@/utils/three-utils';
-
-// Earth radius in km (scaled)
-const EARTH_RADIUS = 5;
-// Distance to show the full Earth
-const OUTER_SPACE_DISTANCE = EARTH_RADIUS * 4;
-// Closest distance to Earth's surface
-const MIN_DISTANCE = EARTH_RADIUS * 1.2;
+import { 
+  createEarthGlobe, 
+  createAtmosphere, 
+  setupLighting,
+  configureControls,
+  EARTH_RADIUS
+} from '@/utils/three/globe-factory';
+import { loadEarthTextures } from '@/utils/three/texture-loader';
 
 export function useThreeGlobe(
   containerRef: React.RefObject<HTMLDivElement>,
@@ -38,88 +37,6 @@ export function useThreeGlobe(
   // Track if textures are loaded
   const [texturesLoaded, setTexturesLoaded] = useState(false);
   
-  // Create our own globe
-  const createGlobe = useCallback(() => {
-    if (!scene) return null;
-    
-    const options = createThreeViewerOptions();
-    const globeGroup = new THREE.Group();
-    
-    // Create Earth sphere
-    const earthGeometry = new THREE.SphereGeometry(
-      EARTH_RADIUS,
-      options.globe.segments,
-      options.globe.segments
-    );
-    
-    // Create basic material first so we have something visible right away
-    const earthMaterial = new THREE.MeshPhongMaterial({
-      color: 0x2233aa,  // Ocean blue as a fallback
-      shininess: 5,
-      specular: new THREE.Color('#000000'),
-    });
-    
-    // Create Earth mesh
-    const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
-    globeGroup.add(earthMesh);
-    
-    // Load Earth texture with absolute URLs to ensure they load
-    const textureLoader = new THREE.TextureLoader();
-    let earthTextureLoaded = false;
-    let bumpTextureLoaded = false;
-    
-    // Load main texture
-    textureLoader.load(
-      'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg', 
-      (texture) => {
-        earthMaterial.map = texture;
-        earthMaterial.needsUpdate = true;
-        earthTextureLoaded = true;
-        
-        // Mark textures as loaded if both are ready
-        if (bumpTextureLoaded) {
-          setTexturesLoaded(true);
-        }
-      },
-      undefined,  // onProgress callback not needed
-      (error) => {
-        console.error('Error loading Earth texture:', error);
-        // Still mark as loaded to prevent blocking
-        earthTextureLoaded = true;
-        if (bumpTextureLoaded) {
-          setTexturesLoaded(true);
-        }
-      }
-    );
-    
-    // Load bump map
-    textureLoader.load(
-      'https://unpkg.com/three-globe/example/img/earth-topology.png', 
-      (bumpTexture) => {
-        earthMaterial.bumpMap = bumpTexture;
-        earthMaterial.bumpScale = 0.05;
-        earthMaterial.needsUpdate = true;
-        bumpTextureLoaded = true;
-        
-        // Mark textures as loaded if both are ready
-        if (earthTextureLoaded) {
-          setTexturesLoaded(true);
-        }
-      },
-      undefined,  // onProgress callback not needed
-      (error) => {
-        console.error('Error loading bump texture:', error);
-        // Still mark as loaded to prevent blocking
-        bumpTextureLoaded = true;
-        if (earthTextureLoaded) {
-          setTexturesLoaded(true);
-        }
-      }
-    );
-    
-    return globeGroup;
-  }, [scene]);
-  
   // Setup globe objects and controls
   useEffect(() => {
     if (!scene || !camera || !renderer) {
@@ -129,64 +46,32 @@ export function useThreeGlobe(
     
     console.log("Setting up globe objects and controls");
     
-    const options = createThreeViewerOptions();
-    
-    // Add lighting
-    const ambientLight = new THREE.AmbientLight(
-      options.lights.ambient.color,
-      options.lights.ambient.intensity
-    );
-    scene.add(ambientLight);
-    
-    const directionalLight = new THREE.DirectionalLight(
-      options.lights.directional.color,
-      options.lights.directional.intensity
-    );
-    directionalLight.position.copy(options.lights.directional.position);
-    scene.add(directionalLight);
+    // Set up lighting
+    setupLighting(scene);
     
     // Create Earth globe
-    const globe = createGlobe();
-    if (globe) {
-      globe.rotation.y = Math.PI;
-      scene.add(globe);
-      globeRef.current = globe;
+    const { globeGroup, earthMesh, setTexturesLoaded: updateTextureLoadStatus } = createEarthGlobe(scene);
+    if (globeGroup) {
+      globeGroup.rotation.y = Math.PI;
+      scene.add(globeGroup);
+      globeRef.current = globeGroup;
+      
+      // Load textures
+      loadEarthTextures(earthMesh.material as THREE.MeshPhongMaterial, (earthLoaded, bumpLoaded) => {
+        const allLoaded = updateTextureLoadStatus(earthLoaded, bumpLoaded);
+        if (allLoaded) {
+          setTexturesLoaded(true);
+        }
+      });
     }
     
     // Create atmosphere
-    if (options.globe.enableAtmosphere) {
-      const atmosphereGeometry = new THREE.SphereGeometry(
-        EARTH_RADIUS * 1.05,
-        options.globe.segments,
-        options.globe.segments
-      );
-      
-      const atmosphereMaterial = new THREE.MeshPhongMaterial({
-        color: options.globe.atmosphereColor,
-        transparent: true,
-        opacity: 0.3,
-        side: THREE.BackSide
-      });
-      
-      const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-      scene.add(atmosphere);
-      atmosphereRef.current = atmosphere;
-    }
+    const atmosphere = createAtmosphere(scene);
+    scene.add(atmosphere);
+    atmosphereRef.current = atmosphere;
     
-    // Set up controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = MIN_DISTANCE;
-    controls.maxDistance = OUTER_SPACE_DISTANCE;
-    controls.enablePan = false;
-    controls.autoRotate = options.globe.enableRotation;
-    controls.autoRotateSpeed = 0.5;
-    controlsRef.current = controls;
-    
-    // Position camera
-    camera.position.z = OUTER_SPACE_DISTANCE;
-    camera.lookAt(0, 0, 0);
+    // Configure controls
+    configureControls(controlsRef.current, camera);
     
     console.log("Globe setup complete, starting animation");
     
@@ -225,7 +110,7 @@ export function useThreeGlobe(
         atmosphereRef.current = null;
       }
     };
-  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, createGlobe, isInitialized]);
+  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, isInitialized]);
   
   // Call onInitialized when textures are loaded
   useEffect(() => {
