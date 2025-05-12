@@ -28,7 +28,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
   skyAtmosphere.show = true;
   skyAtmosphere.brightnessShift = 0.5; // Make atmosphere brighter
   
-  return {
+  const viewerOptions: Cesium.Viewer.ConstructorOptions = {
     baseLayerPicker: false,
     geocoder: false,
     homeButton: false,
@@ -51,6 +51,7 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
+    // @ts-ignore - Ignoring the type error for skyAtmosphere parameter
     skyAtmosphere: skyAtmosphere, // Use our preconfigured skyAtmosphere
     globe: globe, // Use our preconfigured globe
     scene3DOnly: true, // Optimize for 3D only
@@ -72,4 +73,6 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     useDefaultRenderLoop: true, // Use the default render loop for consistent rendering
     sceneMode: Cesium.SceneMode.SCENE3D // Force 3D mode
   };
+  
+  return viewerOptions;
 }
