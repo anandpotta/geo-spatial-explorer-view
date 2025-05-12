@@ -68,6 +68,8 @@ export function useThreeScene(
   useEffect(() => {
     if (!containerRef.current) return;
     
+    console.log("Initializing Three.js scene");
+    
     // Clean up any previous instance
     cleanup();
     
@@ -76,6 +78,7 @@ export function useThreeScene(
     // Create scene
     const scene = new THREE.Scene();
     scene.background = options.backgroundColor;
+    sceneRef.current = scene;
     
     // Create camera
     const { clientWidth, clientHeight } = containerRef.current;
@@ -86,6 +89,7 @@ export function useThreeScene(
       options.cameraOptions.far
     );
     camera.position.copy(options.cameraOptions.position);
+    cameraRef.current = camera;
     
     // Create renderer
     const renderer = new THREE.WebGLRenderer({
@@ -96,15 +100,13 @@ export function useThreeScene(
     });
     renderer.setSize(clientWidth, clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
+    rendererRef.current = renderer;
     
     // Append renderer to container
     containerRef.current.appendChild(renderer.domElement);
     canvasElementRef.current = renderer.domElement;
     
-    // Store references
-    sceneRef.current = scene;
-    cameraRef.current = camera;
-    rendererRef.current = renderer;
+    console.log("Three.js scene initialized");
     
     // Handle window resize
     const handleResize = () => {

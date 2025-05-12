@@ -33,6 +33,19 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     if (onMapReady) onMapReady({ scene, camera, renderer, globe, controls });
   });
   
+  // Debug log for initialization status
+  useEffect(() => {
+    console.log("ThreeGlobe component initialization status:", isInitialized);
+    console.log("Container element exists:", !!containerRef.current);
+    
+    if (isInitialized) {
+      console.log("Scene object exists:", !!scene);
+      console.log("Camera object exists:", !!camera);
+      console.log("Renderer object exists:", !!renderer);
+      console.log("Globe object exists:", !!globe);
+    }
+  }, [isInitialized, scene, camera, renderer, globe]);
+  
   // Handle flying to a location when selectedLocation changes
   useEffect(() => {
     if (!isInitialized || !selectedLocation || isFlying) return;
@@ -73,6 +86,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         overflow: 'hidden',
         zIndex: 0
       }}
+      data-testid="three-globe-container"
     >
       {!isGlobeReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 text-white">

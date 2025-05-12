@@ -77,20 +77,14 @@ export function disposeObject3D(object: THREE.Object3D): void {
     
     if (Array.isArray(material)) {
       material.forEach(mat => {
-        if (mat instanceof THREE.MeshBasicMaterial || 
-            mat instanceof THREE.MeshPhongMaterial || 
-            mat instanceof THREE.MeshStandardMaterial) {
-          // Only check map property on materials that support it
-          if (mat.map) mat.map.dispose();
+        if (mat.map) {
+          mat.map.dispose();
         }
         mat.dispose();
       });
     } else {
-      if (material instanceof THREE.MeshBasicMaterial || 
-          material instanceof THREE.MeshPhongMaterial || 
-          material instanceof THREE.MeshStandardMaterial) {
-        // Only check map property on materials that support it
-        if (material.map) material.map.dispose();
+      if (material.map) {
+        material.map.dispose();
       }
       material.dispose();
     }

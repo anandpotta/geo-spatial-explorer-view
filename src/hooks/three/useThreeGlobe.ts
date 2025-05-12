@@ -37,7 +37,12 @@ export function useThreeGlobe(
   
   // Setup globe objects and controls
   useEffect(() => {
-    if (!scene || !camera || !renderer) return;
+    if (!scene || !camera || !renderer) {
+      console.log("Scene, camera or renderer not available yet");
+      return;
+    }
+    
+    console.log("Setting up globe objects and controls");
     
     const options = createThreeViewerOptions();
     
@@ -103,9 +108,12 @@ export function useThreeGlobe(
     controls.autoRotateSpeed = 0.5;
     controlsRef.current = controls;
     
+    console.log("Globe setup complete, starting animation");
+    
     // Start animation loop
     const animate = () => {
       if (!scene || !camera || !renderer || !controlsRef.current) {
+        console.warn("Animation loop missing required objects");
         return;
       }
       
@@ -120,11 +128,13 @@ export function useThreeGlobe(
     // Mark as initialized
     setIsInitialized(true);
     if (onInitialized) {
+      console.log("Calling onInitialized callback");
       onInitialized();
     }
     
     // Cleanup function
     return () => {
+      console.log("Globe effect cleanup");
       // Dispose globe and atmosphere meshes
       if (globeRef.current) {
         disposeObject3D(globeRef.current);
@@ -138,7 +148,7 @@ export function useThreeGlobe(
     };
   }, [scene, camera, renderer, onInitialized, setIsInitialized, animationFrameRef, controlsRef]);
   
-  // Get flyToLocation functionality - Fix by using the proper ref type
+  // Get flyToLocation functionality
   const { flyToLocation } = useFlyToLocation(
     { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
     controlsRef,
