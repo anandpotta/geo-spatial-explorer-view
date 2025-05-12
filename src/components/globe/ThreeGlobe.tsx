@@ -23,13 +23,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     scene, 
     camera, 
     renderer, 
+    controls,
     globe,
     flyToLocation,
     isInitialized
   } = useThreeGlobe(containerRef, () => {
     console.log("ThreeGlobe: Scene initialized successfully");
     setIsGlobeReady(true);
-    if (onMapReady) onMapReady({ scene, camera, renderer, globe });
+    if (onMapReady) onMapReady({ scene, camera, renderer, globe, controls });
   });
   
   // Handle flying to a location when selectedLocation changes
