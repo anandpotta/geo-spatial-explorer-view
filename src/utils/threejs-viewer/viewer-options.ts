@@ -34,8 +34,8 @@ export function createThreeViewerOptions(): Record<string, any> {
     globe: {
       radius: 5,
       segments: 96, // Higher segment count for smoother appearance
-      baseColor: new THREE.Color(0x1a4d7c), // Deep ocean blue
-      atmosphereColor: new THREE.Color(0x6699ff), // Light blue atmosphere
+      baseColor: new THREE.Color(0x1a7d4c), // Deep green instead of ocean blue
+      atmosphereColor: new THREE.Color(0x99ffcc), // Light green atmosphere instead of blue
       enableAtmosphere: true,
       enableClouds: false, // Disable clouds by default for performance
       enableRotation: true, // Auto-rotation enabled

@@ -13,8 +13,8 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Define HD textures for better visual quality
-  const earthTextureURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+  // Define HD textures for better visual quality - using green-focused Earth texture
+  const earthTextureURL = 'https://unpkg.com/three-globe/example/img/earth-green-marble.jpg';
   const bumpTextureURL = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
   
   console.log('Loading Earth textures from:', earthTextureURL);
@@ -29,6 +29,10 @@ export function loadEarthTextures(
       texture.encoding = THREE.sRGBEncoding;
       texture.needsUpdate = true;
       earthMaterial.map = texture;
+      
+      // Enhance green colors slightly
+      earthMaterial.color = new THREE.Color(0xc8ffc8); // Light green tint overlay
+      
       earthMaterial.needsUpdate = true;
       earthTextureLoaded = true;
       
@@ -41,6 +45,10 @@ export function loadEarthTextures(
     },
     (error) => {
       console.error('Error loading Earth texture:', error);
+      // Use a fallback green texture
+      earthMaterial.color = new THREE.Color(0x22aa55); // Fallback to basic green
+      earthMaterial.needsUpdate = true;
+      
       // Still mark as loaded to prevent blocking
       earthTextureLoaded = true;
       onProgress(earthTextureLoaded, bumpTextureLoaded);

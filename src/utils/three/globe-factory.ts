@@ -30,7 +30,7 @@ export function createEarthGlobe(scene: THREE.Scene): {
   
   // Create basic material first so we have something visible right away
   const earthMaterial = new THREE.MeshPhongMaterial({
-    color: 0x2233aa,  // Ocean blue as a fallback
+    color: 0x22aa55,  // Green base color (fallback)
     shininess: 15,    // Increase shininess for better look
     specular: new THREE.Color('#333333'),
   });
@@ -74,9 +74,9 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
     96
   );
   
-  // Use a more realistic atmosphere material
+  // Use a more realistic atmosphere material with green tint
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
-    color: new THREE.Color(0x6699ff), // Light blue atmosphere
+    color: new THREE.Color(0x99ffcc), // Light green atmosphere
     transparent: true,
     opacity: 0.15,
     side: THREE.BackSide
