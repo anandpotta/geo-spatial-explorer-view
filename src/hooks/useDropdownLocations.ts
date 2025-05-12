@@ -1,15 +1,12 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { LocationMarker } from '@/utils/geo-utils';
-import { getSavedMarkers } from '@/utils/marker-utils';
+import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
 
 export const useDropdownLocations = () => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
   const [pinnedMarkers, setPinnedMarkers] = useState<LocationMarker[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [markerToRename, setMarkerToRename] = useState<LocationMarker | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   
   const loadMarkers = () => {
@@ -68,10 +65,6 @@ export const useDropdownLocations = () => {
     setIsDeleteDialogOpen,
     markerToDelete,
     setMarkerToDelete,
-    isRenameDialogOpen,
-    setIsRenameDialogOpen,
-    markerToRename,
-    setMarkerToRename,
     returnFocusRef,
     cleanupMarkerReferences
   };

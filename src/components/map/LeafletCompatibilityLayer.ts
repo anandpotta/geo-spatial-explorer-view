@@ -5,7 +5,7 @@ import { EditControl as OriginalEditControl } from "react-leaflet-draw";
 import React, { forwardRef } from 'react';
 
 // Create a wrapper component that forwards the ref and handles the featureGroup prop
-export const EditControl = forwardRef((props: any, ref) => {
+export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
@@ -51,7 +51,7 @@ export const EditControl = forwardRef((props: any, ref) => {
     };
   }
   
-  // Use createElement to create the component with the ref properly passed
+  // Create the element with React.createElement to properly pass the ref
   return React.createElement(OriginalEditControl, {
     ...otherProps,
     edit: editOptions,
@@ -59,5 +59,4 @@ export const EditControl = forwardRef((props: any, ref) => {
   });
 });
 
-// Set display name for debugging purposes
 EditControl.displayName = "EditControl";

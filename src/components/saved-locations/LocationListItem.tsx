@@ -1,17 +1,16 @@
 
 import { LocationMarker } from '@/utils/geo-utils';
 import { Button } from '@/components/ui/button';
-import { MapPin, Trash2, Edit } from 'lucide-react';
+import { MapPin, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface LocationListItemProps {
   marker: LocationMarker;
   onSelect: (position: [number, number]) => void;
   onDelete: (id: string, event?: React.MouseEvent) => void;
-  onRename: (id: string, event?: React.MouseEvent) => void;
 }
 
-const LocationListItem = ({ marker, onSelect, onDelete, onRename }: LocationListItemProps) => {
+const LocationListItem = ({ marker, onSelect, onDelete }: LocationListItemProps) => {
   return (
     <div className="flex items-center justify-between p-2 bg-accent rounded-md">
       <div className="flex items-center gap-2">
@@ -31,23 +30,13 @@ const LocationListItem = ({ marker, onSelect, onDelete, onRename }: LocationList
           variant="ghost" 
           size="icon" 
           onClick={() => onSelect(marker.position)}
-          title="Navigate to location"
         >
           <MapPin size={16} />
         </Button>
         <Button 
           variant="ghost" 
           size="icon"
-          onClick={(e) => onRename(marker.id, e)}
-          title="Rename location"
-        >
-          <Edit size={16} />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon"
           onClick={(e) => onDelete(marker.id, e)}
-          title="Delete location"
         >
           <Trash2 size={16} />
         </Button>

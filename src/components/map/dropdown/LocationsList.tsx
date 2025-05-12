@@ -8,10 +8,9 @@ interface LocationsListProps {
   markers: LocationMarker[];
   onSelect: (position: [number, number]) => void;
   onDelete: (id: string, event: React.MouseEvent) => void;
-  onRename?: (id: string, event: React.MouseEvent) => void;
 }
 
-const LocationsList = ({ markers, onSelect, onDelete, onRename }: LocationsListProps) => {
+const LocationsList = ({ markers, onSelect, onDelete }: LocationsListProps) => {
   return (
     <>
       {markers.map((marker) => (
@@ -20,7 +19,6 @@ const LocationsList = ({ markers, onSelect, onDelete, onRename }: LocationsListP
           marker={marker}
           onSelect={onSelect}
           onDelete={onDelete}
-          onRename={onRename}
         />
       ))}
     </>

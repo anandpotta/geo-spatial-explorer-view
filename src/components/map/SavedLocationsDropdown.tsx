@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Plus } from "lucide-react";
 import DeleteLocationDialog from '@/components/saved-locations/DeleteLocationDialog';
-import RenameLocationDialog from '@/components/saved-locations/RenameLocationDialog';
 import LocationsList from './dropdown/LocationsList';
 import AddLocationForm from './dropdown/AddLocationForm';
 import { createMarker, deleteMarker } from '@/utils/marker-utils';
@@ -32,10 +31,6 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     setIsDeleteDialogOpen,
     markerToDelete,
     setMarkerToDelete,
-    isRenameDialogOpen,
-    setIsRenameDialogOpen,
-    markerToRename,
-    setMarkerToRename,
     cleanupMarkerReferences
   } = useDropdownLocations();
 
@@ -56,17 +51,6 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     }
   };
 
-  const handleRenameClick = (id: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    event.preventDefault();
-    
-    const marker = markers.find(m => m.id === id);
-    if (marker) {
-      setMarkerToRename(marker);
-      setIsRenameDialogOpen(true);
-    }
-  };
-
   const handleConfirmDelete = () => {
     if (markerToDelete) {
       deleteMarker(markerToDelete.id);
@@ -80,32 +64,6 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       cleanupMarkerReferences();
       document.body.focus();
     }
-  };
-
-  const handleConfirmRename = (id: string, newName: string) => {
-    const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
-    const updatedMarkers = savedMarkers.map((marker: any) => {
-      if (marker.id === id) {
-        return { ...marker, name: newName };
-      }
-      return marker;
-    });
-    
-    localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
-    
-    // Dispatch events to notify other components
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('markersUpdated'));
-    
-    setIsRenameDialogOpen(false);
-    setMarkerToRename(null);
-    uiToast({
-      title: "Success",
-      description: "Location renamed",
-    });
-    
-    cleanupMarkerReferences();
-    document.body.focus();
   };
 
   const handleAddLocation = async () => {
@@ -199,7 +157,6 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
             markers={markers}
             onSelect={handleSelectLocation}
             onDelete={handleDeleteClick}
-            onRename={handleRenameClick}
           />
           {!isAddingLocation ? (
             <div className="p-2">
@@ -231,18 +188,6 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
         onCancel={() => {
           setIsDeleteDialogOpen(false);
           setMarkerToDelete(null);
-          document.body.focus();
-        }}
-      />
-
-      <RenameLocationDialog
-        isOpen={isRenameDialogOpen}
-        onOpenChange={setIsRenameDialogOpen}
-        markerToRename={markerToRename}
-        onConfirmRename={handleConfirmRename}
-        onCancel={() => {
-          setIsRenameDialogOpen(false);
-          setMarkerToRename(null);
           document.body.focus();
         }}
       />

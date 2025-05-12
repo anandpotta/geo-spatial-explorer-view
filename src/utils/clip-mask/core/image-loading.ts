@@ -112,14 +112,14 @@ export const retrieveFloorPlanImageUrl = (drawingId: string): string | null => {
 };
 
 /**
- * Clear the cache when user changes or explicitly requested
+ * Clear the cache when user changes
  */
 export const clearImageUrlCache = (): void => {
   imageUrlCache.clear();
   console.log('Image URL cache cleared');
 };
 
-// Listen for user changes and view changes
+// Listen for user changes
 if (typeof window !== 'undefined') {
   window.addEventListener('userChanged', () => {
     clearImageUrlCache();
@@ -132,14 +132,6 @@ if (typeof window !== 'undefined') {
   });
   
   window.addEventListener('storage', () => {
-    clearImageUrlCache();
-  });
-  
-  window.addEventListener('clearImageCache', () => {
-    clearImageUrlCache();
-  });
-  
-  window.addEventListener('mapViewChanged', () => {
     clearImageUrlCache();
   });
 }
