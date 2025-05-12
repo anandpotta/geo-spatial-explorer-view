@@ -86,9 +86,16 @@ export function useThreeScene(
     
     // Create camera
     const { clientWidth, clientHeight } = containerRef.current;
+    
+    // Ensure valid dimensions - use minimum values if we get zeros
+    const width = clientWidth || 800; 
+    const height = clientHeight || 600;
+    
+    console.log(`Creating camera with dimensions: ${width}x${height}`);
+    
     const camera = new THREE.PerspectiveCamera(
       options.cameraOptions.fov,
-      clientWidth / clientHeight,
+      width / height,
       options.cameraOptions.near,
       options.cameraOptions.far
     );
@@ -103,19 +110,34 @@ export function useThreeScene(
         preserveDrawingBuffer: options.rendering.preserveDrawingBuffer,
         powerPreference: options.rendering.powerPreference as WebGLPowerPreference,
       });
-      renderer.setSize(clientWidth, clientHeight);
+      
+      // Set size with valid dimensions
+      renderer.setSize(width, height);
       renderer.setPixelRatio(window.devicePixelRatio);
       rendererRef.current = renderer;
       
       // Append renderer to container
-      containerRef.current.appendChild(renderer.domElement);
-      canvasElementRef.current = renderer.domElement;
+      const canvas = renderer.domElement;
+      containerRef.current.appendChild(canvas);
+      canvasElementRef.current = canvas;
+      
+      console.log("Renderer created and added to container");
       
       // Create orbit controls
-      const controls = new OrbitControls(camera, renderer.domElement);
+      const controls = new OrbitControls(camera, canvas);
       controlsRef.current = controls;
       
+      // Initial render to make sure something is visible
+      renderer.render(scene, camera);
+      
       console.log("Three.js scene initialized");
+      
+      // Call the onSceneReady callback if provided
+      if (onSceneReady) {
+        onSceneReady();
+      }
+      
+      setIsInitialized(true);
     } catch (error) {
       console.error("Failed to initialize WebGL renderer:", error);
     }
@@ -124,20 +146,34 @@ export function useThreeScene(
     const handleResize = () => {
       if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
       
+      // Get new dimensions
       const { clientWidth, clientHeight } = containerRef.current;
-      cameraRef.current.aspect = clientWidth / clientHeight;
+      
+      // Ensure valid dimensions
+      const width = clientWidth || 800;
+      const height = clientHeight || 600;
+      
+      // Update camera aspect ratio
+      cameraRef.current.aspect = width / height;
       cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(clientWidth, clientHeight);
+      
+      // Update renderer size
+      rendererRef.current.setSize(width, height);
+      
+      console.log(`Resized renderer to ${width}x${height}`);
     };
     
     window.addEventListener('resize', handleResize);
+    
+    // Initial call to handleResize to ensure everything is set up correctly
+    setTimeout(handleResize, 100);
     
     // Clean up on unmount
     return () => {
       window.removeEventListener('resize', handleResize);
       cleanup();
     };
-  }, [containerRef, cleanup]);
+  }, [containerRef, cleanup, onSceneReady]);
   
   return {
     scene: sceneRef.current,

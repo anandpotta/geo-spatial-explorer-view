@@ -83,12 +83,13 @@ export function createStarfield(scene: THREE.Scene): void {
   const starsMaterial = new THREE.PointsMaterial({
     color: 0xffffff,
     size: 1,
-    transparent: true
+    transparent: true,
+    opacity: 1.0 // Full opacity for stars
   });
   
   // Create a large number of stars at random positions
   const starsVertices = [];
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < 15000; i++) { // More stars
     const x = THREE.MathUtils.randFloatSpread(2000);
     const y = THREE.MathUtils.randFloatSpread(2000);
     const z = THREE.MathUtils.randFloatSpread(2000);
@@ -99,5 +100,5 @@ export function createStarfield(scene: THREE.Scene): void {
   const starField = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starField);
   
-  console.log('Starfield background added to scene');
+  console.log('Starfield background added to scene with 15000 stars');
 }

@@ -39,10 +39,13 @@ export function createEarthGlobe(scene: THREE.Scene): {
   const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
   globeGroup.add(earthMesh);
   
+  // Make this group immediately visible in the scene
+  scene.add(globeGroup);
+  
+  console.log('Earth globe created with basic material and added to scene');
+  
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
-  
-  console.log('Earth globe created with basic material');
   
   return {
     globeGroup,
@@ -80,6 +83,9 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   });
   
   const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+  scene.add(atmosphere); // Add directly to scene
+  console.log('Atmosphere added to scene');
+  
   return atmosphere;
 }
 
@@ -92,22 +98,25 @@ export function setupLighting(scene: THREE.Scene): void {
   // Add ambient lighting
   const ambientLight = new THREE.AmbientLight(
     0x404040,
-    0.6
+    0.8
   );
   scene.add(ambientLight);
+  console.log('Ambient light added to scene');
   
   // Main directional light (sun)
   const directionalLight = new THREE.DirectionalLight(
     0xffffff,
-    1.0
+    1.2
   );
   directionalLight.position.set(1, 0.5, 1);
   scene.add(directionalLight);
+  console.log('Directional light added to scene');
   
   // Add a second light from the opposite direction for better illumination
-  const backLight = new THREE.DirectionalLight(0x555555, 0.4);
-  backLight.position.set(-1, -1, -1);
+  const backLight = new THREE.DirectionalLight(0x555555, 0.6); // Increased intensity
+  backLight.position.set(-1, -0.5, -1);
   scene.add(backLight);
+  console.log('Back light added to scene');
 }
 
 /**
@@ -117,8 +126,12 @@ export function configureControls(
   controls: OrbitControls | null, 
   camera: THREE.PerspectiveCamera | null
 ): void {
-  if (!controls || !camera) return;
+  if (!controls || !camera) {
+    console.warn('Cannot configure controls or camera - they are null');
+    return;
+  }
   
+  console.log('Configuring orbit controls for camera');
   const options = createThreeViewerOptions();
   
   controls.enableDamping = true;
@@ -130,6 +143,7 @@ export function configureControls(
   controls.autoRotateSpeed = 0.5;
   
   // Position camera
-  camera.position.z = OUTER_SPACE_DISTANCE;
+  camera.position.z = EARTH_RADIUS * 3; // Start closer to see the globe
   camera.lookAt(0, 0, 0);
+  console.log('Camera positioned at:', camera.position);
 }

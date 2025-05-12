@@ -14,18 +14,18 @@ export function createThreeViewerOptions(): Record<string, any> {
       fov: 45,
       near: 0.1,
       far: 2000, // Increased for starfield
-      position: new THREE.Vector3(0, 0, 20) // Default camera position
+      position: new THREE.Vector3(0, 0, 15) // Adjusted camera position to see the globe
     },
     
     // Lighting
     lights: {
       ambient: {
         color: 0x404040,
-        intensity: 0.6
+        intensity: 0.8 // Increased ambient light
       },
       directional: {
         color: 0xffffff,
-        intensity: 1.0,
+        intensity: 1.2, // Increased light intensity
         position: new THREE.Vector3(1, 0.5, 1)
       }
     },

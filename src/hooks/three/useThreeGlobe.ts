@@ -47,6 +47,14 @@ export function useThreeGlobe(
     
     console.log("Setting up globe objects and controls");
     
+    // Clear any previous starfield or elements
+    scene.children.forEach(child => {
+      if (child instanceof THREE.Points || 
+          (child instanceof THREE.Mesh && child.userData.type === 'starfield')) {
+        scene.remove(child);
+      }
+    });
+    
     // Add starfield background
     createStarfield(scene);
     
@@ -57,9 +65,11 @@ export function useThreeGlobe(
     const { globeGroup, earthMesh, setTexturesLoaded: updateTextureLoadStatus } = createEarthGlobe(scene);
     if (globeGroup) {
       globeGroup.rotation.y = Math.PI;
-      scene.add(globeGroup);
+      scene.add(globeGroup); // Add to scene
       globeRef.current = globeGroup;
       earthMeshRef.current = earthMesh;
+      
+      console.log("Globe created and added to scene");
       
       // Load textures
       loadEarthTextures(earthMesh.material as THREE.MeshPhongMaterial, (earthLoaded, bumpLoaded) => {
@@ -73,7 +83,6 @@ export function useThreeGlobe(
     
     // Create atmosphere
     const atmosphere = createAtmosphere(scene);
-    scene.add(atmosphere);
     atmosphereRef.current = atmosphere;
     
     // Configure controls
@@ -89,7 +98,11 @@ export function useThreeGlobe(
       }
       
       animationFrameRef.current = requestAnimationFrame(animate);
+      
+      // Make sure controls are updated every frame
       controlsRef.current.update();
+      
+      // Ensure the renderer is drawing the scene
       renderer.render(scene, camera);
     };
     
@@ -112,6 +125,7 @@ export function useThreeGlobe(
       }
       
       if (atmosphereRef.current) {
+        scene.remove(atmosphereRef.current);
         disposeObject3D(atmosphereRef.current);
         atmosphereRef.current = null;
       }
