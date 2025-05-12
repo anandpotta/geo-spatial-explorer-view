@@ -13,8 +13,8 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Define HD textures for better visual quality
-  const earthTextureURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+  // Use a more realistic Earth texture similar to the reference image
+  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74218/world.200409.3x5400x2700.png';
   const bumpTextureURL = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
   
   console.log('Loading Earth textures from:', earthTextureURL);
@@ -41,9 +41,29 @@ export function loadEarthTextures(
     },
     (error) => {
       console.error('Error loading Earth texture:', error);
-      // Still mark as loaded to prevent blocking
-      earthTextureLoaded = true;
-      onProgress(earthTextureLoaded, bumpTextureLoaded);
+      // Fallback to the blue marble texture if NASA image fails to load
+      const fallbackTextureURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+      console.log('Trying fallback texture:', fallbackTextureURL);
+      
+      textureLoader.load(
+        fallbackTextureURL,
+        (fallbackTexture) => {
+          console.log('Fallback texture loaded successfully');
+          fallbackTexture.anisotropy = 16;
+          fallbackTexture.encoding = THREE.sRGBEncoding;
+          fallbackTexture.needsUpdate = true;
+          earthMaterial.map = fallbackTexture;
+          earthMaterial.needsUpdate = true;
+          earthTextureLoaded = true;
+          onProgress(earthTextureLoaded, bumpTextureLoaded);
+        },
+        undefined,
+        () => {
+          console.error('Both textures failed to load');
+          earthTextureLoaded = true;
+          onProgress(earthTextureLoaded, bumpTextureLoaded);
+        }
+      );
     }
   );
   

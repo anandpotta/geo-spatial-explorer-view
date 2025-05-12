@@ -20,12 +20,12 @@ export function createThreeViewerOptions(): Record<string, any> {
     // Lighting
     lights: {
       ambient: {
-        color: 0x404040,
+        color: 0x555555,
         intensity: 0.8 // Increased ambient light
       },
       directional: {
         color: 0xffffff,
-        intensity: 1.2, // Increased light intensity
+        intensity: 1.0, // Standard light intensity
         position: new THREE.Vector3(1, 0.5, 1)
       }
     },
