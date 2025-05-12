@@ -25,7 +25,7 @@ export function createThreeViewerOptions(): Record<string, any> {
       },
       directional: {
         color: 0xffffff,
-        intensity: 1.0, // Standard light intensity
+        intensity: 1.1, // Slightly increased light intensity for better texture visibility
         position: new THREE.Vector3(1, 0.5, 1)
       }
     },

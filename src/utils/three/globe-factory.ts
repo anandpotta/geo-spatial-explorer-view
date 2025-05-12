@@ -28,11 +28,11 @@ export function createEarthGlobe(scene: THREE.Scene): {
     96
   );
   
-  // Create basic material first so we have something visible right away
+  // Create more realistic material with enhanced shininess and specular highlights
   const earthMaterial = new THREE.MeshPhongMaterial({
     color: 0x2233aa,  // Ocean blue as a fallback
-    shininess: 15,    // Increase shininess for better look
-    specular: new THREE.Color('#333333'),
+    shininess: 25,    // Increase shininess for better realism
+    specular: new THREE.Color('#555555'), // Subtle specular highlights
   });
   
   // Create Earth mesh
@@ -69,7 +69,7 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   
   // Create slightly larger geometry for atmosphere
   const atmosphereGeometry = new THREE.SphereGeometry(
-    EARTH_RADIUS * 1.05,
+    EARTH_RADIUS * 1.025, // Thinner atmosphere for more realism
     96, // Higher segment count for smoother sphere
     96
   );
@@ -78,7 +78,7 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
     color: new THREE.Color(0x6699ff), // Light blue atmosphere
     transparent: true,
-    opacity: 0.15,
+    opacity: 0.12, // Reduced opacity for more subtle effect
     side: THREE.BackSide
   });
   

@@ -13,9 +13,10 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Use a more realistic Earth texture similar to the reference image
-  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74218/world.200409.3x5400x2700.png';
-  const bumpTextureURL = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
+  // Use more reliable and realistic Earth textures from NASA Blue Marble collection
+  const earthTextureURL = 'https://raw.githubusercontent.com/ecomfe/echarts-gl/master/test/data/asset/earth.jpg';
+  // Use a bump texture for terrain elevation 
+  const bumpTextureURL = 'https://raw.githubusercontent.com/ecomfe/echarts-gl/master/test/data/asset/bathymetry_bw_composite_4k.jpg';
   
   console.log('Loading Earth textures from:', earthTextureURL);
   
@@ -41,8 +42,8 @@ export function loadEarthTextures(
     },
     (error) => {
       console.error('Error loading Earth texture:', error);
-      // Fallback to the blue marble texture if NASA image fails to load
-      const fallbackTextureURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+      // Fallback to another reliable texture
+      const fallbackTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg';
       console.log('Trying fallback texture:', fallbackTextureURL);
       
       textureLoader.load(
@@ -59,15 +60,32 @@ export function loadEarthTextures(
         },
         undefined,
         () => {
-          console.error('Both textures failed to load');
-          earthTextureLoaded = true;
-          onProgress(earthTextureLoaded, bumpTextureLoaded);
+          // If both fail, use the standard Blue Marble as final fallback
+          const lastResortURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+          textureLoader.load(
+            lastResortURL,
+            (lastTexture) => {
+              console.log('Last resort texture loaded successfully');
+              lastTexture.anisotropy = 16;
+              lastTexture.encoding = THREE.sRGBEncoding;
+              earthMaterial.map = lastTexture;
+              earthMaterial.needsUpdate = true;
+              earthTextureLoaded = true;
+              onProgress(earthTextureLoaded, bumpTextureLoaded);
+            },
+            undefined,
+            () => {
+              console.error('All textures failed to load');
+              earthTextureLoaded = true;
+              onProgress(earthTextureLoaded, bumpTextureLoaded);
+            }
+          );
         }
       );
     }
   );
   
-  // Load bump map
+  // Load bump map for terrain
   textureLoader.load(
     bumpTextureURL, 
     (bumpTexture) => {
@@ -88,9 +106,26 @@ export function loadEarthTextures(
     },
     (error) => {
       console.error('Error loading bump texture:', error);
-      // Still mark as loaded to prevent blocking
-      bumpTextureLoaded = true;
-      onProgress(earthTextureLoaded, bumpTextureLoaded);
+      // Try fallback bump texture
+      const fallbackBumpURL = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
+      textureLoader.load(
+        fallbackBumpURL,
+        (fallbackBump) => {
+          fallbackBump.anisotropy = 16;
+          fallbackBump.needsUpdate = true;
+          earthMaterial.bumpMap = fallbackBump;
+          earthMaterial.bumpScale = 0.05;
+          earthMaterial.needsUpdate = true;
+          bumpTextureLoaded = true;
+          onProgress(earthTextureLoaded, bumpTextureLoaded);
+        },
+        undefined,
+        () => {
+          // Still mark as loaded to prevent blocking
+          bumpTextureLoaded = true;
+          onProgress(earthTextureLoaded, bumpTextureLoaded);
+        }
+      );
     }
   );
 }
