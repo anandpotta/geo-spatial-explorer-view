@@ -36,6 +36,13 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   useEffect(() => {
     if (!isInitialized || !selectedLocation || isFlying) return;
     
+    // Validate coordinates before flying
+    if (typeof selectedLocation.x !== 'number' || typeof selectedLocation.y !== 'number' ||
+        isNaN(selectedLocation.x) || isNaN(selectedLocation.y)) {
+      console.error('Invalid coordinates:', selectedLocation);
+      return;
+    }
+    
     console.log('Flying to location:', selectedLocation);
     setIsFlying(true);
     

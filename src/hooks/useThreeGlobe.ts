@@ -28,6 +28,7 @@ export const useThreeGlobe = (
   const globeRef = useRef<THREE.Mesh | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isInitializedRef = useRef<boolean>(false);
+  const canvasElementRef = useRef<HTMLCanvasElement | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   
   // State for tracking flying animations
@@ -72,13 +73,13 @@ export const useThreeGlobe = (
       renderer.setSize(width, height);
       renderer.setPixelRatio(window.devicePixelRatio);
       
-      // Clear any existing canvas elements to prevent duplicates
-      while (container.firstChild) {
-        container.removeChild(container.firstChild);
-      }
+      // Store the canvas element reference for later cleanup
+      canvasElementRef.current = renderer.domElement;
       
-      // Append the renderer's canvas to the container
-      container.appendChild(renderer.domElement);
+      // Only append if the container is empty or doesn't already have this canvas
+      if (!container.contains(renderer.domElement)) {
+        container.appendChild(renderer.domElement);
+      }
       
       // Create ambient light
       const ambientLight = new THREE.AmbientLight(0x404040, 1);
@@ -149,32 +150,50 @@ export const useThreeGlobe = (
       
       // Cleanup function
       return () => {
+        console.log("Three.js cleanup starting");
+        
+        // Cancel animation frame first
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
         }
         
+        // Remove window event listeners
         window.removeEventListener('resize', handleResize);
         
-        if (rendererRef.current && rendererRef.current.domElement && containerRef.current) {
-          try {
-            containerRef.current.removeChild(rendererRef.current.domElement);
-          } catch (e) {
-            console.warn('Could not remove renderer DOM element', e);
+        // Safely remove the renderer's DOM element
+        try {
+          const canvas = canvasElementRef.current;
+          if (canvas && canvas.parentNode) {
+            canvas.parentNode.removeChild(canvas);
           }
+          canvasElementRef.current = null;
+        } catch (e) {
+          console.warn('Could not remove canvas element:', e);
         }
         
         // Dispose of Three.js resources
         if (globeRef.current) {
           disposeObject(globeRef.current);
+          globeRef.current = null;
         }
         
         if (sceneRef.current) {
           disposeScene(sceneRef.current);
+          sceneRef.current = null;
         }
         
         if (rendererRef.current) {
-          rendererRef.current.dispose();
+          try {
+            rendererRef.current.dispose();
+            rendererRef.current = null;
+          } catch (e) {
+            console.warn('Error disposing renderer:', e);
+          }
         }
+        
+        isInitializedRef.current = false;
+        console.log("Three.js cleanup complete");
       };
     } catch (error) {
       console.error('Error initializing Three.js globe:', error);
