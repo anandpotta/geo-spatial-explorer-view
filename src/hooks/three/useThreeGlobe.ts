@@ -34,6 +34,9 @@ export function useThreeGlobe(
     canvasElementRef,
     controlsRef
   } = useThreeScene(containerRef);
+
+  // Track if textures are loaded
+  const [texturesLoaded, setTexturesLoaded] = useState(false);
   
   // Create our own globe
   const createGlobe = useCallback(() => {
@@ -49,27 +52,70 @@ export function useThreeGlobe(
       options.globe.segments
     );
     
-    // Load Earth texture
+    // Create basic material first so we have something visible right away
+    const earthMaterial = new THREE.MeshPhongMaterial({
+      color: 0x2233aa,  // Ocean blue as a fallback
+      shininess: 5,
+      specular: new THREE.Color('#000000'),
+    });
+    
+    // Create Earth mesh
+    const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+    globeGroup.add(earthMesh);
+    
+    // Load Earth texture with absolute URLs to ensure they load
     const textureLoader = new THREE.TextureLoader();
-    textureLoader.load('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg', (texture) => {
-      // Create Earth material with texture
-      const earthMaterial = new THREE.MeshPhongMaterial({
-        map: texture,
-        shininess: 5,
-        specular: new THREE.Color('#000000'),
-      });
-      
-      // Create Earth mesh
-      const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
-      globeGroup.add(earthMesh);
-      
-      // Load bump map if needed
-      textureLoader.load('//unpkg.com/three-globe/example/img/earth-topology.png', (bumpTexture) => {
+    let earthTextureLoaded = false;
+    let bumpTextureLoaded = false;
+    
+    // Load main texture
+    textureLoader.load(
+      'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg', 
+      (texture) => {
+        earthMaterial.map = texture;
+        earthMaterial.needsUpdate = true;
+        earthTextureLoaded = true;
+        
+        // Mark textures as loaded if both are ready
+        if (bumpTextureLoaded) {
+          setTexturesLoaded(true);
+        }
+      },
+      undefined,  // onProgress callback not needed
+      (error) => {
+        console.error('Error loading Earth texture:', error);
+        // Still mark as loaded to prevent blocking
+        earthTextureLoaded = true;
+        if (bumpTextureLoaded) {
+          setTexturesLoaded(true);
+        }
+      }
+    );
+    
+    // Load bump map
+    textureLoader.load(
+      'https://unpkg.com/three-globe/example/img/earth-topology.png', 
+      (bumpTexture) => {
         earthMaterial.bumpMap = bumpTexture;
         earthMaterial.bumpScale = 0.05;
         earthMaterial.needsUpdate = true;
-      });
-    });
+        bumpTextureLoaded = true;
+        
+        // Mark textures as loaded if both are ready
+        if (earthTextureLoaded) {
+          setTexturesLoaded(true);
+        }
+      },
+      undefined,  // onProgress callback not needed
+      (error) => {
+        console.error('Error loading bump texture:', error);
+        // Still mark as loaded to prevent blocking
+        bumpTextureLoaded = true;
+        if (earthTextureLoaded) {
+          setTexturesLoaded(true);
+        }
+      }
+    );
     
     return globeGroup;
   }, [scene]);
@@ -110,7 +156,7 @@ export function useThreeGlobe(
     // Create atmosphere
     if (options.globe.enableAtmosphere) {
       const atmosphereGeometry = new THREE.SphereGeometry(
-        options.globe.radius * 1.05,
+        EARTH_RADIUS * 1.05,
         options.globe.segments,
         options.globe.segments
       );
@@ -159,11 +205,9 @@ export function useThreeGlobe(
     // Start animation
     animate();
     
-    // Mark as initialized
-    setIsInitialized(true);
-    if (onInitialized) {
-      console.log("Calling onInitialized callback");
-      onInitialized();
+    // Mark as initialized when everything is ready
+    if (!isInitialized) {
+      setIsInitialized(true);
     }
     
     // Cleanup function
@@ -181,7 +225,15 @@ export function useThreeGlobe(
         atmosphereRef.current = null;
       }
     };
-  }, [scene, camera, renderer, onInitialized, setIsInitialized, animationFrameRef, controlsRef, createGlobe]);
+  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, createGlobe, isInitialized]);
+  
+  // Call onInitialized when textures are loaded
+  useEffect(() => {
+    if (texturesLoaded && onInitialized) {
+      console.log("Calling onInitialized callback - textures loaded");
+      onInitialized();
+    }
+  }, [texturesLoaded, onInitialized]);
   
   // Get flyToLocation functionality
   const { flyToLocation } = useFlyToLocation(
