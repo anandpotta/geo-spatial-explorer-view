@@ -52,9 +52,11 @@ export function createOfflineCesiumViewerOptions(): Cesium.Viewer.ConstructorOpt
     targetFrameRate: 60, // Higher framerate for smoother rotation
     shadows: false,
     skyBox: false, // We'll handle atmosphere separately
-    // We need to add the @ts-ignore for this property as well
-    // @ts-ignore - Ignoring the type error for skyAtmosphere property
+    
+    // Add @ts-ignore for the skyAtmosphere property to suppress the type error
+    // @ts-ignore - SkyAtmosphere constructor expects 2 arguments in newer Cesium versions
     skyAtmosphere: skyAtmosphere, // Use our preconfigured skyAtmosphere
+    
     globe: globe, // Use our preconfigured globe
     scene3DOnly: true, // Optimize for 3D only
     shouldAnimate: true, // Ensure the globe is animating
