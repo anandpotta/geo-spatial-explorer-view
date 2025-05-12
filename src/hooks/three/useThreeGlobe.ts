@@ -138,8 +138,12 @@ export function useThreeGlobe(
     };
   }, [scene, camera, renderer, onInitialized, setIsInitialized, animationFrameRef, controlsRef]);
   
-  // Get flyToLocation functionality
-  const { flyToLocation } = useFlyToLocation(camera, controlsRef, EARTH_RADIUS);
+  // Get flyToLocation functionality - Fix by using the proper ref type
+  const { flyToLocation } = useFlyToLocation(
+    { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
+    controlsRef,
+    EARTH_RADIUS
+  );
   
   return {
     scene,

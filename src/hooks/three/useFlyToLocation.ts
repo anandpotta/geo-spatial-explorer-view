@@ -3,11 +3,16 @@ import { useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
+// Define a type that accepts either a direct camera instance or a React ref to a camera
+type CameraRefType = React.MutableRefObject<THREE.PerspectiveCamera | null> | {
+  current: THREE.PerspectiveCamera | null;
+};
+
 /**
  * Hook providing functionality to fly to a specific location on the globe
  */
 export function useFlyToLocation(
-  cameraRef: React.MutableRefObject<THREE.PerspectiveCamera | null>,
+  cameraRef: CameraRefType,
   controlsRef: React.MutableRefObject<OrbitControls | null>,
   globeRadius: number
 ) {
