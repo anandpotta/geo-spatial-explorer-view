@@ -7,13 +7,13 @@ import * as THREE from 'three';
 export function createThreeViewerOptions(): Record<string, any> {
   return {
     // Scene configuration
-    backgroundColor: new THREE.Color(0x000000), // Black background
+    backgroundColor: new THREE.Color(0x000011), // Very dark blue background (nearly black)
     
     // Camera configuration
     cameraOptions: {
       fov: 45,
       near: 0.1,
-      far: 1000,
+      far: 2000, // Increased for starfield
       position: new THREE.Vector3(0, 0, 20) // Default camera position
     },
     
@@ -21,21 +21,21 @@ export function createThreeViewerOptions(): Record<string, any> {
     lights: {
       ambient: {
         color: 0x404040,
-        intensity: 1.0
+        intensity: 0.6
       },
       directional: {
         color: 0xffffff,
         intensity: 1.0,
-        position: new THREE.Vector3(1, 1, 1)
+        position: new THREE.Vector3(1, 0.5, 1)
       }
     },
     
     // Globe configuration
     globe: {
       radius: 5,
-      segments: 64,
-      baseColor: new THREE.Color(0x0066ff), // Vibrant blue for Earth
-      atmosphereColor: new THREE.Color(0x004488), // Atmosphere color
+      segments: 96, // Higher segment count for smoother appearance
+      baseColor: new THREE.Color(0x1a4d7c), // Deep ocean blue
+      atmosphereColor: new THREE.Color(0x6699ff), // Light blue atmosphere
       enableAtmosphere: true,
       enableClouds: false, // Disable clouds by default for performance
       enableRotation: true, // Auto-rotation enabled

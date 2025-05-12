@@ -13,7 +13,7 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Define fallback textures in case remote loading fails
+  // Define HD textures for better visual quality
   const earthTextureURL = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
   const bumpTextureURL = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
   
@@ -24,6 +24,10 @@ export function loadEarthTextures(
     earthTextureURL, 
     (texture) => {
       console.log('Earth texture loaded successfully');
+      // Apply texture settings for better quality
+      texture.anisotropy = 16;
+      texture.encoding = THREE.sRGBEncoding;
+      texture.needsUpdate = true;
       earthMaterial.map = texture;
       earthMaterial.needsUpdate = true;
       earthTextureLoaded = true;
@@ -48,6 +52,8 @@ export function loadEarthTextures(
     bumpTextureURL, 
     (bumpTexture) => {
       console.log('Bump texture loaded successfully');
+      bumpTexture.anisotropy = 16;
+      bumpTexture.needsUpdate = true;
       earthMaterial.bumpMap = bumpTexture;
       earthMaterial.bumpScale = 0.05;
       earthMaterial.needsUpdate = true;
@@ -67,4 +73,31 @@ export function loadEarthTextures(
       onProgress(earthTextureLoaded, bumpTextureLoaded);
     }
   );
+}
+
+/**
+ * Creates a starfield background for the scene
+ */
+export function createStarfield(scene: THREE.Scene): void {
+  const starsGeometry = new THREE.BufferGeometry();
+  const starsMaterial = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 1,
+    transparent: true
+  });
+  
+  // Create a large number of stars at random positions
+  const starsVertices = [];
+  for (let i = 0; i < 10000; i++) {
+    const x = THREE.MathUtils.randFloatSpread(2000);
+    const y = THREE.MathUtils.randFloatSpread(2000);
+    const z = THREE.MathUtils.randFloatSpread(2000);
+    starsVertices.push(x, y, z);
+  }
+  
+  starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+  const starField = new THREE.Points(starsGeometry, starsMaterial);
+  scene.add(starField);
+  
+  console.log('Starfield background added to scene');
 }

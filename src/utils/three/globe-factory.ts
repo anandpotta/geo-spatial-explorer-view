@@ -21,18 +21,18 @@ export function createEarthGlobe(scene: THREE.Scene): {
   const options = createThreeViewerOptions();
   const globeGroup = new THREE.Group();
   
-  // Create Earth sphere
+  // Create Earth sphere with higher segment count for smoother appearance
   const earthGeometry = new THREE.SphereGeometry(
     EARTH_RADIUS,
-    options.globe.segments,
-    options.globe.segments
+    96, // Higher segment count for smoother sphere
+    96
   );
   
   // Create basic material first so we have something visible right away
   const earthMaterial = new THREE.MeshPhongMaterial({
     color: 0x2233aa,  // Ocean blue as a fallback
-    shininess: 5,
-    specular: new THREE.Color('#000000'),
+    shininess: 15,    // Increase shininess for better look
+    specular: new THREE.Color('#333333'),
   });
   
   // Create Earth mesh
@@ -64,16 +64,18 @@ export function createEarthGlobe(scene: THREE.Scene): {
 export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   const options = createThreeViewerOptions();
   
+  // Create slightly larger geometry for atmosphere
   const atmosphereGeometry = new THREE.SphereGeometry(
     EARTH_RADIUS * 1.05,
-    options.globe.segments,
-    options.globe.segments
+    96, // Higher segment count for smoother sphere
+    96
   );
   
+  // Use a more realistic atmosphere material
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
-    color: options.globe.atmosphereColor,
+    color: new THREE.Color(0x6699ff), // Light blue atmosphere
     transparent: true,
-    opacity: 0.3,
+    opacity: 0.15,
     side: THREE.BackSide
   });
   
@@ -87,22 +89,23 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
 export function setupLighting(scene: THREE.Scene): void {
   const options = createThreeViewerOptions();
   
-  // Add lighting
+  // Add ambient lighting
   const ambientLight = new THREE.AmbientLight(
-    options.lights.ambient.color,
-    options.lights.ambient.intensity
+    0x404040,
+    0.6
   );
   scene.add(ambientLight);
   
+  // Main directional light (sun)
   const directionalLight = new THREE.DirectionalLight(
-    options.lights.directional.color,
-    options.lights.directional.intensity
+    0xffffff,
+    1.0
   );
-  directionalLight.position.copy(options.lights.directional.position);
+  directionalLight.position.set(1, 0.5, 1);
   scene.add(directionalLight);
   
   // Add a second light from the opposite direction for better illumination
-  const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+  const backLight = new THREE.DirectionalLight(0x555555, 0.4);
   backLight.position.set(-1, -1, -1);
   scene.add(backLight);
 }
@@ -121,9 +124,9 @@ export function configureControls(
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.minDistance = MIN_DISTANCE;
-  controls.maxDistance = OUTER_SPACE_DISTANCE;
+  controls.maxDistance = OUTER_SPACE_DISTANCE * 1.5; // Allow zooming out further to see stars
   controls.enablePan = false;
-  controls.autoRotate = options.globe.enableRotation;
+  controls.autoRotate = true; // Enable auto-rotation
   controls.autoRotateSpeed = 0.5;
   
   // Position camera

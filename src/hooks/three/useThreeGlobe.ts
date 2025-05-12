@@ -11,7 +11,7 @@ import {
   configureControls,
   EARTH_RADIUS
 } from '@/utils/three/globe-factory';
-import { loadEarthTextures } from '@/utils/three/texture-loader';
+import { loadEarthTextures, createStarfield } from '@/utils/three/texture-loader';
 
 export function useThreeGlobe(
   containerRef: React.RefObject<HTMLDivElement>,
@@ -46,6 +46,9 @@ export function useThreeGlobe(
     }
     
     console.log("Setting up globe objects and controls");
+    
+    // Add starfield background
+    createStarfield(scene);
     
     // Set up lighting
     setupLighting(scene);
