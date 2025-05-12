@@ -42,6 +42,10 @@ export function useFlyToLocation(
     const currentPos = cameraRef.current.position.clone();
     const targetPos = new THREE.Vector3(cameraTargetX, cameraTargetY, cameraTargetZ);
     
+    // Save the current target of the controls
+    const currentTarget = new THREE.Vector3();
+    controlsRef.current.target.clone(currentTarget);
+    
     // Disable auto-rotation during transition
     controlsRef.current.autoRotate = false;
     
@@ -64,10 +68,16 @@ export function useFlyToLocation(
       const newY = currentPos.y + (targetPos.y - currentPos.y) * ease;
       const newZ = currentPos.z + (targetPos.z - currentPos.z) * ease;
       
+      // Interpolate target (where the camera is looking)
+      const newTargetX = currentTarget.x * (1 - ease);
+      const newTargetY = currentTarget.y * (1 - ease);
+      const newTargetZ = currentTarget.z * (1 - ease);
+      
       // Update camera
       if (cameraRef.current) {
         cameraRef.current.position.set(newX, newY, newZ);
-        cameraRef.current.lookAt(0, 0, 0);
+        controlsRef.current!.target.set(newTargetX, newTargetY, newTargetZ);
+        controlsRef.current!.update();
       }
       
       // Continue animation if not complete

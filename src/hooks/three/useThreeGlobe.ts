@@ -2,6 +2,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import ThreeGlobe from 'three-globe';
 import { createThreeViewerOptions } from '@/utils/threejs-viewer/viewer-options';
 import { useThreeScene } from './useThreeScene';
 import { useFlyToLocation } from './useFlyToLocation';
@@ -19,7 +20,7 @@ export function useThreeGlobe(
   onInitialized?: () => void
 ) {
   // Globe-specific refs
-  const globeRef = useRef<THREE.Mesh | null>(null);
+  const globeRef = useRef<ThreeGlobe | null>(null);
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   
   // Use the scene hook
@@ -60,22 +61,20 @@ export function useThreeGlobe(
     directionalLight.position.copy(options.lights.directional.position);
     scene.add(directionalLight);
     
-    // Create Earth globe
-    const globeGeometry = new THREE.SphereGeometry(
-      options.globe.radius,
-      options.globe.segments,
-      options.globe.segments
-    );
+    // Create Earth globe using three-globe
+    const Globe = new ThreeGlobe()
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
+      .globeMaterial(new THREE.MeshPhongMaterial({
+        shininess: 5,
+        specular: new THREE.Color('#000000'),
+      }));
     
-    const globeMaterial = new THREE.MeshPhongMaterial({
-      color: options.globe.baseColor,
-      shininess: 5,
-      flatShading: false
-    });
-    
-    const globe = new THREE.Mesh(globeGeometry, globeMaterial);
-    scene.add(globe);
-    globeRef.current = globe;
+    // Set globe properties and size
+    Globe.scale.set(1, 1, 1);
+    Globe.rotation.y = Math.PI;
+    scene.add(Globe);
+    globeRef.current = Globe;
     
     // Create atmosphere
     if (options.globe.enableAtmosphere) {
@@ -108,6 +107,10 @@ export function useThreeGlobe(
     controls.autoRotateSpeed = 0.5;
     controlsRef.current = controls;
     
+    // Position camera
+    camera.position.z = OUTER_SPACE_DISTANCE;
+    camera.lookAt(0, 0, 0);
+    
     console.log("Globe setup complete, starting animation");
     
     // Start animation loop
@@ -137,7 +140,7 @@ export function useThreeGlobe(
       console.log("Globe effect cleanup");
       // Dispose globe and atmosphere meshes
       if (globeRef.current) {
-        disposeObject3D(globeRef.current);
+        scene.remove(globeRef.current);
         globeRef.current = null;
       }
       
