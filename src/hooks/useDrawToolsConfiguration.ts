@@ -29,8 +29,8 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup) {
         }
         
         // Restore original onMarkerDrag if it was modified
-        if (L.Edit && (L.Edit as any).Poly && (L.Edit as any).Poly.prototype && originalOnMarkerDrag) {
-          (L.Edit as any).Poly.prototype._onMarkerDrag = originalOnMarkerDrag;
+        if (L.Edit && L.Edit.Poly && L.Edit.Poly.prototype && originalOnMarkerDrag) {
+          L.Edit.Poly.prototype._onMarkerDrag = originalOnMarkerDrag;
         }
       };
     } catch (err) {

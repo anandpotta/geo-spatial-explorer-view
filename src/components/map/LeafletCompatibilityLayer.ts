@@ -3,6 +3,23 @@
 // by ensuring that we can still pass certain props like featureGroup to EditControl
 import { EditControl as OriginalEditControl } from "react-leaflet-draw";
 import React, { forwardRef } from 'react';
+import L from 'leaflet';
+
+// Define proper types for edit options
+interface EditOptions {
+  featureGroup: any;
+  edit?: boolean | {
+    selectedPathOptions?: {
+      maintainColor?: boolean;
+      opacity?: number;
+      dashArray?: string;
+      fill?: boolean;
+      fillColor?: string;
+      fillOpacity?: number;
+    };
+  };
+  remove?: boolean;
+}
 
 // Create a wrapper component that forwards the ref and handles the featureGroup prop
 export const EditControl = forwardRef((props: any, ref: any) => {
@@ -10,7 +27,7 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   const { featureGroup, edit, ...otherProps } = props;
   
   // Format the edit options properly based on what was passed
-  let editOptions = {
+  let editOptions: EditOptions = {
     featureGroup: featureGroup
   };
   
