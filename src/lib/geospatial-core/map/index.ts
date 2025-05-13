@@ -66,8 +66,5 @@ export class MapCore {
   }
 }
 
-// Explicitly export the MapCore class
-export { MapCore };
-
 // Re-export map functionality
 export * from './options';
