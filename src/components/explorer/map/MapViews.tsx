@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, CSSProperties } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
@@ -78,12 +78,12 @@ const MapViews: React.FC<MapViewsProps> = ({
   };
   
   // Get styles for current view
-  const getCesiumStyles = () => {
+  const getCesiumStyles = (): React.CSSProperties => {
     const isCurrent = currentView === 'cesium';
     const styles = getTransitionStyles(isCurrent);
     
     return {
-      position: 'absolute',
+      position: 'absolute' as const,
       top: 0,
       left: 0,
       right: 0,
@@ -98,12 +98,12 @@ const MapViews: React.FC<MapViewsProps> = ({
     };
   };
   
-  const getLeafletStyles = () => {
+  const getLeafletStyles = (): React.CSSProperties => {
     const isCurrent = currentView === 'leaflet';
     const styles = getTransitionStyles(!isCurrent);
     
     return {
-      position: 'absolute',
+      position: 'absolute' as const,
       top: 0,
       left: 0,
       right: 0,
