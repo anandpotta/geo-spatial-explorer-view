@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
+import WebView from 'react-native-webview';
 import { GeoLocation } from '../geospatial-core/types';
 import { LoadingIndicator, INJECT_SCRIPT, handleWebViewMessage } from './utils/webview-utils';
 
