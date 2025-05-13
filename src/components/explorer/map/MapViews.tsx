@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
@@ -27,10 +27,37 @@ const MapViews: React.FC<MapViewsProps> = ({
   activeTool,
   handleClearAll
 }) => {
+  // Add transition state to handle smoother view changes
+  const [transitioning, setTransitioning] = useState(false);
+  const [previousView, setPreviousView] = useState<'cesium' | 'leaflet' | null>(null);
+  
+  // Handle view transitions
+  useEffect(() => {
+    if (previousView && previousView !== currentView) {
+      // Start transition effect
+      setTransitioning(true);
+      
+      // End transition after animation completes
+      const timer = setTimeout(() => {
+        setTransitioning(false);
+      }, 500); // Match this to the CSS transition duration
+      
+      return () => clearTimeout(timer);
+    }
+    
+    setPreviousView(currentView);
+  }, [currentView, previousView]);
+  
   return (
     <>
       <div 
-        className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'cesium' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+          currentView === 'cesium' 
+            ? 'opacity-100 z-10' 
+            : transitioning 
+              ? 'opacity-0 z-10 pointer-events-none' 
+              : 'opacity-0 z-0 pointer-events-none'
+        }`} 
         style={{ 
           position: 'absolute', 
           top: 0, 
@@ -39,39 +66,55 @@ const MapViews: React.FC<MapViewsProps> = ({
           bottom: 0, 
           width: '100%', 
           height: '100%',
-          visibility: currentView === 'cesium' ? 'visible' : 'hidden'
+          visibility: currentView === 'cesium' || transitioning ? 'visible' : 'hidden',
+          transform: currentView === 'cesium' ? 'scale(1)' : 'scale(0.98)'
         }}
         data-map-type="cesium"
       >
-        {currentView === 'cesium' && (
-          <CesiumMap 
-            selectedLocation={selectedLocation}
-            onMapReady={onMapReady}
-            onFlyComplete={onFlyComplete}
-            cinematicFlight={true}
-            key={`cesium-${mapKey}`}
-            onViewerReady={handleCesiumViewerRef}
-          />
-        )}
+        {/* Always render both views but hide one */}
+        <CesiumMap 
+          selectedLocation={selectedLocation}
+          onMapReady={onMapReady}
+          onFlyComplete={onFlyComplete}
+          cinematicFlight={true}
+          key={`cesium-${mapKey}`}
+          onViewerReady={handleCesiumViewerRef}
+        />
       </div>
       
       <div 
-        className={`absolute inset-0 transition-opacity duration-500 ${currentView === 'leaflet' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+          currentView === 'leaflet' 
+            ? 'opacity-100 z-10' 
+            : transitioning 
+              ? 'opacity-0 z-10 pointer-events-none' 
+              : 'opacity-0 z-0 pointer-events-none'
+        }`}
         style={{ 
-          visibility: currentView === 'leaflet' ? 'visible' : 'hidden' 
+          visibility: currentView === 'leaflet' || transitioning ? 'visible' : 'hidden',
+          transform: currentView === 'leaflet' ? 'scale(1)' : 'scale(0.98)'
         }}
         data-map-type="leaflet"
       >
-        {currentView === 'leaflet' && (
-          <LeafletMap 
-            selectedLocation={selectedLocation} 
-            onMapReady={handleLeafletMapRef}
-            activeTool={activeTool}
-            key={`leaflet-${mapKey}`}
-            onClearAll={handleClearAll}
-          />
-        )}
+        {/* Always render both views but hide one */}
+        <LeafletMap 
+          selectedLocation={selectedLocation} 
+          onMapReady={handleLeafletMapRef}
+          activeTool={activeTool}
+          key={`leaflet-${mapKey}`}
+          onClearAll={handleClearAll}
+        />
       </div>
+      
+      {/* Add transition overlay */}
+      {transitioning && (
+        <div 
+          className="absolute inset-0 bg-black bg-opacity-30 z-20 pointer-events-none transition-opacity duration-300"
+          style={{
+            animation: 'fadeInOut 500ms ease-in-out forwards'
+          }}
+        />
+      )}
     </>
   );
 };

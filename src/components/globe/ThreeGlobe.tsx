@@ -59,20 +59,40 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     }
   }, [isGlobeReady]);
   
-  // Handle flying to a location when selectedLocation changes
+  // Debounce location changes to prevent rapid-fire transitions
+  const [debouncedSelectedLocation, setDebouncedSelectedLocation] = useState<Location | undefined>(selectedLocation);
+  
   useEffect(() => {
-    if (!isInitialized || !selectedLocation) return;
+    if (!selectedLocation) return;
+    
+    // Create a unique ID for the location
+    const locationId = `${selectedLocation.id}-${selectedLocation.x}-${selectedLocation.y}`;
+    
+    // Skip if it's the same location
+    if (locationId === previousLocationRef.current) return;
+    
+    // Add a small debounce to prevent rapid selection changes
+    const timer = setTimeout(() => {
+      setDebouncedSelectedLocation(selectedLocation);
+    }, 150);
+    
+    return () => clearTimeout(timer);
+  }, [selectedLocation]);
+  
+  // Handle flying to a location when debouncedSelectedLocation changes
+  useEffect(() => {
+    if (!isInitialized || !debouncedSelectedLocation) return;
     
     // Create a unique ID for the location to detect changes
-    const locationId = `${selectedLocation.id}-${selectedLocation.x}-${selectedLocation.y}`;
+    const locationId = `${debouncedSelectedLocation.id}-${debouncedSelectedLocation.x}-${debouncedSelectedLocation.y}`;
     
     // Skip if we're already flying or it's the same location
     if (isFlying || locationId === previousLocationRef.current) return;
     
     // Validate coordinates before flying
-    if (typeof selectedLocation.x !== 'number' || typeof selectedLocation.y !== 'number' ||
-        isNaN(selectedLocation.x) || isNaN(selectedLocation.y)) {
-      console.error('Invalid coordinates:', selectedLocation);
+    if (typeof debouncedSelectedLocation.x !== 'number' || typeof debouncedSelectedLocation.y !== 'number' ||
+        isNaN(debouncedSelectedLocation.x) || isNaN(debouncedSelectedLocation.y)) {
+      console.error('Invalid coordinates:', debouncedSelectedLocation);
       toast({
         title: "Navigation Error",
         description: "Cannot navigate to location due to invalid coordinates",
@@ -81,22 +101,25 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       return;
     }
     
-    console.log('Flying to location:', selectedLocation);
+    console.log('Flying to location:', debouncedSelectedLocation);
     setIsFlying(true);
     previousLocationRef.current = locationId;
     
     flyToLocation(
-      selectedLocation.x,
-      selectedLocation.y,
+      debouncedSelectedLocation.x,
+      debouncedSelectedLocation.y,
       () => {
-        setIsFlying(false);
-        if (onFlyComplete) {
-          console.log("Flight complete, calling onFlyComplete callback");
-          onFlyComplete();
-        }
+        // Wait a moment before marking flight as complete for smoother transition
+        setTimeout(() => {
+          setIsFlying(false);
+          if (onFlyComplete) {
+            console.log("Flight complete, calling onFlyComplete callback");
+            onFlyComplete();
+          }
+        }, 300);
       }
     );
-  }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);
+  }, [debouncedSelectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);
 
   return (
     <div 
@@ -139,6 +162,11 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
             <p className="text-sm text-green-200">Loading high-resolution terrain...</p>
           </div>
         </div>
+      )}
+      
+      {/* Show subtle transition overlay during flights */}
+      {isFlying && isGlobeReady && (
+        <div className="absolute inset-0 bg-black bg-opacity-10 pointer-events-none z-10 transition-opacity duration-500" />
       )}
     </div>
   );

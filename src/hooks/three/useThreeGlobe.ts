@@ -22,6 +22,7 @@ export function useThreeGlobe(
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const autoRotationEnabledRef = useRef<boolean>(true);
+  const isFlyingRef = useRef<boolean>(false);
   
   // Use the scene hook
   const {
@@ -90,10 +91,14 @@ export function useThreeGlobe(
     const atmosphere = createAtmosphere(scene);
     atmosphereRef.current = atmosphere;
     
-    // Configure controls with auto-rotation enabled
+    // Configure controls with improved settings for smoother experience
     if (controlsRef.current) {
       configureControls(controlsRef.current, camera);
       controlsRef.current.autoRotate = true;
+      controlsRef.current.autoRotateSpeed = 0.3; // Slower rotation for smoother appearance
+      controlsRef.current.enableDamping = true;
+      controlsRef.current.dampingFactor = 0.1; // Increased damping for smoother stops
+      controlsRef.current.rotateSpeed = 0.4; // Slower rotation for more precise control
       autoRotationEnabledRef.current = true;
     }
     
@@ -108,17 +113,19 @@ export function useThreeGlobe(
       
       animationFrameRef.current = requestAnimationFrame(animate);
       
-      // If we have a globe, rotate it slightly for a more dynamic appearance
-      if (globeRef.current && autoRotationEnabledRef.current) {
-        // The globe rotation is now handled by OrbitControls autoRotate
-        // but we could add additional rotation effects here if needed
+      // If we have a globe and auto rotation is enabled (and not flying to a location)
+      if (globeRef.current && autoRotationEnabledRef.current && !isFlyingRef.current) {
+        // Let the orbit controls handle rotation
+        controlsRef.current.update();
+      } else if (controlsRef.current) {
+        // Still update controls for other interactions
+        controlsRef.current.update();
       }
       
-      // Make sure controls are updated every frame
-      controlsRef.current.update();
-      
-      // Ensure the renderer is drawing the scene
-      renderer.render(scene, camera);
+      // Ensure the renderer is drawing the scene with high quality
+      if (renderer) {
+        renderer.render(scene, camera);
+      }
     };
     
     // Start animation
@@ -168,10 +175,25 @@ export function useThreeGlobe(
     }
   }, [texturesLoaded, onInitialized, isInitialized]);
   
-  // Enable/disable auto-rotation
+  // Enable/disable auto-rotation with smoother transitions
   const setAutoRotation = useCallback((enabled: boolean) => {
     if (controlsRef.current) {
-      controlsRef.current.autoRotate = enabled;
+      if (enabled && !controlsRef.current.autoRotate) {
+        // When enabling, start with a slower speed and gradually increase
+        controlsRef.current.autoRotate = true;
+        controlsRef.current.autoRotateSpeed = 0.1;
+        
+        // Gradually increase rotation speed
+        const increaseSpeed = () => {
+          if (controlsRef.current && controlsRef.current.autoRotateSpeed < 0.3) {
+            controlsRef.current.autoRotateSpeed += 0.05;
+            setTimeout(increaseSpeed, 100);
+          }
+        };
+        setTimeout(increaseSpeed, 100);
+      } else {
+        controlsRef.current.autoRotate = enabled;
+      }
       autoRotationEnabledRef.current = enabled;
     }
   }, [controlsRef]);
@@ -183,17 +205,26 @@ export function useThreeGlobe(
     EARTH_RADIUS
   );
   
-  // Wrap the flyToLocation to handle auto-rotation
+  // Wrap the flyToLocation to handle auto-rotation and flying state
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
-    // Ensure the globe is rotating while flying for a more dynamic effect
-    setAutoRotation(true);
+    // Set flying state to true to prevent animation conflicts
+    isFlyingRef.current = true;
+    
+    // Temporarily disable auto-rotation for smoother flight
+    setAutoRotation(false);
     
     // Call the original flyToLocation
     flyToLocation(longitude, latitude, () => {
-      // Keep auto-rotation on after flying
-      setAutoRotation(true);
+      // Mark flying as complete
+      isFlyingRef.current = false;
       
-      if (onComplete) onComplete();
+      // Small delay before re-enabling rotation for smoother transition
+      setTimeout(() => {
+        // Re-enable auto-rotation with a smooth start
+        setAutoRotation(true);
+        
+        if (onComplete) onComplete();
+      }, 500);
     });
   }, [flyToLocation, setAutoRotation]);
   

@@ -40,6 +40,27 @@ export function createEarthGlobe(scene: THREE.Scene): {
   const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
   globeGroup.add(earthMesh);
   
+  // Add a subtle highlight to indicate the current side facing the light
+  const highlightMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    opacity: 0.15,
+    transparent: true,
+    side: THREE.FrontSide,
+    blending: THREE.AdditiveBlending
+  });
+  
+  const highlightSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(EARTH_RADIUS * 1.001, 64, 64),
+    highlightMaterial
+  );
+  
+  // Only cover part of the sphere with the highlight
+  highlightSphere.scale.setScalar(1.02);
+  highlightSphere.rotation.y = Math.PI * 0.5;
+  
+  // Add the highlight to the globe group
+  globeGroup.add(highlightSphere);
+  
   // Make this group immediately visible in the scene
   scene.add(globeGroup);
   
@@ -141,9 +162,9 @@ export function configureControls(
   
   // Enhanced control settings for smoother experience
   controls.enableDamping = true;
-  controls.dampingFactor = 0.07; // Increased for smoother stops
-  controls.rotateSpeed = 0.5;    // Slower rotation for more control
-  controls.zoomSpeed = 0.8;      // Slower zoom for better control
+  controls.dampingFactor = 0.1; // Increased for smoother stops
+  controls.rotateSpeed = 0.4;   // Slower rotation for more control
+  controls.zoomSpeed = 0.8;     // Slower zoom for better control
   
   // Distance limits
   controls.minDistance = MIN_DISTANCE;
@@ -154,7 +175,7 @@ export function configureControls(
   
   // Enable auto-rotation for dynamic appearance
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.5; // Moderate rotation speed
+  controls.autoRotateSpeed = 0.3; // Moderate rotation speed
   
   // Set reasonable rotation limits to prevent upside-down view
   controls.minPolarAngle = Math.PI * 0.1;  // Limit top view

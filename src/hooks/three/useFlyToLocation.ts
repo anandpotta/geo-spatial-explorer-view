@@ -38,7 +38,7 @@ export function useFlyToLocation(
     const target = new THREE.Vector3(targetX, targetY, targetZ);
     
     // Calculate camera position (at a specified distance from the target point)
-    const distance = globeRadius * 1.2; // Closer to the surface for better view
+    const distance = globeRadius * 1.5; // Slightly further for smoother view
     const cameraTargetX = -distance * Math.sin(phi) * Math.cos(theta);
     const cameraTargetY = distance * Math.cos(phi);
     const cameraTargetZ = distance * Math.sin(phi) * Math.sin(theta);
@@ -50,21 +50,31 @@ export function useFlyToLocation(
     const currentTarget = controlsRef.current.target.clone();
     const finalTarget = new THREE.Vector3(targetX * 0.2, targetY * 0.2, targetZ * 0.2);
     
-    // Disable auto-rotation during transition
+    // Temporarily disable auto-rotation and damping during transition for precision
     const wasAutoRotating = controlsRef.current.autoRotate;
+    const wasDamping = controlsRef.current.enableDamping;
     controlsRef.current.autoRotate = false;
+    controlsRef.current.enableDamping = false;
     
     // Animate camera position
     let startTime: number | null = null;
-    const duration = 1500; // Faster animation (1.5 seconds)
+    const duration = 2000; // Slower animation (2 seconds) for smoother movement
     
     const animateCamera = (timestamp: number) => {
       if (startTime === null) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Use ease-out cubic function for smoother landing
-      const ease = 1 - Math.pow(1 - progress, 3);
+      // Use custom easing function for smoother motion
+      // This is a combination of ease-out-cubic at start and ease-in-cubic near end
+      let ease;
+      if (progress < 0.5) {
+        // First half: accelerate out of starting position (ease-out-cubic)
+        ease = 0.5 * (1 - Math.pow(1 - 2 * progress, 3));
+      } else {
+        // Second half: decelerate into final position (ease-in-out)
+        ease = 0.5 * (1 + Math.pow(2 * progress - 1, 3));
+      }
       
       // Interpolate camera position
       const newX = currentPos.x + (targetPos.x - currentPos.x) * ease;
@@ -88,9 +98,16 @@ export function useFlyToLocation(
         requestAnimationFrame(animateCamera);
       } else {
         // Animation complete
-        // Only re-enable auto-rotation if it was on before
-        if (controlsRef.current && wasAutoRotating) {
-          controlsRef.current.autoRotate = true;
+        // Restore controls settings
+        if (controlsRef.current) {
+          controlsRef.current.enableDamping = wasDamping;
+          
+          // Delay auto-rotation restart slightly to avoid jump
+          setTimeout(() => {
+            if (controlsRef.current && wasAutoRotating) {
+              controlsRef.current.autoRotate = true;
+            }
+          }, 300);
         }
         
         if (onComplete) {
