@@ -32,6 +32,17 @@ const MapViews: React.FC<MapViewsProps> = ({
   const [transitioning, setTransitioning] = useState(false);
   const [previousView, setPreviousView] = useState<'cesium' | 'leaflet' | null>(null);
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
+  const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
+  
+  // Track location changes to prevent duplicate transitions
+  useEffect(() => {
+    if (selectedLocation && 
+        (!lastSelectedLocation || 
+         selectedLocation.id !== lastSelectedLocation.id)) {
+      console.log('New location selected:', selectedLocation.label);
+      setLastSelectedLocation(selectedLocation);
+    }
+  }, [selectedLocation, lastSelectedLocation]);
   
   // Handle view transitions
   useEffect(() => {

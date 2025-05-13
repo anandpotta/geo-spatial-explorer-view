@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import DrawingTools from '../../DrawingTools';
@@ -29,6 +28,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
+  const [isViewSwitchingAllowed, setIsViewSwitchingAllowed] = useState(true);
   
   // Reset map instance when view changes
   useEffect(() => {
@@ -40,22 +40,40 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
       setViewTransitionInProgress(false);
     }, 1000); // Allow time for transition to complete
     
-    return () => clearTimeout(timer);
+    // Temporarily prevent rapid view switching
+    setIsViewSwitchingAllowed(false);
+    const switchTimer = setTimeout(() => {
+      setIsViewSwitchingAllowed(true);
+    }, 1500);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(switchTimer);
+    };
   }, [currentView]);
 
   const handleCesiumViewerRef = (viewer: any) => {
-    cesiumViewerRef.current = viewer;
+    // Only update the ref if it's not already set (prevents duplicate init)
+    if (!cesiumViewerRef.current) {
+      console.log('Setting Cesium viewer reference');
+      cesiumViewerRef.current = viewer;
+    }
   };
 
   const handleLeafletMapRef = (map: any) => {
-    leafletMapRef.current = map;
-    // When Leaflet map is ready after transition, notify user
-    if (currentView === 'leaflet' && !viewTransitionInProgress) {
-      toast({
-        title: "Map View Ready",
-        description: "Tiled map view has been loaded successfully.",
-        variant: "default",
-      });
+    // Only update the ref if it's not already set (prevents duplicate init)
+    if (!leafletMapRef.current) {
+      console.log('Setting Leaflet map reference');
+      leafletMapRef.current = map;
+      
+      // When Leaflet map is ready after transition, notify user
+      if (currentView === 'leaflet' && !viewTransitionInProgress) {
+        toast({
+          title: "Map View Ready",
+          description: "Tiled map view has been loaded successfully.",
+          variant: "default",
+        });
+      }
     }
   };
 

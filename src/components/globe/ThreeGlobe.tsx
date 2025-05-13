@@ -18,29 +18,45 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const globeAPI = useThreeGlobe(containerRef, onMapReady);
   const [isFlying, setIsFlying] = useState(false);
+  const lastFlyLocationRef = useRef<string | null>(null);
   
   // Handle location changes
   useEffect(() => {
-    if (globeAPI && selectedLocation) {
-      console.log("ThreeGlobe: Flying to location:", selectedLocation);
-      setIsFlying(true);
-      
-      // Calculate marker position
-      const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
-      
-      // Fly to the location
-      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
-        setIsFlying(false);
-        if (onFlyComplete) {
-          console.log("ThreeGlobe: Fly complete");
-          onFlyComplete();
-        }
-      });
-      
-      // Add marker at the location
-      globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+    if (!globeAPI || !selectedLocation) return;
+    
+    // Prevent duplicate fly operations for the same location
+    const locationId = selectedLocation.id;
+    if (isFlying || locationId === lastFlyLocationRef.current) {
+      console.log("ThreeGlobe: Skipping duplicate fly operation");
+      return;
     }
-  }, [selectedLocation, globeAPI, onFlyComplete]);
+    
+    console.log("ThreeGlobe: Flying to location:", selectedLocation);
+    setIsFlying(true);
+    lastFlyLocationRef.current = locationId;
+    
+    // Calculate marker position
+    const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
+    
+    // Fly to the location
+    globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
+      setIsFlying(false);
+      if (onFlyComplete) {
+        console.log("ThreeGlobe: Fly complete");
+        onFlyComplete();
+      }
+    });
+    
+    // Add marker at the location
+    globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+  }, [selectedLocation, globeAPI, onFlyComplete, isFlying]);
+  
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      lastFlyLocationRef.current = null;
+    };
+  }, []);
   
   return (
     <div 

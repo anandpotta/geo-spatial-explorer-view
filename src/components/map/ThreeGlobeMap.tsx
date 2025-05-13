@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
 
@@ -16,11 +16,32 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const viewerInitializedRef = useRef(false);
+  const lastLocationRef = useRef<string | null>(null);
+  
+  // Track location changes to prevent duplicate processing
+  useEffect(() => {
+    if (selectedLocation) {
+      const locationId = selectedLocation.id;
+      if (locationId === lastLocationRef.current) {
+        console.log('Skipping duplicate location selection:', locationId);
+        return;
+      }
+      lastLocationRef.current = locationId;
+    }
+  }, [selectedLocation]);
   
   // Handle map ready state
   const handleMapReady = (viewer?: any) => {
+    if (viewerInitializedRef.current) {
+      console.log('Globe is already initialized, skipping duplicate ready event');
+      return;
+    }
+    
     console.log("ThreeGlobeMap: Globe is ready");
+    viewerInitializedRef.current = true;
     setIsLoading(false);
+    
     if (onMapReady) onMapReady(viewer);
   };
   
@@ -28,6 +49,8 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   React.useEffect(() => {
     return () => {
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
+      viewerInitializedRef.current = false;
+      lastLocationRef.current = null;
     };
   }, []);
   
