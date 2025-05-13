@@ -43,6 +43,7 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
           position: relative;
         }
       </style>
+      <base href="${baseUrl}">
     </head>
     <body>
       <div id="globe-container"></div>
@@ -70,10 +71,8 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
   `;
   
   // Handle WebView navigation state changes
-  const handleNavigationStateChange = (navState: any) => {
-    if (navState.loading === false && isLoading) {
-      setIsLoading(false);
-    }
+  const handleLoadEnd = (navState: any) => {
+    setIsLoading(false);
   };
   
   // Update selected location
@@ -94,7 +93,7 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
         style={styles.webView}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        onNavigationStateChange={handleNavigationStateChange}
+        onLoadEnd={handleLoadEnd}
         injectedJavaScript={INJECT_SCRIPT}
         onMessage={(event) => handleWebViewMessage(event, onLocationSelect, onMapReady)}
         onError={(event) => {

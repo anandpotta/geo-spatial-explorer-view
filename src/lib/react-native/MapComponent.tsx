@@ -75,10 +75,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   `;
   
   // Handle WebView navigation state changes
-  const handleNavigationStateChange = (navState: any) => {
-    if (navState.loading === false && isLoading) {
-      setIsLoading(false);
-    }
+  const handleLoadEnd = (navState: any) => {
+    setIsLoading(false);
   };
   
   // Update selected location
@@ -99,7 +97,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         style={styles.webView}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        onNavigationStateChange={handleNavigationStateChange}
+        onLoadEnd={handleLoadEnd}
         injectedJavaScript={INJECT_SCRIPT}
         onMessage={(event) => handleWebViewMessage(event, onLocationSelect, onMapReady)}
         onError={(event) => {
