@@ -18,6 +18,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const [mapError, setMapError] = useState<string | null>(null);
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
+  const globeInstanceRef = useRef<any>(null);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
@@ -42,7 +43,11 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     viewerInitializedRef.current = true;
     setIsLoading(false);
     
-    if (onMapReady) onMapReady(viewer);
+    if (viewer) {
+      globeInstanceRef.current = viewer;
+    }
+    
+    if (onMapReady) onMapReady(globeInstanceRef.current);
   };
   
   // Clean up resources on unmount
@@ -51,8 +56,15 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
       viewerInitializedRef.current = false;
       lastLocationRef.current = null;
+      globeInstanceRef.current = null;
     };
   }, []);
+  
+  // Handle errors that might occur
+  const handleError = (error: Error) => {
+    console.error("Globe error:", error);
+    setMapError(error.message || "Failed to initialize 3D globe");
+  };
   
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>

@@ -12,6 +12,7 @@ const Index = () => {
   const viewTransitionInProgressRef = useRef(false);
   const locationSelectionTimeRef = useRef<number | null>(null);
   const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
+  const previousLocationRef = useRef<string | null>(null);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
@@ -20,6 +21,14 @@ const Index = () => {
         now - locationSelectionTimeRef.current < 1000) {
       return;
     }
+    
+    // Skip if selecting the same location
+    const locationId = location.id;
+    if (previousLocationRef.current === locationId) {
+      console.log("Skipping duplicate location selection");
+      return;
+    }
+    previousLocationRef.current = locationId;
     
     locationSelectionTimeRef.current = now;
     console.log("Main: Location selected:", location.label);
@@ -46,7 +55,7 @@ const Index = () => {
       setTimeout(() => {
         setCurrentView('leaflet');
         setShouldSwitchToLeaflet(false);
-      }, 500); // Small delay for smoother transition
+      }, 1000); // Use a longer delay for smoother transition
     }
     
     // Reset location selection timer

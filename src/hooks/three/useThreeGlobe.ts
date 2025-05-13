@@ -57,7 +57,7 @@ export function useThreeGlobe(
   
   // Setup globe objects and controls
   useEffect(() => {
-    if (!scene || !camera || !renderer || isSetupCompleteRef.current) {
+    if (!scene || !camera || !renderer || isSetupCompleteRef.current || !containerRef.current) {
       console.log("Scene not ready or setup already complete");
       return;
     }
@@ -65,13 +65,14 @@ export function useThreeGlobe(
     console.log("Setting up globe objects and controls");
     isSetupCompleteRef.current = true;
     
-    // Clear any previous starfield or elements
-    scene.children.forEach(child => {
-      if (child instanceof THREE.Points || 
-          (child instanceof THREE.Mesh && child.userData.type === 'starfield')) {
-        scene.remove(child);
+    // Clear any previous scene elements
+    while (scene.children.length > 0) {
+      const child = scene.children[0];
+      scene.remove(child);
+      if (child instanceof THREE.Object3D) {
+        disposeObject3D(child);
       }
-    });
+    }
     
     // Add starfield background
     createStarfield(scene);
@@ -104,7 +105,7 @@ export function useThreeGlobe(
     atmosphereRef.current = atmosphere;
     
     // Configure controls with improved settings for smoother experience
-    if (controlsRef.current) {
+    if (controlsRef.current && camera) {
       configureControls(controlsRef.current, camera);
       controlsRef.current.autoRotate = true;
       controlsRef.current.autoRotateSpeed = 0.3; // Slower rotation for smoother appearance
@@ -145,7 +146,7 @@ export function useThreeGlobe(
     
     // Mark as initialized after a small timeout to ensure everything is ready
     setTimeout(() => {
-      if (!isInitialized) {
+      if (!isInitialized && containerRef.current) {
         console.log("Setting isInitialized to true");
         setIsInitialized(true);
         
@@ -162,6 +163,7 @@ export function useThreeGlobe(
     return () => {
       console.log("Globe effect cleanup");
       isSetupCompleteRef.current = false;
+      
       // Dispose globe and atmosphere meshes
       if (globeRef.current) {
         scene.remove(globeRef.current);
@@ -177,7 +179,7 @@ export function useThreeGlobe(
       
       earthMeshRef.current = null;
     };
-  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, isInitialized, onInitialized, texturesLoaded]);
+  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, isInitialized, onInitialized, texturesLoaded, containerRef]);
   
   // Call onInitialized when textures are loaded
   useEffect(() => {

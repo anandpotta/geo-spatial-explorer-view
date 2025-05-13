@@ -24,6 +24,13 @@ export function useFlyToLocation(
       return;
     }
     
+    // Validate inputs to avoid NaN errors
+    if (isNaN(longitude) || isNaN(latitude)) {
+      console.error(`Invalid coordinates: longitude=${longitude}, latitude=${latitude}`);
+      if (onComplete) onComplete();
+      return;
+    }
+    
     console.log(`Flying to location: ${latitude}, ${longitude}`);
     
     // Convert lat/long to 3D coordinates
@@ -43,10 +50,23 @@ export function useFlyToLocation(
     const cameraTargetY = distance * Math.cos(phi);
     const cameraTargetZ = distance * Math.sin(phi) * Math.sin(theta);
     
+    // Ensure we have valid current positions before proceeding
+    if (!cameraRef.current.position) {
+      console.error("Camera position is null or undefined");
+      if (onComplete) onComplete();
+      return;
+    }
+    
     const currentPos = cameraRef.current.position.clone();
     const targetPos = new THREE.Vector3(cameraTargetX, cameraTargetY, cameraTargetZ);
     
-    // Save the current target of the controls
+    // Ensure controls target is not null
+    if (!controlsRef.current.target) {
+      console.error("OrbitControls target is null");
+      controlsRef.current.target = new THREE.Vector3(0, 0, 0);
+    }
+    
+    // Save the current target of the controls with null check
     const currentTarget = controlsRef.current.target.clone();
     const finalTarget = new THREE.Vector3(targetX * 0.2, targetY * 0.2, targetZ * 0.2);
     
@@ -61,6 +81,13 @@ export function useFlyToLocation(
     const duration = 2000; // Slower animation (2 seconds) for smoother movement
     
     const animateCamera = (timestamp: number) => {
+      // Check if camera and controls still exist
+      if (!cameraRef.current || !controlsRef.current) {
+        console.warn("Camera or controls no longer exist during animation");
+        if (onComplete) onComplete();
+        return;
+      }
+      
       if (startTime === null) startTime = timestamp;
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -86,11 +113,18 @@ export function useFlyToLocation(
       const newTargetY = currentTarget.y + (finalTarget.y - currentTarget.y) * ease;
       const newTargetZ = currentTarget.z + (finalTarget.z - currentTarget.z) * ease;
       
-      // Update camera
-      if (cameraRef.current) {
-        cameraRef.current.position.set(newX, newY, newZ);
-        controlsRef.current!.target.set(newTargetX, newTargetY, newTargetZ);
-        controlsRef.current!.update();
+      try {
+        // Update camera with null checks
+        if (cameraRef.current && cameraRef.current.position) {
+          cameraRef.current.position.set(newX, newY, newZ);
+        }
+        
+        if (controlsRef.current && controlsRef.current.target) {
+          controlsRef.current.target.set(newTargetX, newTargetY, newTargetZ);
+          controlsRef.current.update();
+        }
+      } catch (error) {
+        console.error("Error during camera animation:", error);
       }
       
       // Continue animation if not complete
@@ -98,7 +132,7 @@ export function useFlyToLocation(
         requestAnimationFrame(animateCamera);
       } else {
         // Animation complete
-        // Restore controls settings
+        // Restore controls settings with null checks
         if (controlsRef.current) {
           controlsRef.current.enableDamping = wasDamping;
           

@@ -19,13 +19,15 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
   const lastFlyLocationRef = useRef<string | null>(null);
+  const initializationAttemptedRef = useRef(false);
   
   // Initialize globe only once
   const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized) {
+    if (!isInitialized && !initializationAttemptedRef.current) {
+      initializationAttemptedRef.current = true;
       setIsInitialized(true);
       console.log("ThreeGlobe: Globe initialized");
-      if (onMapReady) onMapReady();
+      if (onMapReady) onMapReady(globeAPI);
     }
   });
   
@@ -52,23 +54,32 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     // Calculate marker position
     const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
     
-    // Fly to the location
-    globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
-      setIsFlying(false);
-      if (onFlyComplete) {
-        console.log("ThreeGlobe: Fly complete");
-        onFlyComplete();
+    // Fly to the location - ensure coordinates are valid numbers
+    if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
+      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
+        setIsFlying(false);
+        if (onFlyComplete) {
+          console.log("ThreeGlobe: Fly complete");
+          onFlyComplete();
+        }
+      });
+      
+      // Add marker at the location with null check
+      if (globeAPI.addMarker) {
+        globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
       }
-    });
-    
-    // Add marker at the location
-    globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+    } else {
+      console.error("Invalid coordinates:", selectedLocation);
+      setIsFlying(false);
+      if (onFlyComplete) onFlyComplete();
+    }
   }, [selectedLocation, globeAPI, onFlyComplete, isFlying, globeAPI.isInitialized]);
   
   // Clean up on unmount
   useEffect(() => {
     return () => {
       lastFlyLocationRef.current = null;
+      initializationAttemptedRef.current = false;
     };
   }, []);
   
