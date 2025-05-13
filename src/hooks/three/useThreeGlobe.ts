@@ -2,7 +2,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { useThreeScene } from './useThreeScene';
-import { useFlyToLocation } from './useFlyToLocation';
+import { useAutoRotation } from './useAutoRotation';
+import { useEnhancedFlyToLocation } from './useEnhancedFlyToLocation';
+import { useMarkers } from './useMarkers';
 import { disposeObject3D } from '@/utils/three-utils';
 import { 
   createEarthGlobe, 
@@ -21,15 +23,12 @@ export function useThreeGlobe(
   const globeRef = useRef<THREE.Group | null>(null);
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
-  const autoRotationEnabledRef = useRef<boolean>(true);
-  const isFlyingRef = useRef<boolean>(false);
   
   // Use the scene hook
   const {
     scene,
     camera,
     renderer,
-    controls: existingControls,
     isInitialized,
     setIsInitialized,
     animationFrameRef,
@@ -43,8 +42,18 @@ export function useThreeGlobe(
   // Flag to prevent multiple initializations
   const isSetupCompleteRef = useRef(false);
   
-  // Store markers
-  const markersRef = useRef<Map<string, THREE.Mesh>>(new Map());
+  // Get auto-rotation functionality
+  const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
+  
+  // Get markers functionality
+  const { addMarker } = useMarkers(scene);
+  
+  // Get enhanced fly to location functionality
+  const { enhancedFlyToLocation, isFlyingRef } = useEnhancedFlyToLocation(
+    camera,
+    controlsRef,
+    EARTH_RADIUS
+  );
   
   // Setup globe objects and controls
   useEffect(() => {
@@ -177,94 +186,6 @@ export function useThreeGlobe(
       onInitialized();
     }
   }, [texturesLoaded, onInitialized, isInitialized]);
-  
-  // Enable/disable auto-rotation with smoother transitions
-  const setAutoRotation = useCallback((enabled: boolean) => {
-    if (controlsRef.current) {
-      if (enabled && !controlsRef.current.autoRotate) {
-        // When enabling, start with a slower speed and gradually increase
-        controlsRef.current.autoRotate = true;
-        controlsRef.current.autoRotateSpeed = 0.1;
-        
-        // Gradually increase rotation speed
-        const increaseSpeed = () => {
-          if (controlsRef.current && controlsRef.current.autoRotateSpeed < 0.3) {
-            controlsRef.current.autoRotateSpeed += 0.05;
-            setTimeout(increaseSpeed, 100);
-          }
-        };
-        setTimeout(increaseSpeed, 100);
-      } else {
-        controlsRef.current.autoRotate = enabled;
-      }
-      autoRotationEnabledRef.current = enabled;
-    }
-  }, [controlsRef]);
-  
-  // Get flyToLocation functionality
-  const { flyToLocation } = useFlyToLocation(
-    { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
-    controlsRef,
-    EARTH_RADIUS
-  );
-  
-  // Wrap the flyToLocation to handle auto-rotation and flying state
-  const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
-    // Set flying state to true to prevent animation conflicts
-    isFlyingRef.current = true;
-    
-    // Temporarily disable auto-rotation for smoother flight
-    setAutoRotation(false);
-    
-    // Call the original flyToLocation
-    flyToLocation(longitude, latitude, () => {
-      // Mark flying as complete
-      isFlyingRef.current = false;
-      
-      // Small delay before re-enabling rotation for smoother transition
-      setTimeout(() => {
-        // Re-enable auto-rotation with a smooth start
-        setAutoRotation(true);
-        
-        if (onComplete) onComplete();
-      }, 500);
-    });
-  }, [flyToLocation, setAutoRotation]);
-  
-  // Add marker at specific coordinates
-  const addMarker = useCallback((id: string, position: THREE.Vector3, label?: string) => {
-    if (!scene) return;
-    
-    // Remove existing marker with the same ID if it exists
-    if (markersRef.current.has(id)) {
-      const existingMarker = markersRef.current.get(id);
-      if (existingMarker) {
-        scene.remove(existingMarker);
-      }
-      markersRef.current.delete(id);
-    }
-    
-    // Create marker geometry
-    const markerGeometry = new THREE.SphereGeometry(0.05, 16, 16);
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-    
-    // Set position
-    marker.position.copy(position);
-    
-    // Add to scene
-    scene.add(marker);
-    
-    // Store in markers map
-    markersRef.current.set(id, marker);
-    
-    // If there's a label, add it
-    if (label) {
-      console.log(`Added marker for: ${label}`);
-    }
-    
-    return marker;
-  }, [scene]);
   
   return {
     scene,
