@@ -30,9 +30,11 @@ export function createEarthGlobe(scene: THREE.Scene): {
   
   // Create more realistic material with enhanced shininess and specular highlights
   const earthMaterial = new THREE.MeshPhongMaterial({
-    color: 0x2233aa,  // Default ocean blue as a fallback
-    shininess: 30,    // Increase shininess for better realism
-    specular: new THREE.Color('#333333'), // Subtle specular highlights
+    color: 0x333344,  // Darker blue-gray as a fallback - better for night appearance
+    shininess: 25,    // More moderate shininess
+    specular: new THREE.Color(0x555555), // Enhanced specular highlights
+    emissive: new THREE.Color(0x112233), // Slight emissive glow for night side visibility
+    emissiveIntensity: 0.1  // Subtle emissive effect
   });
   
   // Create Earth mesh
@@ -69,17 +71,19 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   
   // Create slightly larger geometry for atmosphere
   const atmosphereGeometry = new THREE.SphereGeometry(
-    EARTH_RADIUS * 1.035, // Slightly thicker atmosphere for more realistic glow
+    EARTH_RADIUS * 1.05, // Slightly thicker atmosphere for more visible glow
     128, // Higher segment count for smoother sphere
     128
   );
   
-  // Use a more realistic atmosphere material with subtle glow
+  // Use a more visible atmosphere material with enhanced glow
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
-    color: new THREE.Color(0x6699ff), // Light blue atmosphere
+    color: new THREE.Color(0x3366aa), // Deeper blue atmosphere
     transparent: true,
-    opacity: 0.15, // Subtle opacity for better glow effect
-    side: THREE.BackSide
+    opacity: 0.25, // Increased opacity for better visibility
+    side: THREE.BackSide,
+    emissive: new THREE.Color(0x2244aa), // Add emissive glow
+    emissiveIntensity: 0.2, // Moderate intensity for the glow
   });
   
   const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
@@ -95,28 +99,34 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
 export function setupLighting(scene: THREE.Scene): void {
   const options = createThreeViewerOptions();
   
-  // Add ambient lighting
+  // Add ambient lighting - increased intensity
   const ambientLight = new THREE.AmbientLight(
     0x404040,
-    0.8
+    1.0  // Increased ambient light
   );
   scene.add(ambientLight);
   console.log('Ambient light added to scene');
   
-  // Main directional light (sun)
+  // Main directional light (sun) - increased intensity
   const directionalLight = new THREE.DirectionalLight(
     0xffffff,
-    1.2
+    1.5  // Increased intensity
   );
   directionalLight.position.set(1, 0.5, 1);
   scene.add(directionalLight);
   console.log('Directional light added to scene');
   
   // Add a second light from the opposite direction for better illumination
-  const backLight = new THREE.DirectionalLight(0x555555, 0.6); // Increased intensity
+  const backLight = new THREE.DirectionalLight(0x555555, 0.8); // Increased intensity
   backLight.position.set(-1, -0.5, -1);
   scene.add(backLight);
   console.log('Back light added to scene');
+  
+  // Add a subtle rim light to highlight the edge of the earth
+  const rimLight = new THREE.DirectionalLight(0x335577, 0.7);
+  rimLight.position.set(0, 5, 0);
+  scene.add(rimLight);
+  console.log('Rim light added to scene');
 }
 
 /**

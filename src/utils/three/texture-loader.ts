@@ -13,13 +13,13 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Use NASA's Blue Marble Next Generation with topography and bathymetry
-  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74117/world.200412.3x5400x2700.jpg';
+  // Try the night-time Earth texture first (showing city lights)
+  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/79000/79765/dnb_land_ocean_ice.2012.3600x1800.jpg';
   
   // Use a high-detail bump map
   const bumpTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/gebco_08_rev_elev_21600x10800.png';
   
-  console.log('Loading high-resolution Earth textures...');
+  console.log('Loading high-resolution Earth night textures...');
   
   // Load main texture
   textureLoader.load(
@@ -31,6 +31,12 @@ export function loadEarthTextures(
       texture.encoding = THREE.sRGBEncoding;
       texture.needsUpdate = true;
       earthMaterial.map = texture;
+      
+      // Set emissive map for night lights to glow
+      earthMaterial.emissiveMap = texture;
+      earthMaterial.emissive = new THREE.Color(0xffffff);
+      earthMaterial.emissiveIntensity = 0.5;
+      
       earthMaterial.needsUpdate = true;
       earthTextureLoaded = true;
       
@@ -44,7 +50,7 @@ export function loadEarthTextures(
     (error) => {
       console.error('Error loading Earth texture:', error);
       // Use the uploaded image as fallback
-      const fallbackTextureURL = 'public/lovable-uploads/40c69632-a13b-4264-886a-7ea756c3c93d.png';
+      const fallbackTextureURL = 'public/lovable-uploads/2dab3c16-1b4f-446f-ab48-2c49361c918b.png';
       console.log('Trying user-provided texture:', fallbackTextureURL);
       
       textureLoader.load(
@@ -55,14 +61,20 @@ export function loadEarthTextures(
           fallbackTexture.encoding = THREE.sRGBEncoding;
           fallbackTexture.needsUpdate = true;
           earthMaterial.map = fallbackTexture;
+          
+          // Set emissive map for night lights to glow
+          earthMaterial.emissiveMap = fallbackTexture;
+          earthMaterial.emissive = new THREE.Color(0xffffff);
+          earthMaterial.emissiveIntensity = 0.5;
+          
           earthMaterial.needsUpdate = true;
           earthTextureLoaded = true;
           onProgress(earthTextureLoaded, bumpTextureLoaded);
         },
         undefined,
         () => {
-          // If both fail, try another reliable source
-          const lastResortURL = 'https://unpkg.com/three-globe@2.27.1/example/img/earth-blue-marble.jpg';
+          // If both fail, try another night-time Earth image
+          const lastResortURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/55000/55167/earth_lights_lrg.jpg';
           textureLoader.load(
             lastResortURL,
             (lastTexture) => {
@@ -70,6 +82,12 @@ export function loadEarthTextures(
               lastTexture.anisotropy = 16;
               lastTexture.encoding = THREE.sRGBEncoding;
               earthMaterial.map = lastTexture;
+              
+              // Set emissive map for night lights to glow
+              earthMaterial.emissiveMap = lastTexture;
+              earthMaterial.emissive = new THREE.Color(0xffffff);
+              earthMaterial.emissiveIntensity = 0.5;
+              
               earthMaterial.needsUpdate = true;
               earthTextureLoaded = true;
               onProgress(earthTextureLoaded, bumpTextureLoaded);
