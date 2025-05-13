@@ -1,5 +1,6 @@
+
 import { useState, useRef, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
 import { handleClearAll } from './map/drawing/ClearAllHandler';
 import { toast } from 'sonner';
@@ -166,6 +167,15 @@ const DrawingTools = ({
         />
         
         <div className="h-4" />
+        
+        <button
+          className="w-full p-2 my-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
+          onClick={() => handleToolClick('edit')}
+          aria-label="Edit existing shapes"
+        >
+          <Edit2 className="h-5 w-5" />
+          <span className="ml-2">Edit Shapes</span>
+        </button>
         
         <button
           className="w-full p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"

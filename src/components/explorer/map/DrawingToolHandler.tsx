@@ -28,6 +28,7 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         toast.info('Clearing all shapes');
       }
     } else if (currentView === 'leaflet') {
+      // Handle special tools for leaflet map
       if (tool === 'clear' && leafletMapRef.current) {
         try {
           // Validate the map instance before using it
@@ -49,6 +50,27 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         } catch (err) {
           console.error('Error during clear operation:', err);
           toast.error('Failed to clear shapes. Please try again.');
+        }
+      } else if (tool === 'edit' && leafletMapRef.current && window.featureGroup) {
+        try {
+          // Enable or disable edit mode
+          const featureGroup = window.featureGroup;
+          
+          // Find any EditControl instance and trigger edit mode
+          const container = leafletMapRef.current.getContainer();
+          if (container) {
+            // Find the edit button and simulate a click if it exists
+            const editButton = container.querySelector('.leaflet-draw-edit-edit');
+            if (editButton) {
+              editButton.click();
+              toast.info('Edit mode enabled. Drag the white squares to reshape your paths.');
+            } else {
+              toast.info('Draw a shape first before editing');
+            }
+          }
+        } catch (err) {
+          console.error('Error enabling edit mode:', err);
+          toast.error('Failed to enable editing. Please try again.');
         }
       }
     }

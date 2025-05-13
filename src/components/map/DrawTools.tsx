@@ -1,5 +1,5 @@
 
-import { useRef, forwardRef, useImperativeHandle } from 'react';
+import { useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { usePathElements } from '@/hooks/usePathElements';
@@ -40,8 +40,37 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
+  // Set up global featureGroup reference for external tools to access
+  useEffect(() => {
+    // Make featureGroup accessible for external components
+    window.featureGroup = featureGroup;
+    
+    return () => {
+      // Cleanup the global reference on unmount
+      if (window.featureGroup === featureGroup) {
+        window.featureGroup = undefined;
+      }
+    };
+  }, [featureGroup]);
+
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
+  
+  // Configure edit options to enable proper editing
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7,
+        dashArray: '10, 10',
+        fill: true,
+        fillColor: '#ffffff',
+        fillOpacity: 0.1
+      }
+    },
+    remove: true
+  };
 
   return (
     <EditControl
@@ -49,7 +78,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       position="topright"
       onCreated={handleCreated}
       draw={drawOptions}
-      edit={false}
+      edit={editOptions}
       featureGroup={featureGroup}
     />
   );
