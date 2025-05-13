@@ -7,6 +7,7 @@ import { zoomIn, zoomOut, resetCamera } from '@/utils/threejs-camera';
 import MapViews from './MapViews';
 import MapTools from './MapTools';
 import DrawingToolHandler from './DrawingToolHandler';
+import { toast } from '@/components/ui/use-toast';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -27,10 +28,19 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   const leafletMapRef = useRef<any>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
+  const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
   
   // Reset map instance when view changes
   useEffect(() => {
     setMapKey(Date.now());
+    
+    // Set transition flag
+    setViewTransitionInProgress(true);
+    const timer = setTimeout(() => {
+      setViewTransitionInProgress(false);
+    }, 1000); // Allow time for transition to complete
+    
+    return () => clearTimeout(timer);
   }, [currentView]);
 
   const handleCesiumViewerRef = (viewer: any) => {
@@ -39,23 +49,49 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
 
   const handleLeafletMapRef = (map: any) => {
     leafletMapRef.current = map;
+    // When Leaflet map is ready after transition, notify user
+    if (currentView === 'leaflet' && !viewTransitionInProgress) {
+      toast({
+        title: "Map View Ready",
+        description: "Tiled map view has been loaded successfully.",
+        variant: "default",
+      });
+    }
   };
 
   const handleZoomIn = () => {
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       zoomIn(cesiumViewerRef.current);
+    } else if (currentView === 'leaflet' && leafletMapRef.current) {
+      try {
+        leafletMapRef.current.setZoom(leafletMapRef.current.getZoom() + 1);
+      } catch (err) {
+        console.error('Error zooming in on leaflet map:', err);
+      }
     }
   };
 
   const handleZoomOut = () => {
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       zoomOut(cesiumViewerRef.current);
+    } else if (currentView === 'leaflet' && leafletMapRef.current) {
+      try {
+        leafletMapRef.current.setZoom(leafletMapRef.current.getZoom() - 1);
+      } catch (err) {
+        console.error('Error zooming out on leaflet map:', err);
+      }
     }
   };
 
   const handleResetView = () => {
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       resetCamera(cesiumViewerRef.current);
+    } else if (currentView === 'leaflet' && leafletMapRef.current) {
+      try {
+        leafletMapRef.current.setView([0, 0], 2);
+      } catch (err) {
+        console.error('Error resetting leaflet map view:', err);
+      }
     }
   };
 
