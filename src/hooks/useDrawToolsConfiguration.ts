@@ -1,5 +1,6 @@
 
 import { useEffect } from 'react';
+import L from 'leaflet';
 import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
 
 /**
