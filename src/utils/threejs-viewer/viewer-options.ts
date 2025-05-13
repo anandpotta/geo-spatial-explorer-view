@@ -40,21 +40,16 @@ export function createThreeViewerOptions(): ThreeViewerOptions {
       powerPreference: "high-performance"
     },
     textures: {
-      // NASA Blue Marble Next Generation with topography and bathymetry
-      earthBaseUrl: "https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74117/world.200408.3x21600x10800.jpg",
-      // Alternative: "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x21600x10800.jpg",
-      
-      // Bump map for terrain
-      bumpMapUrl: "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x21600x10800.jpg",
-      
+      // More reliable Earth texture URLs
+      earthBaseUrl: "https://unpkg.com/three-globe@2.24.10/example/img/earth-blue-marble.jpg",
+      // Alternative texture for reliability
+      bumpMapUrl: "https://unpkg.com/three-globe@2.24.10/example/img/earth-topology.png",
       // Specular map for water reflections
-      specularMapUrl: "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_ocean_ice_lights_2048.jpg",
-      
+      specularMapUrl: "https://unpkg.com/three-globe@2.24.10/example/img/earth-water.png",
       // Cloud map (semi-transparent)
-      cloudsUrl: "https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57747/cloud_combined_2048.jpg",
-      
+      cloudsUrl: "https://unpkg.com/three-globe@2.24.10/example/img/clouds.png",
       // Normal map for enhanced lighting
-      normalMapUrl: "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x21600x10800.jpg"
+      normalMapUrl: "https://unpkg.com/three-globe@2.24.10/example/img/earth-topology.png"
     }
   };
 }

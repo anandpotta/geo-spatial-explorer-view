@@ -18,10 +18,17 @@ export function loadEarthTextures(
   
   // Load Earth texture
   // We'll use a placeholder texture initially for faster loading
-  const placeholderTexture = new THREE.TextureLoader().load('/placeholder.svg');
+  const placeholderTexture = new THREE.TextureLoader().load('/placeholder.svg', undefined, undefined, 
+    (error) => {
+      console.warn('Placeholder texture failed to load, using color instead');
+      // If even placeholder fails, just use a color
+      material.color = new THREE.Color(0x1a2b3c);
+      material.needsUpdate = true;
+    }
+  );
   material.map = placeholderTexture;
   
-  // Load the high-resolution Earth texture
+  // Load the Earth texture
   textureLoader.load(
     options.textures.earthBaseUrl,
     (texture) => {
@@ -36,13 +43,21 @@ export function loadEarthTextures(
     undefined, // Progress callback not needed
     (error) => {
       console.error('Error loading Earth texture:', error);
-      // Fallback to a lesser quality texture
+      // Fallback to a local texture or directly bundled image
       textureLoader.load(
-        'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_ocean_ice_lights_2048.jpg',
+        '/placeholder.svg',
         (fallbackTexture) => {
-          console.log('Fallback Earth texture loaded');
+          console.log('Using simple placeholder as Earth texture');
           fallbackTexture.encoding = THREE.sRGBEncoding;
           material.map = fallbackTexture;
+          material.needsUpdate = true;
+          earthTextureLoaded = true;
+          onLoad(earthTextureLoaded, bumpMapLoaded);
+        },
+        undefined,
+        () => {
+          console.warn('All Earth textures failed, using blue color');
+          material.color = new THREE.Color(0x1a5276);
           material.needsUpdate = true;
           earthTextureLoaded = true;
           onLoad(earthTextureLoaded, bumpMapLoaded);

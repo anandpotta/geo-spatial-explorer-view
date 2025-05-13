@@ -38,16 +38,23 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   
   // Show loading progress animation
   useEffect(() => {
+    // Only start progress animation if not ready yet
     if (!isGlobeReady) {
+      let progress = 0;
       const interval = setInterval(() => {
-        setLoadingProgress(prev => {
-          const newProgress = prev + 1;
-          return newProgress > 95 ? 95 : newProgress; // Cap at 95% until actually ready
-        });
+        progress += 1;
+        if (progress >= 95) {
+          // If we reach 95% and still not ready, stay there
+          setLoadingProgress(95);
+          clearInterval(interval);
+        } else {
+          setLoadingProgress(progress);
+        }
       }, 50);
       
       return () => clearInterval(interval);
     } else {
+      // When ready, set to 100% immediately
       setLoadingProgress(100);
     }
   }, [isGlobeReady]);

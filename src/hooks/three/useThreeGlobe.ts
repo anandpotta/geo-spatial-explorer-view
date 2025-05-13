@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { useThreeScene } from './useThreeScene';
@@ -38,14 +39,18 @@ export function useThreeGlobe(
   // Track if textures are loaded
   const [texturesLoaded, setTexturesLoaded] = useState(false);
   
+  // Flag to prevent multiple initializations
+  const isSetupCompleteRef = useRef(false);
+  
   // Setup globe objects and controls
   useEffect(() => {
-    if (!scene || !camera || !renderer) {
-      console.log("Scene, camera or renderer not available yet");
+    if (!scene || !camera || !renderer || isSetupCompleteRef.current) {
+      console.log("Scene not ready or setup already complete");
       return;
     }
     
     console.log("Setting up globe objects and controls");
+    isSetupCompleteRef.current = true;
     
     // Clear any previous starfield or elements
     scene.children.forEach(child => {
@@ -119,14 +124,25 @@ export function useThreeGlobe(
     // Start animation
     animate();
     
-    // Mark as initialized when everything is ready
-    if (!isInitialized) {
-      setIsInitialized(true);
-    }
+    // Mark as initialized after a small timeout to ensure everything is ready
+    setTimeout(() => {
+      if (!isInitialized) {
+        console.log("Setting isInitialized to true");
+        setIsInitialized(true);
+        
+        // Even if textures are still loading, we'll consider the globe ready
+        // to avoid getting stuck at the loading screen
+        if (!texturesLoaded && onInitialized) {
+          console.log("Calling onInitialized even though textures aren't fully loaded");
+          onInitialized();
+        }
+      }
+    }, 2000); // Give it 2 seconds to load, then move on regardless
     
     // Cleanup function
     return () => {
       console.log("Globe effect cleanup");
+      isSetupCompleteRef.current = false;
       // Dispose globe and atmosphere meshes
       if (globeRef.current) {
         scene.remove(globeRef.current);
@@ -142,15 +158,15 @@ export function useThreeGlobe(
       
       earthMeshRef.current = null;
     };
-  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, isInitialized]);
+  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, isInitialized, onInitialized, texturesLoaded]);
   
   // Call onInitialized when textures are loaded
   useEffect(() => {
-    if (texturesLoaded && onInitialized) {
+    if (texturesLoaded && onInitialized && isInitialized) {
       console.log("Calling onInitialized callback - textures loaded");
       onInitialized();
     }
-  }, [texturesLoaded, onInitialized]);
+  }, [texturesLoaded, onInitialized, isInitialized]);
   
   // Enable/disable auto-rotation
   const setAutoRotation = useCallback((enabled: boolean) => {
