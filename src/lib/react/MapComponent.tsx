@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { MapCore } from '../geospatial-core/map';
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
@@ -104,4 +103,3 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     </div>
   );
 };
-
