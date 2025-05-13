@@ -86,7 +86,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         bottom: 0,
         width: '100%',
         height: '100%',
-        background: '#000011',
+        background: '#000022', // Matching scene background
         overflow: 'hidden',
         zIndex: 0
       }}
@@ -105,14 +105,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
                 </svg>
               </div>
             </div>
-            <h3 className="text-xl font-bold mb-2 text-blue-100">Loading 3D Globe</h3>
+            <h3 className="text-xl font-bold mb-2 text-blue-100">Loading Natural Earth View</h3>
             <div className="w-64 h-3 bg-gray-800 rounded-full overflow-hidden mb-2 mx-auto">
               <div 
-                className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                className="h-full bg-green-500 transition-all duration-300 ease-out"
                 style={{ width: `${loadingProgress}%` }}
               ></div>
             </div>
-            <p className="text-sm text-blue-200">Loading natural Earth view...</p>
+            <p className="text-sm text-green-200">Loading high-resolution terrain...</p>
           </div>
         </div>
       )}

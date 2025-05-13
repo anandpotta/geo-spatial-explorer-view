@@ -13,16 +13,13 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Use a natural Earth texture (day map)
-  const earthTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg';
+  // Natural Earth texture with vibrant colors (Blue Marble)
+  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_2048.jpg';
   
-  // Use a high-detail bump map
+  // High-detail bump map for terrain
   const bumpTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/gebco_08_rev_elev_21600x10800.png';
   
-  // Load texture for country borders
-  const bordersTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/earth-borders.png';
-  
-  console.log('Loading high-resolution Earth textures...');
+  console.log('Loading high-resolution natural Earth textures...');
   
   // Load main texture
   textureLoader.load(
@@ -35,24 +32,25 @@ export function loadEarthTextures(
       texture.needsUpdate = true;
       earthMaterial.map = texture;
       
-      // Set modest emissive map for night visibility
-      earthMaterial.emissiveMap = texture;
-      earthMaterial.emissive = new THREE.Color(0x112233);
-      earthMaterial.emissiveIntensity = 0.15;
+      // Remove opacity to ensure full vibrant colors
+      earthMaterial.transparent = false;
+      earthMaterial.opacity = 1.0;
+      
+      // Enhance natural colors
+      earthMaterial.color = new THREE.Color(0xffffff); // Full white color multiplier for true texture colors
       
       earthMaterial.needsUpdate = true;
       earthTextureLoaded = true;
       
-      // Load borders texture
+      // Load borders texture if needed
+      const bordersTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73751/gebco_08_rev_bath_3600x1800.png';
       textureLoader.load(
         bordersTextureURL,
         (bordersTexture) => {
           console.log('Borders texture loaded successfully');
           bordersTexture.anisotropy = 16;
-          
-          // Use borders as alpha map to create thin lines
-          earthMaterial.alphaMap = bordersTexture;
-          earthMaterial.transparent = true;
+          earthMaterial.displacementMap = bordersTexture;
+          earthMaterial.displacementScale = 0.08;
           earthMaterial.needsUpdate = true;
         },
         undefined,
@@ -71,7 +69,7 @@ export function loadEarthTextures(
     (error) => {
       console.error('Error loading Earth texture:', error);
       // Fall back to NASA Blue Marble
-      const fallbackTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_cloud_2048.jpg';
+      const fallbackTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73580/world.topo.bathy.200401.3x5400x2700.jpg';
       console.log('Trying fallback texture:', fallbackTextureURL);
       
       textureLoader.load(
@@ -83,6 +81,10 @@ export function loadEarthTextures(
           fallbackTexture.needsUpdate = true;
           earthMaterial.map = fallbackTexture;
           
+          // Ensure no transparency
+          earthMaterial.transparent = false;
+          earthMaterial.opacity = 1.0;
+          
           earthMaterial.needsUpdate = true;
           earthTextureLoaded = true;
           onProgress(earthTextureLoaded, bumpTextureLoaded);
@@ -90,7 +92,7 @@ export function loadEarthTextures(
         undefined,
         () => {
           // If both fail, try another Earth image
-          const lastResortURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/55000/55167/earth_lights_lrg.jpg';
+          const lastResortURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74443/world.200409.3x5400x2700.jpg';
           textureLoader.load(
             lastResortURL,
             (lastTexture) => {
@@ -123,7 +125,7 @@ export function loadEarthTextures(
       bumpTexture.anisotropy = 16;
       bumpTexture.needsUpdate = true;
       earthMaterial.bumpMap = bumpTexture;
-      earthMaterial.bumpScale = 0.05; // Subtle bump effect for terrain
+      earthMaterial.bumpScale = 0.08; // Slightly increased bump effect for terrain visibility
       earthMaterial.needsUpdate = true;
       bumpTextureLoaded = true;
       
@@ -144,7 +146,7 @@ export function loadEarthTextures(
           fallbackBump.anisotropy = 16;
           fallbackBump.needsUpdate = true;
           earthMaterial.bumpMap = fallbackBump;
-          earthMaterial.bumpScale = 0.05;
+          earthMaterial.bumpScale = 0.08;
           earthMaterial.needsUpdate = true;
           bumpTextureLoaded = true;
           onProgress(earthTextureLoaded, bumpTextureLoaded);

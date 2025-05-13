@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -79,7 +78,7 @@ export function useThreeScene(
     
     const options = createThreeViewerOptions();
     
-    // Create scene
+    // Create scene with natural background color
     const scene = new THREE.Scene();
     scene.background = options.backgroundColor;
     sceneRef.current = scene;
@@ -102,7 +101,7 @@ export function useThreeScene(
     camera.position.copy(options.cameraOptions.position);
     cameraRef.current = camera;
     
-    // Create renderer
+    // Create renderer with enhanced settings for better quality
     try {
       const renderer = new THREE.WebGLRenderer({
         antialias: options.rendering.antialias,
@@ -113,7 +112,9 @@ export function useThreeScene(
       
       // Set size with valid dimensions
       renderer.setSize(width, height);
-      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+      renderer.outputEncoding = THREE.sRGBEncoding; // Improved color accuracy
+      renderer.physicallyCorrectLights = true; // More natural lighting
       rendererRef.current = renderer;
       
       // Append renderer to container
@@ -121,7 +122,7 @@ export function useThreeScene(
       containerRef.current.appendChild(canvas);
       canvasElementRef.current = canvas;
       
-      console.log("Renderer created and added to container");
+      console.log("High-quality renderer created and added to container");
       
       // Create orbit controls
       const controls = new OrbitControls(camera, canvas);
@@ -130,7 +131,7 @@ export function useThreeScene(
       // Initial render to make sure something is visible
       renderer.render(scene, camera);
       
-      console.log("Three.js scene initialized");
+      console.log("Three.js scene initialized with natural colors settings");
       
       // Call the onSceneReady callback if provided
       if (onSceneReady) {

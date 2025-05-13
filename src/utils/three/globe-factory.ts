@@ -28,13 +28,11 @@ export function createEarthGlobe(scene: THREE.Scene): {
     128
   );
   
-  // Create more realistic material with enhanced shininess and specular highlights
+  // Create more natural material with vibrant base colors
   const earthMaterial = new THREE.MeshPhongMaterial({
-    color: 0x2c5fa0,  // Natural blue base color for oceans
-    shininess: 35,    // More moderate shininess
-    specular: new THREE.Color(0x2d4ea0), // Enhanced specular highlights
-    emissive: new THREE.Color(0x112233), // Slight emissive glow for night side visibility
-    emissiveIntensity: 0.15  // Subtle emissive effect
+    color: 0xffffff,  // Pure white base to let texture colors show naturally
+    shininess: 25,    // More moderate shininess for natural appearance
+    specular: new THREE.Color(0x333333), // Subtle specular highlights
   });
   
   // Create Earth mesh
@@ -71,24 +69,22 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   
   // Create slightly larger geometry for atmosphere
   const atmosphereGeometry = new THREE.SphereGeometry(
-    EARTH_RADIUS * 1.03, // Thinner atmosphere for more realistic look
+    EARTH_RADIUS * 1.025, // Thinner atmosphere for more realistic look
     128, // Higher segment count for smoother sphere
     128
   );
   
-  // Use a more visible atmosphere material with enhanced glow
+  // Use a subtle atmosphere material to not overpower natural Earth colors
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
-    color: new THREE.Color(0x88bbff), // Lighter blue atmosphere
+    color: new THREE.Color(0xaaccff), // Light blue atmosphere
     transparent: true,
-    opacity: 0.15, // More subtle opacity for better visibility
+    opacity: 0.15, // Very subtle opacity
     side: THREE.BackSide,
-    emissive: new THREE.Color(0x2244aa), // Add emissive glow
-    emissiveIntensity: 0.1, // Moderate intensity for the glow
   });
   
   const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
   scene.add(atmosphere); // Add directly to scene
-  console.log('Atmosphere added to scene');
+  console.log('Subtle atmosphere added to scene');
   
   return atmosphere;
 }
@@ -97,36 +93,35 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
  * Sets up the lighting for the scene
  */
 export function setupLighting(scene: THREE.Scene): void {
-  const options = createThreeViewerOptions();
+  // Clear any existing lights
+  scene.children.forEach(child => {
+    if (child instanceof THREE.Light) {
+      scene.remove(child);
+    }
+  });
   
-  // Add ambient lighting - increased intensity
+  // Add ambient lighting - bright enough to see natural colors
   const ambientLight = new THREE.AmbientLight(
-    0x404040,
-    0.8  // Balanced ambient light
+    0xffffff,
+    0.8  // Brighter ambient light for better visibility of natural colors
   );
   scene.add(ambientLight);
-  console.log('Ambient light added to scene');
+  console.log('Bright ambient light added to scene');
   
-  // Main directional light (sun) - increased intensity
+  // Main directional light (sun) - bright natural sunlight
   const directionalLight = new THREE.DirectionalLight(
     0xffffff,
-    1.2  // Increased intensity
+    1.0  // Full intensity
   );
   directionalLight.position.set(1, 0.5, 1);
   scene.add(directionalLight);
   console.log('Directional light added to scene');
   
   // Add a second light from the opposite direction for better illumination
-  const backLight = new THREE.DirectionalLight(0x555555, 0.6); // Softer back light
+  const backLight = new THREE.DirectionalLight(0x9999ff, 0.4); // Soft blue-tinted back light
   backLight.position.set(-1, -0.5, -1);
   scene.add(backLight);
   console.log('Back light added to scene');
-  
-  // Add a subtle rim light to highlight the edge of the earth
-  const rimLight = new THREE.DirectionalLight(0x335577, 0.5); // Softer rim light
-  rimLight.position.set(0, 5, 0);
-  scene.add(rimLight);
-  console.log('Rim light added to scene');
 }
 
 /**
@@ -142,18 +137,17 @@ export function configureControls(
   }
   
   console.log('Configuring orbit controls for camera');
-  const options = createThreeViewerOptions();
   
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.minDistance = MIN_DISTANCE;
-  controls.maxDistance = OUTER_SPACE_DISTANCE * 1.5; // Allow zooming out further to see stars
+  controls.maxDistance = OUTER_SPACE_DISTANCE * 1.5;
   controls.enablePan = false;
   controls.autoRotate = true; // Enable auto-rotation
-  controls.autoRotateSpeed = 0.3; // Slower rotation for more subtle effect
+  controls.autoRotateSpeed = 0.5; // Moderate rotation speed
   
-  // Position camera
-  camera.position.z = EARTH_RADIUS * 3; // Start closer to see the globe
+  // Position camera to see the day side of Earth
+  camera.position.set(0, 10, 10);
   camera.lookAt(0, 0, 0);
-  console.log('Camera positioned at:', camera.position);
+  console.log('Camera positioned for optimal Earth view');
 }
