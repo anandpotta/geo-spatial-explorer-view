@@ -1,7 +1,5 @@
 
-// This file is maintained for backward compatibility
-// All functionality has been moved to the drawings/ directory
-
+// Re-export all drawing types and functions
 export type { DrawingData } from './drawings/types';
 export { 
   saveDrawing, 

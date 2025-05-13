@@ -1,126 +1,119 @@
 
-import React from 'react';
-import { isWeb } from '@/utils/threejs-viewer/platform-check';
-import { useWebViewMessaging, useWebMessageListener, CommonWebView } from './utils/webview-utils';
-import { Location } from '@/utils/geo-utils';
-
-// Initialize components
-import { initComponents } from './utils/webview-utils';
-initComponents();
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { WebView } from 'react-native-webview';
+import { GeoLocation } from '../geospatial-core/types';
+import { LoadingIndicator, INJECT_SCRIPT, handleWebViewMessage } from './utils/webview-utils';
 
 interface MapComponentProps {
-  selectedLocation?: Location;
-  onReady?: (api: any) => void;
-  onLocationSelect?: (location: Location) => void;
+  selectedLocation?: GeoLocation;
+  onLocationSelect?: (location: GeoLocation) => void;
+  onMapReady?: () => void;
   onError?: (error: Error) => void;
+  baseUrl?: string;
+  mapType?: 'street' | 'satellite' | 'hybrid';
 }
 
 export const MapComponent: React.FC<MapComponentProps> = ({
   selectedLocation,
-  onReady,
   onLocationSelect,
-  onError
+  onMapReady,
+  onError,
+  baseUrl = 'https://geo.example.com/map',
+  mapType = 'street'
 }) => {
-  // Use shared messaging hook
-  const {
-    webViewRef,
-    isReady,
-    handleMessage
-  } = useWebViewMessaging(onReady, onLocationSelect, undefined, onError);
-
-  // Add web message listener for web platform
-  useWebMessageListener(handleMessage);
-
-  // Generate HTML content for WebView
-  const generateHtmlContent = () => {
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-          <title>2D Map View</title>
-          <style>
-            html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; }
-            #map-container { width: 100%; height: 100%; background: #f0f0f0; }
-          </style>
-        </head>
-        <body>
-          <div id="map-container"></div>
-          <script>
-            // Simple initialization to show something is loading
-            document.addEventListener('DOMContentLoaded', function() {
-              // Send ready event
-              window.parent.postMessage(JSON.stringify({
-                type: 'ready',
-                api: { version: '1.0', capabilities: ['2d', 'map'] }
-              }), '*');
-              
-              // Setup message handler
-              window.addEventListener('message', function(event) {
-                try {
-                  const message = JSON.parse(event.data);
-                  if (message.type === 'pan' && message.location) {
-                    console.log('Panning to location:', message.location);
-                  }
-                } catch (e) {
-                  console.error('Error parsing message:', e);
-                }
-              });
-              
-              // Set up click handler for map
-              document.getElementById('map-container').addEventListener('click', function(e) {
-                // Example of sending a location selection event back
-                window.parent.postMessage(JSON.stringify({
-                  type: 'locationSelect',
-                  location: {
-                    id: 'clicked-location',
-                    label: 'Map Clicked Location',
-                    x: -74 + Math.random() * 10,
-                    y: 40 + Math.random() * 10
-                  }
-                }), '*');
-              });
-              
-              // Initial setup is complete
-              console.log('Map view initialized');
-            });
-          </script>
-        </body>
-      </html>
-    `;
-  };
-
-  // Effect to send location updates to WebView
-  React.useEffect(() => {
-    if (isReady && selectedLocation && webViewRef.current) {
-      const message = {
-        type: 'pan',
-        location: selectedLocation
-      };
-      
-      if (isWeb()) {
-        // Web implementation
-        const iframe = webViewRef.current.querySelector('iframe');
-        if (iframe && iframe.contentWindow) {
-          iframe.contentWindow.postMessage(JSON.stringify(message), '*');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Create HTML content for WebView
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <style>
+        html, body { 
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
         }
-      } else {
-        // React Native implementation
-        webViewRef.current.postMessage(JSON.stringify(message));
-      }
-    }
-  }, [isReady, selectedLocation]);
+        #map-container {
+          width: 100%;
+          height: 100%;
+          position: relative;
+        }
+      </style>
+    </head>
+    <body>
+      <div id="map-container"></div>
+      <script>
+        // Basic initialization, would be replaced with actual implementation
+        window.onload = function() {
+          // Let React Native know the map is ready
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'MAP_READY'
+          }));
+          
+          // Example of handling selected location updates
+          window.updateLocation = function(location) {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'LOCATION_SELECTED',
+                location: location
+              }));
+            }
+          };
 
+          // Set map type
+          window.setMapType('${mapType}');
+        };
+      </script>
+    </body>
+    </html>
+  `;
+  
+  // Handle WebView navigation state changes
+  const handleNavigationStateChange = (navState: any) => {
+    if (navState.loading === false && isLoading) {
+      setIsLoading(false);
+    }
+  };
+  
+  // Update selected location
+  React.useEffect(() => {
+    if (selectedLocation) {
+      // Send location to WebView
+    }
+  }, [selectedLocation]);
+  
   return (
-    <CommonWebView
-      webViewRef={webViewRef}
-      htmlContent={generateHtmlContent()}
-      onMessage={handleMessage}
-      backgroundColor="white"
-      loadingText="Loading Map..."
-    />
+    <View style={styles.container}>
+      <WebView
+        originWhitelist={['*']}
+        source={{ html: htmlContent, baseUrl }}
+        style={styles.webView}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        onNavigationStateChange={handleNavigationStateChange}
+        injectedJavaScript={INJECT_SCRIPT}
+        onMessage={(event) => handleWebViewMessage(event, onLocationSelect, onMapReady)}
+        onError={(event) => {
+          if (onError) onError(new Error(`WebView error: ${event.nativeEvent.description}`));
+        }}
+      />
+      {isLoading && <LoadingIndicator />}
+    </View>
   );
 };
 
-export default MapComponent;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  webView: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  }
+});

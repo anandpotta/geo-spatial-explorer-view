@@ -7,6 +7,16 @@ export interface Location {
   raw?: any;
 }
 
+// Re-export marker types and functions
+export type { LocationMarker } from './markers/types';
+export { getSavedMarkers, saveMarker, deleteMarker } from './markers/storage';
+export { createMarker } from './markers/factory';
+
+// Re-export drawing types and functions 
+export type { DrawingData } from './drawings/types';
+export { saveDrawing, getSavedDrawings, deleteDrawing } from './drawings/storage';
+export { createDrawing } from './drawings/factory';
+
 // Utility functions for coordinates
 export function formatCoordinates(latitude: number, longitude: number): string {
   const latDir = latitude >= 0 ? "N" : "S";

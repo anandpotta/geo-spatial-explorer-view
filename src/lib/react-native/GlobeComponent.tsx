@@ -1,119 +1,115 @@
 
-import React, { useRef } from 'react';
-import { isWeb } from '@/utils/threejs-viewer/platform-check';
-import { useWebViewMessaging, useWebMessageListener, CommonWebView } from './utils/webview-utils';
-import { Location } from '@/utils/geo-utils';
-
-// Initialize components
-import { initComponents } from './utils/webview-utils';
-initComponents();
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { WebView } from 'react-native-webview';
+import { GeoLocation } from '../geospatial-core/types';
+import { LoadingIndicator, INJECT_SCRIPT, handleWebViewMessage } from './utils/webview-utils';
 
 interface GlobeComponentProps {
-  selectedLocation?: Location;
-  onReady?: (api: any) => void;
-  onFlyComplete?: () => void;
+  selectedLocation?: GeoLocation;
+  onLocationSelect?: (location: GeoLocation) => void;
+  onMapReady?: () => void;
   onError?: (error: Error) => void;
+  baseUrl?: string;
 }
 
 export const GlobeComponent: React.FC<GlobeComponentProps> = ({
   selectedLocation,
-  onReady,
-  onFlyComplete,
-  onError
+  onLocationSelect,
+  onMapReady,
+  onError,
+  baseUrl = 'https://geo.example.com/globe'
 }) => {
-  // Use shared messaging hook
-  const {
-    webViewRef,
-    isReady,
-    handleMessage
-  } = useWebViewMessaging(onReady, undefined, onFlyComplete, onError);
-
-  // Add web message listener for web platform
-  useWebMessageListener(handleMessage);
-
-  // Generate HTML content for WebView
-  const generateHtmlContent = () => {
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-          <title>3D Globe View</title>
-          <style>
-            html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; background: black; }
-            #globe-container { width: 100%; height: 100%; }
-          </style>
-        </head>
-        <body>
-          <div id="globe-container"></div>
-          <script>
-            // Simple initialization to show something is loading
-            document.addEventListener('DOMContentLoaded', function() {
-              // Send ready event
-              window.parent.postMessage(JSON.stringify({
-                type: 'ready',
-                api: { version: '1.0', capabilities: ['3d', 'globe'] }
-              }), '*');
-              
-              // Setup message handler
-              window.addEventListener('message', function(event) {
-                try {
-                  const message = JSON.parse(event.data);
-                  if (message.type === 'fly' && message.location) {
-                    console.log('Flying to location:', message.location);
-                    
-                    // Simulate flight completion after a delay
-                    setTimeout(function() {
-                      window.parent.postMessage(JSON.stringify({
-                        type: 'flyComplete'
-                      }), '*');
-                    }, 2000);
-                  }
-                } catch (e) {
-                  console.error('Error parsing message:', e);
-                }
-              });
-              
-              // Initial setup is complete
-              console.log('Globe view initialized');
-            });
-          </script>
-        </body>
-      </html>
-    `;
-  };
-
-  // Effect to send location updates to WebView
-  React.useEffect(() => {
-    if (isReady && selectedLocation && webViewRef.current) {
-      const message = {
-        type: 'fly',
-        location: selectedLocation
-      };
-      
-      if (isWeb()) {
-        // Web implementation
-        const iframe = webViewRef.current.querySelector('iframe');
-        if (iframe && iframe.contentWindow) {
-          iframe.contentWindow.postMessage(JSON.stringify(message), '*');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Create HTML content for WebView
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <style>
+        html, body { 
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          background-color: #000;
         }
-      } else {
-        // React Native implementation
-        webViewRef.current.postMessage(JSON.stringify(message));
-      }
+        #globe-container {
+          width: 100%;
+          height: 100%;
+          position: relative;
+        }
+      </style>
+    </head>
+    <body>
+      <div id="globe-container"></div>
+      <script>
+        // Basic initialization, would be replaced with actual implementation
+        window.onload = function() {
+          // Let React Native know the globe is ready
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'MAP_READY'
+          }));
+          
+          // Example of handling selected location updates
+          window.updateLocation = function(location) {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'LOCATION_SELECTED',
+                location: location
+              }));
+            }
+          };
+        };
+      </script>
+    </body>
+    </html>
+  `;
+  
+  // Handle WebView navigation state changes
+  const handleNavigationStateChange = (navState: any) => {
+    if (navState.loading === false && isLoading) {
+      setIsLoading(false);
     }
-  }, [isReady, selectedLocation]);
-
+  };
+  
+  // Update selected location
+  React.useEffect(() => {
+    if (selectedLocation) {
+      // Send location to WebView
+    }
+  }, [selectedLocation]);
+  
   return (
-    <CommonWebView
-      webViewRef={webViewRef}
-      htmlContent={generateHtmlContent()}
-      onMessage={handleMessage}
-      backgroundColor="black"
-      loadingText="Loading 3D Globe..."
-    />
+    <View style={styles.container}>
+      <WebView
+        originWhitelist={['*']}
+        source={{ html: htmlContent, baseUrl }}
+        style={styles.webView}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        onNavigationStateChange={handleNavigationStateChange}
+        injectedJavaScript={INJECT_SCRIPT}
+        onMessage={(event) => handleWebViewMessage(event, onLocationSelect, onMapReady)}
+        onError={(event) => {
+          if (onError) onError(new Error(`WebView error: ${event.nativeEvent.description}`));
+        }}
+      />
+      {isLoading && <LoadingIndicator />}
+    </View>
   );
 };
 
-export default GlobeComponent;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  webView: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  }
+});
