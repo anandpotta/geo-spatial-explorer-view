@@ -70,8 +70,8 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
     </html>
   `;
   
-  // Handle WebView navigation state changes
-  const handleLoadEnd = (navState: any) => {
+  // Handle WebView load end
+  const handleLoadEnd = (event: any) => {
     setIsLoading(false);
   };
   

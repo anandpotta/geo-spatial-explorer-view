@@ -24,6 +24,11 @@ declare module 'react-native-webview' {
     onError?: (event: { nativeEvent: { code: string; description: string; url: string } }) => void;
 
     /**
+     * Function that is invoked when the WebView finishes loading.
+     */
+    onLoadEnd?: (event: { nativeEvent: any }) => void;
+
+    /**
      * Set this to provide JavaScript that will be injected into the web page when the view loads.
      */
     injectedJavaScript?: string;
