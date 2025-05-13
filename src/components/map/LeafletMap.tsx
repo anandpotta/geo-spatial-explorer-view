@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -9,6 +8,7 @@ import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
+// Import CSS from node_modules with explicit path
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
