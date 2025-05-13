@@ -36,8 +36,9 @@ export const isMapValid = (map: L.Map | null | undefined): boolean => {
   if (!map) return false;
   
   try {
-    // Check if map has been marked as destroyed
-    if ((map as any)._isDestroyed) return false;
+    // Check if map has been marked as destroyed - use type assertion for internal property
+    const mapAsAny = map as any;
+    if (mapAsAny._isDestroyed) return false;
     
     // Check if container exists and is in the DOM
     const container = map.getContainer();
@@ -46,13 +47,12 @@ export const isMapValid = (map: L.Map | null | undefined): boolean => {
     }
     
     // Check if map panes are initialized
-    const internalMap = map as any;
-    if (!internalMap._panes || !internalMap._panes.mapPane) {
+    if (!mapAsAny._panes || !mapAsAny._panes.mapPane) {
       return false;
     }
     
     // Safely check if position info is available
-    if (!internalMap._panes.mapPane || !internalMap._panes.mapPane._leaflet_pos) {
+    if (!mapAsAny._panes.mapPane || !mapAsAny._panes.mapPane._leaflet_pos) {
       return false;
     }
     

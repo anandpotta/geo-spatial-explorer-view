@@ -5,6 +5,7 @@ import { useMapInitialization } from '@/hooks/useMapInitialization';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { Location } from '@/utils/geo-utils';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 import 'leaflet/dist/leaflet.css';
 
 interface LeafletMapProps {
@@ -148,14 +149,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       
       // Safely check if map is still valid before final invalidation
       const invalidateMapSafely = () => {
-        if (map && !map._isDestroyed) {
+        if (map && isMapValid(map)) {
           try {
-            // Check if map container still exists in the DOM
-            const container = map.getContainer();
-            if (container && document.body.contains(container)) {
-              map.invalidateSize(true);
-              console.log('Final map invalidation completed');
-            }
+            map.invalidateSize(true);
+            console.log('Final map invalidation completed');
           } catch (err) {
             console.log('Map container removed before final invalidation');
           }
