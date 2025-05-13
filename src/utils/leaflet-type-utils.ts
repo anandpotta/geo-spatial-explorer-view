@@ -36,6 +36,9 @@ export const isMapValid = (map: L.Map | null | undefined): boolean => {
   if (!map) return false;
   
   try {
+    // Check if map has been marked as destroyed
+    if ((map as any)._isDestroyed) return false;
+    
     // Check if container exists and is in the DOM
     const container = map.getContainer();
     if (!container || !document.body.contains(container)) {
@@ -48,8 +51,8 @@ export const isMapValid = (map: L.Map | null | undefined): boolean => {
       return false;
     }
     
-    // Check if position info is available
-    if (!internalMap._panes.mapPane._leaflet_pos) {
+    // Safely check if position info is available
+    if (!internalMap._panes.mapPane || !internalMap._panes.mapPane._leaflet_pos) {
       return false;
     }
     
@@ -85,3 +88,17 @@ export const safeMapOperation = <T>(
   }
   return fallback;
 };
+
+/**
+ * Check if a DOM element already has a Leaflet map attached
+ */
+export const hasLeafletMap = (element: HTMLElement): boolean => {
+  return element && element._leaflet_id !== undefined;
+};
+
+// Extend HTMLElement for Leaflet's usage
+declare global {
+  interface HTMLElement {
+    _leaflet_id?: number;
+  }
+}

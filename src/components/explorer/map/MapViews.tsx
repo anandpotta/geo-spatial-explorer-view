@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, CSSProperties, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
@@ -40,6 +41,10 @@ const MapViews: React.FC<MapViewsProps> = ({
   const bothViewsReadyRef = useRef<boolean>(false);
   const [preloadedLeaflet, setPreloadedLeaflet] = useState(false);
   
+  // Key to force remount of the inactive map when switching
+  const [leafletKey, setLeafletKey] = useState(`leaflet-${mapKey}`);
+  const [cesiumKey, setCesiumKey] = useState(`cesium-${mapKey}`);
+  
   // Track location changes to prevent duplicate transitions
   useEffect(() => {
     if (selectedLocation && 
@@ -49,6 +54,12 @@ const MapViews: React.FC<MapViewsProps> = ({
       setLastSelectedLocation(selectedLocation);
     }
   }, [selectedLocation, lastSelectedLocation]);
+  
+  // Regenerate keys when the main map key changes
+  useEffect(() => {
+    setCesiumKey(`cesium-${mapKey}`);
+    setLeafletKey(`leaflet-${mapKey}`);
+  }, [mapKey]);
   
   // Preload the leaflet map in the background when in globe view
   useEffect(() => {
@@ -64,6 +75,13 @@ const MapViews: React.FC<MapViewsProps> = ({
       // Start transition effect
       setTransitioning(true);
       setViewChangeStarted(Date.now());
+      
+      // For the view we're switching to, generate a new key to force remount
+      if (currentView === 'leaflet') {
+        setLeafletKey(`leaflet-${Date.now()}`);
+      } else {
+        setCesiumKey(`cesium-${Date.now()}`);
+      }
       
       // End transition after animation completes
       const timer = setTimeout(() => {
@@ -158,43 +176,54 @@ const MapViews: React.FC<MapViewsProps> = ({
     }
   };
   
+  // Renders the map components with proper styles and visibility
   return (
     <>
+      {/* Cesium Globe View */}
       <div 
         className={`absolute inset-0 transition-all duration-300 ease-in-out ${currentView === 'cesium' ? fadeInClass : ''}`}
         style={getCesiumStyles()}
         data-map-type="cesium"
       >
-        <CesiumMap 
-          selectedLocation={selectedLocation}
-          onMapReady={() => {
-            onMapReady();
-            handleBothMapsReady();
-          }}
-          onFlyComplete={onFlyComplete}
-          cinematicFlight={true}
-          key={`cesium-${mapKey}`}
-          onViewerReady={handleCesiumViewerRef}
-        />
+        {(currentView === 'cesium' || transitioning || viewTransitionInProgress) && (
+          <CesiumMap 
+            selectedLocation={selectedLocation}
+            onMapReady={() => {
+              onMapReady();
+              handleBothMapsReady();
+            }}
+            onFlyComplete={onFlyComplete}
+            cinematicFlight={true}
+            key={cesiumKey}
+            onViewerReady={handleCesiumViewerRef}
+          />
+        )}
       </div>
       
-      {/* Keep leaflet always rendered but with controlled visibility for faster transitions */}
+      {/* Leaflet Map View */}
       <div 
         className={`absolute inset-0 transition-all duration-300 ease-in-out ${currentView === 'leaflet' ? fadeInClass : ''}`}
         style={getLeafletStyles()}
         data-map-type="leaflet"
       >
-        <LeafletMap 
-          selectedLocation={selectedLocation} 
-          onMapReady={(map) => {
-            handleLeafletMapRef(map);
-            handleBothMapsReady();
-          }}
-          activeTool={activeTool}
-          key={`leaflet-${mapKey}`}
-          onClearAll={handleClearAll}
-          preload={preloadedLeaflet}
-        />
+        {(currentView === 'leaflet' || transitioning || preloadedLeaflet) && (
+          <LeafletMap 
+            selectedLocation={selectedLocation} 
+            onMapReady={(map) => {
+              handleLeafletMapRef(map);
+              handleBothMapsReady();
+              
+              // When Leaflet is active, make sure to trigger onMapReady
+              if (currentView === 'leaflet') {
+                onMapReady();
+              }
+            }}
+            activeTool={currentView === 'leaflet' ? activeTool : null}
+            key={leafletKey}
+            onClearAll={handleClearAll}
+            preload={currentView !== 'leaflet'}
+          />
+        )}
       </div>
       
       {/* Add transition overlay - subtle fade effect during transitions */}

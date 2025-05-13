@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
@@ -32,6 +33,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const isReadyRef = useRef(false);
+  const mapInitializedRef = useRef(false);
   
   // Ensure the map resizes properly when container changes
   useEffect(() => {
@@ -95,6 +97,20 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     try {
       if (!element) return;
       
+      // Prevent multiple initializations on the same element
+      if (mapInitializedRef.current) {
+        console.log("Map already initialized, skipping initialization");
+        return;
+      }
+      
+      // Check if element already has a map instance
+      if (element._leaflet_id) {
+        console.log("Element already has a map instance, skipping initialization");
+        return;
+      }
+      
+      mapInitializedRef.current = true;
+      
       const map = L.map(element, {
         center: [0, 0],
         zoom: 2,
@@ -130,16 +146,28 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         if (onMapReady) onMapReady(map);
       }
       
-      // Final map invalidation for proper sizing
-      setTimeout(() => {
-        if (map) {
-          map.invalidateSize(true);
-          console.log('Final map invalidation completed');
+      // Safely check if map is still valid before final invalidation
+      const invalidateMapSafely = () => {
+        if (map && !map._isDestroyed) {
+          try {
+            // Check if map container still exists in the DOM
+            const container = map.getContainer();
+            if (container && document.body.contains(container)) {
+              map.invalidateSize(true);
+              console.log('Final map invalidation completed');
+            }
+          } catch (err) {
+            console.log('Map container removed before final invalidation');
+          }
         }
-      }, 500);
+      };
+      
+      // Final map invalidation for proper sizing with delay to ensure DOM is ready
+      setTimeout(invalidateMapSafely, 500);
     } catch (err) {
       console.error("Map initialization error:", err);
       setMapError(`Failed to initialize map: ${err.message}`);
+      mapInitializedRef.current = false;
     }
   };
   
@@ -147,9 +175,21 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   useEffect(() => {
     return () => {
       isReadyRef.current = false;
+      mapInitializedRef.current = false;
+      
+      // Clean up the map instance
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+          mapRef.current = null;
+        } catch (err) {
+          console.log('Error during map cleanup:', err);
+        }
+      }
+      
       if (onClearAll) onClearAll();
     };
-  }, [onClearAll]);
+  }, [mapRef, onClearAll]);
   
   return (
     <div 
@@ -162,7 +202,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         key={mapInstanceKey}
         id="leaflet-map-container" 
         ref={(el) => {
-          if (el) initMap(el);
+          if (el && !mapRef.current) initMap(el);
         }}
       />
       
