@@ -1,0 +1,50 @@
+
+{
+  "name": "geospatial-explorer-lib",
+  "version": "0.1.0",
+  "description": "Cross-platform GeoSpatial Explorer library",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "rimraf dist && npm run build:cjs && npm run build:esm && npm run build:types",
+    "build:cjs": "tsc --module commonjs --outDir dist/cjs --declaration false",
+    "build:esm": "tsc --module es2015 --outDir dist/esm --declaration false",
+    "build:types": "tsc --declaration --declarationDir dist/types --emitDeclarationOnly",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "geospatial",
+    "map",
+    "globe",
+    "3d",
+    "cross-platform",
+    "react",
+    "react-native",
+    "angular"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0",
+    "react-native": ">=0.60.0",
+    "react-native-webview": ">=11.0.0",
+    "@angular/core": ">=13.0.0",
+    "three": ">=0.133.0"
+  },
+  "devDependencies": {
+    "@types/react": ">=16.8.0",
+    "@types/react-dom": ">=16.8.0",
+    "@types/react-native": ">=0.60.0",
+    "@types/three": ">=0.133.0",
+    "typescript": ">=4.5.0",
+    "rimraf": "^3.0.2"
+  }
+}
