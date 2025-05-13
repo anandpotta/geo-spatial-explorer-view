@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { useThreeScene } from './useThreeScene';
@@ -21,6 +20,7 @@ export function useThreeGlobe(
   const globeRef = useRef<THREE.Group | null>(null);
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
+  const autoRotationEnabledRef = useRef<boolean>(true);
   
   // Use the scene hook
   const {
@@ -85,8 +85,12 @@ export function useThreeGlobe(
     const atmosphere = createAtmosphere(scene);
     atmosphereRef.current = atmosphere;
     
-    // Configure controls
-    configureControls(controlsRef.current, camera);
+    // Configure controls with auto-rotation enabled
+    if (controlsRef.current) {
+      configureControls(controlsRef.current, camera);
+      controlsRef.current.autoRotate = true;
+      autoRotationEnabledRef.current = true;
+    }
     
     console.log("Globe setup complete, starting animation");
     
@@ -98,6 +102,12 @@ export function useThreeGlobe(
       }
       
       animationFrameRef.current = requestAnimationFrame(animate);
+      
+      // If we have a globe, rotate it slightly for a more dynamic appearance
+      if (globeRef.current && autoRotationEnabledRef.current) {
+        // The globe rotation is now handled by OrbitControls autoRotate
+        // but we could add additional rotation effects here if needed
+      }
       
       // Make sure controls are updated every frame
       controlsRef.current.update();
@@ -142,12 +152,34 @@ export function useThreeGlobe(
     }
   }, [texturesLoaded, onInitialized]);
   
+  // Enable/disable auto-rotation
+  const setAutoRotation = useCallback((enabled: boolean) => {
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = enabled;
+      autoRotationEnabledRef.current = enabled;
+    }
+  }, [controlsRef]);
+  
   // Get flyToLocation functionality
   const { flyToLocation } = useFlyToLocation(
     { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
     controlsRef,
     EARTH_RADIUS
   );
+  
+  // Wrap the flyToLocation to handle auto-rotation
+  const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
+    // Ensure the globe is rotating while flying for a more dynamic effect
+    setAutoRotation(true);
+    
+    // Call the original flyToLocation
+    flyToLocation(longitude, latitude, () => {
+      // Keep auto-rotation on after flying
+      setAutoRotation(true);
+      
+      if (onComplete) onComplete();
+    });
+  }, [flyToLocation, setAutoRotation]);
   
   return {
     scene,
@@ -156,6 +188,7 @@ export function useThreeGlobe(
     controls: controlsRef.current,
     globe: globeRef.current,
     isInitialized,
-    flyToLocation
+    flyToLocation: enhancedFlyToLocation,
+    setAutoRotation
   };
 }

@@ -139,13 +139,26 @@ export function configureControls(
   
   console.log('Configuring orbit controls for camera');
   
+  // Enhanced control settings for smoother experience
   controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
+  controls.dampingFactor = 0.07; // Increased for smoother stops
+  controls.rotateSpeed = 0.5;    // Slower rotation for more control
+  controls.zoomSpeed = 0.8;      // Slower zoom for better control
+  
+  // Distance limits
   controls.minDistance = MIN_DISTANCE;
   controls.maxDistance = OUTER_SPACE_DISTANCE * 1.5;
+  
+  // Disable panning for simpler navigation
   controls.enablePan = false;
-  controls.autoRotate = true; // Enable auto-rotation
+  
+  // Enable auto-rotation for dynamic appearance
+  controls.autoRotate = true;
   controls.autoRotateSpeed = 0.5; // Moderate rotation speed
+  
+  // Set reasonable rotation limits to prevent upside-down view
+  controls.minPolarAngle = Math.PI * 0.1;  // Limit top view
+  controls.maxPolarAngle = Math.PI * 0.9;  // Limit bottom view
   
   // Position camera to see the day side of Earth
   camera.position.set(0, 10, 10);

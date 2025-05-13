@@ -2,6 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useThreeGlobe } from '@/hooks/useThreeGlobe';
+import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
@@ -18,6 +19,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const [isGlobeReady, setIsGlobeReady] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const previousLocationRef = useRef<string | null>(null);
   
   // Use our custom hook to handle Three.js setup and animation
   const { 
@@ -52,24 +54,39 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   
   // Handle flying to a location when selectedLocation changes
   useEffect(() => {
-    if (!isInitialized || !selectedLocation || isFlying) return;
+    if (!isInitialized || !selectedLocation) return;
+    
+    // Create a unique ID for the location to detect changes
+    const locationId = `${selectedLocation.id}-${selectedLocation.x}-${selectedLocation.y}`;
+    
+    // Skip if we're already flying or it's the same location
+    if (isFlying || locationId === previousLocationRef.current) return;
     
     // Validate coordinates before flying
     if (typeof selectedLocation.x !== 'number' || typeof selectedLocation.y !== 'number' ||
         isNaN(selectedLocation.x) || isNaN(selectedLocation.y)) {
       console.error('Invalid coordinates:', selectedLocation);
+      toast({
+        title: "Navigation Error",
+        description: "Cannot navigate to location due to invalid coordinates",
+        variant: "destructive"
+      });
       return;
     }
     
     console.log('Flying to location:', selectedLocation);
     setIsFlying(true);
+    previousLocationRef.current = locationId;
     
     flyToLocation(
       selectedLocation.x,
       selectedLocation.y,
       () => {
         setIsFlying(false);
-        if (onFlyComplete) onFlyComplete();
+        if (onFlyComplete) {
+          console.log("Flight complete, calling onFlyComplete callback");
+          onFlyComplete();
+        }
       }
     );
   }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);

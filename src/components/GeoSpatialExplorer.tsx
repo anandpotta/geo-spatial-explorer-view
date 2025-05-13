@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
@@ -31,24 +31,28 @@ const GeoSpatialExplorer = () => {
         duration: 5000,
       });
     }
-  }, [currentUser]);
+  }, [currentUser, toast]);
   
-  const handleLocationSelect = (location: Location) => {
+  const handleLocationSelect = useCallback((location: Location) => {
     console.log('Location selected in Explorer:', location);
-    setSelectedLocation(location);
     
     // Always force cesium view when selecting a new location
     setCurrentView('cesium');
     setFlyCompleted(false);
     
-    toast({
-      title: 'Location selected',
-      description: `Navigating to ${location.label}`,
-      duration: 3000,
-    });
-  };
+    // Set the selected location after a small delay to ensure view has changed
+    setTimeout(() => {
+      setSelectedLocation(location);
+      
+      toast({
+        title: 'Location selected',
+        description: `Navigating to ${location.label}`,
+        duration: 3000,
+      });
+    }, 100);
+  }, [toast]);
   
-  const handleFlyComplete = () => {
+  const handleFlyComplete = useCallback(() => {
     console.log('Fly complete in Explorer, switching to leaflet view');
     setFlyCompleted(true);
     
@@ -61,9 +65,9 @@ const GeoSpatialExplorer = () => {
         duration: 5000,
       });
     }, 500);
-  };
+  }, [toast]);
   
-  const handleSavedLocationSelect = (position: [number, number]) => {
+  const handleSavedLocationSelect = useCallback((position: [number, number]) => {
     // Create a simple location object from coordinates
     const location: Location = {
       id: `loc-${position[0]}-${position[1]}`,
@@ -72,17 +76,22 @@ const GeoSpatialExplorer = () => {
       x: position[1]
     };
     
-    setSelectedLocation(location);
-    setCurrentView('cesium'); // Start with Cesium view for the full experience
+    // Reset view to cesium and set the new location
+    setCurrentView('cesium');
     setFlyCompleted(false);
     
-    // Show toast notification for navigation feedback
-    toast({
-      title: 'Location selected',
-      description: `Navigating to ${location.label}`,
-      duration: 3000,
-    });
-  };
+    // Small delay to ensure view is set before setting location
+    setTimeout(() => {
+      setSelectedLocation(location);
+      
+      // Show toast notification for navigation feedback
+      toast({
+        title: 'Location selected',
+        description: `Navigating to ${location.label}`,
+        duration: 3000,
+      });
+    }, 100);
+  }, [toast]);
   
   return (
     <div className="w-full h-full flex bg-black overflow-hidden">
