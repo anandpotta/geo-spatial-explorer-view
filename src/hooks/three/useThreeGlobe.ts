@@ -42,7 +42,7 @@ export function useThreeGlobe(
     }
   }, [onInitialized, isInitialized]);
   
-  // Use globe setup hook
+  // Use globe setup hook with texture callback
   const { globe } = useGlobeSetup(
     scene,
     camera,

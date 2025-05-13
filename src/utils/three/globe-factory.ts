@@ -1,4 +1,3 @@
-
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { createThreeViewerOptions } from '@/utils/threejs-viewer/viewer-options';
@@ -16,7 +15,6 @@ export const MIN_DISTANCE = EARTH_RADIUS * 1.2;
 export function createEarthGlobe(scene: THREE.Scene): {
   globeGroup: THREE.Group;
   earthMesh: THREE.Mesh;
-  setTexturesLoaded: (earthLoaded: boolean, bumpLoaded: boolean) => boolean;
 } {
   const options = createThreeViewerOptions();
   const globeGroup = new THREE.Group();
@@ -66,20 +64,9 @@ export function createEarthGlobe(scene: THREE.Scene): {
   
   console.log('Earth globe created with natural colors material and added to scene');
   
-  let earthTextureLoaded = false;
-  let bumpTextureLoaded = false;
-  
   return {
     globeGroup,
-    earthMesh,
-    setTexturesLoaded: (earthLoaded: boolean, bumpLoaded: boolean) => {
-      earthTextureLoaded = earthLoaded;
-      bumpTextureLoaded = bumpLoaded;
-      
-      const allLoaded = earthTextureLoaded && bumpTextureLoaded;
-      console.log(`Textures loaded - Earth: ${earthLoaded}, Bump: ${bumpLoaded}, All: ${allLoaded}`);
-      return allLoaded;
-    }
+    earthMesh
   };
 }
 

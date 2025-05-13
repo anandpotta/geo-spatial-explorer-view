@@ -1,5 +1,5 @@
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { disposeObject3D } from '@/utils/three-utils';
 import { 
@@ -9,7 +9,8 @@ import {
   configureControls,
   EARTH_RADIUS
 } from '@/utils/three/globe-factory';
-import { loadEarthTextures, createStarfield } from '@/utils/three/texture-loader';
+import { createStarfield } from '@/utils/three/texture-loader';
+import { useGlobeTextures } from './useGlobeTextures';
 
 export function useGlobeSetup(
   scene: THREE.Scene | null,
@@ -22,9 +23,6 @@ export function useGlobeSetup(
   const globeRef = useRef<THREE.Group | null>(null);
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
-  
-  // Track if textures are loaded
-  const [texturesLoaded, setTexturesLoaded] = useState(false);
   
   // Flag to prevent multiple initializations
   const isSetupCompleteRef = useRef(false);
@@ -55,7 +53,7 @@ export function useGlobeSetup(
     setupLighting(scene);
     
     // Create Earth globe
-    const { globeGroup, earthMesh, setTexturesLoaded: updateTextureLoadStatus } = createEarthGlobe(scene);
+    const { globeGroup, earthMesh } = createEarthGlobe(scene);
     if (globeGroup) {
       globeGroup.rotation.y = Math.PI;
       scene.add(globeGroup); // Add to scene
@@ -63,15 +61,6 @@ export function useGlobeSetup(
       earthMeshRef.current = earthMesh;
       
       console.log("Globe created and added to scene");
-      
-      // Load textures
-      loadEarthTextures(earthMesh.material as THREE.MeshPhongMaterial, (earthLoaded, bumpLoaded) => {
-        const allLoaded = updateTextureLoadStatus(earthLoaded, bumpLoaded);
-        if (allLoaded) {
-          console.log("All Earth textures loaded successfully");
-          setTexturesLoaded(true);
-        }
-      });
     }
     
     // Create atmosphere
@@ -110,13 +99,8 @@ export function useGlobeSetup(
     };
   }, [scene, camera, controlsRef, containerRef]);
   
-  // Call onTexturesLoaded when textures are loaded
-  useEffect(() => {
-    if (texturesLoaded) {
-      console.log("Textures loaded, calling callback");
-      onTexturesLoaded();
-    }
-  }, [texturesLoaded, onTexturesLoaded]);
+  // Use the texture hook
+  const { texturesLoaded } = useGlobeTextures(earthMeshRef.current, onTexturesLoaded);
   
   return {
     globe: globeRef.current,
