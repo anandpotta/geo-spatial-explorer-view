@@ -23,6 +23,12 @@ export function isReactNative(): boolean {
   return typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 }
 
+export function isAngular(): boolean {
+  // Simple detection to check if running in Angular environment
+  // (not perfect but sufficient for most cases)
+  return typeof window !== 'undefined' && !!(window as any).ng;
+}
+
 // Format coordinate to user-friendly string
 export function formatCoordinate(coord: number, isLatitude: boolean = false): string {
   const direction = isLatitude 
@@ -60,3 +66,30 @@ function deg2rad(deg: number): number {
   return deg * (Math.PI/180);
 }
 
+// Cross-platform logging function
+export function logMessage(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
+  if (isReactNative()) {
+    // Use console for React Native
+    switch (level) {
+      case 'info': console.log(message); break;
+      case 'warn': console.warn(message); break;
+      case 'error': console.error(message); break;
+    }
+  } else if (isWeb()) {
+    // Use console with styling for web
+    const styles = {
+      info: 'color: #3498db',
+      warn: 'color: #f39c12; font-weight: bold',
+      error: 'color: #e74c3c; font-weight: bold'
+    };
+    console.log(`%c[GeoSpatial] ${message}`, styles[level]);
+  } else {
+    // Default logging for other environments
+    console.log(`[GeoSpatial] [${level.toUpperCase()}] ${message}`);
+  }
+}
+
+// Generate a unique ID (for markers, locations, etc.)
+export function generateUniqueId(prefix: string = 'geo'): string {
+  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+}

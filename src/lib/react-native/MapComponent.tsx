@@ -1,102 +1,8 @@
 
-/**
- * This is a simplified implementation for React Native
- * In a real app, you would use react-native-maps
- */
-import React, { useState, useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { WebView } from 'react-native-webview';
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
-
-// Define simple types to avoid the need for react-native package in web environment
-type ReactNativeView = React.ComponentType<any>;
-type ReactNativeWebView = React.ComponentType<any> & { postMessage?: (data: string) => void };
-
-interface WebViewProps {
-  source: { html: string };
-  style: any;
-  onMessage: (event: any) => void;
-  javaScriptEnabled: boolean;
-  originWhitelist: string[];
-  ref: React.RefObject<ReactNativeWebView>;
-}
-
-// Mock React Native components for web environment
-const View: ReactNativeView = (props) => <div {...props} />;
-const Text: ReactNativeView = (props) => <span {...props} />;
-const ActivityIndicator: ReactNativeView = (props) => <div {...props}>Loading...</div>;
-const WebView: ReactNativeWebView = (props) => <iframe {...props} />;
-
-// Mock StyleSheet for web environment
-const StyleSheet = {
-  create: (styles: any) => styles,
-  absoluteFillObject: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0
-  }
-};
-
-// HTML template for WebView that includes a simple map
-const getHtmlTemplate = (options: Partial<MapViewOptions> = {}) => `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      body { margin: 0; overflow: hidden; }
-      #map { width: 100%; height: 100%; }
-    </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  </head>
-  <body>
-    <div id="map"></div>
-    <script>
-      // Initialize map
-      const map = L.map('map').setView([${options.initialCenter?.[0] ?? 0}, ${options.initialCenter?.[1] ?? 0}], ${options.initialZoom ?? 2});
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: ${options.maxZoom ?? 19}
-      }).addTo(map);
-      
-      // Handle messages from React Native
-      window.addEventListener('message', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'centerMap') {
-            map.setView([data.latitude, data.longitude], data.zoom || map.getZoom());
-          }
-          
-          if (data.type === 'addMarker') {
-            L.marker([data.latitude, data.longitude])
-              .addTo(map)
-              .bindPopup(data.label || 'Marker');
-          }
-        } catch (e) {
-          console.error('Error processing message:', e);
-        }
-      });
-      
-      // Map click handler
-      map.on('click', (e) => {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'mapClick',
-          latitude: e.latlng.lat,
-          longitude: e.latlng.lng
-        }));
-      });
-      
-      // Notify React Native that we're ready
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'ready'
-      }));
-    </script>
-  </body>
-  </html>
-`;
 
 interface MapComponentProps {
   options?: Partial<MapViewOptions>;
@@ -106,73 +12,192 @@ interface MapComponentProps {
   onError?: (error: Error) => void;
 }
 
-export const MapComponent = ({
-  options = {},
+/**
+ * React Native component wrapper for MapCore
+ */
+export const MapComponent: React.FC<MapComponentProps> = ({
+  options,
   selectedLocation,
   onReady,
   onLocationSelect,
   onError
-}: MapComponentProps) => {
-  const webViewRef = useRef<ReactNativeWebView>(null);
+}) => {
+  const webViewRef = useRef<WebView>(null);
   const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Handle messages from WebView
+  // Handle messages from the WebView
   const handleMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      
-      if (data.type === 'ready') {
-        setIsReady(true);
-        if (onReady) onReady({});
+      switch (data.type) {
+        case 'ready':
+          setIsReady(true);
+          if (onReady) onReady(data.api);
+          break;
+        case 'locationSelect':
+          if (onLocationSelect && data.location) {
+            onLocationSelect(data.location);
+          }
+          break;
+        case 'error':
+          setError(data.message);
+          if (onError) onError(new Error(data.message));
+          break;
       }
-      
-      if (data.type === 'mapClick' && onLocationSelect) {
-        onLocationSelect({
-          id: `loc-${Date.now()}`,
-          label: `Location at ${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)}`,
-          x: data.longitude,
-          y: data.latitude
-        });
-      }
-    } catch (error) {
-      console.error('Error processing WebView message:', error);
-      if (onError) onError(error as Error);
+    } catch (e) {
+      console.error('Failed to parse WebView message:', e);
+      if (onError) onError(e as Error);
     }
   };
-  
-  // Send location to WebView when it changes
-  React.useEffect(() => {
+
+  // Send updated location to WebView when it changes
+  useEffect(() => {
     if (webViewRef.current && isReady && selectedLocation) {
-      webViewRef.current.postMessage && webViewRef.current.postMessage(JSON.stringify({
-        type: 'centerMap',
-        latitude: selectedLocation.y,
-        longitude: selectedLocation.x,
-        zoom: 13
-      }));
-      
-      webViewRef.current.postMessage && webViewRef.current.postMessage(JSON.stringify({
-        type: 'addMarker',
-        latitude: selectedLocation.y,
-        longitude: selectedLocation.x,
-        label: selectedLocation.label
+      webViewRef.current.postMessage(JSON.stringify({
+        type: 'setLocation',
+        location: selectedLocation
       }));
     }
   }, [selectedLocation, isReady]);
   
+  // HTML content for WebView that creates a Leaflet map
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <style>
+          body { margin: 0; padding: 0; width: 100vw; height: 100vh; }
+          #map { width: 100%; height: 100%; }
+          .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 1000; }
+        </style>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      </head>
+      <body>
+        <div id="map"></div>
+        <script>
+          let map;
+          let isReady = false;
+          let marker;
+          let initialZoom = ${options?.initialZoom || 2};
+          let initialCenter = ${options?.initialCenter ? 
+            `[${options.initialCenter[0]}, ${options.initialCenter[1]}]` : 
+            '[0, 0]'
+          };
+          
+          function initMap() {
+            map = L.map('map').setView(initialCenter, initialZoom);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: ${options?.maxZoom || 19},
+              minZoom: ${options?.minZoom || 1},
+              attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            if (${options?.showControls !== false}) {
+              L.control.zoom().addTo(map);
+            }
+            
+            // Handle map clicks
+            map.on('click', function(e) {
+              const location = {
+                id: 'selected-' + Date.now(),
+                label: 'Selected Location',
+                x: e.latlng.lng,
+                y: e.latlng.lat
+              };
+              
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'locationSelect',
+                location: location
+              }));
+            });
+            
+            isReady = true;
+            window.ReactNativeWebView.postMessage(JSON.stringify({ 
+              type: 'ready', 
+              api: { version: '1.0.0' } 
+            }));
+          }
+          
+          function setLocation(location) {
+            if (!map) return;
+            
+            const latlng = [location.y, location.x];
+            
+            // Center map on location
+            map.setView(latlng, map.getZoom());
+            
+            // Add or update marker
+            if (marker) {
+              marker.setLatLng(latlng);
+            } else {
+              marker = L.marker(latlng).addTo(map);
+            }
+            
+            // Add popup with label if available
+            if (location.label) {
+              marker.bindPopup(location.label).openPopup();
+            }
+          }
+          
+          // Handle messages from React Native
+          window.addEventListener('message', function(event) {
+            try {
+              const message = JSON.parse(event.data);
+              if (message.type === 'setLocation' && message.location) {
+                setLocation(message.location);
+              }
+            } catch (e) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                type: 'error', 
+                message: 'Failed to parse message: ' + e.message 
+              }));
+            }
+          });
+          
+          // Initialize map
+          try {
+            initMap();
+          } catch (e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ 
+              type: 'error', 
+              message: 'Failed to initialize map: ' + e.message 
+            }));
+          }
+        </script>
+      </body>
+    </html>
+  `;
+
   return (
     <View style={styles.container}>
       <WebView
         ref={webViewRef}
-        source={{ html: getHtmlTemplate(options) }}
-        style={styles.webview}
+        source={{ html: htmlContent }}
+        style={styles.webView}
         onMessage={handleMessage}
-        javaScriptEnabled={true}
         originWhitelist={['*']}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        startInLoadingState={true}
+        renderLoading={() => (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+            <Text style={styles.loadingText}>Loading Map</Text>
+          </View>
+        )}
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          setError(`WebView error: ${nativeEvent.description}`);
+          if (onError) onError(new Error(nativeEvent.description));
+        }}
       />
-      {!isReady && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.loadingText}>Loading Map</Text>
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
     </View>
@@ -184,21 +209,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
   },
-  webview: {
+  webView: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'white',
   },
   loadingText: {
-    color: '#0066cc',
     marginTop: 10,
-    fontSize: 16,
+    color: 'black',
+    fontSize: 18,
     fontWeight: 'bold',
   },
+  errorContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+    backgroundColor: 'rgba(255, 0, 0, 0.7)',
+  },
+  errorText: {
+    color: 'white',
+    textAlign: 'center',
+  },
 });
-

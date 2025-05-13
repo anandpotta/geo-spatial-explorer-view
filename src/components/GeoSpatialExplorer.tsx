@@ -1,125 +1,95 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { Location } from '@/utils/geo-utils';
-import { useToast } from '@/components/ui/use-toast';
-import ExplorerSidebar from './explorer/ExplorerSidebar';
-import MapContent from './explorer/MapContent';
-import SyncStatusIndicator from './SyncStatusIndicator';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LibraryDemo from './LibraryDemo';
 
 const GeoSpatialExplorer = () => {
-  const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
-  const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium'); // Always start with cesium
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [flyCompleted, setFlyCompleted] = useState(false);
-  const { toast } = useToast();
-  const { currentUser } = useAuth();
-  
-  // Effect to handle initial map load
-  useEffect(() => {
-    if (isMapReady) {
-      console.log('Map is ready for interactions');
-    }
-  }, [isMapReady]);
-  
-  // Effect to welcome the user
-  useEffect(() => {
-    if (currentUser) {
-      toast({
-        title: `Welcome ${currentUser.username}!`,
-        description: 'Your personalized GeoSpatial Explorer is ready.',
-        duration: 5000,
-      });
-    }
-  }, [currentUser, toast]);
-  
-  const handleLocationSelect = useCallback((location: Location) => {
-    console.log('Location selected in Explorer:', location);
-    
-    // Always force cesium view when selecting a new location
-    setCurrentView('cesium');
-    setFlyCompleted(false);
-    
-    // Set the selected location after a small delay to ensure view has changed
-    setTimeout(() => {
-      setSelectedLocation(location);
-      
-      toast({
-        title: 'Location selected',
-        description: `Navigating to ${location.label}`,
-        duration: 3000,
-      });
-    }, 100);
-  }, [toast]);
-  
-  const handleFlyComplete = useCallback(() => {
-    console.log('Fly complete in Explorer, switching to leaflet view');
-    setFlyCompleted(true);
-    
-    // Short delay before switching to leaflet view for a smoother transition
-    setTimeout(() => {
-      setCurrentView('leaflet');
-      toast({
-        title: 'Navigation complete',
-        description: 'You can now draw building boundaries on the map',
-        duration: 5000,
-      });
-    }, 500);
-  }, [toast]);
-  
-  const handleSavedLocationSelect = useCallback((position: [number, number]) => {
-    // Create a simple location object from coordinates
-    const location: Location = {
-      id: `loc-${position[0]}-${position[1]}`,
-      label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-      y: position[0],
-      x: position[1]
-    };
-    
-    // Reset view to cesium and set the new location
-    setCurrentView('cesium');
-    setFlyCompleted(false);
-    
-    // Small delay to ensure view is set before setting location
-    setTimeout(() => {
-      setSelectedLocation(location);
-      
-      // Show toast notification for navigation feedback
-      toast({
-        title: 'Location selected',
-        description: `Navigating to ${location.label}`,
-        duration: 3000,
-      });
-    }, 100);
-  }, [toast]);
-  
   return (
-    <div className="w-full h-full flex bg-black overflow-hidden">
-      {/* Left Panel */}
-      <ExplorerSidebar 
-        selectedLocation={selectedLocation}
-        currentView={currentView}
-        flyCompleted={flyCompleted}
-        setCurrentView={setCurrentView}
-        onSavedLocationSelect={handleSavedLocationSelect}
-      />
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6">GeoSpatial Explorer</h1>
       
-      {/* Right Panel - Map View */}
-      <div className="flex-1 relative bg-black">
-        {/* Map content */}
-        <MapContent 
-          currentView={currentView}
-          selectedLocation={selectedLocation}
-          onMapReady={() => setIsMapReady(true)}
-          onFlyComplete={handleFlyComplete}
-          onLocationSelect={handleLocationSelect}
-        />
+      <Tabs defaultValue="demo" className="w-full">
+        <TabsList>
+          <TabsTrigger value="demo">Library Demo</TabsTrigger>
+          <TabsTrigger value="docs">Documentation</TabsTrigger>
+        </TabsList>
         
-        {/* Sync status indicator */}
-        <div className="absolute bottom-5 right-5 z-[10001]">
-          <SyncStatusIndicator />
-        </div>
-      </div>
+        <TabsContent value="demo">
+          <LibraryDemo />
+        </TabsContent>
+        
+        <TabsContent value="docs">
+          <div className="prose max-w-none">
+            <h2>GeoSpatial Explorer Library</h2>
+            <p>
+              This is a cross-platform library for geospatial visualization that works across
+              React Web, React Native, and Angular applications.
+            </p>
+            
+            <h3>Core Components</h3>
+            <ul>
+              <li><strong>GlobeComponent:</strong> 3D interactive globe based on Three.js</li>
+              <li><strong>MapComponent:</strong> 2D interactive map</li>
+            </ul>
+            
+            <h3>Usage Examples</h3>
+            
+            <h4>React Web</h4>
+            <pre className="bg-gray-100 p-4 rounded">
+              {`
+import { ReactComponents } from 'geospatial-explorer-lib';
+const { GlobeComponent } = ReactComponents;
+
+function App() {
+  return (
+    <div style={{ height: '500px' }}>
+      <GlobeComponent 
+        selectedLocation={{ id: 'nyc', label: 'New York', x: -74.006, y: 40.7128 }}
+        onReady={() => console.log('Globe ready')}
+      />
+    </div>
+  );
+}
+              `}
+            </pre>
+            
+            <h4>React Native</h4>
+            <pre className="bg-gray-100 p-4 rounded">
+              {`
+import { ReactNativeComponents } from 'geospatial-explorer-lib';
+const { GlobeComponent } = ReactNativeComponents;
+
+function GlobeScreen() {
+  return (
+    <View style={{ flex: 1 }}>
+      <GlobeComponent 
+        selectedLocation={{ id: 'nyc', label: 'New York', x: -74.006, y: 40.7128 }}
+      />
+    </View>
+  );
+}
+              `}
+            </pre>
+            
+            <h4>Angular</h4>
+            <pre className="bg-gray-100 p-4 rounded">
+              {`
+// app.component.ts
+@Component({
+  template: \`
+    <div style="height: 500px;">
+      <app-globe [selectedLocation]="location"></app-globe>
+    </div>
+  \`
+})
+export class AppComponent {
+  location = { id: 'nyc', label: 'New York', x: -74.006, y: 40.7128 };
+}
+              `}
+            </pre>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -116,6 +116,67 @@ export class AppComponent {
 }
 ```
 
+## API Reference
+
+### Common Types
+
+```typescript
+// Core location type
+interface GeoLocation {
+  id: string;
+  label: string;
+  x: number; // longitude
+  y: number; // latitude
+  z?: number; // optional altitude
+  metadata?: Record<string, any>;
+}
+
+// Globe configuration options
+interface GlobeOptions {
+  earthRadius?: number;
+  texturePath?: string;
+  bumpMapPath?: string;
+  specularMapPath?: string;
+  backgroundColor?: string;
+  autoRotate?: boolean;
+  rotationSpeed?: number;
+}
+
+// Map view options
+interface MapViewOptions {
+  initialCenter?: [number, number];
+  initialZoom?: number;
+  minZoom?: number;
+  maxZoom?: number;
+  tileProvider?: string;
+  showControls?: boolean;
+}
+```
+
+### Globe Component Props
+
+```typescript
+interface GlobeComponentProps {
+  options?: Partial<GlobeOptions>;
+  selectedLocation?: GeoLocation;
+  onReady?: (api: any) => void;
+  onFlyComplete?: () => void;
+  onError?: (error: Error) => void;
+}
+```
+
+### Map Component Props
+
+```typescript
+interface MapComponentProps {
+  options?: Partial<MapViewOptions>;
+  selectedLocation?: GeoLocation;
+  onReady?: (api: any) => void;
+  onLocationSelect?: (location: GeoLocation) => void;
+  onError?: (error: Error) => void;
+}
+```
+
 ## Platform-Specific Considerations
 
 ### React Native
