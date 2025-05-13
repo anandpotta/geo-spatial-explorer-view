@@ -7,7 +7,7 @@ import * as THREE from 'three';
 export function createThreeViewerOptions(): Record<string, any> {
   return {
     // Scene configuration
-    backgroundColor: new THREE.Color(0x000022), // Very dark blue background
+    backgroundColor: new THREE.Color(0x000011), // Very dark blue background
     
     // Camera configuration
     cameraOptions: {
@@ -21,11 +21,11 @@ export function createThreeViewerOptions(): Record<string, any> {
     lights: {
       ambient: {
         color: 0xffffff,
-        intensity: 0.8 // Brighter ambient light
+        intensity: 0.6 // Moderate ambient light
       },
       directional: {
         color: 0xffffff,
-        intensity: 1.0, // Full intensity for clear visibility
+        intensity: 1.2, // Brighter directional light
         position: new THREE.Vector3(1, 0.5, 1)
       }
     },
@@ -35,7 +35,7 @@ export function createThreeViewerOptions(): Record<string, any> {
       radius: 5,
       segments: 128, // Higher segment count for smoother appearance
       baseColor: new THREE.Color(0xffffff), // Pure white to let texture colors show
-      atmosphereColor: new THREE.Color(0xaaccff), // Light blue atmosphere
+      atmosphereColor: new THREE.Color(0x88ccff), // Light blue atmosphere
       enableAtmosphere: true,
       enableClouds: false, // Disable clouds for clearer land view
       enableRotation: true, // Auto-rotation enabled

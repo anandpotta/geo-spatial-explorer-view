@@ -13,11 +13,11 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Natural Earth texture with vibrant colors (Blue Marble)
-  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_shallow_topo_2048.jpg';
+  // Blue Marble - Natural Earth high-resolution texture
+  const earthTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg';
   
   // High-detail bump map for terrain
-  const bumpTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/gebco_08_rev_elev_21600x10800.png';
+  const bumpTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/elev_bump_4k.jpg';
   
   console.log('Loading high-resolution natural Earth textures...');
   
@@ -42,15 +42,15 @@ export function loadEarthTextures(
       earthMaterial.needsUpdate = true;
       earthTextureLoaded = true;
       
-      // Load borders texture if needed
-      const bordersTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73751/gebco_08_rev_bath_3600x1800.png';
+      // Add borders texture for country outlines
+      const bordersTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/water_4k.png';
       textureLoader.load(
         bordersTextureURL,
         (bordersTexture) => {
           console.log('Borders texture loaded successfully');
           bordersTexture.anisotropy = 16;
           earthMaterial.displacementMap = bordersTexture;
-          earthMaterial.displacementScale = 0.08;
+          earthMaterial.displacementScale = 0.02; // Subtle displacement
           earthMaterial.needsUpdate = true;
         },
         undefined,
@@ -125,7 +125,7 @@ export function loadEarthTextures(
       bumpTexture.anisotropy = 16;
       bumpTexture.needsUpdate = true;
       earthMaterial.bumpMap = bumpTexture;
-      earthMaterial.bumpScale = 0.08; // Slightly increased bump effect for terrain visibility
+      earthMaterial.bumpScale = 0.04; // Slightly increased bump effect for terrain visibility
       earthMaterial.needsUpdate = true;
       bumpTextureLoaded = true;
       
@@ -139,14 +139,14 @@ export function loadEarthTextures(
     (error) => {
       console.error('Error loading bump texture:', error);
       // Try fallback bump texture
-      const fallbackBumpURL = 'https://unpkg.com/three-globe@2.27.1/example/img/earth-topology.png';
+      const fallbackBumpURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/elev_bump_4k.jpg';
       textureLoader.load(
         fallbackBumpURL,
         (fallbackBump) => {
           fallbackBump.anisotropy = 16;
           fallbackBump.needsUpdate = true;
           earthMaterial.bumpMap = fallbackBump;
-          earthMaterial.bumpScale = 0.08;
+          earthMaterial.bumpScale = 0.04;
           earthMaterial.needsUpdate = true;
           bumpTextureLoaded = true;
           onProgress(earthTextureLoaded, bumpTextureLoaded);

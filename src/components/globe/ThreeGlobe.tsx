@@ -86,7 +86,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         bottom: 0,
         width: '100%',
         height: '100%',
-        background: '#000022', // Matching scene background
+        background: '#000011', // Very dark blue background
         overflow: 'hidden',
         zIndex: 0
       }}

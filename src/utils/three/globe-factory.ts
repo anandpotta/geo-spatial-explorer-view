@@ -31,8 +31,9 @@ export function createEarthGlobe(scene: THREE.Scene): {
   // Create more natural material with vibrant base colors
   const earthMaterial = new THREE.MeshPhongMaterial({
     color: 0xffffff,  // Pure white base to let texture colors show naturally
-    shininess: 25,    // More moderate shininess for natural appearance
-    specular: new THREE.Color(0x333333), // Subtle specular highlights
+    shininess: 5,     // Lower shininess for more natural matte appearance
+    specular: new THREE.Color(0x111111), // Minimal specular highlights
+    reflectivity: 0   // No reflectivity for natural appearance
   });
   
   // Create Earth mesh
@@ -76,9 +77,9 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   
   // Use a subtle atmosphere material to not overpower natural Earth colors
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
-    color: new THREE.Color(0xaaccff), // Light blue atmosphere
+    color: new THREE.Color(0x88ccff), // Light blue atmosphere
     transparent: true,
-    opacity: 0.15, // Very subtle opacity
+    opacity: 0.1, // Very subtle opacity
     side: THREE.BackSide,
   });
   
@@ -103,22 +104,22 @@ export function setupLighting(scene: THREE.Scene): void {
   // Add ambient lighting - bright enough to see natural colors
   const ambientLight = new THREE.AmbientLight(
     0xffffff,
-    0.8  // Brighter ambient light for better visibility of natural colors
+    0.6  // Moderate ambient light to ensure we can see the dark side a bit
   );
   scene.add(ambientLight);
-  console.log('Bright ambient light added to scene');
+  console.log('Ambient light added to scene');
   
   // Main directional light (sun) - bright natural sunlight
   const directionalLight = new THREE.DirectionalLight(
     0xffffff,
-    1.0  // Full intensity
+    1.2  // Slightly higher intensity for better visibility
   );
   directionalLight.position.set(1, 0.5, 1);
   scene.add(directionalLight);
   console.log('Directional light added to scene');
   
   // Add a second light from the opposite direction for better illumination
-  const backLight = new THREE.DirectionalLight(0x9999ff, 0.4); // Soft blue-tinted back light
+  const backLight = new THREE.DirectionalLight(0xaaddff, 0.2); // Soft blue-tinted back light
   backLight.position.set(-1, -0.5, -1);
   scene.add(backLight);
   console.log('Back light added to scene');
