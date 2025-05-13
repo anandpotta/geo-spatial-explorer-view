@@ -33,6 +33,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   const [previousView, setPreviousView] = useState<'cesium' | 'leaflet' | null>(null);
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
   const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
+  const [fadeIn, setFadeIn] = useState(false);
   
   // Track location changes to prevent duplicate transitions
   useEffect(() => {
@@ -55,6 +56,10 @@ const MapViews: React.FC<MapViewsProps> = ({
       const timer = setTimeout(() => {
         setTransitioning(false);
         setViewChangeStarted(null);
+        
+        // Trigger fade in for new view
+        setFadeIn(true);
+        setTimeout(() => setFadeIn(false), 500);
       }, 800); // Slightly longer to ensure render completes
       
       // Notify user about view change
@@ -71,12 +76,13 @@ const MapViews: React.FC<MapViewsProps> = ({
   }, [currentView, previousView]);
   
   // Calculate transition progress for smoother animations
-  const getTransitionStyles = (isCurrentView: boolean) => {
+  const getTransitionStyles = (isCurrentView: boolean): React.CSSProperties => {
     if (!transitioning) {
       return {
         opacity: isCurrentView ? 1 : 0,
         transform: isCurrentView ? 'scale(1)' : 'scale(0.95)',
-        zIndex: isCurrentView ? 10 : 0
+        zIndex: isCurrentView ? 10 : 0,
+        visibility: isCurrentView ? 'visible' : 'hidden'
       };
     }
     
@@ -84,7 +90,8 @@ const MapViews: React.FC<MapViewsProps> = ({
     return {
       opacity: isCurrentView ? 0.3 : 0.7, // Fading out current view, fading in new view
       transform: isCurrentView ? 'scale(0.95)' : 'scale(0.98)', // Zoom effect
-      zIndex: 10 // Both on top during transition
+      zIndex: isCurrentView ? 5 : 10, // New view on top during transition
+      visibility: 'visible' // Both visible during transition
     };
   };
   
@@ -94,14 +101,14 @@ const MapViews: React.FC<MapViewsProps> = ({
     const styles = getTransitionStyles(isCurrent);
     
     return {
-      position: 'absolute' as const,
+      position: 'absolute' as 'absolute',
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
       width: '100%',
       height: '100%',
-      visibility: (isCurrent || transitioning) ? 'visible' : 'hidden',
+      visibility: styles.visibility,
       opacity: styles.opacity,
       transform: styles.transform,
       zIndex: styles.zIndex,
@@ -114,14 +121,14 @@ const MapViews: React.FC<MapViewsProps> = ({
     const styles = getTransitionStyles(!isCurrent);
     
     return {
-      position: 'absolute' as const,
+      position: 'absolute' as 'absolute',
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
       width: '100%',
       height: '100%',
-      visibility: (isCurrent || transitioning) ? 'visible' : 'hidden',
+      visibility: isCurrent || transitioning ? 'visible' : 'hidden',
       opacity: 1 - (styles.opacity as number),
       transform: isCurrent ? 'scale(1)' : 'scale(0.95)',
       zIndex: isCurrent ? 10 : (transitioning ? 5 : 0),
@@ -129,10 +136,13 @@ const MapViews: React.FC<MapViewsProps> = ({
     };
   };
   
+  // Add fade-in effect when a view becomes active
+  const fadeInClass = fadeIn ? 'animate-fade-in' : '';
+  
   return (
     <>
       <div 
-        className="absolute inset-0 transition-all duration-500 ease-in-out"
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${currentView === 'cesium' ? fadeInClass : ''}`}
         style={getCesiumStyles()}
         data-map-type="cesium"
       >
@@ -147,7 +157,7 @@ const MapViews: React.FC<MapViewsProps> = ({
       </div>
       
       <div 
-        className="absolute inset-0 transition-all duration-500 ease-in-out"
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${currentView === 'leaflet' ? fadeInClass : ''}`}
         style={getLeafletStyles()}
         data-map-type="leaflet"
       >

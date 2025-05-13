@@ -11,6 +11,7 @@ const Index = () => {
   const [flyCompleted, setFlyCompleted] = useState<boolean>(true);
   const viewTransitionInProgressRef = useRef(false);
   const locationSelectionTimeRef = useRef<number | null>(null);
+  const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
@@ -29,12 +30,24 @@ const Index = () => {
     if (currentView === 'leaflet') {
       console.log("Auto-switching to 3D view for better location experience");
       setCurrentView('cesium');
+    } else {
+      // If already in cesium view, mark that we should switch to leaflet after fly completes
+      setShouldSwitchToLeaflet(true);
     }
   };
 
   const handleFlyComplete = () => {
     console.log("Main: Fly completed");
     setFlyCompleted(true);
+    
+    // If we should switch to leaflet after fly completes, do it now
+    if (shouldSwitchToLeaflet && currentView === 'cesium') {
+      console.log("Switching to leaflet view after fly completion");
+      setTimeout(() => {
+        setCurrentView('leaflet');
+        setShouldSwitchToLeaflet(false);
+      }, 500); // Small delay for smoother transition
+    }
     
     // Reset location selection timer
     setTimeout(() => {
@@ -69,6 +82,7 @@ const Index = () => {
     
     console.log(`Changing view to ${view}`);
     setCurrentView(view);
+    setShouldSwitchToLeaflet(false); // Reset switch flag when manually changing view
     
     // Set transition flag
     viewTransitionInProgressRef.current = true;

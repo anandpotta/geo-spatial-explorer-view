@@ -16,22 +16,36 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   onFlyComplete 
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const globeAPI = useThreeGlobe(containerRef, onMapReady);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
   const lastFlyLocationRef = useRef<string | null>(null);
   
+  // Initialize globe only once
+  const globeAPI = useThreeGlobe(containerRef, () => {
+    if (!isInitialized) {
+      setIsInitialized(true);
+      console.log("ThreeGlobe: Globe initialized");
+      if (onMapReady) onMapReady();
+    }
+  });
+  
   // Handle location changes
   useEffect(() => {
-    if (!globeAPI || !selectedLocation) return;
+    if (!globeAPI.isInitialized || !selectedLocation) return;
     
     // Prevent duplicate fly operations for the same location
     const locationId = selectedLocation.id;
-    if (isFlying || locationId === lastFlyLocationRef.current) {
-      console.log("ThreeGlobe: Skipping duplicate fly operation");
+    if (isFlying) {
+      console.log("ThreeGlobe: Already flying, skipping new flight request");
       return;
     }
     
-    console.log("ThreeGlobe: Flying to location:", selectedLocation);
+    if (locationId === lastFlyLocationRef.current) {
+      console.log("ThreeGlobe: Skipping duplicate location selection:", locationId);
+      return;
+    }
+    
+    console.log("ThreeGlobe: Flying to location:", selectedLocation.label);
     setIsFlying(true);
     lastFlyLocationRef.current = locationId;
     
@@ -49,7 +63,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     
     // Add marker at the location
     globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
-  }, [selectedLocation, globeAPI, onFlyComplete, isFlying]);
+  }, [selectedLocation, globeAPI, onFlyComplete, isFlying, globeAPI.isInitialized]);
   
   // Clean up on unmount
   useEffect(() => {

@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import DrawingTools from '../../DrawingTools';
@@ -28,53 +29,73 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
-  const [isViewSwitchingAllowed, setIsViewSwitchingAllowed] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
+  const previousViewRef = useRef<string | null>(null);
   
   // Reset map instance when view changes
   useEffect(() => {
-    setMapKey(Date.now());
-    
-    // Set transition flag
-    setViewTransitionInProgress(true);
-    const timer = setTimeout(() => {
-      setViewTransitionInProgress(false);
-    }, 1000); // Allow time for transition to complete
-    
-    // Temporarily prevent rapid view switching
-    setIsViewSwitchingAllowed(false);
-    const switchTimer = setTimeout(() => {
-      setIsViewSwitchingAllowed(true);
-    }, 1500);
-    
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(switchTimer);
-    };
+    // Only regenerate key when view type actually changes
+    if (previousViewRef.current !== currentView) {
+      console.log(`View changed from ${previousViewRef.current} to ${currentView}, regenerating map key`);
+      setMapKey(Date.now());
+      previousViewRef.current = currentView;
+      
+      // Set transition flag
+      setViewTransitionInProgress(true);
+      const timer = setTimeout(() => {
+        setViewTransitionInProgress(false);
+        setMapReady(false);
+      }, 1000); // Allow time for transition to complete
+      
+      return () => clearTimeout(timer);
+    }
   }, [currentView]);
 
   const handleCesiumViewerRef = (viewer: any) => {
-    // Only update the ref if it's not already set (prevents duplicate init)
-    if (!cesiumViewerRef.current) {
+    // Only update if not already set or explicitly changing views
+    if (!cesiumViewerRef.current || previousViewRef.current !== 'cesium') {
       console.log('Setting Cesium viewer reference');
       cesiumViewerRef.current = viewer;
+      
+      if (currentView === 'cesium') {
+        setTimeout(() => {
+          setMapReady(true);
+          
+          // When 3D globe is ready after transition, notify user
+          toast({
+            title: "3D Globe Ready",
+            description: "Interactive 3D globe view has been loaded.",
+            variant: "default",
+          });
+        }, 500);
+      }
     }
   };
 
   const handleLeafletMapRef = (map: any) => {
-    // Only update the ref if it's not already set (prevents duplicate init)
-    if (!leafletMapRef.current) {
+    // Only update if not already set or explicitly changing views
+    if (!leafletMapRef.current || previousViewRef.current !== 'leaflet') {
       console.log('Setting Leaflet map reference');
       leafletMapRef.current = map;
       
       // When Leaflet map is ready after transition, notify user
       if (currentView === 'leaflet' && !viewTransitionInProgress) {
-        toast({
-          title: "Map View Ready",
-          description: "Tiled map view has been loaded successfully.",
-          variant: "default",
-        });
+        setTimeout(() => {
+          setMapReady(true);
+          
+          toast({
+            title: "Map View Ready",
+            description: "Tiled map view has been loaded successfully.",
+            variant: "default",
+          });
+        }, 500);
       }
     }
+  };
+
+  const handleMapReadyInternal = () => {
+    setMapReady(true);
+    onMapReady();
   };
 
   const handleZoomIn = () => {
@@ -143,7 +164,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           currentView={currentView}
           mapKey={mapKey}
           selectedLocation={selectedLocation}
-          onMapReady={onMapReady}
+          onMapReady={handleMapReadyInternal}
           onFlyComplete={onFlyComplete}
           handleCesiumViewerRef={handleCesiumViewerRef}
           handleLeafletMapRef={handleLeafletMapRef}
