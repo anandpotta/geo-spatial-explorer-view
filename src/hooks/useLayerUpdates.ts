@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
-import { debounce } from 'lodash';  // Updated import style
+import debounce from 'lodash/debounce';  // Fixed import statement
 import { getCurrentUser } from '@/services/auth-service';
 
 interface LayerUpdatesProps {
