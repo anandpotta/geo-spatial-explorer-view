@@ -19,6 +19,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
+  const flyCompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
@@ -47,7 +48,27 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       globeInstanceRef.current = viewer;
     }
     
-    if (onMapReady) onMapReady(globeInstanceRef.current);
+    // Notify parent that map is ready after ensuring the globe is fully rendered
+    setTimeout(() => {
+      if (onMapReady) onMapReady(globeInstanceRef.current);
+    }, 100);
+  };
+  
+  // Handle fly complete with debouncing to prevent rapid transitions
+  const handleFlyComplete = () => {
+    // Clear any existing timeout to avoid multiple calls
+    if (flyCompleteTimeoutRef.current) {
+      clearTimeout(flyCompleteTimeoutRef.current);
+    }
+    
+    // Set a short timeout to ensure stable transition
+    flyCompleteTimeoutRef.current = setTimeout(() => {
+      if (onFlyComplete) {
+        console.log("ThreeGlobeMap: Notifying fly completion");
+        onFlyComplete();
+      }
+      flyCompleteTimeoutRef.current = null;
+    }, 200);
   };
   
   // Clean up resources on unmount
@@ -57,6 +78,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       viewerInitializedRef.current = false;
       lastLocationRef.current = null;
       globeInstanceRef.current = null;
+      
+      if (flyCompleteTimeoutRef.current) {
+        clearTimeout(flyCompleteTimeoutRef.current);
+      }
     };
   }, []);
   
@@ -70,11 +95,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
       {/* Loading overlay - only show while loading */}
       {isLoading && (
-        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-          <div className="text-center p-6">
+        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="text-center p-4">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <h3 className="text-xl font-bold text-white">Loading 3D Globe</h3>
-            <p className="text-sm text-gray-300">Please wait...</p>
+            <h3 className="text-lg font-bold text-white">Loading 3D Globe</h3>
           </div>
         </div>
       )}
@@ -90,11 +114,11 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         </div>
       )}
       
-      {/* ThreeJS Globe */}
+      {/* ThreeJS Globe with optimized transitions */}
       <ThreeGlobe 
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
-        onFlyComplete={onFlyComplete}
+        onFlyComplete={handleFlyComplete}
       />
     </div>
   );

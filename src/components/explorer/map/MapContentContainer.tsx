@@ -15,6 +15,7 @@ interface MapContentContainerProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
+  viewTransitionReady?: boolean;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -22,7 +23,8 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   selectedLocation, 
   onMapReady, 
   onFlyComplete,
-  onLocationSelect 
+  onLocationSelect,
+  viewTransitionReady = true
 }) => {
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<any>(null);
@@ -37,7 +39,12 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
     // Only regenerate key when view type actually changes
     if (previousViewRef.current !== currentView) {
       console.log(`View changed from ${previousViewRef.current} to ${currentView}, regenerating map key`);
-      setMapKey(Date.now());
+      
+      // Only regenerate the key if the transition is ready to avoid double-loading
+      if (viewTransitionReady) {
+        setMapKey(Date.now());
+      }
+      
       previousViewRef.current = currentView;
       
       // Set transition flag
@@ -45,11 +52,11 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
       const timer = setTimeout(() => {
         setViewTransitionInProgress(false);
         setMapReady(false);
-      }, 1000); // Allow time for transition to complete
+      }, 800); // Slightly shorter for smoother transition
       
       return () => clearTimeout(timer);
     }
-  }, [currentView]);
+  }, [currentView, viewTransitionReady]);
 
   const handleCesiumViewerRef = (viewer: any) => {
     // Only update if not already set or explicitly changing views
@@ -61,13 +68,16 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         setTimeout(() => {
           setMapReady(true);
           
-          // When 3D globe is ready after transition, notify user
-          toast({
-            title: "3D Globe Ready",
-            description: "Interactive 3D globe view has been loaded.",
-            variant: "default",
-          });
-        }, 500);
+          // When 3D globe is ready after transition, notify user with less invasive toast
+          if (!viewTransitionInProgress) {
+            toast({
+              title: "3D Globe Ready",
+              description: "Interactive 3D globe view has been loaded.",
+              variant: "default",
+              duration: 2000,
+            });
+          }
+        }, 300);
       }
     }
   };
@@ -83,12 +93,22 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         setTimeout(() => {
           setMapReady(true);
           
-          toast({
-            title: "Map View Ready",
-            description: "Tiled map view has been loaded successfully.",
-            variant: "default",
-          });
-        }, 500);
+          // Less invasive toast during transitions
+          if (selectedLocation) {
+            toast({
+              title: "Map View Ready",
+              description: `Showing ${selectedLocation.label}`,
+              variant: "default",
+              duration: 2000,
+            });
+          } else {
+            toast({
+              title: "Map View Ready",
+              variant: "default",
+              duration: 1500,
+            });
+          }
+        }, 300);
       }
     }
   };
@@ -170,6 +190,8 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           handleLeafletMapRef={handleLeafletMapRef}
           activeTool={activeTool}
           handleClearAll={handleClearAll}
+          viewTransitionReady={viewTransitionReady}
+          viewTransitionInProgress={viewTransitionInProgress}
         />
         
         <DrawingTools 
@@ -206,6 +228,16 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
+      
+      {/* Transition overlay that appears only during view transitions */}
+      {viewTransitionInProgress && !viewTransitionReady && (
+        <div 
+          className="absolute inset-0 bg-black bg-opacity-30 z-50 pointer-events-none transition-opacity duration-500"
+          style={{
+            opacity: viewTransitionInProgress ? 0.3 : 0,
+          }}
+        />
+      )}
     </div>
   );
 };
