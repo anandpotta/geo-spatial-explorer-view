@@ -44,6 +44,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           position: relative;
         }
       </style>
+      <base href="${baseUrl}">
     </head>
     <body>
       <div id="map-container"></div>
@@ -91,7 +92,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
     <View style={styles.container}>
       <WebView
         originWhitelist={['*']}
-        source={{ html: htmlContent, baseUrl }}
+        source={{ 
+          html: htmlContent,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        }}
         style={styles.webView}
         javaScriptEnabled={true}
         domStorageEnabled={true}

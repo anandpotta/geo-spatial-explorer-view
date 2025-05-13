@@ -87,7 +87,10 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
     <View style={styles.container}>
       <WebView
         originWhitelist={['*']}
-        source={{ html: htmlContent, baseUrl }}
+        source={{ 
+          html: htmlContent, 
+          headers: { 'Content-Type': 'text/html; charset=utf-8' } 
+        }}
         style={styles.webView}
         javaScriptEnabled={true}
         domStorageEnabled={true}
