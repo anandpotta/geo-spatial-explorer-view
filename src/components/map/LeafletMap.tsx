@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -8,7 +9,7 @@ import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
-// Import CSS from node_modules with explicit path
+import { setupLeafletIcons } from './LeafletMapIcons';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -28,6 +29,11 @@ const LeafletMap = ({
   onClearAll 
 }: LeafletMapProps) => {
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
+  
+  // Initialize Leaflet icons
+  useEffect(() => {
+    setupLeafletIcons();
+  }, []);
   
   // Custom hooks
   const mapState = useMapState(selectedLocation);

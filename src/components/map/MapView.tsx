@@ -1,6 +1,5 @@
 
 import { useState, useRef } from 'react';
-import { DrawingData } from '@/utils/drawing-utils';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';
 import { useFloorPlanState } from '@/hooks/useFloorPlanState';
@@ -11,6 +10,8 @@ import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
 import MapEvents from './MapEvents';
 import L from 'leaflet';
+
+// Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 

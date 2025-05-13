@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, AttributionControl } from 'react-leaflet';
-// Make sure we have the CSS import here as well
+// Import CSS directly from node_modules
 import 'leaflet/dist/leaflet.css';
 
 interface MapContainerProps {

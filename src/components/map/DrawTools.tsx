@@ -2,7 +2,6 @@
 import { useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
-import 'leaflet-draw/dist/leaflet.draw.css';
 import { usePathElements } from '@/hooks/usePathElements';
 import { useShapeCreation } from '@/hooks/useShapeCreation';
 import { useDrawToolsConfiguration } from '@/hooks/useDrawToolsConfiguration';
@@ -10,6 +9,10 @@ import { useDrawToolsEventHandlers } from '@/hooks/useDrawToolsEventHandlers';
 import { useSavedPathsRestoration } from '@/hooks/useSavedPathsRestoration';
 import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
 import { getDrawOptions } from './drawing/DrawOptionsConfiguration';
+
+// Import leaflet CSS directly
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
