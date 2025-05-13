@@ -11,10 +11,14 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 export function useEnhancedFlyToLocation(
   camera: THREE.PerspectiveCamera | null,
   controlsRef: React.MutableRefObject<OrbitControls | null>,
-  globeRadius: number
+  globeRadius: number,
+  externalFlyingRef?: React.MutableRefObject<boolean>
 ) {
   // Refs
-  const isFlyingRef = useRef<boolean>(false);
+  const internalFlyingRef = useRef<boolean>(false);
+  
+  // Determine which ref to use for tracking flying state
+  const isFlyingRef = externalFlyingRef || internalFlyingRef;
   
   // Get auto-rotation controls
   const { setAutoRotation } = useAutoRotation(controlsRef);
@@ -47,7 +51,7 @@ export function useEnhancedFlyToLocation(
         if (onComplete) onComplete();
       }, 500);
     });
-  }, [flyToLocation, setAutoRotation]);
+  }, [flyToLocation, setAutoRotation, isFlyingRef]);
   
   return {
     enhancedFlyToLocation,

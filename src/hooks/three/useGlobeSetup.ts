@@ -1,0 +1,125 @@
+
+import { useRef, useEffect, useState, useCallback } from 'react';
+import * as THREE from 'three';
+import { disposeObject3D } from '@/utils/three-utils';
+import { 
+  createEarthGlobe, 
+  createAtmosphere, 
+  setupLighting,
+  configureControls,
+  EARTH_RADIUS
+} from '@/utils/three/globe-factory';
+import { loadEarthTextures, createStarfield } from '@/utils/three/texture-loader';
+
+export function useGlobeSetup(
+  scene: THREE.Scene | null,
+  camera: THREE.PerspectiveCamera | null,
+  controlsRef: React.RefObject<any>,
+  containerRef: React.RefObject<HTMLDivElement>,
+  onTexturesLoaded: () => void
+) {
+  // Globe-specific refs
+  const globeRef = useRef<THREE.Group | null>(null);
+  const atmosphereRef = useRef<THREE.Mesh | null>(null);
+  const earthMeshRef = useRef<THREE.Mesh | null>(null);
+  
+  // Track if textures are loaded
+  const [texturesLoaded, setTexturesLoaded] = useState(false);
+  
+  // Flag to prevent multiple initializations
+  const isSetupCompleteRef = useRef(false);
+  
+  // Setup globe objects and controls
+  useEffect(() => {
+    if (!scene || !camera || isSetupCompleteRef.current || !containerRef.current) {
+      console.log("Scene not ready or setup already complete");
+      return;
+    }
+    
+    console.log("Setting up globe objects and controls");
+    isSetupCompleteRef.current = true;
+    
+    // Clear any previous scene elements
+    while (scene.children.length > 0) {
+      const child = scene.children[0];
+      scene.remove(child);
+      if (child instanceof THREE.Object3D) {
+        disposeObject3D(child);
+      }
+    }
+    
+    // Add starfield background
+    createStarfield(scene);
+    
+    // Set up lighting
+    setupLighting(scene);
+    
+    // Create Earth globe
+    const { globeGroup, earthMesh, setTexturesLoaded: updateTextureLoadStatus } = createEarthGlobe(scene);
+    if (globeGroup) {
+      globeGroup.rotation.y = Math.PI;
+      scene.add(globeGroup); // Add to scene
+      globeRef.current = globeGroup;
+      earthMeshRef.current = earthMesh;
+      
+      console.log("Globe created and added to scene");
+      
+      // Load textures
+      loadEarthTextures(earthMesh.material as THREE.MeshPhongMaterial, (earthLoaded, bumpLoaded) => {
+        const allLoaded = updateTextureLoadStatus(earthLoaded, bumpLoaded);
+        if (allLoaded) {
+          console.log("All Earth textures loaded successfully");
+          setTexturesLoaded(true);
+        }
+      });
+    }
+    
+    // Create atmosphere
+    const atmosphere = createAtmosphere(scene);
+    atmosphereRef.current = atmosphere;
+    
+    // Configure controls with improved settings for smoother experience
+    if (controlsRef.current && camera) {
+      configureControls(controlsRef.current, camera);
+      controlsRef.current.autoRotate = true;
+      controlsRef.current.autoRotateSpeed = 0.3; // Slower rotation for smoother appearance
+      controlsRef.current.enableDamping = true;
+      controlsRef.current.dampingFactor = 0.1; // Increased damping for smoother stops
+      controlsRef.current.rotateSpeed = 0.4; // Slower rotation for more precise control
+    }
+    
+    // Cleanup function
+    return () => {
+      console.log("Globe effect cleanup");
+      isSetupCompleteRef.current = false;
+      
+      // Dispose globe and atmosphere meshes
+      if (globeRef.current) {
+        scene.remove(globeRef.current);
+        disposeObject3D(globeRef.current);
+        globeRef.current = null;
+      }
+      
+      if (atmosphereRef.current) {
+        scene.remove(atmosphereRef.current);
+        disposeObject3D(atmosphereRef.current);
+        atmosphereRef.current = null;
+      }
+      
+      earthMeshRef.current = null;
+    };
+  }, [scene, camera, controlsRef, containerRef]);
+  
+  // Call onTexturesLoaded when textures are loaded
+  useEffect(() => {
+    if (texturesLoaded) {
+      console.log("Textures loaded, calling callback");
+      onTexturesLoaded();
+    }
+  }, [texturesLoaded, onTexturesLoaded]);
+  
+  return {
+    globe: globeRef.current,
+    texturesLoaded
+  };
+}
