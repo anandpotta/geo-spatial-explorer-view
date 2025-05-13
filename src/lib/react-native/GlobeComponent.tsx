@@ -1,12 +1,85 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
-import WebView from 'react-native-webview';
-import type { GeoLocation, GlobeOptions, GlobeEventHandlers } from '../geospatial-core/types';
+// Use platform-specific imports
+import { isWeb } from '../../utils/threejs-viewer/platform-check';
+
+// Web polyfills for React Native components
+const WebPolyfills = {
+  View: ({ style, children }: any) => <div style={style}>{children}</div>,
+  Text: ({ style, children }: any) => <span style={style}>{children}</span>,
+  ActivityIndicator: ({ size, color }: any) => (
+    <div style={{ 
+      width: size === 'large' ? '36px' : '24px',
+      height: size === 'large' ? '36px' : '24px',
+      border: `3px solid ${color || '#000'}`,
+      borderTopColor: 'transparent',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    }}>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  ),
+  StyleSheet: {
+    create: (styles: any) => styles
+  },
+  Dimensions: {
+    get: (dimension: string) => ({
+      width: typeof window !== 'undefined' ? window.innerWidth : 300,
+      height: typeof window !== 'undefined' ? window.innerHeight : 500
+    })
+  }
+};
+
+// Import conditionally based on platform
+let View: any, Text: any, ActivityIndicator: any, StyleSheet: any, WebView: any, Dimensions: any;
+
+// This code will only run during component rendering, not during build/import time
+const initComponents = () => {
+  if (isWeb()) {
+    // Use polyfills in web environment
+    View = WebPolyfills.View;
+    Text = WebPolyfills.Text;
+    ActivityIndicator = WebPolyfills.ActivityIndicator;
+    StyleSheet = WebPolyfills.StyleSheet;
+    Dimensions = WebPolyfills.Dimensions;
+    // Mock WebView for web environment
+    WebView = ({ source, style, onMessage, renderLoading }: any) => (
+      <div style={style}>
+        <iframe 
+          src={source.uri || 'about:blank'} 
+          srcDoc={source.html}
+          style={{ width: '100%', height: '100%', border: 'none' }}
+          title="Globe WebView"
+        />
+        {renderLoading && renderLoading()}
+      </div>
+    );
+  } else {
+    // Only import React Native components when in React Native environment
+    try {
+      const RN = require('react-native');
+      View = RN.View;
+      Text = RN.Text;
+      ActivityIndicator = RN.ActivityIndicator;
+      StyleSheet = RN.StyleSheet;
+      Dimensions = RN.Dimensions;
+      WebView = require('react-native-webview').default;
+    } catch (e) {
+      console.error('Failed to load React Native components:', e);
+    }
+  }
+};
+
+// Call init function before component definition
+initComponents();
 
 interface GlobeComponentProps {
-  options?: Partial<GlobeOptions>;
-  selectedLocation?: GeoLocation;
+  options?: any;
+  selectedLocation?: any;
   onReady?: (api: any) => void;
   onFlyComplete?: () => void;
   onError?: (error: Error) => void;
@@ -14,6 +87,7 @@ interface GlobeComponentProps {
 
 /**
  * React Native component wrapper for ThreeGlobeCore using WebView
+ * This component is designed to work in both React Native and web environments
  */
 export const GlobeComponent: React.FC<GlobeComponentProps> = ({
   options,
@@ -22,14 +96,17 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
   onFlyComplete,
   onError
 }) => {
-  const webViewRef = useRef<WebView>(null);
+  // Initialize component UI elements if not done already
+  if (!View) initComponents();
+  
+  const webViewRef = useRef<any>(null);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Handle messages from the WebView
   const handleMessage = (event: any) => {
     try {
-      const data = JSON.parse(event.nativeEvent.data);
+      const data = JSON.parse(event.nativeEvent?.data || event.data);
       switch (data.type) {
         case 'ready':
           setIsReady(true);
@@ -52,10 +129,22 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
   // Send updated location to WebView when it changes
   useEffect(() => {
     if (webViewRef.current && isReady && selectedLocation) {
-      webViewRef.current.postMessage(JSON.stringify({
-        type: 'setLocation',
-        location: selectedLocation
-      }));
+      if (isWeb()) {
+        // Web implementation
+        const iframe = webViewRef.current.querySelector('iframe');
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage(JSON.stringify({
+            type: 'setLocation',
+            location: selectedLocation
+          }), '*');
+        }
+      } else {
+        // React Native implementation
+        webViewRef.current.postMessage(JSON.stringify({
+          type: 'setLocation',
+          location: selectedLocation
+        }));
+      }
     }
   }, [selectedLocation, isReady]);
   
@@ -250,70 +339,111 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
     </html>
   `;
 
-  return (
-    <View style={styles.container}>
-      <WebView
-        ref={webViewRef}
-        source={{ html: htmlContent }}
-        style={styles.webView}
-        onMessage={handleMessage}
-        originWhitelist={['*']}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        startInLoadingState={true}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0000ff" />
-            <Text style={styles.loadingText}>Loading Globe</Text>
+  const styles = {
+    container: {
+      flex: 1,
+      backgroundColor: 'black',
+    },
+    webView: {
+      flex: 1,
+    },
+    loadingContainer: {
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'black',
+    },
+    loadingText: {
+      marginTop: 10,
+      color: 'white',
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    errorContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 10,
+      backgroundColor: 'rgba(255, 0, 0, 0.7)',
+    },
+    errorText: {
+      color: 'white',
+      textAlign: 'center',
+    },
+  };
+
+  // Add event listener for web platform message passing
+  useEffect(() => {
+    if (isWeb()) {
+      const handleWebMessage = (event: MessageEvent) => {
+        handleMessage({ data: event.data });
+      };
+      
+      window.addEventListener('message', handleWebMessage);
+      return () => {
+        window.removeEventListener('message', handleWebMessage);
+      };
+    }
+  }, []);
+
+  // Conditionally render based on platform
+  if (isWeb()) {
+    // Web implementation
+    return (
+      <View style={styles.container}>
+        <WebView
+          ref={webViewRef}
+          source={{ html: htmlContent }}
+          style={styles.webView}
+          onMessage={handleMessage}
+          renderLoading={() => (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0000ff" />
+              <Text style={styles.loadingText}>Loading Globe</Text>
+            </View>
+          )}
+        />
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-        onError={(syntheticEvent) => {
-          const { nativeEvent } = syntheticEvent;
-          setError(`WebView error: ${nativeEvent.description}`);
-          if (onError) onError(new Error(nativeEvent.description));
-        }}
-      />
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-    </View>
-  );
+      </View>
+    );
+  } else {
+    // React Native implementation - this part will only run in React Native
+    return (
+      <View style={styles.container}>
+        <WebView
+          ref={webViewRef}
+          source={{ html: htmlContent }}
+          style={styles.webView}
+          onMessage={handleMessage}
+          originWhitelist={['*']}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0000ff" />
+              <Text style={styles.loadingText}>Loading Globe</Text>
+            </View>
+          )}
+          onError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            setError(`WebView error: ${nativeEvent.description}`);
+            if (onError) onError(new Error(nativeEvent.description));
+          }}
+        />
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+      </View>
+    );
+  }
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-  },
-  webView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'black',
-  },
-  loadingText: {
-    marginTop: 10,
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  errorContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 10,
-    backgroundColor: 'rgba(255, 0, 0, 0.7)',
-  },
-  errorText: {
-    color: 'white',
-    textAlign: 'center',
-  },
-});
