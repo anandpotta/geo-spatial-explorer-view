@@ -17,11 +17,11 @@ import * as AngularComponents from './angular';
 export { AngularComponents };
 
 // Re-export utils separately to avoid naming conflicts
-import { calculateDistance as utilsCalculateDistance } from './utils';
+import { calculateDistance } from './utils';
 export { 
   cn, 
   isWeb, 
   isReactNative, 
   formatCoordinate,
-  utilsCalculateDistance as calculateDistanceUtil 
+  calculateDistance as calculateDistanceUtil 
 } from './utils';
