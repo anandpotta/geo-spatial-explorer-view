@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
+import WebView from 'react-native-webview';
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 
 interface MapComponentProps {

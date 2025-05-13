@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
-import { WebView } from 'react-native-webview';
+import WebView from 'react-native-webview';
 import type { GeoLocation, GlobeOptions, GlobeEventHandlers } from '../geospatial-core/types';
 
 interface GlobeComponentProps {
