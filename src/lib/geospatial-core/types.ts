@@ -14,6 +14,16 @@ export interface GeoLocation {
   metadata?: Record<string, any>;
 }
 
+// Map options interface
+export interface MapOptions {
+  zoom?: number;
+  center?: { lat: number; lng: number };
+  tileProvider?: string;
+  minZoom?: number;
+  maxZoom?: number;
+  showControls?: boolean;
+}
+
 // Globe configuration options
 export interface GlobeOptions {
   earthRadius?: number;
