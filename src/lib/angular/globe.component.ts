@@ -126,3 +126,11 @@ export const ANGULAR_COMPONENT_PLACEHOLDER = `
 // GlobeComponent implementation for Angular would go here
 // See commented code above for reference implementation
 `;
+
+// Export the GlobeComponent for Angular
+export class GlobeComponent {
+  // Placeholder implementation for TypeScript compatibility
+  constructor() {
+    console.log('Angular GlobeComponent instantiated');
+  }
+}
