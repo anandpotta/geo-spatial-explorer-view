@@ -1,42 +1,62 @@
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { GeoLocation } from './geospatial-core/types';
 
 /**
- * Utility function for merging class names with Tailwind CSS
+ * Combines multiple class names or class name objects into a single string
+ * Utility function for conditional classnames in components
  */
-export function cn(...inputs: ClassValue[]) {
+export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
 /**
- * Convert a standard Location object to our GeoLocation type
+ * Cross-platform utility functions for the geospatial library
  */
-export function convertToGeoLocation(location: any): GeoLocation {
-  return {
-    id: location.id || `loc-${Date.now()}`,
-    label: location.label || location.name || 'Unknown Location',
-    x: location.x || location.longitude || 0,
-    y: location.y || location.latitude || 0,
-    z: location.z || location.altitude || 0,
-    metadata: location.metadata || {}
-  };
+
+// Platform detection
+export function isWeb(): boolean {
+  return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
 
-/**
- * Check if the platform is React Native
- */
 export function isReactNative(): boolean {
   return typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 }
 
-/**
- * Platform-specific utilities for detecting environment
- */
-export const platformUtils = {
-  isWeb: typeof window !== 'undefined' && typeof document !== 'undefined',
-  isReactNative: isReactNative(),
-  isNode: typeof process !== 'undefined' && process.versions != null && process.versions.node != null,
-  isAngular: typeof window !== 'undefined' && !!(window as any).ng
-};
+// Format coordinate to user-friendly string
+export function formatCoordinate(coord: number, isLatitude: boolean = false): string {
+  const direction = isLatitude 
+    ? (coord >= 0 ? 'N' : 'S')
+    : (coord >= 0 ? 'E' : 'W');
+  
+  const absCoord = Math.abs(coord);
+  const degrees = Math.floor(absCoord);
+  const minutes = Math.floor((absCoord - degrees) * 60);
+  const seconds = ((absCoord - degrees - minutes / 60) * 3600).toFixed(2);
+  
+  return `${degrees}° ${minutes}' ${seconds}" ${direction}`;
+}
+
+// Calculate distance between two coordinates (in km)
+export function calculateDistance(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg: number): number {
+  return deg * (Math.PI/180);
+}
+

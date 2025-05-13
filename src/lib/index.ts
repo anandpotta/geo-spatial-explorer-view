@@ -12,6 +12,9 @@ export { ReactComponents };
 import * as ReactNativeComponents from './react-native';
 export { ReactNativeComponents };
 
-// Angular-specific exports would be in a separate package
+// Angular-specific exports
+import * as AngularComponents from './angular';
+export { AngularComponents };
 
 export * from './utils';
+
