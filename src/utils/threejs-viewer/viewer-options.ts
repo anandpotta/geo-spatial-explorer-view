@@ -21,11 +21,11 @@ export function createThreeViewerOptions(): Record<string, any> {
     lights: {
       ambient: {
         color: 0x555555,
-        intensity: 1.0 // Increased ambient light for better visibility
+        intensity: 0.8 // Balanced ambient light
       },
       directional: {
         color: 0xffffff,
-        intensity: 1.5, // Increased light intensity for better visibility
+        intensity: 1.2, // Light intensity for good visibility but natural appearance
         position: new THREE.Vector3(1, 0.5, 1)
       }
     },
@@ -34,8 +34,8 @@ export function createThreeViewerOptions(): Record<string, any> {
     globe: {
       radius: 5,
       segments: 128, // Higher segment count for smoother appearance
-      baseColor: new THREE.Color(0x1a4d7c), // Deep ocean blue
-      atmosphereColor: new THREE.Color(0x3366aa), // Deeper blue atmosphere
+      baseColor: new THREE.Color(0x2c5fa0), // Natural blue base color for oceans
+      atmosphereColor: new THREE.Color(0x88bbff), // Lighter blue atmosphere
       enableAtmosphere: true,
       enableClouds: false, // Disable clouds by default for performance
       enableRotation: true, // Auto-rotation enabled

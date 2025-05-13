@@ -13,13 +13,16 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
   
-  // Try the night-time Earth texture first (showing city lights)
-  const earthTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/79000/79765/dnb_land_ocean_ice.2012.3600x1800.jpg';
+  // Use a natural Earth texture (day map)
+  const earthTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg';
   
   // Use a high-detail bump map
   const bumpTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/gebco_08_rev_elev_21600x10800.png';
   
-  console.log('Loading high-resolution Earth night textures...');
+  // Load texture for country borders
+  const bordersTextureURL = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/earth-borders.png';
+  
+  console.log('Loading high-resolution Earth textures...');
   
   // Load main texture
   textureLoader.load(
@@ -32,13 +35,31 @@ export function loadEarthTextures(
       texture.needsUpdate = true;
       earthMaterial.map = texture;
       
-      // Set emissive map for night lights to glow
+      // Set modest emissive map for night visibility
       earthMaterial.emissiveMap = texture;
-      earthMaterial.emissive = new THREE.Color(0xffffff);
-      earthMaterial.emissiveIntensity = 0.5;
+      earthMaterial.emissive = new THREE.Color(0x112233);
+      earthMaterial.emissiveIntensity = 0.15;
       
       earthMaterial.needsUpdate = true;
       earthTextureLoaded = true;
+      
+      // Load borders texture
+      textureLoader.load(
+        bordersTextureURL,
+        (bordersTexture) => {
+          console.log('Borders texture loaded successfully');
+          bordersTexture.anisotropy = 16;
+          
+          // Use borders as alpha map to create thin lines
+          earthMaterial.alphaMap = bordersTexture;
+          earthMaterial.transparent = true;
+          earthMaterial.needsUpdate = true;
+        },
+        undefined,
+        (error) => {
+          console.error('Error loading borders texture:', error);
+        }
+      );
       
       // Notify progress
       onProgress(earthTextureLoaded, bumpTextureLoaded);
@@ -49,23 +70,18 @@ export function loadEarthTextures(
     },
     (error) => {
       console.error('Error loading Earth texture:', error);
-      // Use the uploaded image as fallback
-      const fallbackTextureURL = 'public/lovable-uploads/2dab3c16-1b4f-446f-ab48-2c49361c918b.png';
-      console.log('Trying user-provided texture:', fallbackTextureURL);
+      // Fall back to NASA Blue Marble
+      const fallbackTextureURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57730/land_ocean_ice_cloud_2048.jpg';
+      console.log('Trying fallback texture:', fallbackTextureURL);
       
       textureLoader.load(
         fallbackTextureURL,
         (fallbackTexture) => {
-          console.log('User-provided texture loaded successfully');
+          console.log('Fallback texture loaded successfully');
           fallbackTexture.anisotropy = 16;
           fallbackTexture.encoding = THREE.sRGBEncoding;
           fallbackTexture.needsUpdate = true;
           earthMaterial.map = fallbackTexture;
-          
-          // Set emissive map for night lights to glow
-          earthMaterial.emissiveMap = fallbackTexture;
-          earthMaterial.emissive = new THREE.Color(0xffffff);
-          earthMaterial.emissiveIntensity = 0.5;
           
           earthMaterial.needsUpdate = true;
           earthTextureLoaded = true;
@@ -73,7 +89,7 @@ export function loadEarthTextures(
         },
         undefined,
         () => {
-          // If both fail, try another night-time Earth image
+          // If both fail, try another Earth image
           const lastResortURL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/55000/55167/earth_lights_lrg.jpg';
           textureLoader.load(
             lastResortURL,
@@ -82,11 +98,6 @@ export function loadEarthTextures(
               lastTexture.anisotropy = 16;
               lastTexture.encoding = THREE.sRGBEncoding;
               earthMaterial.map = lastTexture;
-              
-              // Set emissive map for night lights to glow
-              earthMaterial.emissiveMap = lastTexture;
-              earthMaterial.emissive = new THREE.Color(0xffffff);
-              earthMaterial.emissiveIntensity = 0.5;
               
               earthMaterial.needsUpdate = true;
               earthTextureLoaded = true;
@@ -112,7 +123,7 @@ export function loadEarthTextures(
       bumpTexture.anisotropy = 16;
       bumpTexture.needsUpdate = true;
       earthMaterial.bumpMap = bumpTexture;
-      earthMaterial.bumpScale = 0.05;
+      earthMaterial.bumpScale = 0.05; // Subtle bump effect for terrain
       earthMaterial.needsUpdate = true;
       bumpTextureLoaded = true;
       
@@ -156,14 +167,14 @@ export function createStarfield(scene: THREE.Scene): void {
   const starsGeometry = new THREE.BufferGeometry();
   const starsMaterial = new THREE.PointsMaterial({
     color: 0xffffff,
-    size: 1,
+    size: 0.8, // Smaller stars
     transparent: true,
-    opacity: 1.0 // Full opacity for stars
+    opacity: 0.8 // Slightly transparent stars
   });
   
   // Create a large number of stars at random positions
   const starsVertices = [];
-  for (let i = 0; i < 15000; i++) { // More stars
+  for (let i = 0; i < 20000; i++) { // More stars
     const x = THREE.MathUtils.randFloatSpread(2000);
     const y = THREE.MathUtils.randFloatSpread(2000);
     const z = THREE.MathUtils.randFloatSpread(2000);
@@ -174,5 +185,5 @@ export function createStarfield(scene: THREE.Scene): void {
   const starField = new THREE.Points(starsGeometry, starsMaterial);
   scene.add(starField);
   
-  console.log('Starfield background added to scene with 15000 stars');
+  console.log('Starfield background added to scene with 20000 stars');
 }

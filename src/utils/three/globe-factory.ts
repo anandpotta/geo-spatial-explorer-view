@@ -30,11 +30,11 @@ export function createEarthGlobe(scene: THREE.Scene): {
   
   // Create more realistic material with enhanced shininess and specular highlights
   const earthMaterial = new THREE.MeshPhongMaterial({
-    color: 0x333344,  // Darker blue-gray as a fallback - better for night appearance
-    shininess: 25,    // More moderate shininess
-    specular: new THREE.Color(0x555555), // Enhanced specular highlights
+    color: 0x2c5fa0,  // Natural blue base color for oceans
+    shininess: 35,    // More moderate shininess
+    specular: new THREE.Color(0x2d4ea0), // Enhanced specular highlights
     emissive: new THREE.Color(0x112233), // Slight emissive glow for night side visibility
-    emissiveIntensity: 0.1  // Subtle emissive effect
+    emissiveIntensity: 0.15  // Subtle emissive effect
   });
   
   // Create Earth mesh
@@ -44,7 +44,7 @@ export function createEarthGlobe(scene: THREE.Scene): {
   // Make this group immediately visible in the scene
   scene.add(globeGroup);
   
-  console.log('Earth globe created with basic material and added to scene');
+  console.log('Earth globe created with natural colors material and added to scene');
   
   let earthTextureLoaded = false;
   let bumpTextureLoaded = false;
@@ -71,19 +71,19 @@ export function createAtmosphere(scene: THREE.Scene): THREE.Mesh {
   
   // Create slightly larger geometry for atmosphere
   const atmosphereGeometry = new THREE.SphereGeometry(
-    EARTH_RADIUS * 1.05, // Slightly thicker atmosphere for more visible glow
+    EARTH_RADIUS * 1.03, // Thinner atmosphere for more realistic look
     128, // Higher segment count for smoother sphere
     128
   );
   
   // Use a more visible atmosphere material with enhanced glow
   const atmosphereMaterial = new THREE.MeshPhongMaterial({
-    color: new THREE.Color(0x3366aa), // Deeper blue atmosphere
+    color: new THREE.Color(0x88bbff), // Lighter blue atmosphere
     transparent: true,
-    opacity: 0.25, // Increased opacity for better visibility
+    opacity: 0.15, // More subtle opacity for better visibility
     side: THREE.BackSide,
     emissive: new THREE.Color(0x2244aa), // Add emissive glow
-    emissiveIntensity: 0.2, // Moderate intensity for the glow
+    emissiveIntensity: 0.1, // Moderate intensity for the glow
   });
   
   const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
@@ -102,7 +102,7 @@ export function setupLighting(scene: THREE.Scene): void {
   // Add ambient lighting - increased intensity
   const ambientLight = new THREE.AmbientLight(
     0x404040,
-    1.0  // Increased ambient light
+    0.8  // Balanced ambient light
   );
   scene.add(ambientLight);
   console.log('Ambient light added to scene');
@@ -110,20 +110,20 @@ export function setupLighting(scene: THREE.Scene): void {
   // Main directional light (sun) - increased intensity
   const directionalLight = new THREE.DirectionalLight(
     0xffffff,
-    1.5  // Increased intensity
+    1.2  // Increased intensity
   );
   directionalLight.position.set(1, 0.5, 1);
   scene.add(directionalLight);
   console.log('Directional light added to scene');
   
   // Add a second light from the opposite direction for better illumination
-  const backLight = new THREE.DirectionalLight(0x555555, 0.8); // Increased intensity
+  const backLight = new THREE.DirectionalLight(0x555555, 0.6); // Softer back light
   backLight.position.set(-1, -0.5, -1);
   scene.add(backLight);
   console.log('Back light added to scene');
   
   // Add a subtle rim light to highlight the edge of the earth
-  const rimLight = new THREE.DirectionalLight(0x335577, 0.7);
+  const rimLight = new THREE.DirectionalLight(0x335577, 0.5); // Softer rim light
   rimLight.position.set(0, 5, 0);
   scene.add(rimLight);
   console.log('Rim light added to scene');
@@ -150,7 +150,7 @@ export function configureControls(
   controls.maxDistance = OUTER_SPACE_DISTANCE * 1.5; // Allow zooming out further to see stars
   controls.enablePan = false;
   controls.autoRotate = true; // Enable auto-rotation
-  controls.autoRotateSpeed = 0.5;
+  controls.autoRotateSpeed = 0.3; // Slower rotation for more subtle effect
   
   // Position camera
   camera.position.z = EARTH_RADIUS * 3; // Start closer to see the globe

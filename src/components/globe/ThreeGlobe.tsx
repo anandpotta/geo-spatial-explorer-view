@@ -50,19 +50,6 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     }
   }, [isGlobeReady]);
   
-  // Debug log for initialization status
-  useEffect(() => {
-    console.log("ThreeGlobe component initialization status:", isInitialized);
-    console.log("Container element exists:", !!containerRef.current);
-    
-    if (isInitialized) {
-      console.log("Scene object exists:", !!scene);
-      console.log("Camera object exists:", !!camera);
-      console.log("Renderer object exists:", !!renderer);
-      console.log("Globe object exists:", !!globe);
-    }
-  }, [isInitialized, scene, camera, renderer, globe]);
-  
   // Handle flying to a location when selectedLocation changes
   useEffect(() => {
     if (!isInitialized || !selectedLocation || isFlying) return;
@@ -99,17 +86,17 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         bottom: 0,
         width: '100%',
         height: '100%',
-        background: '#000',
+        background: '#000011',
         overflow: 'hidden',
         zIndex: 0
       }}
       data-testid="three-globe-container"
     >
       {!isGlobeReady && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 text-white z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white z-10">
           <div className="text-center p-8">
             <div className="relative mx-auto mb-6">
-              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-400"></div>
               <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
                 <svg className="h-8 w-8 text-blue-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -118,14 +105,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
                 </svg>
               </div>
             </div>
-            <h3 className="text-xl font-bold mb-2">Loading 3D Globe</h3>
-            <div className="w-64 h-3 bg-gray-700 rounded-full overflow-hidden mb-2 mx-auto">
+            <h3 className="text-xl font-bold mb-2 text-blue-100">Loading 3D Globe</h3>
+            <div className="w-64 h-3 bg-gray-800 rounded-full overflow-hidden mb-2 mx-auto">
               <div 
                 className="h-full bg-blue-500 transition-all duration-300 ease-out"
                 style={{ width: `${loadingProgress}%` }}
               ></div>
             </div>
-            <p className="text-sm text-gray-300">Initializing universe...</p>
+            <p className="text-sm text-blue-200">Loading natural Earth view...</p>
           </div>
         </div>
       )}
