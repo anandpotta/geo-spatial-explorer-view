@@ -39,6 +39,7 @@ const DrawingTools = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const [isEditActive, setIsEditActive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -82,6 +83,10 @@ const DrawingTools = ({
     if (tool === 'clear') {
       setIsClearDialogOpen(true);
       return;
+    }
+    
+    if (tool === 'edit') {
+      setIsEditActive(!isEditActive);
     }
     
     onToolSelect(tool);
@@ -169,7 +174,7 @@ const DrawingTools = ({
         <div className="h-4" />
         
         <button
-          className="w-full p-2 my-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
+          className={`w-full p-2 my-2 rounded-md ${isEditActive ? 'bg-green-500' : 'bg-blue-500'} text-white hover:${isEditActive ? 'bg-green-600' : 'bg-blue-600'} transition-colors flex items-center justify-center`}
           onClick={() => handleToolClick('edit')}
           aria-label="Edit existing shapes"
         >

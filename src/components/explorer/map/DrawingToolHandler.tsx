@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 
@@ -18,6 +18,15 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   setActiveTool,
   onToolSelect
 }) => {
+  const [editEnabled, setEditEnabled] = useState(false);
+
+  // Reset edit mode when the tool changes
+  useEffect(() => {
+    if (activeTool !== 'edit') {
+      setEditEnabled(false);
+    }
+  }, [activeTool]);
+
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
     setActiveTool(tool === activeTool ? null : tool);
@@ -51,21 +60,29 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
           console.error('Error during clear operation:', err);
           toast.error('Failed to clear shapes. Please try again.');
         }
-      } else if (tool === 'edit' && leafletMapRef.current && window.featureGroup) {
+      } else if (tool === 'edit' && leafletMapRef.current) {
         try {
           // Enable or disable edit mode
-          const featureGroup = window.featureGroup;
-          
-          // Find any EditControl instance and trigger edit mode
-          const container = leafletMapRef.current.getContainer();
-          if (container) {
-            // Find the edit button and simulate a click if it exists
-            const editButton = container.querySelector('.leaflet-draw-edit-edit');
-            if (editButton) {
-              editButton.click();
-              toast.info('Edit mode enabled. Drag the white squares to reshape your paths.');
+          if (!editEnabled) {
+            // Access the global featureGroup
+            if (window.featureGroup) {
+              const featureGroup = window.featureGroup;
+              const map = leafletMapRef.current;
+              
+              // Find the edit button in the Leaflet draw control and click it
+              const container = map.getContainer();
+              if (container) {
+                const editButton = container.querySelector('.leaflet-draw-edit-edit');
+                if (editButton) {
+                  (editButton as HTMLElement).click();
+                  setEditEnabled(true);
+                  toast.info('Edit mode enabled. Drag the white squares to reshape your paths.');
+                } else {
+                  toast.info('Draw a shape first before editing');
+                }
+              }
             } else {
-              toast.info('Draw a shape first before editing');
+              toast.info('No drawings available to edit');
             }
           }
         } catch (err) {

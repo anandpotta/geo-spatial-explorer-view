@@ -56,20 +56,24 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
   
-  // Configure edit options to enable proper editing
+  // Configure edit options to ensure proper editing
   const editOptions = {
     featureGroup: featureGroup,
     edit: {
+      // Ensure proper options for edit mode
       selectedPathOptions: {
         maintainColor: true,
-        opacity: 0.7,
         dashArray: '10, 10',
         fill: true,
         fillColor: '#ffffff',
-        fillOpacity: 0.1
+        fillOpacity: 0.1,
+        maintainDashArray: false 
       }
     },
-    remove: true
+    remove: true,
+    poly: {
+      allowIntersection: false
+    }
   };
 
   return (
