@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -113,7 +114,7 @@ export function useThreeScene(
       // Set size with valid dimensions
       renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
-      renderer.outputEncoding = THREE.sRGBEncoding; // Improved color accuracy
+      renderer.outputEncoding = THREE.sRGBEncoding; // Use outputEncoding in THREE.js v0.133.0
       renderer.physicallyCorrectLights = true; // More natural lighting
       rendererRef.current = renderer;
       

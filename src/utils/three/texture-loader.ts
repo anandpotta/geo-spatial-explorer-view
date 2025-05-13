@@ -26,7 +26,8 @@ export function loadEarthTextures(
     options.textures.earthBaseUrl,
     (texture) => {
       console.log('Earth texture loaded');
-      texture.colorSpace = THREE.SRGBColorSpace; // For more accurate colors
+      // THREE.js v0.133.0 uses encoding instead of colorSpace
+      texture.encoding = THREE.sRGBEncoding; // For more accurate colors
       material.map = texture;
       material.needsUpdate = true;
       earthTextureLoaded = true;
@@ -40,6 +41,7 @@ export function loadEarthTextures(
         'https://eoimages.gsfc.nasa.gov/images/imagerecords/57000/57752/land_ocean_ice_lights_2048.jpg',
         (fallbackTexture) => {
           console.log('Fallback Earth texture loaded');
+          fallbackTexture.encoding = THREE.sRGBEncoding;
           material.map = fallbackTexture;
           material.needsUpdate = true;
           earthTextureLoaded = true;
