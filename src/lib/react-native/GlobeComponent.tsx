@@ -3,13 +3,40 @@
  * This is a simplified implementation for React Native
  * In a real app, you would use react-native-webgl or Expo's GL module
  */
-import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import { WebView } from 'react-native-webview';
-import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
+import React, { useState } from 'react';
+// Define simple types to avoid the need for react-native package in web environment
+type ReactNativeView = React.ComponentType<any>;
+type ReactNativeWebView = React.ComponentType<any> & { postMessage?: (data: string) => void };
+
+interface WebViewProps {
+  source: { html: string };
+  style: any;
+  onMessage: (event: any) => void;
+  javaScriptEnabled: boolean;
+  originWhitelist: string[];
+  ref: React.RefObject<ReactNativeWebView>;
+}
+
+// Mock React Native components for web environment
+const View: ReactNativeView = (props) => <div {...props} />;
+const Text: ReactNativeView = (props) => <span {...props} />;
+const ActivityIndicator: ReactNativeView = (props) => <div {...props}>Loading...</div>;
+const WebView: ReactNativeWebView = (props) => <iframe {...props} />;
+
+// Mock StyleSheet for web environment
+const StyleSheet = {
+  create: (styles: any) => styles,
+  absoluteFillObject: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0
+  }
+};
 
 // HTML template for WebView that includes Three.js and our globe implementation
-const getHtmlTemplate = (options: Partial<GlobeOptions> = {}) => `
+const getHtmlTemplate = (options: Partial<any> = {}) => `
   <!DOCTYPE html>
   <html>
   <head>
@@ -88,8 +115,8 @@ const getHtmlTemplate = (options: Partial<GlobeOptions> = {}) => `
 `;
 
 interface GlobeComponentProps {
-  options?: Partial<GlobeOptions>;
-  selectedLocation?: GeoLocation;
+  options?: Partial<any>;
+  selectedLocation?: any;
   onReady?: (api: any) => void;
   onFlyComplete?: () => void;
   onError?: (error: Error) => void;
@@ -102,7 +129,7 @@ export const GlobeComponent = ({
   onFlyComplete,
   onError
 }: GlobeComponentProps) => {
-  const webViewRef = React.useRef<WebView>(null);
+  const webViewRef = React.useRef<ReactNativeWebView>(null);
   const [isReady, setIsReady] = useState(false);
   
   // Handle messages from WebView
@@ -127,7 +154,7 @@ export const GlobeComponent = ({
   // Send location to WebView when it changes
   React.useEffect(() => {
     if (webViewRef.current && isReady && selectedLocation) {
-      webViewRef.current.postMessage(JSON.stringify({
+      webViewRef.current.postMessage && webViewRef.current.postMessage(JSON.stringify({
         type: 'flyTo',
         longitude: selectedLocation.x,
         latitude: selectedLocation.y

@@ -1,9 +1,14 @@
 
-/**
- * Common utility functions for all platforms
- */
-
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { GeoLocation } from './geospatial-core/types';
+
+/**
+ * Utility function for merging class names with Tailwind CSS
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 /**
  * Convert a standard Location object to our GeoLocation type
