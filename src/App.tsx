@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import GeoSpatialExplorer from './components/GeoSpatialExplorer';
+import Index from './pages/Index';
 import LoginPage from './components/auth/LoginPage';
 import Header from './components/auth/Header';
 
@@ -13,7 +13,7 @@ const AppContent = () => {
   return (
     <div className="h-screen flex flex-col">
       {isAuthenticated && <Header />}
-      {isAuthenticated ? <GeoSpatialExplorer /> : <LoginPage />}
+      {isAuthenticated ? <Index /> : <LoginPage />}
     </div>
   );
 };

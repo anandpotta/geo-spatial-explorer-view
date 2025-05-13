@@ -1,42 +1,33 @@
 
-export type { Location } from './location-utils';
-export type { LocationMarker } from './markers/types';
-export type { DrawingData } from './drawing-utils';
-export type { FloorPlanData } from './floor-plan-utils';
+export interface Location {
+  id: string;
+  label: string;
+  x: number; // longitude
+  y: number; // latitude
+  raw?: any;
+}
 
-export {
-  searchLocations,
-  formatCoordinates,
-  getDistanceFromLatLonInKm,
-} from './location-utils';
+// Utility functions for coordinates
+export function formatCoordinates(latitude: number, longitude: number): string {
+  const latDir = latitude >= 0 ? "N" : "S";
+  const lonDir = longitude >= 0 ? "E" : "W";
+  return `${Math.abs(latitude).toFixed(4)}° ${latDir}, ${Math.abs(longitude).toFixed(4)}° ${lonDir}`;
+}
 
-export {
-  saveMarker,
-  getSavedMarkers,
-  deleteMarker,
-} from './markers/index';
+// Calculate distance between points
+export function distanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
 
-export {
-  saveDrawing,
-  getSavedDrawings,
-  deleteDrawing,
-} from './drawing-utils';
-
-export {
-  saveFloorPlan,
-  getFloorPlanById,
-  hasFloorPlan,
-  getDrawingIdsWithFloorPlans,
-} from './floor-plan-utils';
-
-// Export from our refactored SVG utilities
-export {
-  getSvgPathFromElement,
-  simplifyPath,
-  extractPointsFromPath,
-  simplifyPoints,
-  pointsToPathData,
-  getAllSvgPaths,
-  applyImageClipMask,
-  removeClipMask,
-} from './svg-utils';
+function deg2rad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
