@@ -4,6 +4,9 @@
  */
 
 import type { GeoLocation, MapOptions } from './types';
+import { MapCore } from './map/index';
+
+export { MapCore };
 
 /**
  * Initialize a new map instance
