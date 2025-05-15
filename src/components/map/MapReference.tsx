@@ -11,7 +11,7 @@ interface MapReferenceProps {
 // Define interface for internal map properties not exposed in TypeScript definitions
 interface LeafletMapInternal extends L.Map {
   _panes?: {
-    mapPane?: {
+    mapPane: {
       _leaflet_pos?: any;
     };
   };
