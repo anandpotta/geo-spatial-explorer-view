@@ -28,6 +28,7 @@ export function useThreeGlobe(
   const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
   const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initCallbackFiredRef = useRef<boolean>(false);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
@@ -37,8 +38,11 @@ export function useThreeGlobe(
   
   // Handle textures loaded callback with delay to ensure smooth appearance
   const handleTexturesLoaded = useCallback(() => {
-    if (onInitialized && isInitialized) {
+    if (onInitialized && isInitialized && !initCallbackFiredRef.current) {
       console.log("Textures loaded, preparing to call onInitialized callback");
+      
+      // Mark that we've fired the callback to prevent double initialization
+      initCallbackFiredRef.current = true;
       
       // Small delay to ensure textures are applied before showing
       setTimeout(() => {
@@ -86,15 +90,16 @@ export function useThreeGlobe(
     
     // Mark as initialized after a reasonable timeout to ensure everything is ready
     initializationTimeoutRef.current = setTimeout(() => {
-      if (!isInitialized && containerRef.current) {
+      if (!isInitialized && containerRef.current && !initCallbackFiredRef.current) {
         console.log("Setting isInitialized to true after timeout");
         setIsInitialized(true);
         isSetupCompleteRef.current = true;
         
         // Even if textures are still loading, we'll consider the globe ready
         // to avoid getting stuck at the loading screen
-        if (onInitialized) {
+        if (onInitialized && !initCallbackFiredRef.current) {
           console.log("Calling onInitialized as fallback to prevent stuck loading");
+          initCallbackFiredRef.current = true;
           onInitialized();
         }
       }
@@ -105,6 +110,7 @@ export function useThreeGlobe(
         clearTimeout(initializationTimeoutRef.current);
         initializationTimeoutRef.current = null;
       }
+      initCallbackFiredRef.current = false;
       isSetupCompleteRef.current = false;
     };
   }, [isInitialized, setIsInitialized, onInitialized, containerRef]);

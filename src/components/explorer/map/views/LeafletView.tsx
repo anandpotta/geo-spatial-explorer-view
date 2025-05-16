@@ -54,7 +54,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
     // If transitioning to leaflet as active view, ensure fresh mounting 
     if (currentView === 'leaflet' && !wasActiveView) {
       console.log("Leaflet is now the active view, ensuring fresh initialization");
-      // Use a timestamp to ensure the key is truly unique 
+      // Generate a truly unique key by combining a timestamp
       const uniqueKey = `${leafletKey}-${Date.now()}`;
       setLocalKey(uniqueKey);
       mapReadyCalledRef.current = false;
@@ -105,7 +105,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
           onMapReady(map);
         }
         readyTimerRef.current = null;
-      }, 500); // Increased delay for better stability
+      }, 600); // Increased delay for better transition stability
     } else if (preloadedLeaflet) {
       // For preloaded maps, still mark as ready but don't trigger the callback
       mapReadyCalledRef.current = true;
@@ -113,32 +113,31 @@ const LeafletView: React.FC<LeafletViewProps> = ({
     }
   };
 
+  // Only render the component when needed to prevent unnecessary rendering cycles
+  if (!shouldRender) return null;
+
   return (
     <div 
-      className={`absolute inset-0 transition-all duration-300 ease-in-out ${fadeInClass}`}
+      className={`absolute inset-0 transition-all duration-500 ease-in-out ${fadeInClass}`}
       style={styles}
       data-map-type="leaflet"
       data-active={currentView === 'leaflet' ? 'true' : 'false'}
     >
-      {shouldRender && (
-        <>
-          <LeafletMap 
-            selectedLocation={selectedLocation} 
-            onMapReady={handleMapReady}
-            activeTool={currentView === 'leaflet' ? activeTool : null}
-            key={localKey}
-            onClearAll={onClearAll}
-            preload={currentView !== 'leaflet'}
-          />
-          
-          {selectedLocation && onClearLocation && isLeafletView && (
-            <SelectedLocationDisplay 
-              selectedLocation={selectedLocation}
-              onClear={onClearLocation}
-              isLeafletView={isLeafletView}
-            />
-          )}
-        </>
+      <LeafletMap 
+        selectedLocation={selectedLocation} 
+        onMapReady={handleMapReady}
+        activeTool={currentView === 'leaflet' ? activeTool : null}
+        key={localKey}
+        onClearAll={onClearAll}
+        preload={currentView !== 'leaflet'}
+      />
+      
+      {selectedLocation && onClearLocation && isLeafletView && (
+        <SelectedLocationDisplay 
+          selectedLocation={selectedLocation}
+          onClear={onClearLocation}
+          isLeafletView={isLeafletView}
+        />
       )}
     </div>
   );

@@ -21,8 +21,9 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
   const flyCompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialReadyCalledRef = useRef<boolean>(false);
   
-  // Improved loading state management
+  // Improved loading state management with a single initialization
   useEffect(() => {
     if (fadeOutLoading) {
       // Fade out the loading screen smoothly
@@ -63,10 +64,15 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       globeInstanceRef.current = viewer;
     }
     
-    // Notify parent that map is ready after ensuring the globe is fully rendered
-    setTimeout(() => {
-      if (onMapReady) onMapReady(globeInstanceRef.current);
-    }, 300); // Slightly longer delay for visual completeness
+    // Ensure we only call onMapReady once
+    if (!initialReadyCalledRef.current && onMapReady) {
+      initialReadyCalledRef.current = true;
+      
+      // Short delay to ensure smooth transition
+      setTimeout(() => {
+        onMapReady(globeInstanceRef.current);
+      }, 300);
+    }
   };
   
   // Handle fly complete with debouncing to prevent rapid transitions
@@ -83,7 +89,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         onFlyComplete();
       }
       flyCompleteTimeoutRef.current = null;
-    }, 200);
+    }, 250);
   };
   
   // Clean up resources on unmount
@@ -91,6 +97,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     return () => {
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
       viewerInitializedRef.current = false;
+      initialReadyCalledRef.current = false;
       lastLocationRef.current = null;
       globeInstanceRef.current = null;
       
@@ -108,7 +115,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
-      {/* Loading overlay - with smooth transition */}
+      {/* Loading overlay with improved transition */}
       {isLoading && (
         <div 
           className={`absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 transition-opacity duration-600 ${fadeOutLoading ? 'opacity-0' : 'opacity-100'}`}
@@ -132,7 +139,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         </div>
       )}
       
-      {/* ThreeJS Globe with optimized transitions */}
+      {/* ThreeJS Globe with optimized loading */}
       <ThreeGlobe 
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}

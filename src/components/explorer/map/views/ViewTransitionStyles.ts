@@ -16,7 +16,7 @@ export const getTransitionStyles = (isCurrentView: boolean, transitioning: boole
   
   // During transition, both views are visible but with different opacities
   return {
-    opacity: isCurrentView ? 0.2 : 0.8, // Faster fade out for current view
+    opacity: isCurrentView ? 0.15 : 0.85, // Faster fade out for current view
     transform: isCurrentView ? 'scale(0.97)' : 'scale(1)', // More pronounced zoom effect
     zIndex: isCurrentView ? 5 : 10, // New view on top during transition
     visibility: 'visible' // Both visible during transition
@@ -42,7 +42,7 @@ export const getCesiumStyles = (currentView: 'cesium' | 'leaflet', transitioning
     opacity: styles.opacity,
     transform: styles.transform,
     zIndex: styles.zIndex,
-    transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out' // Slower, smoother transition
+    transition: 'opacity 800ms cubic-bezier(0.4, 0, 0.2, 1), transform 800ms cubic-bezier(0.4, 0, 0.2, 1)' // Slower, smoother transition with easing
   };
   
   return baseStyles;
@@ -70,10 +70,10 @@ export const getLeafletStyles = (
     height: '100%',
     // Show when current view or during transition or when preloaded
     visibility: isCurrent || transitioning || preloadedLeaflet ? 'visible' : 'hidden',
-    opacity: isCurrent ? 1 : (transitioning ? 0.8 : 0),
+    opacity: isCurrent ? 1 : (transitioning ? 0.85 : 0),
     transform: isCurrent ? 'scale(1)' : 'scale(0.98)',
     zIndex: isCurrent ? 10 : (transitioning ? 5 : 1),
-    transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out' // Slower, smoother transition
+    transition: 'opacity 800ms cubic-bezier(0.4, 0, 0.2, 1), transform 800ms cubic-bezier(0.4, 0, 0.2, 1)' // Slower, smoother transition with easing
   };
   
   return baseStyles;
