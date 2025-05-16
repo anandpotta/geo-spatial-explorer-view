@@ -11,6 +11,7 @@ interface MapContentProps {
   onLocationSelect: (location: Location) => void;
   onClearLocation?: () => void;
   viewTransitionReady?: boolean;
+  viewTransitionInProgress?: boolean;
 }
 
 const MapContent: React.FC<MapContentProps> = ({ 
@@ -20,7 +21,8 @@ const MapContent: React.FC<MapContentProps> = ({
   onFlyComplete,
   onLocationSelect,
   onClearLocation,
-  viewTransitionReady = true 
+  viewTransitionReady = true,
+  viewTransitionInProgress = false
 }) => {
   return (
     <MapContentContainer
@@ -31,6 +33,7 @@ const MapContent: React.FC<MapContentProps> = ({
       onLocationSelect={onLocationSelect}
       onClearLocation={onClearLocation}
       viewTransitionReady={viewTransitionReady}
+      viewTransitionInProgress={viewTransitionInProgress}
     />
   );
 };

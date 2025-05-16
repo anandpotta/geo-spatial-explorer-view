@@ -37,6 +37,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
   const mapMountedRef = useRef(false);
   const mapReadyCalledRef = useRef(false);
   const [localKey, setLocalKey] = useState(leafletKey);
+  const readyTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Reset the key when leaflet becomes active view to ensure fresh mounting
   useEffect(() => {
@@ -46,7 +47,20 @@ const LeafletView: React.FC<LeafletViewProps> = ({
       console.log("Leaflet is now the active view, ensuring fresh initialization");
       // Add a timestamp to ensure the key is truly unique
       setLocalKey(`${leafletKey}-${Date.now()}`);
+      
+      // Clear any existing ready timer
+      if (readyTimerRef.current) {
+        clearTimeout(readyTimerRef.current);
+        readyTimerRef.current = null;
+      }
     }
+    
+    return () => {
+      if (readyTimerRef.current) {
+        clearTimeout(readyTimerRef.current);
+        readyTimerRef.current = null;
+      }
+    };
   }, [currentView, leafletKey]);
   
   // Handle cleanup when component unmounts
@@ -54,6 +68,9 @@ const LeafletView: React.FC<LeafletViewProps> = ({
     return () => {
       mapMountedRef.current = false;
       mapReadyCalledRef.current = false;
+      if (readyTimerRef.current) {
+        clearTimeout(readyTimerRef.current);
+      }
     };
   }, []);
 
@@ -64,8 +81,20 @@ const LeafletView: React.FC<LeafletViewProps> = ({
     }
     
     console.log("LeafletMap ready callback triggered");
-    mapReadyCalledRef.current = true;
-    onMapReady(map);
+    
+    // When transitioning from Cesium to Leaflet, add a small delay before calling onMapReady
+    // This ensures the visual transition completes before map operations occur
+    if (currentView === 'leaflet') {
+      readyTimerRef.current = setTimeout(() => {
+        mapReadyCalledRef.current = true;
+        onMapReady(map);
+        readyTimerRef.current = null;
+      }, 300);
+    } else {
+      // For preloaded maps, still mark as ready but don't delay
+      mapReadyCalledRef.current = true;
+      onMapReady(map);
+    }
   };
 
   return (
@@ -86,7 +115,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
             preload={currentView !== 'leaflet'}
           />
           
-          {selectedLocation && onClearLocation && (
+          {selectedLocation && onClearLocation && isLeafletView && (
             <SelectedLocationDisplay 
               selectedLocation={selectedLocation}
               onClear={onClearLocation}

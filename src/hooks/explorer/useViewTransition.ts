@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Location } from '@/utils/geo-utils';
 
@@ -6,26 +7,43 @@ export function useViewTransition(
   flyCompleted: boolean, 
   shouldSwitchToLeaflet: boolean, 
   setShouldSwitchToLeaflet: (value: boolean) => void,
-  selectedLocation?: Location
+  selectedLocation?: Location,
+  isTransitionInProgress?: () => boolean
 ) {
   const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium');
   const viewTransitionInProgressRef = useRef(false);
   const [viewTransitionReady, setViewTransitionReady] = useState(true);
   const leafletReadyRef = useRef(false);
+  const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearTransitionTimer = useCallback(() => {
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+  }, []);
 
   // Effect to handle automatic switching to leaflet after fly completes
   useEffect(() => {
     if (flyCompleted && shouldSwitchToLeaflet && currentView === 'cesium') {
       console.log("Preparing transition to leaflet view after fly completion");
       
-      // Start transition to leaflet immediately but keep transition state
-      // to ensure smooth visual transition
-      setCurrentView('leaflet');
-      setShouldSwitchToLeaflet(false);
+      // Prevent multiple transition attempts
+      if (viewTransitionInProgressRef.current) {
+        console.log("Transition already in progress, not starting a new one");
+        return;
+      }
       
-      // Slight delay before showing toast for better UX
-      setTimeout(() => {
-        // Show toast with location info
+      // Set the transition flag
+      viewTransitionInProgressRef.current = true;
+      setViewTransitionReady(false);
+      
+      // Start transition to leaflet with a slight delay to ensure smooth visual experience
+      transitionTimerRef.current = setTimeout(() => {
+        setCurrentView('leaflet');
+        setShouldSwitchToLeaflet(false);
+        
+        // Show toast with location info after transition starts
         if (selectedLocation) {
           toast({
             title: "Navigation Complete",
@@ -34,17 +52,20 @@ export function useViewTransition(
           });
         }
         
-        // Reset view transition ready state slightly later
-        setTimeout(() => {
+        // Reset transition flags after animation completes
+        transitionTimerRef.current = setTimeout(() => {
+          viewTransitionInProgressRef.current = false;
           setViewTransitionReady(true);
-        }, 300);
-      }, 500);
+        }, 800);
+      }, 200);
     }
-  }, [flyCompleted, shouldSwitchToLeaflet, currentView, selectedLocation, setShouldSwitchToLeaflet]);
+    
+    return () => clearTransitionTimer();
+  }, [flyCompleted, shouldSwitchToLeaflet, currentView, selectedLocation, setShouldSwitchToLeaflet, clearTransitionTimer]);
 
-  const handleViewChange = (view: 'cesium' | 'leaflet') => {
-    // Prevent rapid view changes
-    if (viewTransitionInProgressRef.current) {
+  const handleViewChange = useCallback((view: 'cesium' | 'leaflet') => {
+    // Don't allow view changes during transitions
+    if (viewTransitionInProgressRef.current || (isTransitionInProgress && isTransitionInProgress())) {
       toast({
         title: "Please wait",
         description: "View transition already in progress",
@@ -65,18 +86,24 @@ export function useViewTransition(
     
     console.log(`Changing view to ${view}`);
     setViewTransitionReady(false); // Start transition
-    setCurrentView(view);
-    setShouldSwitchToLeaflet(false); // Reset switch flag when manually changing view
-    
-    // Set transition flag
     viewTransitionInProgressRef.current = true;
-    setTimeout(() => {
-      viewTransitionInProgressRef.current = false;
-      setViewTransitionReady(true); // End transition
-    }, 800); // Slightly faster transition
-  };
+    
+    clearTransitionTimer();
+    
+    // Change view with a slight delay for better visual transition
+    transitionTimerRef.current = setTimeout(() => {
+      setCurrentView(view);
+      setShouldSwitchToLeaflet(false); // Reset switch flag when manually changing view
+      
+      // End transition after animation completes
+      transitionTimerRef.current = setTimeout(() => {
+        viewTransitionInProgressRef.current = false;
+        setViewTransitionReady(true);
+      }, 800);
+    }, 100);
+  }, [flyCompleted, selectedLocation, setShouldSwitchToLeaflet, isTransitionInProgress, clearTransitionTimer]);
 
-  const handleMapReady = () => {
+  const handleMapReady = useCallback(() => {
     console.log('Map is ready');
     
     // If this is the leaflet map becoming ready, mark it
@@ -85,26 +112,21 @@ export function useViewTransition(
     }
     
     // Allow a small delay for map rendering before marking ready
-    setTimeout(() => {
+    transitionTimerRef.current = setTimeout(() => {
       setViewTransitionReady(true);
     }, 200);
-  };
+  }, [currentView]);
 
-  // Manage view transition effects
+  // Cleanup effect
   useEffect(() => {
-    if (!viewTransitionReady) {
-      // If transition is happening, set a backup timer to ensure we don't get stuck
-      const timer = setTimeout(() => {
-        setViewTransitionReady(true);
-      }, 2000); // Shorter timeout
-      return () => clearTimeout(timer);
-    }
-  }, [viewTransitionReady]);
+    return () => clearTransitionTimer();
+  }, [clearTransitionTimer]);
 
   return {
     currentView,
     viewTransitionReady,
     handleViewChange,
-    handleMapReady
+    handleMapReady,
+    isViewTransitionInProgress: viewTransitionInProgressRef.current
   };
 }

@@ -16,6 +16,7 @@ const Index = () => {
     handleFlyComplete,
     handleSavedLocationSelect,
     clearSelectedLocation,
+    isTransitionInProgress,
     cleanup
   } = useLocationNavigation();
 
@@ -23,12 +24,14 @@ const Index = () => {
     currentView,
     viewTransitionReady,
     handleViewChange,
-    handleMapReady
+    handleMapReady,
+    isViewTransitionInProgress
   } = useViewTransition(
     flyCompleted,
     shouldSwitchToLeaflet,
     setShouldSwitchToLeaflet,
-    selectedLocation
+    selectedLocation,
+    isTransitionInProgress
   );
   
   // Handle clearing the selected location
@@ -59,6 +62,7 @@ const Index = () => {
         onLocationSelect={handleLocationSelect}
         onClearLocation={handleClearLocation}
         viewTransitionReady={viewTransitionReady}
+        viewTransitionInProgress={isViewTransitionInProgress}
       />
     </div>
   );

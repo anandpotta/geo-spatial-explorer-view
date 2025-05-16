@@ -18,11 +18,22 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
 }) => {
   const mapInitializedRef = useRef(false);
   const isMountedRef = useRef(true);
+  const mapRef = useRef<L.Map | null>(null);
   
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      
+      // Clean up map instance if needed
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+          mapRef.current = null;
+        } catch (err) {
+          console.error("Error cleaning up map:", err);
+        }
+      }
     };
   }, []);
   
@@ -54,6 +65,9 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
         preferCanvas: true
       });
       
+      // Store map reference
+      mapRef.current = map;
+      
       // Add an identifier to the map
       (map as any)._customInitTime = Date.now();
       
@@ -62,26 +76,29 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
       map.addLayer(featureGroup);
       (window as any).featureGroup = featureGroup;
       
-      // Notify that the map is initialized
-      if (isMountedRef.current) {
-        onMapInitialized(map);
-      }
-      
-      // Force a map redraw after initialization
+      // Notify that the map is initialized after a short delay
+      // This gives tiles time to start loading
       setTimeout(() => {
-        if (map && isMapValid(map) && isMountedRef.current) {
-          map.invalidateSize(true);
-          // Add additional redraw to ensure tiles load
-          setTimeout(() => {
-            if (map && isMapValid(map) && isMountedRef.current) {
-              map.invalidateSize(true);
-              // Trigger events to ensure all map components are properly initialized
-              map.fire('load');
-              map.fire('moveend');
-            }
-          }, 300);
+        if (isMountedRef.current) {
+          onMapInitialized(map);
         }
-      }, 200);
+        
+        // Force a map redraw after initialization
+        setTimeout(() => {
+          if (map && isMapValid(map) && isMountedRef.current) {
+            map.invalidateSize(true);
+            // Add additional redraw to ensure tiles load
+            setTimeout(() => {
+              if (map && isMapValid(map) && isMountedRef.current) {
+                map.invalidateSize(true);
+                // Trigger events to ensure all map components are properly initialized
+                map.fire('load');
+                map.fire('moveend');
+              }
+            }, 300);
+          }
+        }, 200);
+      }, 100);
     } catch (err) {
       console.error("Map initialization error:", err);
       mapInitializedRef.current = false;
@@ -94,6 +111,16 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
     return () => {
       isMountedRef.current = false;
       mapInitializedRef.current = false;
+      
+      // Clean up map instance if needed
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+          mapRef.current = null;
+        } catch (err) {
+          console.error("Error cleaning up map:", err);
+        }
+      }
     };
   }, [containerElement, selectedLocation, onMapInitialized]);
   
