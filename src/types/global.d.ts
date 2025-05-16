@@ -48,6 +48,7 @@ declare global {
       type: string;
       target: any;
       name?: string;  // Add the name property that's required by LayersControlEvent
+      originalEvent?: MouseEvent;  // Add originalEvent property to fix type error
     }
     
     // Extended LeafletEventHandlerFn to handle events with name property
