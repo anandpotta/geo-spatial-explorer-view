@@ -9,12 +9,14 @@ interface MapReferenceProps {
 }
 
 // Define interface for internal map properties not exposed in TypeScript definitions
-interface LeafletMapInternal extends L.Map {
+// Use type intersection instead of extends to avoid interface compatibility issues
+interface LeafletMapInternal {
   _panes?: {
     mapPane?: {
       _leaflet_pos?: any;
     };
   };
+  _isDestroyed?: boolean;
 }
 
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
@@ -47,7 +49,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             // Check if map is valid before trying to invalidate size
             try {
               // Cast to internal map type to access private properties
-              const internalMap = map as LeafletMapInternal;
+              const internalMap = map as L.Map & LeafletMapInternal;
               
               // Only invalidate size if map is properly initialized
               if (internalMap && 
@@ -72,7 +74,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             
             // Just one additional invalidation after a reasonable delay
             const additionalTimeout = setTimeout(() => {
-              if (map && !(map as any)._isDestroyed) {
+              if (map && !(map as L.Map & LeafletMapInternal)._isDestroyed) {
                 try {
                   map.invalidateSize(true);
                   console.log('Final map invalidation completed');

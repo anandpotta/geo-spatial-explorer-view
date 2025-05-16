@@ -9,7 +9,7 @@ declare global {
     interface Map {
       _isDestroyed?: boolean;
       _panes?: {
-        mapPane: {
+        mapPane?: {
           _leaflet_pos?: any;
         };
       };
