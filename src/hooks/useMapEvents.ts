@@ -54,10 +54,14 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
         try {
           if (map && isMapValid(map)) {
             const container = map.getContainer();
-            if (container && document.body.contains(container) && map._leaflet_id) {
-              clearInterval(initCheckInterval);
-              mapInitializedRef.current = true;
-              performFlyOperation();
+            if (container && document.body.contains(container)) {
+              // Fix the TypeScript error by using a type assertion
+              const mapAsAny = map as any;
+              if (mapAsAny._leaflet_id) {
+                clearInterval(initCheckInterval);
+                mapInitializedRef.current = true;
+                performFlyOperation();
+              }
             }
           }
         } catch (err) {
@@ -103,7 +107,9 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
           map.invalidateSize();
           
           // Safety check for map panes and ensure position before flying
-          if (!map.getPanes() || !map._mapPane || !map._mapPane._leaflet_pos) {
+          // Use type assertion to access internal properties
+          const mapAsAny = map as any;
+          if (!map.getPanes() || !mapAsAny._mapPane || !mapAsAny._mapPane._leaflet_pos) {
             console.warn('Map panes not ready, delaying fly operation');
             setTimeout(() => {
               if (map && isMapValid(map)) {
