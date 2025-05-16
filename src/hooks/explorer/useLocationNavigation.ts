@@ -1,7 +1,7 @@
 
 import { useState, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 export function useLocationNavigation() {
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
@@ -74,6 +74,12 @@ export function useLocationNavigation() {
     handleLocationSelect(newLocation);
   };
 
+  // Add function to clear the selected location
+  const clearSelectedLocation = () => {
+    setSelectedLocation(undefined);
+    previousLocationRef.current = null;
+  };
+
   // Cleanup function for timeouts
   const cleanup = () => {
     if (transitionTimeoutRef.current) {
@@ -89,6 +95,7 @@ export function useLocationNavigation() {
     handleLocationSelect,
     handleFlyComplete,
     handleSavedLocationSelect,
+    clearSelectedLocation,
     cleanup
   };
 }

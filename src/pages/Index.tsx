@@ -4,6 +4,7 @@ import MapContent from '@/components/explorer/MapContent';
 import ExplorerSidebar from '@/components/explorer/ExplorerSidebar';
 import { useLocationNavigation } from '@/hooks/explorer/useLocationNavigation';
 import { useViewTransition } from '@/hooks/explorer/useViewTransition';
+import { toast } from 'sonner';
 
 const Index = () => {
   const {
@@ -14,6 +15,7 @@ const Index = () => {
     handleLocationSelect,
     handleFlyComplete,
     handleSavedLocationSelect,
+    clearSelectedLocation,
     cleanup
   } = useLocationNavigation();
 
@@ -28,6 +30,12 @@ const Index = () => {
     setShouldSwitchToLeaflet,
     selectedLocation
   );
+  
+  // Handle clearing the selected location
+  const handleClearLocation = () => {
+    clearSelectedLocation();
+    toast.info("Location cleared");
+  };
   
   // Cleanup effect
   useEffect(() => {
@@ -49,6 +57,7 @@ const Index = () => {
         onMapReady={handleMapReady}
         onFlyComplete={handleFlyComplete}
         onLocationSelect={handleLocationSelect}
+        onClearLocation={handleClearLocation}
         viewTransitionReady={viewTransitionReady}
       />
     </div>

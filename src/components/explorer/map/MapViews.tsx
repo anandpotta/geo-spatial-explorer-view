@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumView from './views/CesiumView';
@@ -15,6 +14,7 @@ interface MapViewsProps {
   handleLeafletMapRef: (map: any) => void;
   activeTool: string | null;
   handleClearAll: () => void;
+  onClearLocation?: () => void;
   viewTransitionReady?: boolean;
   viewTransitionInProgress?: boolean;
 }
@@ -29,6 +29,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   handleLeafletMapRef,
   activeTool,
   handleClearAll,
+  onClearLocation,
   viewTransitionReady = true,
   viewTransitionInProgress = false
 }) => {
@@ -171,6 +172,7 @@ const MapViews: React.FC<MapViewsProps> = ({
         onMapReady={handleLeafletMapReady}
         activeTool={activeTool}
         onClearAll={handleClearAll}
+        onClearLocation={onClearLocation}
         fadeIn={fadeIn}
       />
       

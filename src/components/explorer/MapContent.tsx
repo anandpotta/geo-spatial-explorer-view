@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import MapContentContainer from './map/MapContentContainer';
@@ -8,6 +9,7 @@ interface MapContentProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
+  onClearLocation?: () => void;
   viewTransitionReady?: boolean;
 }
 
@@ -17,6 +19,7 @@ const MapContent: React.FC<MapContentProps> = ({
   onMapReady, 
   onFlyComplete,
   onLocationSelect,
+  onClearLocation,
   viewTransitionReady = true 
 }) => {
   return (
@@ -26,6 +29,7 @@ const MapContent: React.FC<MapContentProps> = ({
       onMapReady={onMapReady}
       onFlyComplete={onFlyComplete}
       onLocationSelect={onLocationSelect}
+      onClearLocation={onClearLocation}
       viewTransitionReady={viewTransitionReady}
     />
   );

@@ -6,6 +6,7 @@ import { useMapEvents } from '@/hooks/useMapEvents';
 import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { Location } from '@/utils/geo-utils';
 import { isMapValid } from '@/utils/leaflet-type-utils';
+import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 
 interface LeafletMapProps {
@@ -46,6 +47,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       if (mapRef.current && isMapValid(mapRef.current)) {
         try {
           mapRef.current.invalidateSize();
+          console.log("Map resized due to container change");
         } catch (err) {
           console.error("Error resizing map:", err);
         }
@@ -69,16 +71,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     if (!mapRef.current || !isMapReady) return;
     
     try {
-      // Setup drawing tools and options
+      // Setup drawing tools and options based on activeTool
       if (activeTool === 'draw-polygon' && mapRef.current) {
-        // Drawing logic here
         console.log('Activating polygon drawing tool');
       } else if (activeTool === 'draw-marker' && mapRef.current) {
-        // Marker drawing logic here
         console.log('Activating marker drawing tool');
-      } else {
-        // Clear any existing drawings
-        console.log('No tool active, clearing drawings');
       }
     } catch (err) {
       console.error("Error setting up drawing tools:", err);
@@ -91,9 +88,64 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     isMapReady,
     (location) => {
       console.log("Location selected:", location);
-      // You can perform additional actions here when a location is selected
     }
   );
+  
+  // Add extra tile refresh logic to ensure tiles load properly
+  useEffect(() => {
+    // Only run this effect when the map is ready
+    if (!mapRef.current || !isMapValid(mapRef.current)) return;
+    
+    const map = mapRef.current;
+    
+    // Force refresh tiles occasionally
+    const refreshTiles = () => {
+      try {
+        if (map && isMapValid(map)) {
+          console.log("Forcing tile refresh");
+          
+          // First invalidate the map size
+          map.invalidateSize(true);
+          
+          // If there's an existing tile layer, remove and re-add it
+          if (tileLayerRef.current) {
+            const currentZoom = map.getZoom();
+            const currentCenter = map.getCenter();
+            
+            map.removeLayer(tileLayerRef.current);
+            
+            // Create and add a new tile layer
+            const newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; OpenStreetMap contributors',
+              maxZoom: 19
+            }).addTo(map);
+            
+            tileLayerRef.current = newTileLayer;
+            
+            // Reset view to ensure tiles load properly
+            setTimeout(() => {
+              if (map && isMapValid(map)) {
+                map.setView(currentCenter, currentZoom, { animate: false });
+              }
+            }, 100);
+          }
+        }
+      } catch (error) {
+        console.error("Error during tile refresh:", error);
+      }
+    };
+    
+    // Initial tile refresh after map is ready
+    const initialRefreshTimeout = setTimeout(refreshTiles, 500);
+    
+    // Periodic tile refreshes
+    const periodicRefreshInterval = setInterval(refreshTiles, 5000);
+    
+    return () => {
+      clearTimeout(initialRefreshTimeout);
+      clearInterval(periodicRefreshInterval);
+    };
+  }, [mapRef.current, isMapReady]);
   
   // Force tile refreshes periodically when preloaded to ensure they load properly
   useEffect(() => {
@@ -110,7 +162,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           console.log("Forcing tile refresh for preloaded map");
           mapRef.current.invalidateSize(true);
         }
-      }, 2000);
+      }, 1000); // Shorter timeout for faster loading
     }
     
     return () => {
@@ -132,7 +184,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }
       
       // Check if element already has a map instance
-      // Safely check for _leaflet_id property using type assertion
       const leafletId = (element as HTMLElement & { _leaflet_id?: number })._leaflet_id;
       if (leafletId) {
         console.log("Element already has a map instance, skipping initialization");
@@ -157,9 +208,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19,
-        // If preloading, use lower quality tiles initially to speed up loading
-        tileSize: preload ? 512 : 256,
-        zoomOffset: preload ? -1 : 0
+        // Standard tile size for better quality
+        tileSize: 256,
+        zoomOffset: 0
       }).addTo(map);
       
       tileLayerRef.current = tileLayer;
@@ -169,13 +220,15 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       map.addLayer(featureGroup);
       window.featureGroup = featureGroup;
       
-      // Add draw control
+      // Store the map reference
       handleSetMapRef(map);
       
       // Force a map redraw after initialization
       setTimeout(() => {
         if (map && isMapValid(map)) {
           map.invalidateSize(true);
+          // Add additional redraw to ensure tiles load
+          setTimeout(() => map.invalidateSize(true), 200);
         }
       }, 100);
       
@@ -196,8 +249,20 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           // Additional invalidate after onMapReady for better rendering
           if (map && isMapValid(map)) {
             map.invalidateSize(true);
+            
+            // Force tile loading by triggering pan
+            setTimeout(() => {
+              try {
+                const center = map.getCenter();
+                map.panTo([center.lat + 0.0001, center.lng + 0.0001]);
+                setTimeout(() => map.panTo(center), 100);
+                toast.success("Map tiles loaded", { id: "map-tiles-loaded", duration: 2000 });
+              } catch (err) {
+                console.error("Error during map pan:", err);
+              }
+            }, 500);
           }
-        }, preload ? 100 : 50); // Faster when not preloading
+        }, preload ? 100 : 50);
       }
       
       // Safely check if map is still valid before final invalidation
@@ -213,7 +278,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       };
       
       // Final map invalidation for proper sizing with delay to ensure DOM is ready
-      setTimeout(invalidateMapSafely, 300); // Faster invalidation
+      setTimeout(invalidateMapSafely, 300);
     } catch (err) {
       console.error("Map initialization error:", err);
       setMapError(`Failed to initialize map: ${err.message}`);

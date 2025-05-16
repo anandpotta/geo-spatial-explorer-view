@@ -17,6 +17,7 @@ interface MapContentContainerProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
+  onClearLocation?: () => void;
   viewTransitionReady?: boolean;
 }
 
@@ -26,6 +27,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   onMapReady, 
   onFlyComplete,
   onLocationSelect,
+  onClearLocation,
   viewTransitionReady = true
 }) => {
   // Use extracted hooks
@@ -60,6 +62,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           handleLeafletMapRef={handleLeafletMapRef}
           activeTool={activeTool}
           handleClearAll={handleClearAll}
+          onClearLocation={onClearLocation}
           viewTransitionReady={viewTransitionReady}
           viewTransitionInProgress={viewTransitionInProgress}
         />

@@ -3,6 +3,7 @@ import React from 'react';
 import LeafletMap from '@/components/map/LeafletMap';
 import { Location } from '@/utils/geo-utils';
 import { getLeafletStyles } from './ViewTransitionStyles';
+import SelectedLocationDisplay from '../components/SelectedLocationDisplay';
 
 interface LeafletViewProps {
   currentView: 'cesium' | 'leaflet';
@@ -14,6 +15,7 @@ interface LeafletViewProps {
   activeTool: string | null;
   onClearAll: () => void;
   fadeIn: boolean;
+  onClearLocation?: () => void;
 }
 
 const LeafletView: React.FC<LeafletViewProps> = ({
@@ -25,11 +27,13 @@ const LeafletView: React.FC<LeafletViewProps> = ({
   onMapReady,
   activeTool,
   onClearAll,
-  fadeIn
+  fadeIn,
+  onClearLocation
 }) => {
   const styles = getLeafletStyles(currentView, transitioning, preloadedLeaflet);
   const shouldRender = currentView === 'leaflet' || transitioning || preloadedLeaflet;
   const fadeInClass = fadeIn && currentView === 'leaflet' ? 'animate-fade-in' : '';
+  const isLeafletView = currentView === 'leaflet';
 
   return (
     <div 
@@ -38,14 +42,24 @@ const LeafletView: React.FC<LeafletViewProps> = ({
       data-map-type="leaflet"
     >
       {shouldRender && (
-        <LeafletMap 
-          selectedLocation={selectedLocation} 
-          onMapReady={onMapReady}
-          activeTool={currentView === 'leaflet' ? activeTool : null}
-          key={leafletKey}
-          onClearAll={onClearAll}
-          preload={currentView !== 'leaflet'}
-        />
+        <>
+          <LeafletMap 
+            selectedLocation={selectedLocation} 
+            onMapReady={onMapReady}
+            activeTool={currentView === 'leaflet' ? activeTool : null}
+            key={leafletKey}
+            onClearAll={onClearAll}
+            preload={currentView !== 'leaflet'}
+          />
+          
+          {selectedLocation && onClearLocation && (
+            <SelectedLocationDisplay 
+              selectedLocation={selectedLocation}
+              onClear={onClearLocation}
+              isLeafletView={isLeafletView}
+            />
+          )}
+        </>
       )}
     </div>
   );
