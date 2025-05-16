@@ -49,10 +49,25 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
       return;
     }
     
-    // Check if the container already has a Leaflet map initialized
-    if (containerElement._leaflet_id) {
-      console.warn("Container already has a Leaflet map. Skipping initialization.");
-      setInitializationError("Map already initialized");
+    // Clean up any existing Leaflet maps on this container
+    const existingMap = L.DomUtil.get(containerElement) as any;
+    if (existingMap && existingMap._leaflet_id) {
+      console.log("Container already has a map, attempting to clean up");
+      try {
+        if (existingMap.remove) {
+          existingMap.remove();
+        }
+        delete existingMap._leaflet_id;
+      } catch (err) {
+        console.warn("Error cleaning up existing map:", err);
+      }
+      
+      // Brief delay to ensure cleanup completes
+      setTimeout(() => {
+        if (!isMountedRef.current) return;
+        setInitializationError(null); // Trigger re-attempt
+      }, 100);
+      
       return;
     }
     
@@ -106,8 +121,8 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
         console.warn("Error setting initial view:", viewError);
       }
       
-      // Notify that the map is initialized after a short delay
-      // This gives tiles time to start loading
+      // Notify that the map is initialized after a longer delay
+      // This gives the map more time to fully initialize panes
       setTimeout(() => {
         if (!isMountedRef.current || !mapRef.current) return;
         
@@ -119,6 +134,28 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
             return;
           }
           
+          // Ensure map has necessary panes
+          const panes = mapRef.current.getPanes();
+          if (!panes || !panes.tilePane) {
+            console.warn("Map panes not fully initialized yet");
+            
+            // Retry initialization callback after additional delay
+            setTimeout(() => {
+              if (!isMountedRef.current || !mapRef.current) return;
+              
+              try {
+                if (isMapValid(mapRef.current) && mapRef.current.getPanes().tilePane) {
+                  console.log("Map panes now ready, calling initialization callback");
+                  onMapInitialized(mapRef.current);
+                }
+              } catch (callbackError) {
+                console.error("Error in delayed map initialization callback:", callbackError);
+              }
+            }, 300);
+            return;
+          }
+          
+          console.log("Map fully initialized, calling initialization callback");
           onMapInitialized(mapRef.current);
           
           // Force a map redraw after initialization
@@ -137,7 +174,7 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
         } catch (callbackError) {
           console.error("Error in map initialization callback:", callbackError);
         }
-      }, 200);
+      }, 400);
       
     } catch (err) {
       console.error("Map initialization error:", err);

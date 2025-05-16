@@ -42,6 +42,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
   
   // Track when leaflet becomes the active view
   useEffect(() => {
+    const wasActiveView = isActiveView.current;
     isActiveView.current = currentView === 'leaflet';
     
     // Clear any existing ready timer first
@@ -50,13 +51,14 @@ const LeafletView: React.FC<LeafletViewProps> = ({
       readyTimerRef.current = null;
     }
     
-    // Reset the key when leaflet becomes active view to ensure fresh mounting
-    if (currentView === 'leaflet' && !mapMountedRef.current) {
-      mapMountedRef.current = true;
-      mapReadyCalledRef.current = false;
+    // If transitioning to leaflet as active view, ensure fresh mounting 
+    if (currentView === 'leaflet' && !wasActiveView) {
       console.log("Leaflet is now the active view, ensuring fresh initialization");
-      // Add a timestamp to ensure the key is truly unique
-      setLocalKey(`${leafletKey}-${Date.now()}`);
+      // Use a timestamp to ensure the key is truly unique 
+      const uniqueKey = `${leafletKey}-${Date.now()}`;
+      setLocalKey(uniqueKey);
+      mapReadyCalledRef.current = false;
+      mapMountedRef.current = true;
     }
     
     return () => {
@@ -81,13 +83,13 @@ const LeafletView: React.FC<LeafletViewProps> = ({
 
   const handleMapReady = (map: any) => {
     if (mapReadyCalledRef.current) {
-      console.log("Map ready already called, skipping duplicate");
+      console.log("Map ready already called for this instance, skipping duplicate");
       return;
     }
     
     console.log("LeafletMap ready callback triggered");
     
-    // When transitioning from Cesium to Leaflet, add a small delay before calling onMapReady
+    // When transitioning to Leaflet view, add a delay before calling onMapReady
     // This ensures the visual transition completes before map operations occur
     if (currentView === 'leaflet') {
       // Clear any existing timer to prevent leaks
@@ -103,7 +105,7 @@ const LeafletView: React.FC<LeafletViewProps> = ({
           onMapReady(map);
         }
         readyTimerRef.current = null;
-      }, 400);
+      }, 500); // Increased delay for better stability
     } else if (preloadedLeaflet) {
       // For preloaded maps, still mark as ready but don't trigger the callback
       mapReadyCalledRef.current = true;
