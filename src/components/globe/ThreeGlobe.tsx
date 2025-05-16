@@ -20,18 +20,24 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const [isFlying, setIsFlying] = useState(false);
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
+  const readyCallbackFiredRef = useRef(false);
   
-  // Initialize globe only once
+  // Initialize globe with improved loading state handling
   const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized && !initializationAttemptedRef.current) {
+    if (!isInitialized && !initializationAttemptedRef.current && !readyCallbackFiredRef.current) {
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
+      readyCallbackFiredRef.current = true;
       console.log("ThreeGlobe: Globe initialized");
-      if (onMapReady) onMapReady(globeAPI);
+      
+      // Short delay to ensure complete initialization before notifying parent
+      setTimeout(() => {
+        if (onMapReady) onMapReady(globeAPI);
+      }, 100);
     }
   });
   
-  // Handle location changes
+  // Handle location changes with better flight state management
   useEffect(() => {
     if (!globeAPI.isInitialized || !selectedLocation) return;
     
@@ -80,6 +86,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     return () => {
       lastFlyLocationRef.current = null;
       initializationAttemptedRef.current = false;
+      readyCallbackFiredRef.current = false;
     };
   }, []);
   

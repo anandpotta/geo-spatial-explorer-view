@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { loadEarthTextures } from '@/utils/three/texture-loader';
 
@@ -8,9 +8,12 @@ export function useGlobeTextures(
   onTexturesLoaded?: () => void
 ) {
   const [texturesLoaded, setTexturesLoaded] = useState(false);
-  const texturesLoadedRef = useState<boolean>(false);
+  const texturesLoadedRef = useRef<boolean>(false);
+  const textureRetryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
   
-  // Function to handle texture loading
+  // Function to handle texture loading with retries
   const handleTextureLoading = useCallback(() => {
     if (!earthMesh) return;
     
@@ -25,18 +28,40 @@ export function useGlobeTextures(
       
       console.log(`Textures loaded - Earth: ${earthLoaded}, Bump: ${bumpLoaded}, All: ${allLoaded}`);
       
-      if (allLoaded && !texturesLoadedRef[0]) {
+      if (allLoaded && !texturesLoadedRef.current) {
         console.log("All textures loaded successfully");
         setTexturesLoaded(true);
-        texturesLoadedRef[0] = true;
+        texturesLoadedRef.current = true;
         
         if (onTexturesLoaded) {
           console.log("Calling textures loaded callback");
           onTexturesLoaded();
         }
+      } else if (!allLoaded && retryCountRef.current < MAX_RETRIES) {
+        // Retry texture loading after a delay
+        if (textureRetryTimerRef.current) {
+          clearTimeout(textureRetryTimerRef.current);
+        }
+        
+        retryCountRef.current++;
+        console.log(`Retrying texture load, attempt ${retryCountRef.current}/${MAX_RETRIES}`);
+        
+        textureRetryTimerRef.current = setTimeout(() => {
+          handleTextureLoading();
+        }, 1000); // 1 second between retries
+      } else if (retryCountRef.current >= MAX_RETRIES) {
+        // After max retries, continue anyway
+        console.log("Max texture load retries reached, continuing with partial textures");
+        setTexturesLoaded(true);
+        texturesLoadedRef.current = true;
+        
+        if (onTexturesLoaded) {
+          console.log("Calling textures loaded callback after max retries");
+          onTexturesLoaded();
+        }
       }
     });
-  }, [earthMesh, onTexturesLoaded, texturesLoadedRef]);
+  }, [earthMesh, onTexturesLoaded]);
   
   // Initialize texture loading when mesh is available
   useEffect(() => {
@@ -45,7 +70,11 @@ export function useGlobeTextures(
     handleTextureLoading();
     
     return () => {
-      // Cleanup if needed
+      // Cleanup
+      if (textureRetryTimerRef.current) {
+        clearTimeout(textureRetryTimerRef.current);
+        textureRetryTimerRef.current = null;
+      }
     };
   }, [earthMesh, texturesLoaded, handleTextureLoading]);
   

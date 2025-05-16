@@ -27,6 +27,7 @@ export function useThreeGlobe(
   // Refs for tracking state
   const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
+  const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
@@ -34,11 +35,16 @@ export function useThreeGlobe(
   // Get markers functionality
   const { addMarker } = useMarkers(scene);
   
-  // Handle textures loaded callback
+  // Handle textures loaded callback with delay to ensure smooth appearance
   const handleTexturesLoaded = useCallback(() => {
     if (onInitialized && isInitialized) {
-      console.log("Calling onInitialized callback - textures loaded");
-      onInitialized();
+      console.log("Textures loaded, preparing to call onInitialized callback");
+      
+      // Small delay to ensure textures are applied before showing
+      setTimeout(() => {
+        console.log("Calling onInitialized callback - textures loaded and applied");
+        onInitialized();
+      }, 150);
     }
   }, [onInitialized, isInitialized]);
   
@@ -69,27 +75,36 @@ export function useThreeGlobe(
     isFlyingRef
   );
   
-  // Initialize effect - mark as initialized after a small timeout
+  // Initialize effect - improved initialization with better fallbacks
   useEffect(() => {
     if (isSetupCompleteRef.current || !containerRef.current) return;
     
-    // Mark as initialized after a small timeout to ensure everything is ready
-    setTimeout(() => {
+    // Clear any existing timeout
+    if (initializationTimeoutRef.current) {
+      clearTimeout(initializationTimeoutRef.current);
+    }
+    
+    // Mark as initialized after a reasonable timeout to ensure everything is ready
+    initializationTimeoutRef.current = setTimeout(() => {
       if (!isInitialized && containerRef.current) {
-        console.log("Setting isInitialized to true");
+        console.log("Setting isInitialized to true after timeout");
         setIsInitialized(true);
         isSetupCompleteRef.current = true;
         
         // Even if textures are still loading, we'll consider the globe ready
         // to avoid getting stuck at the loading screen
         if (onInitialized) {
-          console.log("Calling onInitialized even though textures may not be fully loaded");
+          console.log("Calling onInitialized as fallback to prevent stuck loading");
           onInitialized();
         }
       }
-    }, 2000); // Give it 2 seconds to load, then move on regardless
+    }, 3500); // Give it more time to load properly, but not too much to get stuck
     
     return () => {
+      if (initializationTimeoutRef.current) {
+        clearTimeout(initializationTimeoutRef.current);
+        initializationTimeoutRef.current = null;
+      }
       isSetupCompleteRef.current = false;
     };
   }, [isInitialized, setIsInitialized, onInitialized, containerRef]);

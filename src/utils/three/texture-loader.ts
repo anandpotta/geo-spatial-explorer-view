@@ -7,7 +7,7 @@ import { createThreeViewerOptions } from '@/utils/threejs-viewer/viewer-options'
  */
 export function loadEarthTextures(
   material: THREE.MeshPhongMaterial,
-  onLoad: (earthLoaded: boolean, bumpLoaded: boolean) => void
+  onLoad: (earthLoaded: boolean, bumpMapLoaded: boolean) => void
 ): void {
   const options = createThreeViewerOptions();
   const textureLoader = new THREE.TextureLoader();
@@ -16,74 +16,100 @@ export function loadEarthTextures(
   let earthTextureLoaded = false;
   let bumpMapLoaded = false;
   
-  // Load Earth texture
-  // We'll use a placeholder texture initially for faster loading
-  const placeholderTexture = new THREE.TextureLoader().load('/placeholder.svg', undefined, undefined, 
-    (error) => {
-      console.warn('Placeholder texture failed to load, using color instead');
-      // If even placeholder fails, just use a color
-      material.color = new THREE.Color(0x1a2b3c);
-      material.needsUpdate = true;
-    }
-  );
-  material.map = placeholderTexture;
+  // Set texture loading manager to handle loading and errors better
+  const loadingManager = new THREE.LoadingManager();
+  loadingManager.onStart = (url) => {
+    console.log('Started loading texture:', url);
+  };
   
-  // Load the Earth texture
-  textureLoader.load(
-    options.textures.earthBaseUrl,
-    (texture) => {
-      console.log('Earth texture loaded');
-      // THREE.js v0.133.0 uses encoding instead of colorSpace
-      texture.encoding = THREE.sRGBEncoding; // For more accurate colors
-      material.map = texture;
-      material.needsUpdate = true;
-      earthTextureLoaded = true;
+  loadingManager.onError = (url) => {
+    console.error('Error loading texture:', url);
+    // Call onLoad with current state to allow fallbacks
+    if (!earthTextureLoaded || !bumpMapLoaded) {
       onLoad(earthTextureLoaded, bumpMapLoaded);
-    },
-    undefined, // Progress callback not needed
-    (error) => {
-      console.error('Error loading Earth texture:', error);
-      // Fallback to a local texture or directly bundled image
-      textureLoader.load(
-        '/placeholder.svg',
-        (fallbackTexture) => {
-          console.log('Using simple placeholder as Earth texture');
-          fallbackTexture.encoding = THREE.sRGBEncoding;
-          material.map = fallbackTexture;
-          material.needsUpdate = true;
-          earthTextureLoaded = true;
-          onLoad(earthTextureLoaded, bumpMapLoaded);
-        },
-        undefined,
-        () => {
-          console.warn('All Earth textures failed, using blue color');
-          material.color = new THREE.Color(0x1a5276);
-          material.needsUpdate = true;
-          earthTextureLoaded = true;
-          onLoad(earthTextureLoaded, bumpMapLoaded);
-        }
-      );
     }
-  );
+  };
   
-  // Load bump map for terrain
-  textureLoader.load(
-    options.textures.bumpMapUrl,
-    (texture) => {
-      console.log('Bump texture loaded');
-      material.bumpMap = texture;
-      material.bumpScale = 0.08; // Subtle bump effect
-      material.needsUpdate = true;
-      bumpMapLoaded = true;
-      onLoad(earthTextureLoaded, bumpMapLoaded);
-    },
-    undefined,
-    (error) => {
-      console.error('Error loading bump texture:', error);
-      bumpMapLoaded = true; // Mark as loaded even though it failed
+  // Use loading manager with texture loader
+  const managedLoader = new THREE.TextureLoader(loadingManager);
+  
+  // Load a placeholder for immediate feedback while real textures load
+  // Set an immediate basic color to give visual feedback
+  material.color = new THREE.Color(0x1a5276);
+  material.needsUpdate = true;
+  
+  // Load Earth texture with progressive enhancement
+  const loadMainTexture = () => {
+    managedLoader.load(
+      options.textures.earthBaseUrl,
+      (texture) => {
+        console.log('Earth texture loaded');
+        // THREE.js v0.133.0 uses encoding instead of colorSpace
+        texture.encoding = THREE.sRGBEncoding; // For more accurate colors
+        material.map = texture;
+        material.needsUpdate = true;
+        earthTextureLoaded = true;
+        checkAllLoaded();
+      },
+      // Progress callback - not needed
+      undefined,
+      (error) => {
+        console.error('Error loading Earth texture:', error);
+        // Fallback to a local texture or directly bundled image
+        managedLoader.load(
+          '/placeholder.svg',
+          (fallbackTexture) => {
+            console.log('Using simple placeholder as Earth texture');
+            fallbackTexture.encoding = THREE.sRGBEncoding;
+            material.map = fallbackTexture;
+            material.needsUpdate = true;
+            earthTextureLoaded = true;
+            checkAllLoaded();
+          },
+          undefined,
+          () => {
+            console.warn('All Earth textures failed, using blue color');
+            material.color = new THREE.Color(0x1a5276);
+            material.needsUpdate = true;
+            earthTextureLoaded = true;
+            checkAllLoaded();
+          }
+        );
+      }
+    );
+  };
+  
+  // Load bump map with helpful fallback
+  const loadBumpMap = () => {
+    managedLoader.load(
+      options.textures.bumpMapUrl,
+      (texture) => {
+        console.log('Bump texture loaded');
+        material.bumpMap = texture;
+        material.bumpScale = 0.08; // Subtle bump effect
+        material.needsUpdate = true;
+        bumpMapLoaded = true;
+        checkAllLoaded();
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading bump texture:', error);
+        bumpMapLoaded = true; // Mark as loaded even though it failed
+        checkAllLoaded();
+      }
+    );
+  };
+  
+  // Check if all textures are loaded and trigger callback
+  const checkAllLoaded = () => {
+    if (earthTextureLoaded && bumpMapLoaded) {
       onLoad(earthTextureLoaded, bumpMapLoaded);
     }
-  );
+  };
+  
+  // Start loading textures
+  loadMainTexture();
+  loadBumpMap();
 }
 
 /**
