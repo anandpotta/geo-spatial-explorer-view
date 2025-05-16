@@ -90,10 +90,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         />
       </div>
       
-      <SearchOverlay 
-        onLocationSelect={onLocationSelect} 
-        selectedLocation={selectedLocation}
-      />
+      <SearchOverlay onLocationSelect={onLocationSelect} />
       
       {/* Transition overlay that appears only during view transitions */}
       <TransitionOverlay isVisible={viewTransitionInProgress && !viewTransitionReady} />

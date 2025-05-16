@@ -1,9 +1,9 @@
+
 import * as THREE from 'three';
 import { createThreeViewerOptions } from '@/utils/threejs-viewer/viewer-options';
 
 /**
  * Load Earth textures and apply them to the given material
- * Modified to improve loading performance
  */
 export function loadEarthTextures(
   material: THREE.MeshPhongMaterial,
@@ -15,14 +15,6 @@ export function loadEarthTextures(
   // Track texture loading progress
   let earthTextureLoaded = false;
   let bumpMapLoaded = false;
-  
-  // Set timeout to ensure callback happens even if textures are slow
-  setTimeout(() => {
-    if (!earthTextureLoaded || !bumpMapLoaded) {
-      console.log('Forcing texture load completion after timeout');
-      onLoad(true, true); // Force completion after timeout
-    }
-  }, 3000);
   
   // Load Earth texture
   // We'll use a placeholder texture initially for faster loading
@@ -36,7 +28,7 @@ export function loadEarthTextures(
   );
   material.map = placeholderTexture;
   
-  // Load the Earth texture with high priority
+  // Load the Earth texture
   textureLoader.load(
     options.textures.earthBaseUrl,
     (texture) => {
@@ -74,26 +66,24 @@ export function loadEarthTextures(
     }
   );
   
-  // Load bump map with lower priority (after basic globe is shown)
-  setTimeout(() => {
-    textureLoader.load(
-      options.textures.bumpMapUrl,
-      (texture) => {
-        console.log('Bump texture loaded');
-        material.bumpMap = texture;
-        material.bumpScale = 0.08; // Subtle bump effect
-        material.needsUpdate = true;
-        bumpMapLoaded = true;
-        onLoad(earthTextureLoaded, bumpMapLoaded);
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading bump texture:', error);
-        bumpMapLoaded = true; // Mark as loaded even though it failed
-        onLoad(earthTextureLoaded, bumpMapLoaded);
-      }
-    );
-  }, 1000); // Delay bump map loading for faster initial display
+  // Load bump map for terrain
+  textureLoader.load(
+    options.textures.bumpMapUrl,
+    (texture) => {
+      console.log('Bump texture loaded');
+      material.bumpMap = texture;
+      material.bumpScale = 0.08; // Subtle bump effect
+      material.needsUpdate = true;
+      bumpMapLoaded = true;
+      onLoad(earthTextureLoaded, bumpMapLoaded);
+    },
+    undefined,
+    (error) => {
+      console.error('Error loading bump texture:', error);
+      bumpMapLoaded = true; // Mark as loaded even though it failed
+      onLoad(earthTextureLoaded, bumpMapLoaded);
+    }
+  );
 }
 
 /**
