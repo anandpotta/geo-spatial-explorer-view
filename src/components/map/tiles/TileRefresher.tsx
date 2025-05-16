@@ -31,15 +31,16 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
             const currentZoom = map.getZoom();
             const currentCenter = map.getCenter();
             
-            map.removeLayer(tileLayerRef.current);
+            map.removeLayer(tileLayerRef.current as unknown as L.Layer);
             
             // Create and add a new tile layer
             const newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
               attribution: '&copy; OpenStreetMap contributors',
               maxZoom: 19
-            }) as any;
+            });
             
-            map.addLayer(newTileLayer);
+            // Use proper type casting
+            map.addLayer(newTileLayer as unknown as L.Layer);
             
             tileLayerRef.current = newTileLayer;
             

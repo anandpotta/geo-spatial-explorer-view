@@ -39,6 +39,8 @@ declare global {
     // Extend Layer to ensure options property is available
     interface Layer {
       options?: LayerOptions;
+      // Make Layer's on method more compatible with LeafletEventHandlerFn
+      on(type: string, fn: LeafletEventHandlerFn, context?: any): this;
     }
     
     // Extended LeafletEvent interface to include the name property required by LayersControlEvent

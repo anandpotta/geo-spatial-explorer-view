@@ -27,10 +27,10 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
         updateWhenZooming: false // Update during zoom operations
       });
       
-      // Add the tile layer to the map with proper type casting to resolve TS errors
+      // Add the tile layer to the map with proper type handling
       try {
-        // Cast to any to bypass TypeScript's type checking temporarily
-        (map as any).addLayer(tileLayer as any);
+        // Use proper type casting for better compatibility
+        map.addLayer(tileLayer as unknown as L.Layer);
       } catch (err) {
         console.error("Error adding tile layer:", err);
         toast.error("Failed to load map tiles. Please try refreshing the page.");
@@ -41,7 +41,7 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
       
       tileLayerRef.current = tileLayer;
       
-      // Listen for tile load events with type assertion to resolve type issues
+      // Listen for tile load events with safer type handling
       const typedTileLayer = tileLayer as any;
       typedTileLayer.on('load', () => {
         console.log('Tiles loaded successfully');
@@ -73,7 +73,7 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
     return () => {
       if (tileLayerRef.current && map) {
         try {
-          map.removeLayer(tileLayerRef.current);
+          map.removeLayer(tileLayerRef.current as unknown as L.Layer);
           tileLayerRef.current = null;
         } catch (err) {
           console.error("Error removing tile layer:", err);
