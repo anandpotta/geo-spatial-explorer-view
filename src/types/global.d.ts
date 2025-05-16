@@ -27,6 +27,7 @@ declare global {
       addLayer(layer: L.Layer): this;
       removeLayer(layer: L.Layer): this;
       eachLayer(fn: (layer: L.Layer) => void, context?: any): this;
+      fire(type: string, data?: any): this;
     }
     
     // Extend LayerOptions to include our custom properties
@@ -38,6 +39,12 @@ declare global {
     // Extend Layer to ensure options property is available
     interface Layer {
       options?: LayerOptions;
+    }
+    
+    // Extend TileLayer to include event handling
+    interface TileLayer {
+      on(type: 'load' | 'loading' | 'tileload' | 'tileerror' | string, fn: L.LeafletEventHandlerFn): this;
+      setOpacity(opacity: number): this;
     }
   }
 

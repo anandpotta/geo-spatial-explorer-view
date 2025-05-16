@@ -46,7 +46,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     const resizeObserver = new ResizeObserver(() => {
       if (mapRef.current && isMapValid(mapRef.current)) {
         try {
-          mapRef.current.invalidateSize();
+          mapRef.current.invalidateSize(true);
           console.log("Map resized due to container change");
         } catch (err) {
           console.error("Error resizing map:", err);
@@ -147,31 +147,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     };
   }, [mapRef.current, isMapReady]);
   
-  // Force tile refreshes periodically when preloaded to ensure they load properly
-  useEffect(() => {
-    // Clear any existing refresh timer
-    if (forceTileRefreshRef.current) {
-      clearTimeout(forceTileRefreshRef.current);
-      forceTileRefreshRef.current = null;
-    }
-    
-    // When in preload mode, force refresh tiles occasionally
-    if (mapRef.current && preload) {
-      forceTileRefreshRef.current = setTimeout(() => {
-        if (mapRef.current && isMapValid(mapRef.current)) {
-          console.log("Forcing tile refresh for preloaded map");
-          mapRef.current.invalidateSize(true);
-        }
-      }, 1000); // Shorter timeout for faster loading
-    }
-    
-    return () => {
-      if (forceTileRefreshRef.current) {
-        clearTimeout(forceTileRefreshRef.current);
-      }
-    };
-  }, [preload, mapRef.current]);
-  
   // Enhanced map initialization with error handling
   const initMap = (element: HTMLElement) => {
     try {
@@ -180,13 +155,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       // Prevent multiple initializations on the same element
       if (mapInitializedRef.current) {
         console.log("Map already initialized, skipping initialization");
-        return;
-      }
-      
-      // Check if element already has a map instance
-      const leafletId = (element as HTMLElement & { _leaflet_id?: number })._leaflet_id;
-      if (leafletId) {
-        console.log("Element already has a map instance, skipping initialization");
         return;
       }
       
@@ -201,7 +169,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         minZoom: 1,
         maxZoom: 19,
         fadeAnimation: true,
-        zoomAnimation: true
+        zoomAnimation: true,
+        // Add rendering options to improve tile loading
+        renderer: L.canvas(),
+        preferCanvas: true
       });
       
       // Add tile layer with optimizations for initial loading
@@ -210,8 +181,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         maxZoom: 19,
         // Standard tile size for better quality
         tileSize: 256,
-        zoomOffset: 0
+        zoomOffset: 0,
+        className: 'map-tiles', // Add class for CSS targeting
+        updateWhenIdle: false, // Update even when map is moving
+        updateWhenZooming: false // Update during zoom operations
       }).addTo(map);
+      
+      // Set opacity explicitly to ensure visibility
+      tileLayer.setOpacity(1.0);
       
       tileLayerRef.current = tileLayer;
       
@@ -228,57 +205,53 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         if (map && isMapValid(map)) {
           map.invalidateSize(true);
           // Add additional redraw to ensure tiles load
-          setTimeout(() => map.invalidateSize(true), 200);
+          setTimeout(() => {
+            map.invalidateSize(true);
+            // Trigger events to ensure all map components are properly initialized
+            map.fire('load');
+            map.fire('moveend');
+          }, 200);
         }
       }, 100);
       
-      // Notify that map is ready sooner
-      setLoading(false);
-      
-      // Trigger onMapReady callback only once
-      if (!isReadyRef.current) {
-        isReadyRef.current = true;
+      // Listen for tile load events
+      tileLayer.on('load', () => {
+        console.log('Tiles loaded successfully');
+        setLoading(false);
         
-        // Small delay to ensure map is properly rendered
-        setTimeout(() => {
-          if (onMapReady) {
-            console.log('Calling onMapReady from LeafletMap');
-            onMapReady(map);
-          }
-          
-          // Additional invalidate after onMapReady for better rendering
-          if (map && isMapValid(map)) {
-            map.invalidateSize(true);
-            
-            // Force tile loading by triggering pan
-            setTimeout(() => {
-              try {
-                const center = map.getCenter();
-                map.panTo([center.lat + 0.0001, center.lng + 0.0001]);
-                setTimeout(() => map.panTo(center), 100);
-                toast.success("Map tiles loaded", { id: "map-tiles-loaded", duration: 2000 });
-              } catch (err) {
-                console.error("Error during map pan:", err);
-              }
-            }, 500);
-          }
-        }, preload ? 100 : 50);
-      }
-      
-      // Safely check if map is still valid before final invalidation
-      const invalidateMapSafely = () => {
-        if (map && isMapValid(map)) {
-          try {
-            map.invalidateSize(true);
-            console.log('Final map invalidation completed');
-          } catch (err) {
-            console.log('Map container removed before final invalidation');
-          }
+        if (onMapReady && !isReadyRef.current) {
+          isReadyRef.current = true;
+          console.log('Calling onMapReady from LeafletMap after tiles loaded');
+          onMapReady(map);
         }
-      };
+      });
       
-      // Final map invalidation for proper sizing with delay to ensure DOM is ready
-      setTimeout(invalidateMapSafely, 300);
+      // Listen for tile error events
+      tileLayer.on('tileerror', (error) => {
+        console.error('Tile loading error:', error);
+      });
+      
+      // Force tile loading by triggering pan
+      setTimeout(() => {
+        try {
+          const center = map.getCenter();
+          map.panTo([center.lat + 0.0001, center.lng + 0.0001]);
+          setTimeout(() => map.panTo(center), 100);
+        } catch (err) {
+          console.error("Error during map pan:", err);
+        }
+      }, 300);
+      
+      // Notify ready in case tile events don't fire (backup)
+      setTimeout(() => {
+        if (!isReadyRef.current && onMapReady) {
+          isReadyRef.current = true;
+          setLoading(false);
+          console.log('Calling onMapReady from timeout backup');
+          onMapReady(map);
+          toast.success("Map loaded", { id: "map-loaded", duration: 2000 });
+        }
+      }, 1000);
     } catch (err) {
       console.error("Map initialization error:", err);
       setMapError(`Failed to initialize map: ${err.message}`);
