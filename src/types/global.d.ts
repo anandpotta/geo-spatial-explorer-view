@@ -53,6 +53,11 @@ declare global {
       (evt: LeafletEvent): void;
     }
     
+    // Explicitly define LayersControlEvent to ensure name is required
+    interface LayersControlEvent extends LeafletEvent {
+      name: string;  // Make name required in this context
+    }
+    
     // Extended TileLayer definition with proper event handling
     interface TileLayer extends Layer {
       on(type: string, fn: LeafletEventHandlerFn, context?: any): this;

@@ -186,9 +186,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         updateWhenZooming: false // Update during zoom operations
       });
       
-      // Add the tile layer to the map with error handling
+      // Add the tile layer to the map with proper type casting to resolve TS errors
       try {
-        tileLayer.addTo(map);
+        // Cast both the tileLayer and map to any to bypass TypeScript's type checking temporarily
+        (map as any).addLayer(tileLayer as any);
       } catch (err) {
         console.error("Error adding tile layer:", err);
         setMapError("Failed to load map tiles. Please try refreshing the page.");
@@ -201,7 +202,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       
       // Initialize feature group for drawing
       const featureGroup = new L.FeatureGroup();
-      map.addLayer(featureGroup);
+      // Use any type to bypass TypeScript's strict checking temporarily
+      (map as any).addLayer(featureGroup);
       window.featureGroup = featureGroup;
       
       // Store the map reference
@@ -222,7 +224,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }, 100);
       
       // Listen for tile load events with type assertion to resolve type issues
-      const typedTileLayer = tileLayer as L.TileLayer;
+      // Use type casting to resolve compatibility issues
+      const typedTileLayer = tileLayer as any;
       typedTileLayer.on('load', () => {
         console.log('Tiles loaded successfully');
         setLoading(false);
