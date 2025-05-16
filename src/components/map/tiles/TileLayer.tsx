@@ -2,6 +2,7 @@
 import React, { useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 
 interface TileLayerProps {
   map: L.Map;
@@ -10,68 +11,87 @@ interface TileLayerProps {
 
 const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const tilesLoadedFired = useRef<boolean>(false);
   
   useEffect(() => {
-    if (!map) return;
-    
-    try {
-      // Add tile layer with optimizations for initial loading
-      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19,
-        // Standard tile size for better quality
-        tileSize: 256,
-        zoomOffset: 0,
-        className: 'map-tiles', // Add class for CSS targeting
-        updateWhenIdle: false, // Update even when map is moving
-        updateWhenZooming: false // Update during zoom operations
-      });
-      
-      // Add the tile layer to the map with proper type handling
-      try {
-        // Use proper type casting for better compatibility
-        map.addLayer(tileLayer as unknown as L.Layer);
-      } catch (err) {
-        console.error("Error adding tile layer:", err);
-        toast.error("Failed to load map tiles. Please try refreshing the page.");
-      }
-      
-      // Set opacity explicitly to ensure visibility
-      tileLayer.setOpacity(1.0);
-      
-      tileLayerRef.current = tileLayer;
-      
-      // Listen for tile load events with safer type handling
-      const typedTileLayer = tileLayer as any;
-      typedTileLayer.on('load', () => {
-        console.log('Tiles loaded successfully');
-        if (onTilesLoaded) {
-          onTilesLoaded();
-        }
-      });
-      
-      // Listen for tile error events
-      typedTileLayer.on('tileerror', (error: any) => {
-        console.error('Tile loading error:', error);
-      });
-      
-      // Force tile loading by triggering pan
-      setTimeout(() => {
-        try {
-          const center = map.getCenter();
-          map.panTo([center.lat + 0.0001, center.lng + 0.0001]);
-          setTimeout(() => map.panTo(center), 100);
-        } catch (err) {
-          console.error("Error during map pan:", err);
-        }
-      }, 300);
-    } catch (err) {
-      console.error("Error initializing tile layer:", err);
+    if (!map || !isMapValid(map)) {
+      console.log("Map not ready for tile layer");
+      return;
     }
+    
+    // Small delay to ensure map is fully initialized
+    const initTimeout = setTimeout(() => {
+      try {
+        // Check if map still valid after timeout
+        if (!isMapValid(map)) {
+          console.log("Map became invalid during tile initialization");
+          return;
+        }
+
+        // Add tile layer with optimizations
+        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+          tileSize: 256,
+          zoomOffset: 0,
+          className: 'map-tiles',
+          updateWhenIdle: true,
+          updateWhenZooming: false
+        });
+        
+        // Add the tile layer to the map with proper type handling
+        try {
+          // Type assertion needed due to TypeScript's strict checking
+          map.addLayer(tileLayer as unknown as L.Layer);
+          console.log("Tile layer added successfully");
+        } catch (err) {
+          console.error("Error adding tile layer:", err);
+          toast.error("Failed to load map tiles. Please try refreshing the page.");
+        }
+        
+        // Set opacity explicitly to ensure visibility
+        tileLayer.setOpacity(1.0);
+        tileLayerRef.current = tileLayer;
+        
+        // Listen for tile load events
+        const typedTileLayer = tileLayer as any;
+        typedTileLayer.on('load', () => {
+          if (tilesLoadedFired.current) return; // Prevent multiple callbacks
+          
+          console.log('Tiles loaded successfully');
+          tilesLoadedFired.current = true;
+          if (onTilesLoaded) {
+            onTilesLoaded();
+          }
+        });
+        
+        // Listen for tile error events
+        typedTileLayer.on('tileerror', (error: any) => {
+          console.error('Tile loading error:', error);
+        });
+        
+        // Manually trigger view update after a delay to ensure tile loading
+        setTimeout(() => {
+          try {
+            if (isMapValid(map)) {
+              map.invalidateSize(true);
+              const currentZoom = map.getZoom();
+              map.setZoom(currentZoom);
+            }
+          } catch (err) {
+            console.error("Error during map refresh:", err);
+          }
+        }, 500);
+        
+      } catch (err) {
+        console.error("Error initializing tile layer:", err);
+      }
+    }, 100); // Small delay for better sequencing
     
     // Cleanup
     return () => {
-      if (tileLayerRef.current && map) {
+      clearTimeout(initTimeout);
+      if (tileLayerRef.current && map && isMapValid(map)) {
         try {
           map.removeLayer(tileLayerRef.current as unknown as L.Layer);
           tileLayerRef.current = null;

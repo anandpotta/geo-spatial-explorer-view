@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import LeafletMap from '@/components/map/LeafletMap';
 import { Location } from '@/utils/geo-utils';
 import { getLeafletStyles } from './ViewTransitionStyles';
@@ -34,20 +34,33 @@ const LeafletView: React.FC<LeafletViewProps> = ({
   const shouldRender = currentView === 'leaflet' || transitioning || preloadedLeaflet;
   const fadeInClass = fadeIn && currentView === 'leaflet' ? 'animate-fade-in' : '';
   const isLeafletView = currentView === 'leaflet';
+  const mapMountedRef = useRef(false);
+  
+  // When view changes to Leaflet, ensure map gets proper initialization signal
+  useEffect(() => {
+    if (currentView === 'leaflet' && !mapMountedRef.current) {
+      console.log("Leaflet is now the active view");
+      mapMountedRef.current = true;
+    }
+  }, [currentView]);
 
   return (
     <div 
       className={`absolute inset-0 transition-all duration-300 ease-in-out ${fadeInClass}`}
       style={styles}
       data-map-type="leaflet"
+      data-active={currentView === 'leaflet' ? 'true' : 'false'}
     >
       {shouldRender && (
         <>
           <LeafletMap 
             selectedLocation={selectedLocation} 
-            onMapReady={onMapReady}
+            onMapReady={(map) => {
+              console.log("LeafletMap ready callback triggered");
+              onMapReady(map);
+            }}
             activeTool={currentView === 'leaflet' ? activeTool : null}
-            key={leafletKey}
+            key={`${leafletKey}-${currentView === 'leaflet' ? 'active' : 'inactive'}`}
             onClearAll={onClearAll}
             preload={currentView !== 'leaflet'}
           />

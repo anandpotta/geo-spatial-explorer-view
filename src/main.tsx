@@ -13,9 +13,18 @@ style.textContent = `
   .leaflet-tile-container {
     opacity: 1 !important;
     visibility: visible !important;
+    z-index: 200 !important;
   }
-  .map-tiles {
+  .map-tiles, .map-tiles-refreshed {
     opacity: 1 !important;
+    z-index: 200 !important;
+  }
+  .leaflet-tile {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  .leaflet-container {
+    background: #f0f0f0 !important;
   }
 `;
 document.head.appendChild(style);
