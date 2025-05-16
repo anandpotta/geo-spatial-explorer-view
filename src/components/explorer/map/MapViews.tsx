@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect, CSSProperties, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
-import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
-import LeafletMap from '../../map/LeafletMap';
-import { toast } from '@/components/ui/use-toast';
+import CesiumView from './views/CesiumView';
+import LeafletView from './views/LeafletView';
+import TransitionEffect from './views/TransitionEffect';
 
 interface MapViewsProps {
   currentView: 'cesium' | 'leaflet';
@@ -20,7 +20,7 @@ interface MapViewsProps {
 }
 
 const MapViews: React.FC<MapViewsProps> = ({
-  currentView,
+  currentView, 
   mapKey,
   selectedLocation,
   onMapReady,
@@ -32,7 +32,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   viewTransitionReady = true,
   viewTransitionInProgress = false
 }) => {
-  // Add transition state to handle smoother view changes
+  // State management for transitions
   const [transitioning, setTransitioning] = useState(false);
   const [previousView, setPreviousView] = useState<'cesium' | 'leaflet' | null>(null);
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
@@ -41,7 +41,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   const bothViewsReadyRef = useRef<boolean>(false);
   const [preloadedLeaflet, setPreloadedLeaflet] = useState(false);
   
-  // Key to force remount of the inactive map when switching
+  // Keys to force remount of the inactive map when switching
   const [leafletKey, setLeafletKey] = useState(`leaflet-${mapKey}`);
   const [cesiumKey, setCesiumKey] = useState(`cesium-${mapKey}`);
   
@@ -99,142 +99,60 @@ const MapViews: React.FC<MapViewsProps> = ({
     setPreviousView(currentView);
   }, [currentView, previousView]);
   
-  // Calculate transition progress for smoother animations
-  const getTransitionStyles = (isCurrentView: boolean): React.CSSProperties => {
-    if (!transitioning) {
-      return {
-        opacity: isCurrentView ? 1 : 0,
-        transform: isCurrentView ? 'scale(1)' : 'scale(0.95)',
-        zIndex: isCurrentView ? 10 : 0,
-        visibility: isCurrentView ? 'visible' : 'hidden'
-      };
-    }
-    
-    // During transition, both views are visible but with different opacities
-    return {
-      opacity: isCurrentView ? 0.2 : 0.8, // Faster fade out for current view
-      transform: isCurrentView ? 'scale(0.97)' : 'scale(0.99)', // Subtle zoom effect
-      zIndex: isCurrentView ? 5 : 10, // New view on top during transition
-      visibility: 'visible' // Both visible during transition
-    };
-  };
-  
-  // Get styles for current view
-  const getCesiumStyles = (): React.CSSProperties => {
-    const isCurrent = currentView === 'cesium';
-    const styles = getTransitionStyles(isCurrent);
-    
-    const baseStyles: React.CSSProperties = {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: '100%',
-      height: '100%',
-      visibility: styles.visibility,
-      opacity: styles.opacity,
-      transform: styles.transform,
-      zIndex: styles.zIndex,
-      transition: 'opacity 400ms ease-in-out, transform 400ms ease-in-out' // Faster transition
-    };
-    
-    return baseStyles;
-  };
-  
-  const getLeafletStyles = (): React.CSSProperties => {
-    const isCurrent = currentView === 'leaflet';
-    const styles = getTransitionStyles(!isCurrent);
-    
-    // For leaflet, we want to keep it preloaded in the background but invisible
-    const baseStyles: React.CSSProperties = {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: '100%',
-      height: '100%',
-      // Show when current view or during transition or when preloaded
-      visibility: isCurrent || transitioning || preloadedLeaflet ? 'visible' : 'hidden',
-      opacity: 1 - (styles.opacity as number),
-      transform: isCurrent ? 'scale(1)' : 'scale(0.98)',
-      zIndex: isCurrent ? 10 : (transitioning ? 5 : 1),
-      transition: 'opacity 400ms ease-in-out, transform 400ms ease-in-out' // Faster transition
-    };
-    
-    return baseStyles;
-  };
-  
-  // Add fade-in effect when a view becomes active
-  const fadeInClass = fadeIn ? 'animate-fade-in' : '';
-  
   // Handle both maps loaded to enable smoother transitions
   const handleBothMapsReady = () => {
     if (!bothViewsReadyRef.current) {
       bothViewsReadyRef.current = true;
     }
   };
-  
-  // Renders the map components with proper styles and visibility
+
+  // Handle Leaflet map ready callback with additional logic
+  const handleLeafletMapReady = (map: any) => {
+    handleLeafletMapRef(map);
+    handleBothMapsReady();
+    
+    // When Leaflet is active, make sure to trigger onMapReady
+    if (currentView === 'leaflet') {
+      onMapReady();
+    }
+  };
+
+  // Handle Cesium map ready callback
+  const handleCesiumMapReady = () => {
+    onMapReady();
+    handleBothMapsReady();
+  };
+
   return (
     <>
       {/* Cesium Globe View */}
-      <div 
-        className={`absolute inset-0 transition-all duration-300 ease-in-out ${currentView === 'cesium' ? fadeInClass : ''}`}
-        style={getCesiumStyles()}
-        data-map-type="cesium"
-      >
-        {(currentView === 'cesium' || transitioning || viewTransitionInProgress) && (
-          <CesiumMap 
-            selectedLocation={selectedLocation}
-            onMapReady={() => {
-              onMapReady();
-              handleBothMapsReady();
-            }}
-            onFlyComplete={onFlyComplete}
-            cinematicFlight={true}
-            key={cesiumKey}
-            onViewerReady={handleCesiumViewerRef}
-          />
-        )}
-      </div>
+      <CesiumView
+        currentView={currentView}
+        transitioning={transitioning}
+        viewTransitionInProgress={viewTransitionInProgress || false}
+        selectedLocation={selectedLocation}
+        cesiumKey={cesiumKey}
+        onMapReady={handleCesiumMapReady}
+        onFlyComplete={onFlyComplete}
+        onViewerReady={handleCesiumViewerRef}
+        fadeIn={fadeIn}
+      />
       
       {/* Leaflet Map View */}
-      <div 
-        className={`absolute inset-0 transition-all duration-300 ease-in-out ${currentView === 'leaflet' ? fadeInClass : ''}`}
-        style={getLeafletStyles()}
-        data-map-type="leaflet"
-      >
-        {(currentView === 'leaflet' || transitioning || preloadedLeaflet) && (
-          <LeafletMap 
-            selectedLocation={selectedLocation} 
-            onMapReady={(map) => {
-              handleLeafletMapRef(map);
-              handleBothMapsReady();
-              
-              // When Leaflet is active, make sure to trigger onMapReady
-              if (currentView === 'leaflet') {
-                onMapReady();
-              }
-            }}
-            activeTool={currentView === 'leaflet' ? activeTool : null}
-            key={leafletKey}
-            onClearAll={handleClearAll}
-            preload={currentView !== 'leaflet'}
-          />
-        )}
-      </div>
+      <LeafletView
+        currentView={currentView}
+        transitioning={transitioning}
+        preloadedLeaflet={preloadedLeaflet}
+        selectedLocation={selectedLocation}
+        leafletKey={leafletKey}
+        onMapReady={handleLeafletMapReady}
+        activeTool={activeTool}
+        onClearAll={handleClearAll}
+        fadeIn={fadeIn}
+      />
       
-      {/* Add transition overlay - subtle fade effect during transitions */}
-      {transitioning && (
-        <div 
-          className="absolute inset-0 bg-black bg-opacity-20 z-20 pointer-events-none"
-          style={{
-            animation: 'fadeInOut 400ms ease-in-out forwards'
-          }}
-        />
-      )}
+      {/* Transition overlay effect */}
+      <TransitionEffect transitioning={transitioning} />
     </>
   );
 };
