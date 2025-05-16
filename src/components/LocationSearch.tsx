@@ -5,19 +5,29 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, X, Navigation, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { formatCoordinates } from '@/utils/location-utils';
 
 interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;
+  selectedLocation?: Location;
 }
 
-const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
+const LocationSearch = ({ onLocationSelect, selectedLocation }: LocationSearchProps) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [localSelectedLocation, setLocalSelectedLocation] = useState<Location | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const { toast } = useToast();
+
+  // Sync local state with prop
+  useEffect(() => {
+    if (selectedLocation) {
+      setLocalSelectedLocation(selectedLocation);
+      setQuery(selectedLocation.label);
+    }
+  }, [selectedLocation]);
 
   useEffect(() => {
     // Check if we're online or offline
@@ -82,7 +92,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
 
   const handleSelect = (location: Location) => {
     console.log('Location selected in search component:', location);
-    setSelectedLocation(location);
+    setLocalSelectedLocation(location);
     setQuery(location.label);
     setShowResults(false);
     
@@ -97,19 +107,19 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
 
   const handleClear = () => {
     setQuery('');
-    setSelectedLocation(null);
+    setLocalSelectedLocation(null);
     setResults([]);
     setShowResults(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedLocation) {
-      onLocationSelect(selectedLocation);
+    if (localSelectedLocation) {
+      onLocationSelect(localSelectedLocation);
       
       toast({
         title: "Starting navigation",
-        description: `Traveling to ${selectedLocation.label}`,
+        description: `Traveling to ${localSelectedLocation.label}`,
         duration: 3000,
       });
     } else if (results.length > 0) {
@@ -190,11 +200,11 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         )}
       </form>
       
-      {selectedLocation && (
-        <div className="mt-3 p-3 bg-accent rounded-md">
-          <h3 className="font-medium">{selectedLocation.label}</h3>
-          <p className="text-sm text-muted-foreground">
-            Lat: {selectedLocation.y.toFixed(6)}, Lng: {selectedLocation.x.toFixed(6)}
+      {localSelectedLocation && (
+        <div className="mt-3 p-3 bg-accent rounded-md animate-fade-in">
+          <h3 className="font-medium">{localSelectedLocation.label}</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {formatCoordinates(localSelectedLocation.y, localSelectedLocation.x)}
           </p>
         </div>
       )}

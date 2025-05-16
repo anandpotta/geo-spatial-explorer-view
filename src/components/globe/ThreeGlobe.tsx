@@ -21,13 +21,18 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
   
-  // Initialize globe only once
+  // Initialize globe with faster startup
   const globeAPI = useThreeGlobe(containerRef, () => {
     if (!isInitialized && !initializationAttemptedRef.current) {
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
       console.log("ThreeGlobe: Globe initialized");
-      if (onMapReady) onMapReady(globeAPI);
+      
+      // Call the ready callback immediately
+      if (onMapReady) {
+        console.log("ThreeGlobe: Calling onMapReady immediately");
+        onMapReady(globeAPI);
+      }
     }
   });
   
@@ -67,6 +72,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       // Add marker at the location with null check
       if (globeAPI.addMarker) {
         globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+        console.log("Added marker for:", selectedLocation.label);
       }
     } else {
       console.error("Invalid coordinates:", selectedLocation);
@@ -93,7 +99,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         backgroundColor: 'black'
       }}
     >
-      {/* Canvas will be added here by Three.js */}
+      {!isInitialized && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black text-white">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <h3 className="text-xl font-bold">Loading Globe</h3>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
