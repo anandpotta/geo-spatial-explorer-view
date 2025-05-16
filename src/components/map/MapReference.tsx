@@ -38,7 +38,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     if (map && onMapReady && !hasCalledOnReady.current) {
       console.log('Map is ready, will call onMapReady after initialization');
       
-      // Wait until the map is fully initialized before calling onMapReady
+      // Call onMapReady sooner to start initialization process
       const timeout = setTimeout(() => {
         try {
           // Check if map container still exists and is attached to DOM
@@ -46,22 +46,12 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             // Mark as called immediately to prevent duplicate calls
             hasCalledOnReady.current = true;
             
-            // Check if map is valid before trying to invalidate size
+            // Always invalidate size immediately for better responsiveness
             try {
-              // Cast to internal map type to access private properties
-              const internalMap = map as L.Map & LeafletMapInternal;
-              
-              // Only invalidate size if map is properly initialized
-              if (internalMap && 
-                  internalMap._panes && 
-                  internalMap._panes.mapPane) {
-                console.log('Map panes initialized, calling invalidateSize');
-                map.invalidateSize(true);
-              } else {
-                console.log('Map panes not fully initialized yet, skipping invalidateSize');
-              }
+              map.invalidateSize(true);
+              console.log('Initial size invalidation completed');
             } catch (err) {
-              console.log('Skipping invalidateSize due to initialization state');
+              console.log('Initial invalidateSize encountered an issue, continuing');
             }
             
             console.log('Map container verified, calling onMapReady');
@@ -70,7 +60,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             // Mark map as stable after initial setup
             setTimeout(() => {
               setIsStable(true);
-            }, 500);
+            }, 300); // Shorter delay for faster stabilization
             
             // Just one additional invalidation after a reasonable delay
             const additionalTimeout = setTimeout(() => {
@@ -82,7 +72,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
                   // Ignore errors during additional invalidations
                 }
               }
-            }, 1500);
+            }, 1000); // Faster final invalidation
             timeoutRefs.current.push(additionalTimeout);
           } else {
             console.log('Map container not ready or not attached to DOM');
@@ -99,14 +89,14 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
                   console.warn('Failed to initialize map on retry');
                 }
               }
-            }, 1000);
+            }, 500); // Faster retry
             timeoutRefs.current.push(retryTimeout);
           }
         } catch (err) {
           console.error('Error in map initialization:', err);
           toast.error("Map initialization issue. Please refresh the page.");
         }
-      }, 250);
+      }, 100); // Much faster initial call
       
       timeoutRefs.current.push(timeout);
     }

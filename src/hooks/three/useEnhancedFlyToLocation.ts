@@ -38,31 +38,43 @@ export function useEnhancedFlyToLocation(
     // Temporarily disable auto-rotation for smoother flight
     setAutoRotation(false);
     
+    // Pre-trigger callback with minimal delay so UI can prepare for transition sooner
+    // This helps start the map preparation earlier for a more seamless experience
+    const preTransitionTimeout = setTimeout(() => {
+      if (isFlyingRef.current) {
+        // Signal that we're about to complete the fly (this primes the UI)
+        console.log('Pre-triggering transition preparation');
+      }
+    }, 1000); // Short pre-trigger for UI preparation
+    
     // Clear any existing flight completion callbacks
     const flyCompletionTimeout = setTimeout(() => {
-      // If the flight doesn't complete in 8 seconds, force completion
+      // If the flight doesn't complete in 6 seconds (reduced from 8), force completion
       if (isFlyingRef.current) {
         console.log('Flight timeout exceeded, forcing completion');
         isFlyingRef.current = false;
+        clearTimeout(preTransitionTimeout);
         
         if (onComplete) onComplete();
       }
-    }, 8000);
+    }, 6000); // Reduced timeout for better responsiveness
     
     // Call the original flyToLocation with enhanced completion handling
     flyToLocation(longitude, latitude, () => {
       // Mark flying as complete
       isFlyingRef.current = false;
       
-      // Clear the safety timeout
+      // Clear the safety timeouts
       clearTimeout(flyCompletionTimeout);
+      clearTimeout(preTransitionTimeout);
+      
+      // Immediate callback to prevent delay in transition
+      if (onComplete) onComplete();
       
       // Small delay before re-enabling rotation for smoother transition
       setTimeout(() => {
         // Re-enable auto-rotation with a smooth start
         setAutoRotation(true);
-        
-        if (onComplete) onComplete();
       }, 500);
     });
   }, [flyToLocation, setAutoRotation, isFlyingRef]);

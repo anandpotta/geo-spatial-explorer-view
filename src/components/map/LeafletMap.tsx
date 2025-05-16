@@ -35,6 +35,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const [mapError, setMapError] = useState<string | null>(null);
   const isReadyRef = useRef(false);
   const mapInitializedRef = useRef(false);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   
   // Ensure the map resizes properly when container changes
   useEffect(() => {
@@ -93,6 +94,31 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   );
   
+  // Preload map tiles if needed
+  useEffect(() => {
+    if (mapRef.current && tileLayerRef.current && !preload) {
+      // If no longer in preload mode, improve tile quality
+      try {
+        tileLayerRef.current.remove();
+        
+        // Add higher quality tile layer
+        const newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 18,
+          tileSize: 256,
+          zoomOffset: 0
+        }).addTo(mapRef.current);
+        
+        tileLayerRef.current = newTileLayer;
+        
+        // Force map to refresh tiles
+        mapRef.current.invalidateSize(true);
+      } catch (err) {
+        console.error("Error upgrading tile layer:", err);
+      }
+    }
+  }, [preload, mapRef.current]);
+  
   // Enhanced map initialization with error handling
   const initMap = (element: HTMLElement) => {
     try {
@@ -113,22 +139,26 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       mapInitializedRef.current = true;
       
       const map = L.map(element, {
-        center: [0, 0],
-        zoom: 2,
+        center: selectedLocation ? [selectedLocation.y, selectedLocation.x] : [0, 0],
+        zoom: selectedLocation ? 16 : 2,
         zoomControl: false,
         attributionControl: true,
         minZoom: 1,
-        maxZoom: 18
+        maxZoom: 19,
+        fadeAnimation: true,
+        zoomAnimation: true
       });
       
-      // Add tile layer with less intensive loading during preload
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Add tile layer with optimizations for initial loading
+      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 18,
-        // If preloading, use lower quality tiles initially
+        maxZoom: 19,
+        // If preloading, use lower quality tiles initially to speed up loading
         tileSize: preload ? 512 : 256,
         zoomOffset: preload ? -1 : 0
       }).addTo(map);
+      
+      tileLayerRef.current = tileLayer;
       
       // Initialize feature group for drawing
       const featureGroup = new L.FeatureGroup();
@@ -138,16 +168,20 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       // Add draw control
       handleSetMapRef(map);
       
-      // Notify that map is ready
+      // Notify that map is ready sooner
       setLoading(false);
       
       // Trigger onMapReady callback only once
       if (!isReadyRef.current) {
         isReadyRef.current = true;
-        if (onMapReady) {
-          console.log('Calling onMapReady from LeafletMap');
-          onMapReady(map);
-        }
+        
+        // Small delay to ensure map is properly rendered
+        setTimeout(() => {
+          if (onMapReady) {
+            console.log('Calling onMapReady from LeafletMap');
+            onMapReady(map);
+          }
+        }, preload ? 100 : 50); // Faster when not preloading
       }
       
       // Safely check if map is still valid before final invalidation
@@ -163,7 +197,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       };
       
       // Final map invalidation for proper sizing with delay to ensure DOM is ready
-      setTimeout(invalidateMapSafely, 500);
+      setTimeout(invalidateMapSafely, 300); // Faster invalidation
     } catch (err) {
       console.error("Map initialization error:", err);
       setMapError(`Failed to initialize map: ${err.message}`);
@@ -176,6 +210,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     return () => {
       isReadyRef.current = false;
       mapInitializedRef.current = false;
+      tileLayerRef.current = null;
       
       // Clean up the map instance
       if (mapRef.current) {
@@ -208,10 +243,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       
       {/* Loading indicator - only show if not preloading in background */}
       {loading && !preload && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-50">
+        <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <h3 className="text-xl font-bold">Loading Map</h3>
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+            <h3 className="text-lg font-medium">Loading Map</h3>
           </div>
         </div>
       )}

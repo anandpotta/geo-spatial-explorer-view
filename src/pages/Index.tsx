@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import MapContent from '@/components/explorer/MapContent';
 import ExplorerSidebar from '@/components/explorer/ExplorerSidebar';
@@ -15,12 +14,13 @@ const Index = () => {
   const previousLocationRef = useRef<string | null>(null);
   const [viewTransitionReady, setViewTransitionReady] = useState(true);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const leafletReadyRef = useRef(false);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
     const now = Date.now();
     if (locationSelectionTimeRef.current && 
-        now - locationSelectionTimeRef.current < 1000) {
+        now - locationSelectionTimeRef.current < 800) { // Slightly faster prevention
       return;
     }
     
@@ -49,7 +49,7 @@ const Index = () => {
     // Mark transition as in progress to prevent UI flashing
     setViewTransitionReady(false);
     
-    // Safety timeout - if fly completion doesn't trigger within 10 seconds,
+    // Safety timeout - if fly completion doesn't trigger within 8 seconds,
     // force transition to continue
     if (transitionTimeoutRef.current) {
       clearTimeout(transitionTimeoutRef.current);
@@ -60,7 +60,7 @@ const Index = () => {
         console.log("Fly completion timeout - forcing completion");
         handleFlyComplete();
       }
-    }, 10000);
+    }, 8000);
   };
 
   const handleFlyComplete = () => {
@@ -77,11 +77,13 @@ const Index = () => {
     if (shouldSwitchToLeaflet && currentView === 'cesium') {
       console.log("Preparing transition to leaflet view after fly completion");
       
-      // Short delay before switching to ensure globe has stabilized
+      // Start transition to leaflet immediately but keep transition state
+      // to ensure smooth visual transition
+      setCurrentView('leaflet');
+      setShouldSwitchToLeaflet(false);
+      
+      // Slight delay before showing toast for better UX
       setTimeout(() => {
-        setCurrentView('leaflet');
-        setShouldSwitchToLeaflet(false);
-        
         // Show toast with location info
         if (selectedLocation) {
           toast({
@@ -90,19 +92,33 @@ const Index = () => {
             duration: 3000,
           });
         }
-      }, 800); // Slightly longer delay for more stable transition
+        
+        // Reset view transition ready state slightly later
+        setTimeout(() => {
+          setViewTransitionReady(true);
+        }, 300);
+      }, 500);
+    } else {
+      // If not switching views, just reset transition state
+      setViewTransitionReady(true);
     }
     
     // Reset location selection timer
-    setTimeout(() => {
-      locationSelectionTimeRef.current = null;
-      setViewTransitionReady(true);
-    }, 500);
+    locationSelectionTimeRef.current = null;
   };
 
   const handleMapReady = () => {
     console.log('Map is ready');
-    setViewTransitionReady(true);
+    
+    // If this is the leaflet map becoming ready, mark it
+    if (currentView === 'leaflet') {
+      leafletReadyRef.current = true;
+    }
+    
+    // Allow a small delay for map rendering before marking ready
+    setTimeout(() => {
+      setViewTransitionReady(true);
+    }, 200);
   };
 
   const handleViewChange = (view: 'cesium' | 'leaflet') => {
@@ -136,7 +152,7 @@ const Index = () => {
     setTimeout(() => {
       viewTransitionInProgressRef.current = false;
       setViewTransitionReady(true); // End transition
-    }, 1000);
+    }, 800); // Slightly faster transition
   };
 
   const handleSavedLocationSelect = (position: [number, number]) => {
@@ -156,7 +172,7 @@ const Index = () => {
       // If transition is happening, set a backup timer to ensure we don't get stuck
       const timer = setTimeout(() => {
         setViewTransitionReady(true);
-      }, 2500);
+      }, 2000); // Shorter timeout
       return () => clearTimeout(timer);
     }
   }, [viewTransitionReady]);
