@@ -41,9 +41,22 @@ declare global {
       options?: LayerOptions;
     }
     
-    // Extend TileLayer to include event handling
-    interface TileLayer {
-      on(type: 'load' | 'loading' | 'tileload' | 'tileerror' | string, fn: L.LeafletEventHandlerFn): this;
+    // Extended LeafletEvent interface to include the name property required by LayersControlEvent
+    interface LeafletEvent {
+      type: string;
+      target: any;
+      name?: string;  // Add the name property that's required by LayersControlEvent
+    }
+    
+    // Extended LeafletEventHandlerFn to handle events with name property
+    interface LeafletEventHandlerFn {
+      (evt: LeafletEvent): void;
+    }
+    
+    // Extended TileLayer definition with proper event handling
+    interface TileLayer extends Layer {
+      on(type: string, fn: LeafletEventHandlerFn, context?: any): this;
+      on(type: 'load' | 'loading' | 'tileload' | 'tileerror', fn: LeafletEventHandlerFn, context?: any): this;
       setOpacity(opacity: number): this;
     }
   }

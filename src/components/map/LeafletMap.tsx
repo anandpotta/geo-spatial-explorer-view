@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
@@ -185,7 +184,15 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         className: 'map-tiles', // Add class for CSS targeting
         updateWhenIdle: false, // Update even when map is moving
         updateWhenZooming: false // Update during zoom operations
-      }).addTo(map);
+      });
+      
+      // Add the tile layer to the map with error handling
+      try {
+        tileLayer.addTo(map);
+      } catch (err) {
+        console.error("Error adding tile layer:", err);
+        setMapError("Failed to load map tiles. Please try refreshing the page.");
+      }
       
       // Set opacity explicitly to ensure visibility
       tileLayer.setOpacity(1.0);
@@ -214,8 +221,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         }
       }, 100);
       
-      // Listen for tile load events
-      tileLayer.on('load', () => {
+      // Listen for tile load events with type assertion to resolve type issues
+      const typedTileLayer = tileLayer as L.TileLayer;
+      typedTileLayer.on('load', () => {
         console.log('Tiles loaded successfully');
         setLoading(false);
         
@@ -227,7 +235,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       });
       
       // Listen for tile error events
-      tileLayer.on('tileerror', (error) => {
+      typedTileLayer.on('tileerror', (error) => {
         console.error('Tile loading error:', error);
       });
       
