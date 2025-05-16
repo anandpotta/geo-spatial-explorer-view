@@ -42,12 +42,15 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         try {
           // Validate the map instance before using it
           if (isMapValid(leafletMapRef.current)) {
-            const layers = leafletMapRef.current._layers;
+            // Use type assertion to access _layers property safely
+            const map = leafletMapRef.current as L.Map & { _layers?: {[key: string]: L.Layer} };
+            const layers = map._layers;
+            
             if (layers) {
               Object.keys(layers).forEach(layerId => {
                 const layer = layers[layerId];
                 if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-                  leafletMapRef.current.removeLayer(layer);
+                  map.removeLayer(layer);
                 }
               });
               toast.info('All shapes cleared');

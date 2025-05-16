@@ -132,7 +132,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }
       
       // Check if element already has a map instance
-      if (element._leaflet_id) {
+      // Safely check for _leaflet_id property using type assertion
+      const leafletId = (element as HTMLElement & { _leaflet_id?: number })._leaflet_id;
+      if (leafletId) {
         console.log("Element already has a map instance, skipping initialization");
         return;
       }
