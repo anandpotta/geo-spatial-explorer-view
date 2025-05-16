@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
@@ -12,10 +12,25 @@ interface TileLayerProps {
 const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const tilesLoadedFired = useRef<boolean>(false);
+  const [tileLoadAttempts, setTileLoadAttempts] = useState(0);
   
   useEffect(() => {
-    if (!map || !isMapValid(map)) {
-      console.log("Map not ready for tile layer");
+    if (!map) {
+      console.log("Map not provided for tile layer");
+      return;
+    }
+    
+    // Verify map is valid before proceeding
+    if (!isMapValid(map)) {
+      console.log("Map not valid for tile layer");
+      
+      // Try again after a delay if attempts are limited
+      if (tileLoadAttempts < 3) {
+        const retryTimeout = setTimeout(() => {
+          setTileLoadAttempts(prev => prev + 1);
+        }, 1000);
+        return () => clearTimeout(retryTimeout);
+      }
       return;
     }
     
@@ -24,9 +39,15 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
     // Small delay to ensure map is fully initialized
     const initTimeout = setTimeout(() => {
       try {
-        // Check if component is still mounted and map is valid
+        // Check if map is still valid and has required properties
         if (!isMounted || !isMapValid(map)) {
-          console.log("Component unmounted or map became invalid during tile initialization");
+          console.log("Map became invalid during tile initialization");
+          return;
+        }
+        
+        // Verify critical map properties
+        if (!map.getContainer() || !(map as any)._leaflet_id) {
+          console.log("Map missing critical properties, delaying tile layer");
           return;
         }
 
@@ -46,51 +67,56 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
         
         // Only add a new layer if one doesn't exist already
         if (!existingLayer) {
-          // Add tile layer with optimizations
-          const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19,
-            tileSize: 256,
-            zoomOffset: 0,
-            className: 'map-tiles',
-            updateWhenIdle: true,
-            updateWhenZooming: false
-          });
-          
-          // Add the tile layer to the map with proper error handling
+          // Create the tile layer
           try {
-            // Ensure map is valid before adding layer
-            if (isMapValid(map)) {
-              // Using as any to bypass TypeScript issue with layer types
-              map.addLayer(tileLayer as any);
-              console.log("Tile layer added successfully");
-              
-              // Set opacity explicitly to ensure visibility
-              tileLayer.setOpacity(1.0);
-              tileLayerRef.current = tileLayer;
-              
-              // Listen for tile load events
-              const typedTileLayer = tileLayer as any;
-              typedTileLayer.on('load', () => {
-                if (tilesLoadedFired.current || !isMounted) return;
+            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; OpenStreetMap contributors',
+              maxZoom: 19,
+              tileSize: 256,
+              zoomOffset: 0,
+              className: 'map-tiles',
+              updateWhenIdle: true,
+              updateWhenZooming: false
+            });
+            
+            // Additional safety check before adding layer
+            if (isMapValid(map) && map.getContainer()) {
+              // Add layer with explicit error handling
+              try {
+                map.addLayer(tileLayer as any);
+                console.log("Tile layer added successfully");
                 
-                console.log('Tiles loaded successfully');
-                tilesLoadedFired.current = true;
-                if (onTilesLoaded && isMounted) {
-                  onTilesLoaded();
-                }
-              });
-              
-              // Listen for tile error events
-              typedTileLayer.on('tileerror', (error: any) => {
-                console.error('Tile loading error:', error);
-              });
+                // Force opacity to ensure visibility
+                tileLayer.setOpacity(1.0);
+                tileLayerRef.current = tileLayer;
+                
+                // Listen for tile load events
+                const typedTileLayer = tileLayer as any;
+                typedTileLayer.on('load', () => {
+                  if (tilesLoadedFired.current || !isMounted) return;
+                  
+                  console.log('Tiles loaded successfully');
+                  tilesLoadedFired.current = true;
+                  if (onTilesLoaded && isMounted) {
+                    onTilesLoaded();
+                  }
+                });
+                
+                // Listen for tile error events with limited logging
+                typedTileLayer.on('tileerror', () => {
+                  // Only log first few errors to avoid console spam
+                  if (tileLoadAttempts < 3) {
+                    console.warn('Tile loading error occurred');
+                  }
+                });
+              } catch (addErr) {
+                console.error("Error adding tile layer:", addErr);
+              }
+            } else {
+              console.log("Map became invalid, cannot add tile layer");
             }
-          } catch (err) {
-            console.error("Error adding tile layer:", err);
-            if (isMounted) {
-              toast.error("Failed to load map tiles. Please try refreshing the page.");
-            }
+          } catch (createErr) {
+            console.error("Error creating tile layer:", createErr);
           }
         } else {
           console.log("Tile layer already exists, skipping creation");
@@ -104,34 +130,13 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
           }, 1000);
         }
         
-        // Manually trigger view update after a delay to ensure tile loading
-        const refreshTimeout = setTimeout(() => {
-          try {
-            if (isMounted && isMapValid(map)) {
-              map.invalidateSize(true);
-              // Only try to adjust zoom if map is valid and has position
-              try {
-                const currentZoom = map.getZoom();
-                if (typeof currentZoom === 'number') {
-                  map.setZoom(currentZoom);
-                }
-              } catch (zoomErr) {
-                console.warn("Non-critical error during zoom refresh:", zoomErr);
-              }
-            }
-          } catch (err) {
-            console.warn("Error during map refresh:", err);
-          }
-        }, 500);
-        
-        return () => {
-          clearTimeout(refreshTimeout);
-        };
-        
       } catch (err) {
         console.error("Error initializing tile layer:", err);
+        if (isMounted && tileLoadAttempts < 2) {
+          toast.error("Error loading map tiles. Retrying...");
+        }
       }
-    }, 200); // Longer delay for better initialization sequence
+    }, Math.max(300, tileLoadAttempts * 200)); // Progressively longer delay for retries
     
     // Cleanup
     return () => {
@@ -147,7 +152,7 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
         }
       }
     };
-  }, [map, onTilesLoaded]);
+  }, [map, onTilesLoaded, tileLoadAttempts]);
   
   return null;
 };

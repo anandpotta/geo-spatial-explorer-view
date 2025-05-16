@@ -2,7 +2,6 @@
 import { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
-import { getSavedMarkers } from '@/utils/marker-utils';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 
@@ -14,7 +13,9 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const validityChecksRef = useRef(0);
   const recoveryAttemptRef = useRef(0);
   const initialFlyComplete = useRef(false);
+  const initialFlyAttempted = useRef(false);
   const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const flyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     setupLeafletIcons();
@@ -22,7 +23,9 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     validityChecksRef.current = 0;
     recoveryAttemptRef.current = 0;
     initialFlyComplete.current = false;
+    initialFlyAttempted.current = false;
     
+    // Ensure Leaflet CSS is loaded
     if (!document.querySelector('link[href*="leaflet.css"]')) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -66,78 +69,74 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         setIsMapReady(false);
       }
       
-      // Clear validity check interval
+      // Clear intervals and timeouts
       if (validityCheckIntervalRef.current) {
         clearInterval(validityCheckIntervalRef.current);
         validityCheckIntervalRef.current = null;
+      }
+      
+      if (flyTimeoutRef.current) {
+        clearTimeout(flyTimeoutRef.current);
+        flyTimeoutRef.current = null;
       }
     };
   }, [mapInstanceKey]);
 
-  // Set up an interval to check map validity less frequently
-  useEffect(() => {
-    // Only set up the validation check if needed
-    if (isMapReady) {
-      // No need for continuous checks if map is already valid
+  // Handle initial location navigation safely
+  const handleInitialFly = () => {
+    // Only attempt flying once
+    if (initialFlyAttempted.current || initialFlyComplete.current || !selectedLocation || !mapRef.current) {
       return;
     }
     
-    const checkMapValidity = () => {
-      if (!mapRef.current) return;
+    initialFlyAttempted.current = true;
+    
+    try {
+      // First check if map is valid
+      if (!isMapValid(mapRef.current)) {
+        console.warn("Map not valid for initial fly");
+        return;
+      }
       
-      try {
-        // Use utility function for map validation
-        const isValid = isMapValid(mapRef.current);
-        
-        // Only increment when checking
-        validityChecksRef.current += 1;
-        
-        // If map is valid but not marked as ready
-        if (isValid && !isMapReady && mapAttachedRef.current) {
-          console.log('Map is now valid, marking as ready');
-          setIsMapReady(true);
-          
-          // Clear interval once map is valid
-          if (validityCheckIntervalRef.current) {
-            clearInterval(validityCheckIntervalRef.current);
-            validityCheckIntervalRef.current = null;
-          }
-        }
-        // If map becomes invalid after being ready
-        else if (!isValid && isMapReady) {
-          console.warn('Map is no longer valid, attempting recovery');
-          
-          // Try recovery but limit attempts
-          if (recoveryAttemptRef.current < 2) {
-            recoveryAttemptRef.current += 1;
-            
-            setTimeout(() => {
-              if (mapRef.current && !(mapRef.current as any)._isDestroyed) {
-                try {
-                  mapRef.current.invalidateSize(true);
-                } catch (err) {
-                  console.error("Map recovery failed:", err);
-                }
-              }
-            }, 1000);
-          }
-        }
-      } catch (err) {
-        // Only log errors, don't change state unnecessarily
-        console.warn("Map validation error:", err.message);
+      // Explicitly check map panes
+      const mapPanes = mapRef.current.getPanes();
+      if (!mapPanes || !mapPanes.mapPane) {
+        console.warn("Map panes not ready for initial fly");
+        return;
       }
-    };
-    
-    // Check validity less frequently (10 seconds) and only when needed
-    validityCheckIntervalRef.current = setInterval(checkMapValidity, 10000);
-    
-    return () => {
-      if (validityCheckIntervalRef.current) {
-        clearInterval(validityCheckIntervalRef.current);
-        validityCheckIntervalRef.current = null;
+      
+      console.log('Flying to initial location after ensuring map stability');
+      mapRef.current.setView(
+        [selectedLocation.y, selectedLocation.x], 
+        16, 
+        { animate: false }
+      );
+      
+      initialFlyComplete.current = true;
+    } catch (flyErr) {
+      console.error('Error in initial fly operation:', flyErr);
+      
+      // Try again once more after a delay
+      if (recoveryAttemptRef.current < 2) {
+        recoveryAttemptRef.current++;
+        flyTimeoutRef.current = setTimeout(() => {
+          if (mapRef.current && isMapValid(mapRef.current) && !initialFlyComplete.current) {
+            try {
+              console.log('Retry initial fly with setView');
+              mapRef.current.setView(
+                [selectedLocation.y, selectedLocation.x], 
+                16, 
+                { animate: false }
+              );
+              initialFlyComplete.current = true;
+            } catch (retryErr) {
+              console.error('Error in retry fly operation:', retryErr);
+            }
+          }
+        }, 1500);
       }
-    };
-  }, [isMapReady]);
+    }
+  };
 
   const handleSetMapRef = (map: L.Map) => {
     console.log('Map reference provided');
@@ -149,52 +148,55 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     
     try {
       const container = map.getContainer();
-      if (container && document.body.contains(container)) {
-        console.log('Map container verified, storing reference');
-        
-        // Add a custom property to check if map is destroyed
-        Object.defineProperty(map, '_isDestroyed', {
-          value: false,
-          writable: true
-        });
-        
-        mapRef.current = map;
-        mapAttachedRef.current = true;
-        
-        // Reset counters when we get a valid map
-        validityChecksRef.current = 0;
-        recoveryAttemptRef.current = 0;
-        
-        // Single invalidation to ensure the map is properly sized
-        setTimeout(() => {
-          if (mapRef.current && !(mapRef.current as any)._isDestroyed) {
-            try {
-              mapRef.current.invalidateSize(true);
-              console.log('Initial map invalidation completed');
-              setIsMapReady(true);
-              
-              // Handle initial location navigation once the map is ready
-              if (selectedLocation && !initialFlyComplete.current) {
-                initialFlyComplete.current = true;
-                try {
-                  console.log('Flying to initial location after ensuring map stability');
-                  mapRef.current.flyTo(
-                    [selectedLocation.y, selectedLocation.x], 
-                    18, 
-                    { animate: true, duration: 1.5 }
-                  );
-                } catch (flyErr) {
-                  console.error('Error in initial fly operation:', flyErr);
-                }
-              }
-            } catch (err) {
-              console.warn(`Error during invalidation:`, err);
-            }
-          }
-        }, 500);
-      } else {
-        console.warn('Map container not verified, skipping reference assignment');
+      if (!container || !document.body.contains(container)) {
+        console.warn('Map container not in DOM, skipping reference');
+        return;
       }
+      
+      console.log('Map container verified, storing reference');
+      
+      // Add a custom property to check if map is destroyed
+      Object.defineProperty(map, '_isDestroyed', {
+        value: false,
+        writable: true
+      });
+      
+      mapRef.current = map;
+      mapAttachedRef.current = true;
+      
+      // Reset counters when we get a valid map
+      validityChecksRef.current = 0;
+      recoveryAttemptRef.current = 0;
+      
+      // Single invalidation to ensure the map is properly sized
+      setTimeout(() => {
+        if (!mapRef.current || (mapRef.current as any)._isDestroyed) return;
+        
+        try {
+          // Make sure the map is still valid
+          if (!isMapValid(mapRef.current)) {
+            console.warn('Map became invalid, cannot initialize');
+            return;
+          }
+          
+          mapRef.current.invalidateSize(true);
+          console.log('Initial map invalidation completed');
+          
+          // Delay setting map ready to ensure the map is stable
+          setTimeout(() => {
+            if (!mapRef.current || (mapRef.current as any)._isDestroyed) return;
+            setIsMapReady(true);
+            
+            // Wait a bit longer before trying to fly to location
+            setTimeout(() => {
+              handleInitialFly();
+            }, 500);
+          }, 300);
+          
+        } catch (err) {
+          console.warn(`Error during initialization:`, err);
+        }
+      }, 500);
     } catch (err) {
       console.error('Error setting map reference:', err);
     }
@@ -207,5 +209,6 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady,
     setMapInstanceKey,
     handleSetMapRef,
+    handleInitialFly
   };
 }
