@@ -22,6 +22,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const globeInstanceRef = useRef<any>(null);
   const flyCompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialReadyCalledRef = useRef<boolean>(false);
+  const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Improved loading state management with a single initialization
   useEffect(() => {
@@ -49,6 +50,12 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   
   // Handle map ready state with improved transitions
   const handleMapReady = (viewer?: any) => {
+    // Clear any previous timeout
+    if (mapReadyTimeoutRef.current) {
+      clearTimeout(mapReadyTimeoutRef.current);
+      mapReadyTimeoutRef.current = null;
+    }
+    
     if (viewerInitializedRef.current) {
       console.log('Globe is already initialized, skipping duplicate ready event');
       return;
@@ -64,13 +71,15 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       globeInstanceRef.current = viewer;
     }
     
-    // Ensure we only call onMapReady once
+    // Ensure we only call onMapReady once with a slight delay
     if (!initialReadyCalledRef.current && onMapReady) {
       initialReadyCalledRef.current = true;
       
-      // Short delay to ensure smooth transition
-      setTimeout(() => {
+      // Use timeout to allow the globe to stabilize before notifying parent
+      mapReadyTimeoutRef.current = setTimeout(() => {
+        console.log("ThreeGlobeMap: Calling onMapReady callback");
         onMapReady(globeInstanceRef.current);
+        mapReadyTimeoutRef.current = null;
       }, 300);
     }
   };
@@ -103,6 +112,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       
       if (flyCompleteTimeoutRef.current) {
         clearTimeout(flyCompleteTimeoutRef.current);
+      }
+      
+      if (mapReadyTimeoutRef.current) {
+        clearTimeout(mapReadyTimeoutRef.current);
       }
     };
   }, []);
@@ -144,6 +157,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
         onFlyComplete={handleFlyComplete}
+        key={`globe-${Date.now()}`} // Force new instance to avoid stale references
       />
     </div>
   );

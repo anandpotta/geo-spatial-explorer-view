@@ -55,6 +55,9 @@ export function useMapTransition(
   
   // Track view changes and regenerate map key when necessary
   useEffect(() => {
+    // Create a ref to track previous view inside the effect
+    const prevViewRef = useRef<string | null>(null);
+    
     const handleViewChange = (prevView: string | null) => {
       if (prevView !== currentView) {
         console.log(`View changed from ${prevView} to ${currentView}, handling transition`);
@@ -75,10 +78,7 @@ export function useMapTransition(
       }
     };
     
-    // Initial setup for previous view reference
-    const prevViewRef = { current: null as string | null };
-    
-    // Effect for view change tracking
+    // Handle view change
     if (prevViewRef.current !== currentView) {
       handleViewChange(prevViewRef.current);
       prevViewRef.current = currentView;

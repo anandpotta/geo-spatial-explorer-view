@@ -21,19 +21,29 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
   const readyCallbackFiredRef = useRef(false);
+  const globeInitializedRef = useRef(false);
   
   // Initialize globe with improved loading state handling
   const globeAPI = useThreeGlobe(containerRef, () => {
     if (!isInitialized && !initializationAttemptedRef.current && !readyCallbackFiredRef.current) {
+      console.log("ThreeGlobe: Globe initialization callback triggered");
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
       readyCallbackFiredRef.current = true;
-      console.log("ThreeGlobe: Globe initialized");
       
-      // Short delay to ensure complete initialization before notifying parent
-      setTimeout(() => {
-        if (onMapReady) onMapReady(globeAPI);
-      }, 100);
+      // To avoid multiple initializations
+      if (!globeInitializedRef.current) {
+        globeInitializedRef.current = true;
+        console.log("ThreeGlobe: Globe initialized for the first time");
+        
+        // Short delay to ensure complete initialization before notifying parent
+        setTimeout(() => {
+          if (onMapReady) {
+            console.log("ThreeGlobe: Calling onMapReady callback");
+            onMapReady(globeAPI);
+          }
+        }, 100);
+      }
     }
   });
   
@@ -84,9 +94,11 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   // Clean up on unmount
   useEffect(() => {
     return () => {
+      console.log("ThreeGlobe unmounting, cleaning up");
       lastFlyLocationRef.current = null;
       initializationAttemptedRef.current = false;
       readyCallbackFiredRef.current = false;
+      globeInitializedRef.current = false;
     };
   }, []);
   
