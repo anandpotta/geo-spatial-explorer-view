@@ -17,6 +17,12 @@ declare global {
       _mapPane?: any;
       _layers?: {[key: string]: L.Layer};
     }
+    
+    // Extend LayerOptions to include our custom properties
+    interface LayerOptions {
+      isDrawn?: boolean;
+      id?: string;
+    }
   }
 
   // Add _leaflet_id to HTMLElement for Leaflet

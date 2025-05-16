@@ -49,8 +49,12 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
             if (layers) {
               Object.keys(layers).forEach(layerId => {
                 const layer = layers[layerId];
-                if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-                  map.removeLayer(layer);
+                // Check if layer has options and if options have our custom properties
+                if (layer && layer.options) {
+                  const layerOptions = layer.options as L.LayerOptions;
+                  if (layerOptions.isDrawn || layerOptions.id) {
+                    map.removeLayer(layer);
+                  }
                 }
               });
               toast.info('All shapes cleared');
