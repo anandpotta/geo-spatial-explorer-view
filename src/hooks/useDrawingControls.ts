@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import L from 'leaflet';
 import { toast } from 'sonner';
-import { getMapFromLayer } from '@/utils/leaflet-type-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 
 export interface DrawingControlsRef {
   getFeatureGroup: () => L.FeatureGroup;

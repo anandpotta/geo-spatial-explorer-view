@@ -8,7 +8,7 @@ import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
 export const validateFeatureGroupMap = (featureGroup: L.FeatureGroup): boolean => {
   try {
     const map = getMapFromLayer(featureGroup);
-    return isMapValid(map);
+    return map !== null && isMapValid(map);
   } catch (err) {
     console.error('Error validating map for layer controls:', err);
     return false;
