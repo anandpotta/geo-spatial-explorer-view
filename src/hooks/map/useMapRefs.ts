@@ -29,6 +29,22 @@ export function useMapRefs() {
         try {
           // Check if map is still valid and has a container
           if (isMapValid(map) && map.getContainer()) {
+            // Additional check for panes initialization
+            const panes = map.getPanes();
+            if (!panes || !panes.tilePane) {
+              console.warn('Map panes not initialized yet, delaying layer addition');
+              // Return map for chaining, but don't add layer yet
+              setTimeout(() => {
+                try {
+                  if (isMapValid(map) && map.getContainer() && map.getPanes().tilePane) {
+                    originalAddLayerRef.current!.call(this, layer);
+                  }
+                } catch (err) {
+                  console.error('Error in delayed layer addition:', err);
+                }
+              }, 300);
+              return map;
+            }
             // Call the original method with proper context
             return originalAddLayerRef.current!.call(this, layer);
           } else {
@@ -46,7 +62,8 @@ export function useMapRefs() {
   const isMapReady = () => {
     return leafletMapRef.current && 
            isMapValid(leafletMapRef.current) && 
-           leafletMapRef.current.getContainer() !== undefined;
+           leafletMapRef.current.getContainer() !== undefined &&
+           leafletMapRef.current.getPanes().tilePane !== undefined;
   };
 
   const setMapReady = (ready: boolean) => {

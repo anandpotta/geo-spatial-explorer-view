@@ -38,15 +38,19 @@ const LeafletView: React.FC<LeafletViewProps> = ({
   const mapReadyCalledRef = useRef(false);
   const [localKey, setLocalKey] = useState(leafletKey);
   const readyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isActiveView = useRef(currentView === 'leaflet');
   
-  // Reset the key when leaflet becomes active view to ensure fresh mounting
+  // Track when leaflet becomes the active view
   useEffect(() => {
+    isActiveView.current = currentView === 'leaflet';
+    
     // Clear any existing ready timer first
     if (readyTimerRef.current) {
       clearTimeout(readyTimerRef.current);
       readyTimerRef.current = null;
     }
     
+    // Reset the key when leaflet becomes active view to ensure fresh mounting
     if (currentView === 'leaflet' && !mapMountedRef.current) {
       mapMountedRef.current = true;
       mapReadyCalledRef.current = false;
@@ -93,17 +97,17 @@ const LeafletView: React.FC<LeafletViewProps> = ({
       
       // Set a new timer with increased delay for stability
       readyTimerRef.current = setTimeout(() => {
-        if (!mapReadyCalledRef.current) {
+        if (!mapReadyCalledRef.current && isActiveView.current) {
           mapReadyCalledRef.current = true;
           console.log("Calling onMapReady with delay for transition stability");
           onMapReady(map);
         }
         readyTimerRef.current = null;
       }, 400);
-    } else {
-      // For preloaded maps, still mark as ready but don't delay
+    } else if (preloadedLeaflet) {
+      // For preloaded maps, still mark as ready but don't trigger the callback
       mapReadyCalledRef.current = true;
-      onMapReady(map);
+      console.log("Map ready called for preloaded leaflet map (not triggering callback)");
     }
   };
 

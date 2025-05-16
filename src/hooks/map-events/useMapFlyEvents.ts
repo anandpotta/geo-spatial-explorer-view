@@ -83,10 +83,26 @@ export function useMapFlyEvents(map: L.Map | null, selectedLocation?: { x: numbe
       // Ensure the map is fully rendered before flying
       map.invalidateSize();
       
-      // Double check map has panes before flying
-      const mapPanes = map.getPanes();
-      if (!mapPanes || !mapPanes.mapPane) {
-        console.warn("Map panes not ready, cannot fly");
+      // Check if map panes are ready
+      try {
+        // Double check map has panes before flying
+        const mapPanes = map.getPanes();
+        if (!mapPanes || !mapPanes.mapPane) {
+          console.warn("Map panes not ready, cannot fly");
+          setFlyInProgress(false);
+          
+          // Try again after a delay if attempts are limited
+          if (flyAttemptRef.current < 3) {
+            flyAttemptRef.current++;
+            setTimeout(() => {
+              // Force a re-trigger of the effect
+              resetLastLocation();
+            }, 800 * flyAttemptRef.current); // Progressive backoff
+          }
+          return;
+        }
+      } catch (panesErr) {
+        console.warn("Error checking map panes:", panesErr);
         setFlyInProgress(false);
         return;
       }

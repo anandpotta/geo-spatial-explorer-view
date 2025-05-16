@@ -51,6 +51,18 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
           return;
         }
 
+        // Ensure map panes are initialized
+        const panes = map.getPanes();
+        if (!panes || !panes.tilePane) {
+          console.log("Map panes not ready, delaying tile layer creation");
+          if (tileLoadAttempts < 5) {
+            setTimeout(() => {
+              setTileLoadAttempts(prev => prev + 1);
+            }, 500);
+          }
+          return;
+        }
+
         // Check if the map already has a tile layer with the same URL
         let existingLayer = false;
         try {
@@ -80,10 +92,10 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
             });
             
             // Additional safety check before adding layer
-            if (isMapValid(map) && map.getContainer()) {
+            if (isMapValid(map) && map.getContainer() && map.getPanes().tilePane) {
               // Add layer with explicit error handling
               try {
-                map.addLayer(tileLayer as any);
+                tileLayer.addTo(map); // Use addTo instead of directly calling map.addLayer
                 console.log("Tile layer added successfully");
                 
                 // Force opacity to ensure visibility
@@ -114,6 +126,13 @@ const TileLayer: React.FC<TileLayerProps> = ({ map, onTilesLoaded }) => {
               }
             } else {
               console.log("Map became invalid, cannot add tile layer");
+              
+              // Try again with a delay if map isn't ready
+              if (tileLoadAttempts < 4) {
+                setTimeout(() => {
+                  setTileLoadAttempts(prev => prev + 1);
+                }, 800);
+              }
             }
           } catch (createErr) {
             console.error("Error creating tile layer:", createErr);
