@@ -19,6 +19,7 @@ interface MapContentContainerProps {
   onLocationSelect: (location: Location) => void;
   onClearLocation?: () => void;
   viewTransitionReady?: boolean;
+  viewTransitionInProgress?: boolean;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -28,14 +29,14 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   onFlyComplete,
   onLocationSelect,
   onClearLocation,
-  viewTransitionReady = true
+  viewTransitionReady = true,
+  viewTransitionInProgress = false
 }) => {
   // Use extracted hooks
   const { cesiumViewerRef, leafletMapRef, handleCesiumViewerRef, handleLeafletMapRef } = useMapRefs();
   
   const { 
     mapKey, 
-    viewTransitionInProgress, 
     handleMapReadyInternal 
   } = useMapTransition(currentView, selectedLocation, onMapReady);
   
