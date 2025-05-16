@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -56,7 +57,7 @@ export const createLayerFromDrawing = async ({
   try {
     // Check if the feature group is attached to a valid map
     const map = getMapFromLayer(featureGroup);
-    if (!map || !isMapValid(map)) {
+    if (!isMapValid(map)) {
       return;
     }
 

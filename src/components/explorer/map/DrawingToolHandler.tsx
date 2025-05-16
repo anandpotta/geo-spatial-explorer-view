@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { isMapValid, asLeaflet } from '@/utils/leaflet-type-utils';
-import L from 'leaflet';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 
 interface DrawingToolHandlerProps {
   currentView: 'cesium' | 'leaflet';
@@ -43,14 +42,12 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         try {
           // Validate the map instance before using it
           if (isMapValid(leafletMapRef.current)) {
-            // Use type assertion for internal Leaflet properties
-            const map = asLeaflet<L.Map & {_layers?: Record<string, any>}>(leafletMapRef.current);
-            
-            if (map._layers) {
-              Object.keys(map._layers).forEach(layerId => {
-                const layer = map._layers[layerId];
+            const layers = leafletMapRef.current._layers;
+            if (layers) {
+              Object.keys(layers).forEach(layerId => {
+                const layer = layers[layerId];
                 if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-                  map.removeLayer(layer);
+                  leafletMapRef.current.removeLayer(layer);
                 }
               });
               toast.info('All shapes cleared');

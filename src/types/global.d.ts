@@ -8,10 +8,11 @@ declare global {
   namespace L {
     interface Map {
       _isDestroyed?: boolean;
-      _mapPane?: HTMLElement & {
-        _leaflet_pos?: { x: number; y: number };
+      _panes?: {
+        mapPane?: {
+          _leaflet_pos?: any;
+        };
       };
-      _leaflet_id?: number;
     }
   }
 }

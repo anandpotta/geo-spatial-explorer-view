@@ -1,10 +1,11 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { Location } from '@/utils/geo-utils';
-import { isMapValid, hasLeafletId } from '@/utils/leaflet-type-utils';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 import 'leaflet/dist/leaflet.css';
 
 interface LeafletMapProps {
@@ -129,8 +130,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         return;
       }
       
-      // Check if element already has a map instance using our safe helper
-      if (hasLeafletId(element)) {
+      // Check if element already has a map instance
+      if (element._leaflet_id) {
         console.log("Element already has a map instance, skipping initialization");
         return;
       }
