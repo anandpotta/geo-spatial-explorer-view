@@ -41,7 +41,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     if (!containerRef.current) return;
     
     const resizeObserver = new ResizeObserver(() => {
-      if (mapRef.current) {
+      if (mapRef.current && isMapValid(mapRef.current)) {
         try {
           mapRef.current.invalidateSize();
         } catch (err) {
@@ -93,7 +93,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   );
   
-  // Enhanced map initialization
+  // Enhanced map initialization with error handling
   const initMap = (element: HTMLElement) => {
     try {
       if (!element) return;
@@ -144,7 +144,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       // Trigger onMapReady callback only once
       if (!isReadyRef.current) {
         isReadyRef.current = true;
-        if (onMapReady) onMapReady(map);
+        if (onMapReady) {
+          console.log('Calling onMapReady from LeafletMap');
+          onMapReady(map);
+        }
       }
       
       // Safely check if map is still valid before final invalidation
@@ -187,7 +190,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       if (onClearAll) onClearAll();
     };
   }, [mapRef, onClearAll]);
-  
+
   return (
     <div 
       className="relative w-full h-full"

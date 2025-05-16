@@ -38,10 +38,24 @@ export function useEnhancedFlyToLocation(
     // Temporarily disable auto-rotation for smoother flight
     setAutoRotation(false);
     
-    // Call the original flyToLocation
+    // Clear any existing flight completion callbacks
+    const flyCompletionTimeout = setTimeout(() => {
+      // If the flight doesn't complete in 8 seconds, force completion
+      if (isFlyingRef.current) {
+        console.log('Flight timeout exceeded, forcing completion');
+        isFlyingRef.current = false;
+        
+        if (onComplete) onComplete();
+      }
+    }, 8000);
+    
+    // Call the original flyToLocation with enhanced completion handling
     flyToLocation(longitude, latitude, () => {
       // Mark flying as complete
       isFlyingRef.current = false;
+      
+      // Clear the safety timeout
+      clearTimeout(flyCompletionTimeout);
       
       // Small delay before re-enabling rotation for smoother transition
       setTimeout(() => {

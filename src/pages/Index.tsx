@@ -14,6 +14,7 @@ const Index = () => {
   const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
   const previousLocationRef = useRef<string | null>(null);
   const [viewTransitionReady, setViewTransitionReady] = useState(true);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
@@ -36,23 +37,41 @@ const Index = () => {
     setSelectedLocation(location);
     setFlyCompleted(false);
     
-    // Auto-switch to 3D globe view for better experience with new location
+    // Always start in 3D view when selecting a new location
     if (currentView === 'leaflet') {
-      console.log("Auto-switching to 3D view for better location experience");
+      console.log("Switching to 3D view for location transition");
       setCurrentView('cesium');
-      setShouldSwitchToLeaflet(true); // Will switch back to leaflet after fly
-    } else {
-      // If already in cesium view, mark that we should switch to leaflet after fly completes
-      setShouldSwitchToLeaflet(true);
     }
+    
+    // Plan to switch to leaflet after fly completes
+    setShouldSwitchToLeaflet(true);
     
     // Mark transition as in progress to prevent UI flashing
     setViewTransitionReady(false);
+    
+    // Safety timeout - if fly completion doesn't trigger within 10 seconds,
+    // force transition to continue
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+    
+    transitionTimeoutRef.current = setTimeout(() => {
+      if (!flyCompleted) {
+        console.log("Fly completion timeout - forcing completion");
+        handleFlyComplete();
+      }
+    }, 10000);
   };
 
   const handleFlyComplete = () => {
     console.log("Main: Fly completed");
     setFlyCompleted(true);
+    
+    // Clear any pending timeouts
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
     
     // If we should switch to leaflet after fly completes, prepare for transition
     if (shouldSwitchToLeaflet && currentView === 'cesium') {
@@ -62,7 +81,16 @@ const Index = () => {
       setTimeout(() => {
         setCurrentView('leaflet');
         setShouldSwitchToLeaflet(false);
-      }, 300); // Shorter delay for smoother transition
+        
+        // Show toast with location info
+        if (selectedLocation) {
+          toast({
+            title: "Navigation Complete",
+            description: `Now showing ${selectedLocation.label}`,
+            duration: 3000,
+          });
+        }
+      }, 800); // Slightly longer delay for more stable transition
     }
     
     // Reset location selection timer
@@ -132,6 +160,15 @@ const Index = () => {
       return () => clearTimeout(timer);
     }
   }, [viewTransitionReady]);
+  
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="h-screen flex">
