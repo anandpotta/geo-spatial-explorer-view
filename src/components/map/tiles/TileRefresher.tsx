@@ -12,6 +12,14 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const timeoutRefsArray = useRef<NodeJS.Timeout[]>([]);
   const refreshAttemptsRef = useRef(0);
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   // Add extra tile refresh logic to ensure tiles load properly
   useEffect(() => {
@@ -21,8 +29,7 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
     // Force refresh tiles occasionally
     const refreshTiles = () => {
       try {
-        if (!map || !isMapValid(map)) {
-          console.log("Map not valid during tile refresh");
+        if (!map || !isMapReady || !isMapValid(map) || !isMountedRef.current) {
           return;
         }
         
@@ -34,8 +41,24 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
           console.log(`Forcing tile refresh (attempt ${refreshAttemptsRef.current})`);
         }
         
+        // First check if the map container still exists
+        try {
+          const container = map.getContainer();
+          if (!container || !document.body.contains(container)) {
+            console.log("Map container no longer in DOM, skipping refresh");
+            return;
+          }
+        } catch (err) {
+          console.warn("Error checking map container:", err);
+          return;
+        }
+        
         // First invalidate the map size
-        map.invalidateSize(true);
+        try {
+          map.invalidateSize(true);
+        } catch (err) {
+          console.warn("Error invalidating map size:", err);
+        }
         
         // Find existing tile layers
         let existingTileLayer: L.TileLayer | null = null;
@@ -52,8 +75,15 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
         
         // If there's no tile layer already or we've reached the renewal threshold
         if (!existingTileLayer || refreshAttemptsRef.current % 10 === 0) {
-          const currentZoom = map.getZoom();
-          const currentCenter = map.getCenter();
+          let currentZoom = 2;
+          let currentCenter = L.latLng(0, 0);
+          
+          try {
+            currentZoom = map.getZoom();
+            currentCenter = map.getCenter();
+          } catch (err) {
+            console.warn("Error getting map state:", err);
+          }
           
           // Create and add a new tile layer
           const newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -64,13 +94,13 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
           
           try {
             // Add the new layer first, then remove the old one if it exists
-            map.addLayer(newTileLayer as unknown as L.Layer);
+            map.addLayer(newTileLayer as any);
             
             if (existingTileLayer) {
               setTimeout(() => {
                 try {
-                  if (isMapValid(map)) {
-                    map.removeLayer(existingTileLayer as unknown as L.Layer);
+                  if (isMapValid(map) && isMountedRef.current) {
+                    map.removeLayer(existingTileLayer as any);
                   }
                 } catch (e) {
                   console.warn("Error removing old tile layer:", e);
@@ -85,8 +115,12 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
           
           // Reset view to ensure tiles load properly
           const resetViewTimeout = setTimeout(() => {
-            if (map && isMapValid(map)) {
-              map.setView(currentCenter, currentZoom, { animate: false });
+            if (map && isMapValid(map) && isMountedRef.current) {
+              try {
+                map.setView(currentCenter, currentZoom, { animate: false });
+              } catch (err) {
+                console.warn("Error resetting view:", err);
+              }
             }
           }, 100);
           timeoutRefsArray.current.push(resetViewTimeout);
@@ -94,8 +128,14 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
         
         // Simply set zoom level to force tile update in other cases
         else if (isMapValid(map)) {
-          const currentZoom = map.getZoom();
-          map.setZoom(currentZoom);
+          try {
+            const currentZoom = map.getZoom();
+            if (typeof currentZoom === 'number') {
+              map.setZoom(currentZoom);
+            }
+          } catch (err) {
+            console.warn("Error refreshing zoom:", err);
+          }
         }
       } catch (error) {
         console.error("Error during tile refresh:", error);
@@ -103,15 +143,15 @@ const TileRefresher: React.FC<TileRefresherProps> = ({ map, isMapReady }) => {
     };
     
     // Initial tile refresh after map is ready with progressive delay
-    const initialRefreshTimeout = setTimeout(refreshTiles, 800);
+    const initialRefreshTimeout = setTimeout(refreshTiles, 1200);
     timeoutRefsArray.current.push(initialRefreshTimeout);
     
     // Second refresh with longer delay for cases where first refresh didn't work
-    const secondRefreshTimeout = setTimeout(refreshTiles, 2000);
+    const secondRefreshTimeout = setTimeout(refreshTiles, 3000);
     timeoutRefsArray.current.push(secondRefreshTimeout);
     
     // Periodic tile refreshes at longer intervals
-    const periodicRefreshInterval = setInterval(refreshTiles, 8000);
+    const periodicRefreshInterval = setInterval(refreshTiles, 10000);
     
     return () => {
       clearInterval(periodicRefreshInterval);

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import LeafletMap from '@/components/map/LeafletMap';
 import { Location } from '@/utils/geo-utils';
 import { getLeafletStyles } from './ViewTransitionStyles';
@@ -35,14 +35,38 @@ const LeafletView: React.FC<LeafletViewProps> = ({
   const fadeInClass = fadeIn && currentView === 'leaflet' ? 'animate-fade-in' : '';
   const isLeafletView = currentView === 'leaflet';
   const mapMountedRef = useRef(false);
+  const mapReadyCalledRef = useRef(false);
+  const [localKey, setLocalKey] = useState(leafletKey);
   
-  // When view changes to Leaflet, ensure map gets proper initialization signal
+  // Reset the key when leaflet becomes active view to ensure fresh mounting
   useEffect(() => {
     if (currentView === 'leaflet' && !mapMountedRef.current) {
-      console.log("Leaflet is now the active view");
       mapMountedRef.current = true;
+      mapReadyCalledRef.current = false;
+      console.log("Leaflet is now the active view, ensuring fresh initialization");
+      // Add a timestamp to ensure the key is truly unique
+      setLocalKey(`${leafletKey}-${Date.now()}`);
     }
-  }, [currentView]);
+  }, [currentView, leafletKey]);
+  
+  // Handle cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      mapMountedRef.current = false;
+      mapReadyCalledRef.current = false;
+    };
+  }, []);
+
+  const handleMapReady = (map: any) => {
+    if (mapReadyCalledRef.current) {
+      console.log("Map ready already called, skipping duplicate");
+      return;
+    }
+    
+    console.log("LeafletMap ready callback triggered");
+    mapReadyCalledRef.current = true;
+    onMapReady(map);
+  };
 
   return (
     <div 
@@ -55,12 +79,9 @@ const LeafletView: React.FC<LeafletViewProps> = ({
         <>
           <LeafletMap 
             selectedLocation={selectedLocation} 
-            onMapReady={(map) => {
-              console.log("LeafletMap ready callback triggered");
-              onMapReady(map);
-            }}
+            onMapReady={handleMapReady}
             activeTool={currentView === 'leaflet' ? activeTool : null}
-            key={`${leafletKey}-${currentView === 'leaflet' ? 'active' : 'inactive'}`}
+            key={localKey}
             onClearAll={onClearAll}
             preload={currentView !== 'leaflet'}
           />

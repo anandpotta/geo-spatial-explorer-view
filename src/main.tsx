@@ -14,10 +14,12 @@ style.textContent = `
     opacity: 1 !important;
     visibility: visible !important;
     z-index: 200 !important;
+    pointer-events: auto !important;
   }
   .map-tiles, .map-tiles-refreshed {
     opacity: 1 !important;
     z-index: 200 !important;
+    visibility: visible !important;
   }
   .leaflet-tile {
     visibility: visible !important;
@@ -25,6 +27,27 @@ style.textContent = `
   }
   .leaflet-container {
     background: #f0f0f0 !important;
+  }
+  .leaflet-pane {
+    z-index: 400 !important; 
+  }
+  .leaflet-tile-pane {
+    z-index: 200 !important;
+  }
+  .leaflet-overlay-pane {
+    z-index: 400 !important;
+  }
+  .leaflet-marker-pane {
+    z-index: 600 !important;
+  }
+  .leaflet-tooltip-pane {
+    z-index: 650 !important;
+  }
+  .leaflet-popup-pane {
+    z-index: 700 !important;
+  }
+  .leaflet-map-pane {
+    z-index: 100 !important;
   }
 `;
 document.head.appendChild(style);

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { isMapValid } from '@/utils/leaflet-type-utils';
+import { toast } from 'sonner';
 
 interface MapInitializerProps {
   containerElement: HTMLElement;
@@ -16,14 +17,28 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
   onMapInitialized
 }) => {
   const mapInitializedRef = useRef(false);
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   useEffect(() => {
     if (!containerElement || mapInitializedRef.current) return;
     
-    mapInitializedRef.current = true;
-    console.log("Initializing Leaflet map");
+    // Check if the container already has a Leaflet map initialized
+    if (containerElement._leaflet_id) {
+      console.warn("Container already has a Leaflet map. Skipping initialization.");
+      return;
+    }
     
     try {
+      mapInitializedRef.current = true;
+      console.log("Initializing Leaflet map");
+      
       // Create the map instance
       const map = L.map(containerElement, {
         center: selectedLocation ? [selectedLocation.y, selectedLocation.x] : [0, 0],
@@ -39,34 +54,45 @@ const MapInitializer: React.FC<MapInitializerProps> = ({
         preferCanvas: true
       });
       
+      // Add an identifier to the map
+      (map as any)._customInitTime = Date.now();
+      
       // Initialize feature group for drawing
       const featureGroup = new L.FeatureGroup();
-      // Use any type to bypass TypeScript's strict checking temporarily
-      (map as any).addLayer(featureGroup);
-      window.featureGroup = featureGroup;
+      map.addLayer(featureGroup);
+      (window as any).featureGroup = featureGroup;
       
       // Notify that the map is initialized
-      onMapInitialized(map);
+      if (isMountedRef.current) {
+        onMapInitialized(map);
+      }
       
       // Force a map redraw after initialization
       setTimeout(() => {
-        if (map && isMapValid(map)) {
+        if (map && isMapValid(map) && isMountedRef.current) {
           map.invalidateSize(true);
           // Add additional redraw to ensure tiles load
           setTimeout(() => {
-            map.invalidateSize(true);
-            // Trigger events to ensure all map components are properly initialized
-            map.fire('load');
-            map.fire('moveend');
-          }, 200);
+            if (map && isMapValid(map) && isMountedRef.current) {
+              map.invalidateSize(true);
+              // Trigger events to ensure all map components are properly initialized
+              map.fire('load');
+              map.fire('moveend');
+            }
+          }, 300);
         }
-      }, 100);
+      }, 200);
     } catch (err) {
       console.error("Map initialization error:", err);
       mapInitializedRef.current = false;
+      
+      if (isMountedRef.current) {
+        toast.error("Failed to initialize map. Please try refreshing the page.");
+      }
     }
     
     return () => {
+      isMountedRef.current = false;
       mapInitializedRef.current = false;
     };
   }, [containerElement, selectedLocation, onMapInitialized]);
