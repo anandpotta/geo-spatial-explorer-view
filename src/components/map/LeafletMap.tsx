@@ -36,6 +36,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const isReadyRef = useRef(false);
   const mapInitializedRef = useRef(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const forceTileRefreshRef = useRef<NodeJS.Timeout | null>(null);
   
   // Ensure the map resizes properly when container changes
   useEffect(() => {
@@ -94,29 +95,29 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   );
   
-  // Preload map tiles if needed
+  // Force tile refreshes periodically when preloaded to ensure they load properly
   useEffect(() => {
-    if (mapRef.current && tileLayerRef.current && !preload) {
-      // If no longer in preload mode, improve tile quality
-      try {
-        tileLayerRef.current.remove();
-        
-        // Add higher quality tile layer
-        const newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 18,
-          tileSize: 256,
-          zoomOffset: 0
-        }).addTo(mapRef.current);
-        
-        tileLayerRef.current = newTileLayer;
-        
-        // Force map to refresh tiles
-        mapRef.current.invalidateSize(true);
-      } catch (err) {
-        console.error("Error upgrading tile layer:", err);
-      }
+    // Clear any existing refresh timer
+    if (forceTileRefreshRef.current) {
+      clearTimeout(forceTileRefreshRef.current);
+      forceTileRefreshRef.current = null;
     }
+    
+    // When in preload mode, force refresh tiles occasionally
+    if (mapRef.current && preload) {
+      forceTileRefreshRef.current = setTimeout(() => {
+        if (mapRef.current && isMapValid(mapRef.current)) {
+          console.log("Forcing tile refresh for preloaded map");
+          mapRef.current.invalidateSize(true);
+        }
+      }, 2000);
+    }
+    
+    return () => {
+      if (forceTileRefreshRef.current) {
+        clearTimeout(forceTileRefreshRef.current);
+      }
+    };
   }, [preload, mapRef.current]);
   
   // Enhanced map initialization with error handling
@@ -137,6 +138,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }
       
       mapInitializedRef.current = true;
+      console.log("Initializing Leaflet map with preload =", preload);
       
       const map = L.map(element, {
         center: selectedLocation ? [selectedLocation.y, selectedLocation.x] : [0, 0],
@@ -168,6 +170,13 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       // Add draw control
       handleSetMapRef(map);
       
+      // Force a map redraw after initialization
+      setTimeout(() => {
+        if (map && isMapValid(map)) {
+          map.invalidateSize(true);
+        }
+      }, 100);
+      
       // Notify that map is ready sooner
       setLoading(false);
       
@@ -180,6 +189,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           if (onMapReady) {
             console.log('Calling onMapReady from LeafletMap');
             onMapReady(map);
+          }
+          
+          // Additional invalidate after onMapReady for better rendering
+          if (map && isMapValid(map)) {
+            map.invalidateSize(true);
           }
         }, preload ? 100 : 50); // Faster when not preloading
       }
@@ -211,6 +225,12 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       isReadyRef.current = false;
       mapInitializedRef.current = false;
       tileLayerRef.current = null;
+      
+      // Clear any refresh timers
+      if (forceTileRefreshRef.current) {
+        clearTimeout(forceTileRefreshRef.current);
+        forceTileRefreshRef.current = null;
+      }
       
       // Clean up the map instance
       if (mapRef.current) {

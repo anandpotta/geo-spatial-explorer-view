@@ -40,6 +40,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   const [fadeIn, setFadeIn] = useState(false);
   const bothViewsReadyRef = useRef<boolean>(false);
   const [preloadedLeaflet, setPreloadedLeaflet] = useState(false);
+  const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Keys to force remount of the inactive map when switching
   const [leafletKey, setLeafletKey] = useState(`leaflet-${mapKey}`);
@@ -61,13 +62,18 @@ const MapViews: React.FC<MapViewsProps> = ({
     setLeafletKey(`leaflet-${mapKey}`);
   }, [mapKey]);
   
-  // Preload the leaflet map in the background when in globe view
+  // Always preload the leaflet map for smoother transitions
   useEffect(() => {
-    if (currentView === 'cesium' && !preloadedLeaflet && viewTransitionReady) {
-      // Only preload once 
-      setPreloadedLeaflet(true);
-    }
-  }, [currentView, preloadedLeaflet, viewTransitionReady]);
+    // Always preload after a short delay
+    const preloadTimer = setTimeout(() => {
+      if (!preloadedLeaflet) {
+        setPreloadedLeaflet(true);
+        console.log("Preloading Leaflet view for smoother transitions");
+      }
+    }, 2000); // Short delay before preloading
+    
+    return () => clearTimeout(preloadTimer);
+  }, [preloadedLeaflet]);
   
   // Handle view transitions
   useEffect(() => {
@@ -83,20 +89,33 @@ const MapViews: React.FC<MapViewsProps> = ({
         setCesiumKey(`cesium-${Date.now()}`);
       }
       
-      // End transition after animation completes
-      const timer = setTimeout(() => {
+      // Clear any existing transition timer
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+      
+      // End transition after animation completes - longer duration for smoother transition
+      transitionTimerRef.current = setTimeout(() => {
         setTransitioning(false);
         setViewChangeStarted(null);
         
         // Trigger fade in for new view
         setFadeIn(true);
-        setTimeout(() => setFadeIn(false), 400); 
-      }, 600); // Slightly shorter for smoother transition
-      
-      return () => clearTimeout(timer);
+        setTimeout(() => setFadeIn(false), 600);
+        
+        transitionTimerRef.current = null;
+      }, 800); // Longer for smoother transition
     }
     
     setPreviousView(currentView);
+    
+    // Cleanup function
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+      }
+    };
   }, [currentView, previousView]);
   
   // Handle both maps loaded to enable smoother transitions
@@ -113,7 +132,11 @@ const MapViews: React.FC<MapViewsProps> = ({
     
     // When Leaflet is active, make sure to trigger onMapReady
     if (currentView === 'leaflet') {
-      onMapReady();
+      // Add small delay to ensure map is fully rendered
+      setTimeout(() => {
+        console.log("Leaflet map fully ready");
+        onMapReady();
+      }, 300);
     }
   };
 
@@ -138,7 +161,7 @@ const MapViews: React.FC<MapViewsProps> = ({
         fadeIn={fadeIn}
       />
       
-      {/* Leaflet Map View */}
+      {/* Leaflet Map View - Always render but control visibility with CSS */}
       <LeafletView
         currentView={currentView}
         transitioning={transitioning}

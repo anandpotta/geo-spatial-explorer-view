@@ -13,6 +13,8 @@ declare global {
           _leaflet_pos?: any;
         };
       };
+      _leaflet_id?: number;
+      _mapPane?: any;
     }
   }
 }

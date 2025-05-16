@@ -26,3 +26,30 @@ export function isMapValid(map: any): map is L.Map {
     return false;
   }
 }
+
+/**
+ * Gets the map instance from a layer
+ */
+export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
+  if (!layer) return null;
+  
+  try {
+    // Check if layer has a _map property
+    if ((layer as any)._map) {
+      return (layer as any)._map;
+    }
+    
+    // For feature groups, check the first layer
+    if (layer instanceof L.FeatureGroup && layer.getLayers().length > 0) {
+      const firstLayer = layer.getLayers()[0];
+      if ((firstLayer as any)._map) {
+        return (firstLayer as any)._map;
+      }
+    }
+    
+    return null;
+  } catch (err) {
+    console.error("Error getting map from layer:", err);
+    return null;
+  }
+}

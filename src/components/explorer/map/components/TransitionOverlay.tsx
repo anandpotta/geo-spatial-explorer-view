@@ -13,21 +13,21 @@ const TransitionOverlay: React.FC<TransitionOverlayProps> = ({ isVisible }) => {
     if (isVisible) {
       // Show content immediately with overlay
       setShowContent(true);
-      // Fade in quickly but not too drastically
-      setOpacity(0.4);
+      // Fade in quickly but not drastically
+      setOpacity(0.3);
       
-      // Start fading out sooner for smoother transition
+      // Start fading out for smoother transition
       const timeout = setTimeout(() => {
         setOpacity(0);
         // Hide content with slight delay after fade
-        setTimeout(() => setShowContent(false), 400);
-      }, 500);
+        setTimeout(() => setShowContent(false), 600);
+      }, 800);
       
       return () => clearTimeout(timeout);
     } else {
       setOpacity(0);
       // Delay hiding content until after fade out completes
-      setTimeout(() => setShowContent(false), 400);
+      setTimeout(() => setShowContent(false), 600);
     }
   }, [isVisible]);
   
@@ -39,7 +39,7 @@ const TransitionOverlay: React.FC<TransitionOverlayProps> = ({ isVisible }) => {
       className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center"
       style={{ 
         backgroundColor: `rgba(0,0,0,${opacity})`,
-        transition: 'background-color 400ms ease-in-out'
+        transition: 'background-color 600ms ease-in-out'
       }}
     >
       {showContent && opacity > 0.05 && (

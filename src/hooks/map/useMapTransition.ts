@@ -22,7 +22,7 @@ export function useMapTransition(
     const timer = setTimeout(() => {
       endTransition();
       setMapReady(false);
-    }, 800); // Slightly shorter for smoother transition
+    }, 1000); // Longer for smoother transition
     
     return () => clearTimeout(timer);
   });

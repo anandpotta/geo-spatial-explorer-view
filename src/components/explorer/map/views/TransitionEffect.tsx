@@ -10,9 +10,9 @@ const TransitionEffect: React.FC<TransitionEffectProps> = ({ transitioning }) =>
   
   return (
     <div 
-      className="absolute inset-0 bg-black bg-opacity-20 z-20 pointer-events-none"
+      className="absolute inset-0 bg-black bg-opacity-10 z-20 pointer-events-none"
       style={{
-        animation: 'fadeInOut 400ms ease-in-out forwards'
+        animation: 'fadeInOut 600ms ease-in-out forwards'
       }}
     />
   );
