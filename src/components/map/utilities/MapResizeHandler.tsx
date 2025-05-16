@@ -24,6 +24,10 @@ const MapResizeHandler: React.FC<MapResizeHandlerProps> = ({ map, containerRef }
         try {
           // Only proceed if both container and map panes exist
           if (!isMapValid(map)) {
+            resizeAttemptRef.current++;
+            if (resizeAttemptRef.current < 5) {
+              console.log("Map not valid, skipping resize");
+            }
             return;
           }
           
@@ -69,7 +73,11 @@ const MapResizeHandler: React.FC<MapResizeHandlerProps> = ({ map, containerRef }
     return () => {
       clearTimeout(initTimeout);
       if (resizeObserverRef.current && containerRef.current) {
-        resizeObserverRef.current.unobserve(containerRef.current);
+        try {
+          resizeObserverRef.current.unobserve(containerRef.current);
+        } catch (e) {
+          console.log('Error unobserving container:', e);
+        }
         resizeObserverRef.current = null;
       }
     };
