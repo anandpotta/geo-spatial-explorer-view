@@ -16,6 +16,8 @@ export function useMapTransition(
   // Using refs instead of state from useTransitionState to avoid React queue errors
   const viewTransitionInProgressRef = useRef(false);
   const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Create ref to track previous view at the top level, not inside the effect
+  const prevViewRef = useRef<string | null>(null);
   
   const startTransition = () => {
     viewTransitionInProgressRef.current = true;
@@ -55,9 +57,6 @@ export function useMapTransition(
   
   // Track view changes and regenerate map key when necessary
   useEffect(() => {
-    // Create a ref to track previous view inside the effect
-    const prevViewRef = useRef<string | null>(null);
-    
     const handleViewChange = (prevView: string | null) => {
       if (prevView !== currentView) {
         console.log(`View changed from ${prevView} to ${currentView}, handling transition`);
