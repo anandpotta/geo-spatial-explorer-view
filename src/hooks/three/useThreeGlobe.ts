@@ -30,6 +30,7 @@ export function useThreeGlobe(
   const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initCallbackFiredRef = useRef<boolean>(false);
   const forceInitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const texturesLoadedRef = useRef<boolean>(false);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
@@ -39,6 +40,10 @@ export function useThreeGlobe(
   
   // Handle textures loaded callback with delay to ensure smooth appearance
   const handleTexturesLoaded = useCallback(() => {
+    // Don't re-fire if textures were already loaded
+    if (texturesLoadedRef.current) return;
+    texturesLoadedRef.current = true;
+    
     if (onInitialized && isInitialized && !initCallbackFiredRef.current) {
       console.log("Textures loaded, preparing to call onInitialized callback");
       
@@ -80,8 +85,10 @@ export function useThreeGlobe(
     isFlyingRef
   );
   
-  // Force initialization after a delay if not already initialized
+  // Force initialization after a delay if not already initialized - but only once
   useEffect(() => {
+    if (initCallbackFiredRef.current || !containerRef.current) return;
+    
     // Set a forced initialization timeout as a safety measure
     forceInitTimeoutRef.current = setTimeout(() => {
       if (!isInitialized && containerRef.current) {
@@ -95,7 +102,7 @@ export function useThreeGlobe(
           onInitialized();
         }
       }
-    }, 2500); // 2.5 second safety timeout
+    }, 2000); // Reduced timeout for better responsiveness
     
     return () => {
       if (forceInitTimeoutRef.current) {
@@ -129,7 +136,7 @@ export function useThreeGlobe(
           onInitialized();
         }
       }
-    }, 2000); // Reduced timeout to ensure UI remains responsive
+    }, 1800); // Slightly reduced timeout for better responsiveness
     
     return () => {
       if (initializationTimeoutRef.current) {

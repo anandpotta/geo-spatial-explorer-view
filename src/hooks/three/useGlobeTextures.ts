@@ -11,8 +11,9 @@ export function useGlobeTextures(
   const texturesLoadedRef = useRef<boolean>(false);
   const textureRetryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 2;
   const loadStartedRef = useRef(false);
+  const backupTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Function to handle texture loading with retries
   const handleTextureLoading = useCallback(() => {
@@ -34,6 +35,20 @@ export function useGlobeTextures(
     material.color = new THREE.Color(0x1a5276);
     material.needsUpdate = true;
     
+    // Set a backup timer to ensure we don't get stuck waiting for textures
+    backupTimerRef.current = setTimeout(() => {
+      if (!texturesLoadedRef.current) {
+        console.log("Backup timer triggered for texture loading");
+        setTexturesLoaded(true);
+        texturesLoadedRef.current = true;
+        
+        if (onTexturesLoaded) {
+          console.log("Calling textures loaded callback from backup timer");
+          onTexturesLoaded();
+        }
+      }
+    }, 3000);
+    
     // Load the textures
     loadEarthTextures(material, (earthLoaded, bumpLoaded) => {
       const allLoaded = earthLoaded && bumpLoaded;
@@ -41,6 +56,12 @@ export function useGlobeTextures(
       console.log(`Textures loaded - Earth: ${earthLoaded}, Bump: ${bumpLoaded}, All: ${allLoaded}`);
       
       if (allLoaded && !texturesLoadedRef.current) {
+        // Clear backup timer if textures loaded successfully
+        if (backupTimerRef.current) {
+          clearTimeout(backupTimerRef.current);
+          backupTimerRef.current = null;
+        }
+        
         console.log("All textures loaded successfully");
         setTexturesLoaded(true);
         texturesLoadedRef.current = true;
@@ -61,7 +82,7 @@ export function useGlobeTextures(
         textureRetryTimerRef.current = setTimeout(() => {
           loadStartedRef.current = false; // Allow new load attempt
           handleTextureLoading();
-        }, 1000); // 1 second between retries
+        }, 800); // Slightly reduced time between retries
       } else if (retryCountRef.current >= MAX_RETRIES) {
         // After max retries, continue anyway with fallback appearance
         console.log("Max texture load retries reached, continuing with basic appearance");
@@ -94,6 +115,10 @@ export function useGlobeTextures(
       if (textureRetryTimerRef.current) {
         clearTimeout(textureRetryTimerRef.current);
         textureRetryTimerRef.current = null;
+      }
+      if (backupTimerRef.current) {
+        clearTimeout(backupTimerRef.current);
+        backupTimerRef.current = null;
       }
     };
   }, [earthMesh, texturesLoaded, handleTextureLoading]);

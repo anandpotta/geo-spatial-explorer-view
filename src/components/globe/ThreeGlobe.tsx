@@ -22,6 +22,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const initializationAttemptedRef = useRef(false);
   const readyCallbackFiredRef = useRef(false);
   const globeInitializedRef = useRef(false);
+  const flyCompletedCallbackRef = useRef<(() => void) | null>(null);
   
   // Initialize globe with improved reliability via a staggered loading approach
   const globeAPI = useThreeGlobe(containerRef, () => {
@@ -47,7 +48,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
                 console.log("ThreeGlobe: Calling onMapReady callback");
                 onMapReady(globeAPI);
               }
-            }, 200);
+            }, 100);
           }
         }
       }, 50);
@@ -81,10 +82,26 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
           onMapReady(globeAPI);
         }
       }
-    }, 3000); // 3 second failsafe
+    }, 2500); // Slightly shorter failsafe timer
     
     return () => clearTimeout(failsafeTimer);
   }, [globeAPI, isInitialized, onMapReady]);
+  
+  // Handle fly completion with debouncing
+  const handleFlyComplete = () => {
+    setIsFlying(false);
+    
+    // Execute the stored callback if exists
+    if (flyCompletedCallbackRef.current) {
+      const callback = flyCompletedCallbackRef.current;
+      flyCompletedCallbackRef.current = null;
+      
+      // Small delay for smoother transition experience
+      setTimeout(() => {
+        callback();
+      }, 100);
+    }
+  };
   
   // Handle location changes with better flight state management
   useEffect(() => {
@@ -93,7 +110,16 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     // Prevent duplicate fly operations for the same location
     const locationId = selectedLocation.id;
     if (isFlying) {
-      console.log("ThreeGlobe: Already flying, skipping new flight request");
+      console.log("ThreeGlobe: Already flying, queueing new flight request");
+      
+      // Store the callback to execute when current flight completes
+      flyCompletedCallbackRef.current = () => {
+        if (onFlyComplete) {
+          console.log("ThreeGlobe: Executing queued fly complete callback");
+          onFlyComplete();
+        }
+      };
+      
       return;
     }
     
@@ -112,7 +138,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     // Fly to the location - ensure coordinates are valid numbers
     if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
       globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
-        setIsFlying(false);
+        handleFlyComplete();
         if (onFlyComplete) {
           console.log("ThreeGlobe: Fly complete");
           onFlyComplete();
@@ -138,6 +164,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       initializationAttemptedRef.current = false;
       readyCallbackFiredRef.current = false;
       globeInitializedRef.current = false;
+      flyCompletedCallbackRef.current = null;
     };
   }, []);
   
@@ -152,6 +179,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       }}
     >
       {/* Canvas will be added here by Three.js */}
+      {!isInitialized && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 z-10">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <div className="text-white">Loading 3D Globe...</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

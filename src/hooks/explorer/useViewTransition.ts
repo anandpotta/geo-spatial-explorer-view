@@ -15,6 +15,9 @@ export function useViewTransition(
   const [viewTransitionReady, setViewTransitionReady] = useState(true);
   const leafletReadyRef = useRef(false);
   const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingViewChangeRef = useRef<'cesium' | 'leaflet' | null>(null);
+  const transitionLockedRef = useRef(false);
+  const transitionLockTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const clearTransitionTimer = useCallback(() => {
     if (transitionTimerRef.current) {
@@ -23,20 +26,42 @@ export function useViewTransition(
     }
   }, []);
 
+  // Lock transitions briefly to prevent rapid view switching
+  const lockTransition = useCallback(() => {
+    transitionLockedRef.current = true;
+    
+    if (transitionLockTimerRef.current) {
+      clearTimeout(transitionLockTimerRef.current);
+    }
+    
+    transitionLockTimerRef.current = setTimeout(() => {
+      transitionLockedRef.current = false;
+      
+      // Process any pending view change after lock expires
+      if (pendingViewChangeRef.current) {
+        const nextView = pendingViewChangeRef.current;
+        pendingViewChangeRef.current = null;
+        handleViewChange(nextView);
+      }
+    }, 1000);
+  }, []);
+
   // Effect to handle automatic switching to leaflet after fly completes
   useEffect(() => {
     if (flyCompleted && shouldSwitchToLeaflet && currentView === 'cesium') {
       console.log("Preparing transition to leaflet view after fly completion");
       
       // Prevent multiple transition attempts
-      if (viewTransitionInProgressRef.current) {
-        console.log("Transition already in progress, not starting a new one");
+      if (viewTransitionInProgressRef.current || transitionLockedRef.current) {
+        console.log("Transition already in progress or locked, delaying leaflet switch");
+        pendingViewChangeRef.current = 'leaflet';
         return;
       }
       
       // Set the transition flag
       viewTransitionInProgressRef.current = true;
       setViewTransitionReady(false);
+      lockTransition();
       
       // Start transition to leaflet with a slight delay to ensure smooth visual experience
       transitionTimerRef.current = setTimeout(() => {
@@ -61,16 +86,25 @@ export function useViewTransition(
     }
     
     return () => clearTransitionTimer();
-  }, [flyCompleted, shouldSwitchToLeaflet, currentView, selectedLocation, setShouldSwitchToLeaflet, clearTransitionTimer]);
+  }, [flyCompleted, shouldSwitchToLeaflet, currentView, selectedLocation, setShouldSwitchToLeaflet, clearTransitionTimer, lockTransition]);
 
   const handleViewChange = useCallback((view: 'cesium' | 'leaflet') => {
-    // Don't allow view changes during transitions
+    // Don't allow view changes during transitions or when locked
     if (viewTransitionInProgressRef.current || (isTransitionInProgress && isTransitionInProgress())) {
       toast({
         title: "Please wait",
         description: "View transition already in progress",
         duration: 2000,
       });
+      
+      // Queue this view change for later
+      pendingViewChangeRef.current = view;
+      return;
+    }
+    
+    if (transitionLockedRef.current) {
+      console.log("View change locked, queueing for later");
+      pendingViewChangeRef.current = view;
       return;
     }
     
@@ -84,9 +118,16 @@ export function useViewTransition(
       return;
     }
     
+    // Don't switch to the view we're already on
+    if (currentView === view) {
+      console.log(`Already on ${view} view, ignoring change request`);
+      return;
+    }
+    
     console.log(`Changing view to ${view}`);
     setViewTransitionReady(false); // Start transition
     viewTransitionInProgressRef.current = true;
+    lockTransition(); // Lock to prevent rapid switching
     
     clearTransitionTimer();
     
@@ -101,7 +142,7 @@ export function useViewTransition(
         setViewTransitionReady(true);
       }, 800);
     }, 100);
-  }, [flyCompleted, selectedLocation, setShouldSwitchToLeaflet, isTransitionInProgress, clearTransitionTimer]);
+  }, [flyCompleted, selectedLocation, setShouldSwitchToLeaflet, isTransitionInProgress, clearTransitionTimer, lockTransition, currentView]);
 
   const handleMapReady = useCallback(() => {
     console.log('Map is ready');
@@ -119,7 +160,14 @@ export function useViewTransition(
 
   // Cleanup effect
   useEffect(() => {
-    return () => clearTransitionTimer();
+    return () => {
+      clearTransitionTimer();
+      
+      if (transitionLockTimerRef.current) {
+        clearTimeout(transitionLockTimerRef.current);
+        transitionLockTimerRef.current = null;
+      }
+    };
   }, [clearTransitionTimer]);
 
   return {
