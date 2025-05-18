@@ -23,29 +23,68 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const readyCallbackFiredRef = useRef(false);
   const globeInitializedRef = useRef(false);
   
-  // Initialize globe with improved loading state handling
+  // Initialize globe with improved reliability via a staggered loading approach
   const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized && !initializationAttemptedRef.current && !readyCallbackFiredRef.current) {
+    if (!isInitialized && !initializationAttemptedRef.current) {
       console.log("ThreeGlobe: Globe initialization callback triggered");
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
-      readyCallbackFiredRef.current = true;
       
-      // To avoid multiple initializations
-      if (!globeInitializedRef.current) {
-        globeInitializedRef.current = true;
-        console.log("ThreeGlobe: Globe initialized for the first time");
-        
-        // Short delay to ensure complete initialization before notifying parent
-        setTimeout(() => {
-          if (onMapReady) {
-            console.log("ThreeGlobe: Calling onMapReady callback");
-            onMapReady(globeAPI);
+      // Force a quick re-render to ensure state consistency
+      setTimeout(() => {
+        if (!readyCallbackFiredRef.current) {
+          readyCallbackFiredRef.current = true;
+          console.log("ThreeGlobe: Setting initialized state and preparing callback");
+          
+          // To avoid multiple initializations
+          if (!globeInitializedRef.current) {
+            globeInitializedRef.current = true;
+            console.log("ThreeGlobe: Globe initialized for the first time");
+            
+            // Ensure the callback is called with a more generous timeout
+            setTimeout(() => {
+              if (onMapReady) {
+                console.log("ThreeGlobe: Calling onMapReady callback");
+                onMapReady(globeAPI);
+              }
+            }, 200);
           }
-        }, 100);
-      }
+        }
+      }, 50);
     }
   });
+  
+  // Added backup initialization trigger to prevent getting stuck on loading
+  useEffect(() => {
+    if (!isInitialized && globeAPI.isInitialized && !readyCallbackFiredRef.current) {
+      console.log("ThreeGlobe: Backup initialization triggered");
+      setIsInitialized(true);
+      readyCallbackFiredRef.current = true;
+      
+      if (onMapReady && !globeInitializedRef.current) {
+        globeInitializedRef.current = true;
+        console.log("ThreeGlobe: Calling onMapReady from backup trigger");
+        onMapReady(globeAPI);
+      }
+    }
+    
+    // Failsafe initialization after timeout - in case normal initialization fails
+    const failsafeTimer = setTimeout(() => {
+      if (!isInitialized && !readyCallbackFiredRef.current) {
+        console.log("ThreeGlobe: Failsafe initialization triggered after timeout");
+        setIsInitialized(true);
+        readyCallbackFiredRef.current = true;
+        
+        if (onMapReady && !globeInitializedRef.current) {
+          globeInitializedRef.current = true;
+          console.log("ThreeGlobe: Calling onMapReady from failsafe");
+          onMapReady(globeAPI);
+        }
+      }
+    }, 3000); // 3 second failsafe
+    
+    return () => clearTimeout(failsafeTimer);
+  }, [globeAPI, isInitialized, onMapReady]);
   
   // Handle location changes with better flight state management
   useEffect(() => {

@@ -23,6 +23,31 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const flyCompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialReadyCalledRef = useRef<boolean>(false);
   const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initializationAttemptsRef = useRef(0);
+  
+  // Added progressive initialization attempts with console logs
+  useEffect(() => {
+    // Make another attempt to initialize if still loading after 6 seconds
+    const loadingTimeoutId = setTimeout(() => {
+      if (isLoading && !fadeOutLoading) {
+        initializationAttemptsRef.current++;
+        console.log(`Globe still loading after 6s, attempt ${initializationAttemptsRef.current}`);
+        
+        // Force reload the globe component if multiple attempts fail
+        if (initializationAttemptsRef.current >= 2) {
+          console.log("Forcing globe component reload");
+          // This will trigger a fresh mount of the ThreeGlobe component
+          const reloadTimerId = setTimeout(() => {
+            setIsLoading(false);
+            setIsLoading(true);
+          }, 100);
+          return () => clearTimeout(reloadTimerId);
+        }
+      }
+    }, 6000);
+    
+    return () => clearTimeout(loadingTimeoutId);
+  }, [isLoading, fadeOutLoading]);
   
   // Improved loading state management with a single initialization
   useEffect(() => {
@@ -136,7 +161,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
           <div className="text-center p-4">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <h3 className="text-lg font-bold text-white">Loading 3D Globe</h3>
-            <p className="text-gray-300 text-sm mt-2">Preparing Earth view...</p>
+            <p className="text-gray-300 text-sm mt-2">Please wait...</p>
           </div>
         </div>
       )}

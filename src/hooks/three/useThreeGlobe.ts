@@ -29,6 +29,7 @@ export function useThreeGlobe(
   const isFlyingRef = useRef<boolean>(false);
   const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initCallbackFiredRef = useRef<boolean>(false);
+  const forceInitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
@@ -79,6 +80,31 @@ export function useThreeGlobe(
     isFlyingRef
   );
   
+  // Force initialization after a delay if not already initialized
+  useEffect(() => {
+    // Set a forced initialization timeout as a safety measure
+    forceInitTimeoutRef.current = setTimeout(() => {
+      if (!isInitialized && containerRef.current) {
+        console.log("Forcing initialization after timeout");
+        setIsInitialized(true);
+        
+        // If onInitialized callback hasn't fired yet, fire it
+        if (!initCallbackFiredRef.current && onInitialized) {
+          console.log("Calling onInitialized callback from force init timeout");
+          initCallbackFiredRef.current = true;
+          onInitialized();
+        }
+      }
+    }, 2500); // 2.5 second safety timeout
+    
+    return () => {
+      if (forceInitTimeoutRef.current) {
+        clearTimeout(forceInitTimeoutRef.current);
+        forceInitTimeoutRef.current = null;
+      }
+    };
+  }, [isInitialized, setIsInitialized, onInitialized]);
+  
   // Initialize effect - improved initialization with better fallbacks
   useEffect(() => {
     if (isSetupCompleteRef.current || !containerRef.current) return;
@@ -103,17 +129,31 @@ export function useThreeGlobe(
           onInitialized();
         }
       }
-    }, 3500); // Give it more time to load properly, but not too much to get stuck
+    }, 2000); // Reduced timeout to ensure UI remains responsive
     
     return () => {
       if (initializationTimeoutRef.current) {
         clearTimeout(initializationTimeoutRef.current);
         initializationTimeoutRef.current = null;
       }
-      initCallbackFiredRef.current = false;
-      isSetupCompleteRef.current = false;
     };
   }, [isInitialized, setIsInitialized, onInitialized, containerRef]);
+  
+  // Handle additional renderer setup when it's available
+  useEffect(() => {
+    if (renderer && !isSetupCompleteRef.current) {
+      // Set pixel ratio for better quality on high-DPI displays
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio)); // Limit to 2x for performance
+      
+      // Enable shadow mapping for more realistic rendering
+      renderer.shadowMap.enabled = true;
+      
+      // Force a render to ensure the scene appears
+      if (scene && camera) {
+        renderer.render(scene, camera);
+      }
+    }
+  }, [renderer, scene, camera]);
   
   return {
     scene,
