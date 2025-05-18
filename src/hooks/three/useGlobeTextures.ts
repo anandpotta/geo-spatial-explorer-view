@@ -14,10 +14,24 @@ export function useGlobeTextures(
   const MAX_RETRIES = 2;
   const loadStartedRef = useRef(false);
   const backupTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef<boolean>(true);
+  
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    if (textureRetryTimerRef.current) {
+      clearTimeout(textureRetryTimerRef.current);
+      textureRetryTimerRef.current = null;
+    }
+    
+    if (backupTimerRef.current) {
+      clearTimeout(backupTimerRef.current);
+      backupTimerRef.current = null;
+    }
+  }, []);
   
   // Function to handle texture loading with retries
   const handleTextureLoading = useCallback(() => {
-    if (!earthMesh) return;
+    if (!earthMesh || !mountedRef.current) return;
     
     // Avoid starting multiple loads
     if (loadStartedRef.current) {
@@ -36,13 +50,15 @@ export function useGlobeTextures(
     material.needsUpdate = true;
     
     // Set a backup timer to ensure we don't get stuck waiting for textures
+    cleanup(); // Clear any existing timers
+    
     backupTimerRef.current = setTimeout(() => {
-      if (!texturesLoadedRef.current) {
+      if (!texturesLoadedRef.current && mountedRef.current) {
         console.log("Backup timer triggered for texture loading");
         setTexturesLoaded(true);
         texturesLoadedRef.current = true;
         
-        if (onTexturesLoaded) {
+        if (onTexturesLoaded && mountedRef.current) {
           console.log("Calling textures loaded callback from backup timer");
           onTexturesLoaded();
         }
@@ -51,11 +67,14 @@ export function useGlobeTextures(
     
     // Load the textures
     loadEarthTextures(material, (earthLoaded, bumpLoaded) => {
+      // Check if component is still mounted
+      if (!mountedRef.current) return;
+      
       const allLoaded = earthLoaded && bumpLoaded;
       
       console.log(`Textures loaded - Earth: ${earthLoaded}, Bump: ${bumpLoaded}, All: ${allLoaded}`);
       
-      if (allLoaded && !texturesLoadedRef.current) {
+      if (allLoaded && !texturesLoadedRef.current && mountedRef.current) {
         // Clear backup timer if textures loaded successfully
         if (backupTimerRef.current) {
           clearTimeout(backupTimerRef.current);
@@ -66,11 +85,11 @@ export function useGlobeTextures(
         setTexturesLoaded(true);
         texturesLoadedRef.current = true;
         
-        if (onTexturesLoaded) {
+        if (onTexturesLoaded && mountedRef.current) {
           console.log("Calling textures loaded callback");
           onTexturesLoaded();
         }
-      } else if (!allLoaded && retryCountRef.current < MAX_RETRIES) {
+      } else if (!allLoaded && retryCountRef.current < MAX_RETRIES && mountedRef.current) {
         // Retry texture loading after a delay
         if (textureRetryTimerRef.current) {
           clearTimeout(textureRetryTimerRef.current);
@@ -80,10 +99,12 @@ export function useGlobeTextures(
         console.log(`Retrying texture load, attempt ${retryCountRef.current}/${MAX_RETRIES}`);
         
         textureRetryTimerRef.current = setTimeout(() => {
-          loadStartedRef.current = false; // Allow new load attempt
-          handleTextureLoading();
+          if (mountedRef.current) {
+            loadStartedRef.current = false; // Allow new load attempt
+            handleTextureLoading();
+          }
         }, 800); // Slightly reduced time between retries
-      } else if (retryCountRef.current >= MAX_RETRIES) {
+      } else if ((retryCountRef.current >= MAX_RETRIES || !allLoaded) && mountedRef.current) {
         // After max retries, continue anyway with fallback appearance
         console.log("Max texture load retries reached, continuing with basic appearance");
         material.color = new THREE.Color(0x2980b9); // Slightly brighter blue as fallback
@@ -92,39 +113,42 @@ export function useGlobeTextures(
         setTexturesLoaded(true);
         texturesLoadedRef.current = true;
         
-        if (onTexturesLoaded) {
+        if (onTexturesLoaded && mountedRef.current) {
           console.log("Calling textures loaded callback after max retries");
           onTexturesLoaded();
         }
       }
     });
-  }, [earthMesh, onTexturesLoaded]);
+  }, [earthMesh, onTexturesLoaded, cleanup]);
   
   // Initialize texture loading when mesh is available
   useEffect(() => {
-    if (!earthMesh || texturesLoaded) return;
+    if (!earthMesh || texturesLoaded || !mountedRef.current) return;
     
     // Short delay before starting texture load to ensure mesh is fully setup
     const startLoadTimer = setTimeout(() => {
-      handleTextureLoading();
+      if (mountedRef.current) {
+        handleTextureLoading();
+      }
     }, 100);
     
     return () => {
-      // Cleanup
       clearTimeout(startLoadTimer);
-      if (textureRetryTimerRef.current) {
-        clearTimeout(textureRetryTimerRef.current);
-        textureRetryTimerRef.current = null;
-      }
-      if (backupTimerRef.current) {
-        clearTimeout(backupTimerRef.current);
-        backupTimerRef.current = null;
-      }
+      cleanup();
     };
-  }, [earthMesh, texturesLoaded, handleTextureLoading]);
+  }, [earthMesh, texturesLoaded, handleTextureLoading, cleanup]);
+  
+  // Unmount cleanup
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      cleanup();
+    };
+  }, [cleanup]);
   
   return {
     texturesLoaded,
-    handleTextureLoading
+    handleTextureLoading,
+    cleanup
   };
 }

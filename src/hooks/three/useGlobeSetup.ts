@@ -1,5 +1,5 @@
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { disposeObject3D } from '@/utils/three-utils';
 import { 
@@ -23,13 +23,42 @@ export function useGlobeSetup(
   const globeRef = useRef<THREE.Group | null>(null);
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
+  const starfieldRef = useRef<THREE.Points | null>(null);
+  const mountedRef = useRef<boolean>(true);
   
   // Flag to prevent multiple initializations
   const isSetupCompleteRef = useRef(false);
   
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    console.log("Globe effect cleanup");
+    isSetupCompleteRef.current = false;
+    
+    // Dispose globe and atmosphere meshes
+    if (globeRef.current && scene) {
+      scene.remove(globeRef.current);
+      disposeObject3D(globeRef.current);
+      globeRef.current = null;
+    }
+    
+    if (atmosphereRef.current && scene) {
+      scene.remove(atmosphereRef.current);
+      disposeObject3D(atmosphereRef.current);
+      atmosphereRef.current = null;
+    }
+    
+    if (starfieldRef.current && scene) {
+      scene.remove(starfieldRef.current);
+      disposeObject3D(starfieldRef.current);
+      starfieldRef.current = null;
+    }
+    
+    earthMeshRef.current = null;
+  }, [scene]);
+  
   // Setup globe objects and controls
   useEffect(() => {
-    if (!scene || !camera || isSetupCompleteRef.current || !containerRef.current) {
+    if (!scene || !camera || isSetupCompleteRef.current || !containerRef.current || !mountedRef.current) {
       console.log("Scene not ready or setup already complete");
       return;
     }
@@ -37,17 +66,9 @@ export function useGlobeSetup(
     console.log("Setting up globe objects and controls");
     isSetupCompleteRef.current = true;
     
-    // Clear any previous scene elements
-    while (scene.children.length > 0) {
-      const child = scene.children[0];
-      scene.remove(child);
-      if (child instanceof THREE.Object3D) {
-        disposeObject3D(child);
-      }
-    }
-    
     // Add starfield background
-    createStarfield(scene);
+    const starfield = createStarfield(scene);
+    starfieldRef.current = starfield;
     
     // Set up lighting
     setupLighting(scene);
@@ -79,31 +100,30 @@ export function useGlobeSetup(
     
     // Cleanup function
     return () => {
-      console.log("Globe effect cleanup");
-      isSetupCompleteRef.current = false;
-      
-      // Dispose globe and atmosphere meshes
-      if (globeRef.current) {
-        scene.remove(globeRef.current);
-        disposeObject3D(globeRef.current);
-        globeRef.current = null;
-      }
-      
-      if (atmosphereRef.current) {
-        scene.remove(atmosphereRef.current);
-        disposeObject3D(atmosphereRef.current);
-        atmosphereRef.current = null;
-      }
-      
-      earthMeshRef.current = null;
+      cleanup();
     };
-  }, [scene, camera, controlsRef, containerRef]);
+  }, [scene, camera, controlsRef, containerRef, cleanup]);
+  
+  // Handle unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      cleanup();
+    };
+  }, [cleanup]);
   
   // Use the texture hook
-  const { texturesLoaded } = useGlobeTextures(earthMeshRef.current, onTexturesLoaded);
+  const { texturesLoaded, handleTextureLoading, cleanup: texturesCleanup } = useGlobeTextures(
+    earthMeshRef.current,
+    onTexturesLoaded
+  );
   
   return {
     globe: globeRef.current,
-    texturesLoaded
+    texturesLoaded,
+    cleanup: useCallback(() => {
+      texturesCleanup();
+      cleanup();
+    }, [texturesCleanup, cleanup])
   };
 }

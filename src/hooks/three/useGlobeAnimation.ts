@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 
 export function useGlobeAnimation(
@@ -12,6 +12,15 @@ export function useGlobeAnimation(
 ) {
   // Animation frame reference
   const animationFrameRef = useRef<number | null>(null);
+  const mountedRef = useRef<boolean>(true);
+  
+  // Cleanup function to cancel animation frame
+  const cleanup = useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
   
   // Setup and handle the animation loop
   useEffect(() => {
@@ -24,6 +33,10 @@ export function useGlobeAnimation(
     
     // Animation function
     const animate = () => {
+      // Check if unmounted
+      if (!mountedRef.current) return;
+      
+      // Check if all required objects are still available
       if (!scene || !camera || !renderer || !controlsRef.current) {
         console.warn("Animation loop missing required objects");
         return;
@@ -41,7 +54,7 @@ export function useGlobeAnimation(
       }
       
       // Ensure the renderer is drawing the scene with high quality
-      if (renderer) {
+      if (renderer && renderer.domElement && renderer.domElement.parentElement) {
         renderer.render(scene, camera);
       }
     };
@@ -51,14 +64,21 @@ export function useGlobeAnimation(
     
     // Cleanup function
     return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
+      mountedRef.current = false;
+      cleanup();
     };
-  }, [scene, camera, renderer, controlsRef, autoRotationEnabledRef, isFlyingRef]);
+  }, [scene, camera, renderer, controlsRef, autoRotationEnabledRef, isFlyingRef, cleanup]);
+  
+  // Handle unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      cleanup();
+    };
+  }, [cleanup]);
   
   return {
-    animationFrameRef
+    animationFrameRef,
+    cleanup
   };
 }

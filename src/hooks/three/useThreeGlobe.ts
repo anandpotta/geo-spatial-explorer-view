@@ -21,30 +21,32 @@ export function useThreeGlobe(
     isInitialized,
     setIsInitialized,
     canvasElementRef,
-    controlsRef
+    controlsRef,
+    cleanup: sceneCleanup
   } = useThreeScene(containerRef);
 
-  // Refs for tracking state
+  // State management
   const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
   const initializationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initCallbackFiredRef = useRef<boolean>(false);
   const forceInitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const texturesLoadedRef = useRef<boolean>(false);
+  const mountedRef = useRef<boolean>(true);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
   
   // Get markers functionality
-  const { addMarker } = useMarkers(scene);
+  const { addMarker, cleanup: markersCleanup } = useMarkers(scene);
   
   // Handle textures loaded callback with delay to ensure smooth appearance
   const handleTexturesLoaded = useCallback(() => {
-    // Don't re-fire if textures were already loaded
-    if (texturesLoadedRef.current) return;
+    // Don't re-fire if textures were already loaded or component unmounted
+    if (texturesLoadedRef.current || !mountedRef.current) return;
     texturesLoadedRef.current = true;
     
-    if (onInitialized && isInitialized && !initCallbackFiredRef.current) {
+    if (onInitialized && isInitialized && !initCallbackFiredRef.current && mountedRef.current) {
       console.log("Textures loaded, preparing to call onInitialized callback");
       
       // Mark that we've fired the callback to prevent double initialization
@@ -52,14 +54,16 @@ export function useThreeGlobe(
       
       // Small delay to ensure textures are applied before showing
       setTimeout(() => {
-        console.log("Calling onInitialized callback - textures loaded and applied");
-        onInitialized();
+        if (mountedRef.current) {
+          console.log("Calling onInitialized callback - textures loaded and applied");
+          onInitialized();
+        }
       }, 150);
     }
   }, [onInitialized, isInitialized]);
   
   // Use globe setup hook with texture callback
-  const { globe } = useGlobeSetup(
+  const { globe, cleanup: globeCleanup } = useGlobeSetup(
     scene,
     camera,
     controlsRef,
@@ -68,7 +72,7 @@ export function useThreeGlobe(
   );
   
   // Set up animation loop
-  useGlobeAnimation(
+  const { cleanup: animationCleanup } = useGlobeAnimation(
     scene,
     camera,
     renderer,
@@ -78,25 +82,46 @@ export function useThreeGlobe(
   );
   
   // Get enhanced fly to location functionality
-  const { enhancedFlyToLocation } = useEnhancedFlyToLocation(
+  const { enhancedFlyToLocation, cleanup: flyCleanup } = useEnhancedFlyToLocation(
     camera,
     controlsRef,
     EARTH_RADIUS,
     isFlyingRef
   );
   
-  // Force initialization after a delay if not already initialized - but only once
+  // Master cleanup function
+  const cleanupAll = useCallback(() => {
+    // Clear all timeouts
+    if (initializationTimeoutRef.current) {
+      clearTimeout(initializationTimeoutRef.current);
+      initializationTimeoutRef.current = null;
+    }
+    
+    if (forceInitTimeoutRef.current) {
+      clearTimeout(forceInitTimeoutRef.current);
+      forceInitTimeoutRef.current = null;
+    }
+    
+    // Call all cleanup functions
+    flyCleanup();
+    animationCleanup();
+    globeCleanup();
+    markersCleanup();
+    sceneCleanup();
+  }, [flyCleanup, animationCleanup, globeCleanup, markersCleanup, sceneCleanup]);
+  
+  // Force initialization after a delay if not already initialized
   useEffect(() => {
     if (initCallbackFiredRef.current || !containerRef.current) return;
     
     // Set a forced initialization timeout as a safety measure
     forceInitTimeoutRef.current = setTimeout(() => {
-      if (!isInitialized && containerRef.current) {
+      if (!isInitialized && containerRef.current && mountedRef.current) {
         console.log("Forcing initialization after timeout");
         setIsInitialized(true);
         
         // If onInitialized callback hasn't fired yet, fire it
-        if (!initCallbackFiredRef.current && onInitialized) {
+        if (!initCallbackFiredRef.current && onInitialized && mountedRef.current) {
           console.log("Calling onInitialized callback from force init timeout");
           initCallbackFiredRef.current = true;
           onInitialized();
@@ -110,7 +135,7 @@ export function useThreeGlobe(
         forceInitTimeoutRef.current = null;
       }
     };
-  }, [isInitialized, setIsInitialized, onInitialized]);
+  }, [isInitialized, setIsInitialized, onInitialized, containerRef]);
   
   // Initialize effect - improved initialization with better fallbacks
   useEffect(() => {
@@ -123,14 +148,14 @@ export function useThreeGlobe(
     
     // Mark as initialized after a reasonable timeout to ensure everything is ready
     initializationTimeoutRef.current = setTimeout(() => {
-      if (!isInitialized && containerRef.current && !initCallbackFiredRef.current) {
+      if (!isInitialized && containerRef.current && !initCallbackFiredRef.current && mountedRef.current) {
         console.log("Setting isInitialized to true after timeout");
         setIsInitialized(true);
         isSetupCompleteRef.current = true;
         
         // Even if textures are still loading, we'll consider the globe ready
         // to avoid getting stuck at the loading screen
-        if (onInitialized && !initCallbackFiredRef.current) {
+        if (onInitialized && !initCallbackFiredRef.current && mountedRef.current) {
           console.log("Calling onInitialized as fallback to prevent stuck loading");
           initCallbackFiredRef.current = true;
           onInitialized();
@@ -148,7 +173,7 @@ export function useThreeGlobe(
   
   // Handle additional renderer setup when it's available
   useEffect(() => {
-    if (renderer && !isSetupCompleteRef.current) {
+    if (renderer && !isSetupCompleteRef.current && mountedRef.current) {
       // Set pixel ratio for better quality on high-DPI displays
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio)); // Limit to 2x for performance
       
@@ -162,6 +187,15 @@ export function useThreeGlobe(
     }
   }, [renderer, scene, camera]);
   
+  // Unmount cleanup
+  useEffect(() => {
+    return () => {
+      console.log("useThreeGlobe hook unmounting, cleaning up all resources");
+      mountedRef.current = false;
+      cleanupAll();
+    };
+  }, [cleanupAll]);
+  
   return {
     scene,
     camera,
@@ -171,6 +205,7 @@ export function useThreeGlobe(
     isInitialized,
     flyToLocation: enhancedFlyToLocation,
     setAutoRotation,
-    addMarker
+    addMarker,
+    cleanup: cleanupAll
   };
 }

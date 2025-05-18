@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
@@ -16,8 +16,22 @@ export function useFlyToLocation(
   controlsRef: React.MutableRefObject<OrbitControls | null>,
   globeRadius: number
 ) {
+  // Animation frame reference for cleanup
+  const animationFrameRef = useRef<number | null>(null);
+  const isDisposedRef = useRef(false);
+  
   // Method to fly to a specific location on the globe
   const flyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
+    // Reset disposed state
+    isDisposedRef.current = false;
+    
+    // Clear any existing animation frame
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    // Check if camera and controls exist
     if (!cameraRef.current || !controlsRef.current) {
       console.warn("Cannot fly to location - camera or controls not initialized");
       if (onComplete) onComplete();
@@ -81,6 +95,12 @@ export function useFlyToLocation(
     const duration = 2000; // Slower animation (2 seconds) for smoother movement
     
     const animateCamera = (timestamp: number) => {
+      // Stop animation if the component has been disposed
+      if (isDisposedRef.current) {
+        if (onComplete) onComplete();
+        return;
+      }
+      
       // Check if camera and controls still exist
       if (!cameraRef.current || !controlsRef.current) {
         console.warn("Camera or controls no longer exist during animation");
@@ -103,17 +123,17 @@ export function useFlyToLocation(
         ease = 0.5 * (1 + Math.pow(2 * progress - 1, 3));
       }
       
-      // Interpolate camera position
-      const newX = currentPos.x + (targetPos.x - currentPos.x) * ease;
-      const newY = currentPos.y + (targetPos.y - currentPos.y) * ease;
-      const newZ = currentPos.z + (targetPos.z - currentPos.z) * ease;
-      
-      // Interpolate target (where the camera is looking)
-      const newTargetX = currentTarget.x + (finalTarget.x - currentTarget.x) * ease;
-      const newTargetY = currentTarget.y + (finalTarget.y - currentTarget.y) * ease;
-      const newTargetZ = currentTarget.z + (finalTarget.z - currentTarget.z) * ease;
-      
       try {
+        // Interpolate camera position
+        const newX = currentPos.x + (targetPos.x - currentPos.x) * ease;
+        const newY = currentPos.y + (targetPos.y - currentPos.y) * ease;
+        const newZ = currentPos.z + (targetPos.z - currentPos.z) * ease;
+        
+        // Interpolate target (where the camera is looking)
+        const newTargetX = currentTarget.x + (finalTarget.x - currentTarget.x) * ease;
+        const newTargetY = currentTarget.y + (finalTarget.y - currentTarget.y) * ease;
+        const newTargetZ = currentTarget.z + (finalTarget.z - currentTarget.z) * ease;
+        
         // Update camera with null checks
         if (cameraRef.current && cameraRef.current.position) {
           cameraRef.current.position.set(newX, newY, newZ);
@@ -125,26 +145,31 @@ export function useFlyToLocation(
         }
       } catch (error) {
         console.error("Error during camera animation:", error);
+        if (onComplete) onComplete();
+        return;
       }
       
       // Continue animation if not complete
-      if (progress < 1) {
-        requestAnimationFrame(animateCamera);
+      if (progress < 1 && !isDisposedRef.current) {
+        animationFrameRef.current = requestAnimationFrame(animateCamera);
       } else {
-        // Animation complete
-        // Restore controls settings with null checks
-        if (controlsRef.current) {
+        // Animation complete or component disposed
+        animationFrameRef.current = null;
+        
+        // Don't attempt to modify disposed controls
+        if (!isDisposedRef.current && controlsRef.current) {
+          // Restore controls settings with null checks
           controlsRef.current.enableDamping = wasDamping;
           
           // Delay auto-rotation restart slightly to avoid jump
           setTimeout(() => {
-            if (controlsRef.current && wasAutoRotating) {
+            if (!isDisposedRef.current && controlsRef.current && wasAutoRotating) {
               controlsRef.current.autoRotate = true;
             }
           }, 300);
         }
         
-        if (onComplete) {
+        if (onComplete && !isDisposedRef.current) {
           console.log("Fly animation complete, calling completion callback");
           onComplete();
         }
@@ -152,10 +177,29 @@ export function useFlyToLocation(
     };
     
     // Start animation
-    requestAnimationFrame(animateCamera);
+    animationFrameRef.current = requestAnimationFrame(animateCamera);
+    
+    // Return a cleanup function
+    return () => {
+      isDisposedRef.current = true;
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
   }, [cameraRef, controlsRef, globeRadius]);
   
+  // Cleanup function to cancel animations
+  const cleanup = useCallback(() => {
+    isDisposedRef.current = true;
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
+  
   return {
-    flyToLocation
+    flyToLocation,
+    cleanup
   };
 }

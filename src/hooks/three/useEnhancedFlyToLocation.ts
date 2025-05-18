@@ -1,5 +1,5 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFlyToLocation } from './useFlyToLocation';
 import { useAutoRotation } from './useAutoRotation';
@@ -16,6 +16,7 @@ export function useEnhancedFlyToLocation(
 ) {
   // Refs
   const internalFlyingRef = useRef<boolean>(false);
+  const cleanupFnRef = useRef<(() => void) | null>(null);
   
   // Determine which ref to use for tracking flying state
   const isFlyingRef = externalFlyingRef || internalFlyingRef;
@@ -24,14 +25,31 @@ export function useEnhancedFlyToLocation(
   const { setAutoRotation } = useAutoRotation(controlsRef);
   
   // Get basic flyToLocation from useFlyToLocation
-  const { flyToLocation } = useFlyToLocation(
+  const { flyToLocation, cleanup } = useFlyToLocation(
     { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
     controlsRef,
     globeRadius
   );
   
+  // Ensure cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (cleanupFnRef.current) {
+        cleanupFnRef.current();
+        cleanupFnRef.current = null;
+      }
+      cleanup();
+    };
+  }, [cleanup]);
+  
   // Wrap the flyToLocation to handle auto-rotation and flying state
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
+    // Clean up any previous flight
+    if (cleanupFnRef.current) {
+      cleanupFnRef.current();
+      cleanupFnRef.current = null;
+    }
+    
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
     
@@ -47,7 +65,7 @@ export function useEnhancedFlyToLocation(
       }
     }, 1000); // Short pre-trigger for UI preparation
     
-    // Clear any existing flight completion callbacks
+    // Safety timeout for flight completion
     const flyCompletionTimeout = setTimeout(() => {
       // If the flight doesn't complete in 6 seconds (reduced from 8), force completion
       if (isFlyingRef.current) {
@@ -60,7 +78,7 @@ export function useEnhancedFlyToLocation(
     }, 6000); // Reduced timeout for better responsiveness
     
     // Call the original flyToLocation with enhanced completion handling
-    flyToLocation(longitude, latitude, () => {
+    const flightCleanupFn = flyToLocation(longitude, latitude, () => {
       // Mark flying as complete
       isFlyingRef.current = false;
       
@@ -77,10 +95,16 @@ export function useEnhancedFlyToLocation(
         setAutoRotation(true);
       }, 500);
     });
+    
+    // Store cleanup function
+    if (flightCleanupFn) {
+      cleanupFnRef.current = flightCleanupFn;
+    }
   }, [flyToLocation, setAutoRotation, isFlyingRef]);
   
   return {
     enhancedFlyToLocation,
-    isFlyingRef
+    isFlyingRef,
+    cleanup
   };
 }

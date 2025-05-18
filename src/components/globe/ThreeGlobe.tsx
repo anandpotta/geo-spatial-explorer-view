@@ -23,28 +23,29 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const readyCallbackFiredRef = useRef(false);
   const globeInitializedRef = useRef(false);
   const flyCompletedCallbackRef = useRef<(() => void) | null>(null);
+  const mountedRef = useRef<boolean>(true);
   
   // Initialize globe with improved reliability via a staggered loading approach
   const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized && !initializationAttemptedRef.current) {
+    if (!isInitialized && !initializationAttemptedRef.current && mountedRef.current) {
       console.log("ThreeGlobe: Globe initialization callback triggered");
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
       
       // Force a quick re-render to ensure state consistency
       setTimeout(() => {
-        if (!readyCallbackFiredRef.current) {
+        if (!readyCallbackFiredRef.current && mountedRef.current) {
           readyCallbackFiredRef.current = true;
           console.log("ThreeGlobe: Setting initialized state and preparing callback");
           
           // To avoid multiple initializations
-          if (!globeInitializedRef.current) {
+          if (!globeInitializedRef.current && mountedRef.current) {
             globeInitializedRef.current = true;
             console.log("ThreeGlobe: Globe initialized for the first time");
             
             // Ensure the callback is called with a more generous timeout
             setTimeout(() => {
-              if (onMapReady) {
+              if (onMapReady && mountedRef.current) {
                 console.log("ThreeGlobe: Calling onMapReady callback");
                 onMapReady(globeAPI);
               }
@@ -57,12 +58,12 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   
   // Added backup initialization trigger to prevent getting stuck on loading
   useEffect(() => {
-    if (!isInitialized && globeAPI.isInitialized && !readyCallbackFiredRef.current) {
+    if (!isInitialized && globeAPI.isInitialized && !readyCallbackFiredRef.current && mountedRef.current) {
       console.log("ThreeGlobe: Backup initialization triggered");
       setIsInitialized(true);
       readyCallbackFiredRef.current = true;
       
-      if (onMapReady && !globeInitializedRef.current) {
+      if (onMapReady && !globeInitializedRef.current && mountedRef.current) {
         globeInitializedRef.current = true;
         console.log("ThreeGlobe: Calling onMapReady from backup trigger");
         onMapReady(globeAPI);
@@ -71,12 +72,12 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     
     // Failsafe initialization after timeout - in case normal initialization fails
     const failsafeTimer = setTimeout(() => {
-      if (!isInitialized && !readyCallbackFiredRef.current) {
+      if (!isInitialized && !readyCallbackFiredRef.current && mountedRef.current) {
         console.log("ThreeGlobe: Failsafe initialization triggered after timeout");
         setIsInitialized(true);
         readyCallbackFiredRef.current = true;
         
-        if (onMapReady && !globeInitializedRef.current) {
+        if (onMapReady && !globeInitializedRef.current && mountedRef.current) {
           globeInitializedRef.current = true;
           console.log("ThreeGlobe: Calling onMapReady from failsafe");
           onMapReady(globeAPI);
@@ -89,23 +90,26 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   
   // Handle fly completion with debouncing
   const handleFlyComplete = () => {
+    if (!mountedRef.current) return;
     setIsFlying(false);
     
     // Execute the stored callback if exists
-    if (flyCompletedCallbackRef.current) {
+    if (flyCompletedCallbackRef.current && mountedRef.current) {
       const callback = flyCompletedCallbackRef.current;
       flyCompletedCallbackRef.current = null;
       
       // Small delay for smoother transition experience
       setTimeout(() => {
-        callback();
+        if (mountedRef.current) {
+          callback();
+        }
       }, 100);
     }
   };
   
   // Handle location changes with better flight state management
   useEffect(() => {
-    if (!globeAPI.isInitialized || !selectedLocation) return;
+    if (!globeAPI.isInitialized || !selectedLocation || !mountedRef.current) return;
     
     // Prevent duplicate fly operations for the same location
     const locationId = selectedLocation.id;
@@ -114,7 +118,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       
       // Store the callback to execute when current flight completes
       flyCompletedCallbackRef.current = () => {
-        if (onFlyComplete) {
+        if (onFlyComplete && mountedRef.current) {
           console.log("ThreeGlobe: Executing queued fly complete callback");
           onFlyComplete();
         }
@@ -138,21 +142,23 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     // Fly to the location - ensure coordinates are valid numbers
     if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
       globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
-        handleFlyComplete();
-        if (onFlyComplete) {
-          console.log("ThreeGlobe: Fly complete");
-          onFlyComplete();
+        if (mountedRef.current) {
+          handleFlyComplete();
+          if (onFlyComplete && mountedRef.current) {
+            console.log("ThreeGlobe: Fly complete");
+            onFlyComplete();
+          }
         }
       });
       
       // Add marker at the location with null check
-      if (globeAPI.addMarker) {
+      if (globeAPI.addMarker && mountedRef.current) {
         globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
       }
     } else {
       console.error("Invalid coordinates:", selectedLocation);
       setIsFlying(false);
-      if (onFlyComplete) onFlyComplete();
+      if (onFlyComplete && mountedRef.current) onFlyComplete();
     }
   }, [selectedLocation, globeAPI, onFlyComplete, isFlying, globeAPI.isInitialized]);
   
@@ -160,13 +166,21 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   useEffect(() => {
     return () => {
       console.log("ThreeGlobe unmounting, cleaning up");
+      mountedRef.current = false;
+      
+      // Execute cleanup
+      if (globeAPI && globeAPI.cleanup) {
+        globeAPI.cleanup();
+      }
+      
+      // Clear state references
       lastFlyLocationRef.current = null;
       initializationAttemptedRef.current = false;
       readyCallbackFiredRef.current = false;
       globeInitializedRef.current = false;
       flyCompletedCallbackRef.current = null;
     };
-  }, []);
+  }, [globeAPI]);
   
   return (
     <div 
