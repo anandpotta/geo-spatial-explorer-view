@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
@@ -24,11 +25,20 @@ const MarkersList = ({
   setMarkerName,
   setMarkerType
 }: MarkersListProps) => {
+  // Ensure we have unique markers by ID
+  const uniqueMarkers = markers.reduce((acc, marker) => {
+    // Only add marker if it's not already in the accumulator
+    if (!acc.some(m => m.id === marker.id)) {
+      acc.push(marker);
+    }
+    return acc;
+  }, [] as LocationMarker[]);
+  
   return (
     <>
-      {Array.isArray(markers) && markers.map((marker) => (
+      {Array.isArray(uniqueMarkers) && uniqueMarkers.map((marker) => (
         <UserMarker 
-          key={marker.id} 
+          key={`marker-${marker.id}`} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />
@@ -48,4 +58,4 @@ const MarkersList = ({
   );
 };
 
-export default MarkersList;
+export default React.memo(MarkersList);

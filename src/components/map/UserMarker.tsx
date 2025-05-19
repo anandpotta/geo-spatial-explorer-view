@@ -1,8 +1,9 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Marker } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
+import L from 'leaflet';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -10,6 +11,24 @@ interface UserMarkerProps {
 }
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
+  const markerRef = useRef<L.Marker | null>(null);
+  
+  // Cleanup marker when component unmounts
+  useEffect(() => {
+    return () => {
+      if (markerRef.current) {
+        const leafletElement = markerRef.current;
+        if (leafletElement && leafletElement.remove) {
+          try {
+            leafletElement.remove();
+          } catch (error) {
+            console.error('Error removing marker:', error);
+          }
+        }
+      }
+    };
+  }, []);
+  
   const handleDragEnd = useCallback((e: any) => {
     const updatedMarker = e.target;
     const newPosition = updatedMarker.getLatLng();
@@ -40,6 +59,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       eventHandlers={{
         dragend: handleDragEnd
       }}
+      ref={markerRef}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
     </Marker>
