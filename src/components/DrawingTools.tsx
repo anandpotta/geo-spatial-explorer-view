@@ -1,6 +1,5 @@
-
 import { useState, useRef, useEffect } from 'react';
-import { Trash2, Edit, Square, Circle, Polyline } from 'lucide-react';
+import { Trash2, Edit, Square, Circle, Pencil } from 'lucide-react';
 import MapControls from './drawing/MapControls';
 import { useClearAllOperation } from '@/hooks/useClearAllOperation';
 
@@ -106,7 +105,7 @@ const DrawingTools = ({
               onClick={() => handleToolClick('polygon')}
               aria-label="Draw polygon"
             >
-              <Polyline className="h-5 w-5 text-blue-600" />
+              <Pencil className="h-5 w-5 text-blue-600" />
             </button>
             <button
               className={`p-2 rounded-md bg-blue-100 hover:bg-blue-200 transition-colors flex items-center justify-center ${activeTool === 'rectangle' ? 'bg-blue-300' : ''}`}
