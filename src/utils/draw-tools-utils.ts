@@ -1,5 +1,61 @@
-
 import L from 'leaflet';
+
+/**
+ * Fixes the "type is not defined" error in the Leaflet Draw library's area calculation
+ */
+export const fixTypeIsNotDefinedError = (): () => void => {
+  // Fix the "type is not defined" error in L.GeometryUtil.readableArea
+  if (L.GeometryUtil && L.GeometryUtil.readableArea) {
+    const originalReadableArea = L.GeometryUtil.readableArea;
+    
+    // Override with a fixed version that avoids the 'type is not defined' error
+    L.GeometryUtil.readableArea = function(area: number, isMetric: boolean, precision?: any) {
+      // The original function tries to use 'type' which is undefined
+      // We'll implement a fixed version
+      const areaStr = area.toFixed(2);
+      const metricUnit = 'm²';
+      const imperialUnit = 'ft²';
+      
+      if (isMetric) {
+        if (area >= 10000) {
+          return (area / 10000).toFixed(2) + ' ha';
+        }
+        return areaStr + ' ' + metricUnit;
+      } else {
+        // Convert to square feet
+        const sqFeet = area * 10.7639;
+        if (sqFeet > 43560) {
+          // Convert to acres (43560 sq feet per acre)
+          return (sqFeet / 43560).toFixed(2) + ' acres';
+        }
+        return sqFeet.toFixed(2) + ' ' + imperialUnit;
+      }
+    };
+    
+    return () => {
+      // Restore original function
+      L.GeometryUtil.readableArea = originalReadableArea;
+    };
+  }
+  
+  // If the function doesn't exist (which would be strange), create it
+  else if (L.GeometryUtil && !L.GeometryUtil.readableArea) {
+    L.GeometryUtil.readableArea = function(area: number, isMetric: boolean) {
+      const areaStr = area.toFixed(2);
+      return isMetric ? areaStr + ' m²' : (area * 10.7639).toFixed(2) + ' ft²';
+    };
+    
+    return () => {
+      // Clean up by deleting our added function
+      if (L.GeometryUtil) {
+        delete L.GeometryUtil.readableArea;
+      }
+    };
+  }
+  
+  // Fallback empty cleanup function
+  return () => {};
+};
 
 /**
  * Configures the SVG renderer for Leaflet drawing tools to prevent flickering
@@ -70,6 +126,22 @@ export const configureSvgRenderer = (): () => void => {
           }
         };
       }
+      
+      // Fix the showRadius property for rectangles
+      const originalGetTooltipText = (L.Draw as any).Rectangle.prototype._getTooltipText;
+      if (originalGetTooltipText) {
+        (L.Draw as any).Rectangle.prototype._getTooltipText = function() {
+          const result = originalGetTooltipText.call(this);
+          // Make sure we don't reference 'type' directly
+          if (result && result.text && this._shape) {
+            const bounds = this._shape.getBounds();
+            const area = L.GeometryUtil.geodesicArea(bounds.getCorners());
+            const areaText = L.GeometryUtil.readableArea(area, true);
+            result.text = result.text.replace(/\{[^\}]*\}/, areaText);
+          }
+          return result;
+        };
+      }
     }
 
     // Force SVG renderer for Circle
@@ -95,10 +167,26 @@ export const configureSvgRenderer = (): () => void => {
     }
   }
 
+  // Add LatLngBounds.getCorners method if it doesn't exist
+  if (L.LatLngBounds && !L.LatLngBounds.prototype.getCorners) {
+    L.LatLngBounds.prototype.getCorners = function() {
+      const northwest = this.getNorthWest();
+      const northeast = this.getNorthEast();
+      const southeast = this.getSouthEast();
+      const southwest = this.getSouthWest();
+      return [northwest, northeast, southeast, southwest, northwest];
+    };
+  }
+
   // Return a cleanup function
   return () => {
     // Restore original method when component unmounts
     (L.SVG.prototype as any)._updateStyle = originalUpdateStyle;
+
+    // Clean up LatLngBounds enhancement
+    if (L.LatLngBounds && L.LatLngBounds.prototype.getCorners) {
+      delete L.LatLngBounds.prototype.getCorners;
+    }
   };
 };
 

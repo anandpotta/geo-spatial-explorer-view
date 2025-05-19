@@ -5,7 +5,8 @@ import {
   configureSvgRenderer, 
   optimizePolygonDrawing, 
   enhancePathPreservation, 
-  enhanceRectangleDrawing 
+  enhanceRectangleDrawing,
+  fixTypeIsNotDefinedError
 } from '@/utils/draw-tools-utils';
 
 /**
@@ -19,6 +20,9 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     // Use type assertion to access _map internally without TypeScript errors
     const map = (featureGroup as any)._map;
     if (!map) return;
+    
+    // Fix the "type is not defined" error in area calculations
+    const cleanupTypePatching = fixTypeIsNotDefinedError();
     
     // Set up SVG renderer configuration to reduce flickering
     const cleanupSvgRenderer = configureSvgRenderer();
@@ -107,6 +111,7 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     
     // Cleanup function
     return () => {
+      cleanupTypePatching();
       cleanupSvgRenderer();
       cleanupPathPreservation();
       

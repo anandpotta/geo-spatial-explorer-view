@@ -15,7 +15,9 @@ export const getDrawOptions = () => {
         stroke: true,
         renderer: L.svg(), // Force SVG renderer for rectangles
         lineCap: 'round',  // Add round line caps for rectangles too
-        lineJoin: 'round'  // Add round line joins for rectangles too
+        lineJoin: 'round',  // Add round line joins for rectangles too
+        metric: true, // Use metric measurements
+        showArea: true // Show area while drawing
       }
     },
     polygon: {
