@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
 import MapView from './MapView';
-import { getSavedMarkers, LocationMarker } from '@/utils/marker-utils';
+import { getSavedMarkers, LocationMarker, createMarker } from '@/utils/marker-utils';
 import { toast } from '@/components/ui/use-toast';
 
 interface LeafletMapProps {
@@ -115,12 +115,14 @@ const LeafletMap = ({
   const handleSaveMarker = () => {
     if (!tempMarker) return;
     
-    const newMarker: LocationMarker = {
+    // Use the createMarker utility function instead of manually constructing the object
+    // This ensures all required properties are included
+    const newMarker = createMarker({
       id: `marker-${Date.now()}`,
       position: tempMarker,
       name: markerName || 'Unnamed Location',
       type: markerType
-    };
+    });
     
     const updatedMarkers = [...markers, newMarker];
     setMarkers(updatedMarkers);
