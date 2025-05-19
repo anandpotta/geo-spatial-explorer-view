@@ -18,12 +18,21 @@ export function useMarkers(scene: THREE.Scene | null) {
       const existingMarker = markersRef.current.get(id);
       if (existingMarker && scene.children.includes(existingMarker)) {
         scene.remove(existingMarker);
+        // Dispose geometry and material
+        if (existingMarker.geometry) existingMarker.geometry.dispose();
+        if (existingMarker.material) {
+          if (Array.isArray(existingMarker.material)) {
+            existingMarker.material.forEach(m => m.dispose());
+          } else {
+            existingMarker.material.dispose();
+          }
+        }
       }
       markersRef.current.delete(id);
     }
     
     // Create marker geometry and material
-    const markerGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+    const markerGeometry = new THREE.SphereGeometry(0.02, 8, 8); // Reduced segments for better performance
     const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff4500 });
     
     // Create marker mesh
@@ -43,7 +52,9 @@ export function useMarkers(scene: THREE.Scene | null) {
   
   // Cleanup function to remove all markers
   const cleanup = useCallback(() => {
-    if (markersRef.current.size > 0 && scene) {
+    if (!scene) return;
+    
+    if (markersRef.current.size > 0) {
       console.log("Cleaning up markers");
       markersRef.current.forEach((marker) => {
         if (scene.children.includes(marker)) {

@@ -13,6 +13,7 @@ export function useGlobeAnimation(
   // Animation frame reference
   const animationFrameRef = useRef<number | null>(null);
   const mountedRef = useRef<boolean>(true);
+  const lastFrameTimeRef = useRef<number>(0);
   
   // Cleanup function to cancel animation frame
   const cleanup = useCallback(() => {
@@ -38,12 +39,20 @@ export function useGlobeAnimation(
     console.log("Starting globe animation loop");
     
     // Animation function with safety checks
-    const animate = () => {
+    const animate = (timestamp: number) => {
       // Check if unmounted
       if (!mountedRef.current) {
         cleanup();
         return;
       }
+      
+      // Throttle frame rate slightly for better performance
+      const elapsed = timestamp - lastFrameTimeRef.current;
+      if (elapsed < 16) { // cap at ~60fps
+        animationFrameRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      lastFrameTimeRef.current = timestamp;
       
       // Request next frame first to ensure smoother animation
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -56,6 +65,11 @@ export function useGlobeAnimation(
       }
       
       try {
+        // Skip rendering if document is not visible (tab is inactive)
+        if (document.hidden) {
+          return;
+        }
+        
         // If auto rotation is enabled and not flying to a location
         if (autoRotationEnabledRef.current && !isFlyingRef.current) {
           // Let the orbit controls handle rotation
@@ -71,12 +85,13 @@ export function useGlobeAnimation(
         }
       } catch (error) {
         console.error("Error in animation loop:", error);
-        cleanup();
+        // Don't immediately clean up on error, try to continue
+        // This makes the animation more robust
       }
     };
     
     // Start animation
-    animate();
+    animationFrameRef.current = requestAnimationFrame(animate);
     
     // Cleanup function
     return () => {
@@ -84,14 +99,6 @@ export function useGlobeAnimation(
       cleanup();
     };
   }, [scene, camera, renderer, controlsRef, autoRotationEnabledRef, isFlyingRef, cleanup]);
-  
-  // Handle unmount
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-      cleanup();
-    };
-  }, [cleanup]);
   
   return {
     animationFrameRef,

@@ -18,12 +18,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<'loading' | 'partial' | 'complete'>('loading');
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
   const readyCallbackFiredRef = useRef(false);
   const globeInitializedRef = useRef(false);
   const flyCompletedCallbackRef = useRef<(() => void) | null>(null);
   const mountedRef = useRef<boolean>(true);
+  const failsafeTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Initialize globe with improved reliability via a staggered loading approach
   const globeAPI = useThreeGlobe(containerRef, () => {
@@ -31,6 +33,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       console.log("ThreeGlobe: Globe initialization callback triggered");
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
+      setLoadingStatus('partial');
       
       // Force a quick re-render to ensure state consistency
       setTimeout(() => {
@@ -47,6 +50,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
             setTimeout(() => {
               if (onMapReady && mountedRef.current) {
                 console.log("ThreeGlobe: Calling onMapReady callback");
+                setLoadingStatus('complete');
                 onMapReady(globeAPI);
               }
             }, 100);
@@ -56,36 +60,51 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     }
   });
   
+  // Critical failsafe - ensure the globe loads even if something goes wrong
+  useEffect(() => {
+    // Super short failsafe timer to ensure we don't block initialization
+    failsafeTimerRef.current = setTimeout(() => {
+      if (!isInitialized && mountedRef.current) {
+        console.log("ThreeGlobe: Emergency failsafe initialization triggered");
+        setIsInitialized(true);
+        setLoadingStatus('partial');
+        
+        // Force the ready callback with a slight delay
+        setTimeout(() => {
+          if (!readyCallbackFiredRef.current && mountedRef.current && onMapReady) {
+            console.log("ThreeGlobe: Emergency readiness notification");
+            readyCallbackFiredRef.current = true;
+            globeInitializedRef.current = true;
+            setLoadingStatus('complete');
+            onMapReady(globeAPI);
+          }
+        }, 200);
+      }
+    }, 1500); // Very short emergency timer - only 1.5 seconds
+    
+    return () => {
+      if (failsafeTimerRef.current) {
+        clearTimeout(failsafeTimerRef.current);
+        failsafeTimerRef.current = null;
+      }
+    };
+  }, [globeAPI, isInitialized, onMapReady]);
+  
   // Added backup initialization trigger to prevent getting stuck on loading
   useEffect(() => {
     if (!isInitialized && globeAPI.isInitialized && !readyCallbackFiredRef.current && mountedRef.current) {
       console.log("ThreeGlobe: Backup initialization triggered");
       setIsInitialized(true);
+      setLoadingStatus('partial');
       readyCallbackFiredRef.current = true;
       
       if (onMapReady && !globeInitializedRef.current && mountedRef.current) {
         globeInitializedRef.current = true;
         console.log("ThreeGlobe: Calling onMapReady from backup trigger");
+        setLoadingStatus('complete');
         onMapReady(globeAPI);
       }
     }
-    
-    // Failsafe initialization after timeout - in case normal initialization fails
-    const failsafeTimer = setTimeout(() => {
-      if (!isInitialized && !readyCallbackFiredRef.current && mountedRef.current) {
-        console.log("ThreeGlobe: Failsafe initialization triggered after timeout");
-        setIsInitialized(true);
-        readyCallbackFiredRef.current = true;
-        
-        if (onMapReady && !globeInitializedRef.current && mountedRef.current) {
-          globeInitializedRef.current = true;
-          console.log("ThreeGlobe: Calling onMapReady from failsafe");
-          onMapReady(globeAPI);
-        }
-      }
-    }, 2500); // Slightly shorter failsafe timer
-    
-    return () => clearTimeout(failsafeTimer);
   }, [globeAPI, isInitialized, onMapReady]);
   
   // Handle fly completion with debouncing
@@ -141,19 +160,26 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     
     // Fly to the location - ensure coordinates are valid numbers
     if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
-      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
-        if (mountedRef.current) {
-          handleFlyComplete();
-          if (onFlyComplete && mountedRef.current) {
-            console.log("ThreeGlobe: Fly complete");
-            onFlyComplete();
+      try {
+        globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
+          if (mountedRef.current) {
+            handleFlyComplete();
+            if (onFlyComplete && mountedRef.current) {
+              console.log("ThreeGlobe: Fly complete");
+              onFlyComplete();
+            }
           }
+        });
+        
+        // Add marker at the location with null check
+        if (globeAPI.addMarker && mountedRef.current) {
+          globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
         }
-      });
-      
-      // Add marker at the location with null check
-      if (globeAPI.addMarker && mountedRef.current) {
-        globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+      } catch (error) {
+        console.error("Error during fly operation:", error);
+        // Handle error gracefully
+        setIsFlying(false);
+        if (onFlyComplete && mountedRef.current) onFlyComplete();
       }
     } else {
       console.error("Invalid coordinates:", selectedLocation);
@@ -168,9 +194,18 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       console.log("ThreeGlobe unmounting, cleaning up");
       mountedRef.current = false;
       
+      if (failsafeTimerRef.current) {
+        clearTimeout(failsafeTimerRef.current);
+        failsafeTimerRef.current = null;
+      }
+      
       // Execute cleanup
       if (globeAPI && globeAPI.cleanup) {
-        globeAPI.cleanup();
+        try {
+          globeAPI.cleanup();
+        } catch (e) {
+          console.error("Error during globe cleanup:", e);
+        }
       }
       
       // Clear state references
@@ -193,11 +228,16 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       }}
     >
       {/* Canvas will be added here by Three.js */}
-      {!isInitialized && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 z-10">
+      {loadingStatus !== 'complete' && (
+        <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 z-10 transition-opacity duration-500 ${loadingStatus === 'partial' ? 'opacity-70' : 'opacity-100'}`}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <div className="text-white">Loading 3D Globe...</div>
+            <div className="text-white text-lg">
+              {loadingStatus === 'loading' ? 'Initializing Globe...' : 'Loading Earth Textures...'}
+            </div>
+            <div className="text-gray-400 text-xs mt-2">
+              {loadingStatus === 'partial' ? 'Almost ready...' : 'Please wait...'}
+            </div>
           </div>
         </div>
       )}

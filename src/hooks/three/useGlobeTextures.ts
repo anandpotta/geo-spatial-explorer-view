@@ -52,9 +52,10 @@ export function useGlobeTextures(
     // Set a backup timer to ensure we don't get stuck waiting for textures
     cleanup(); // Clear any existing timers
     
+    // Shorter backup timer - 2 seconds instead of 3
     backupTimerRef.current = setTimeout(() => {
       if (!texturesLoadedRef.current && mountedRef.current) {
-        console.log("Backup timer triggered for texture loading");
+        console.log("Backup timer triggered for texture loading - proceeding with basic appearance");
         setTexturesLoaded(true);
         texturesLoadedRef.current = true;
         
@@ -63,7 +64,7 @@ export function useGlobeTextures(
           onTexturesLoaded();
         }
       }
-    }, 3000);
+    }, 2000);
     
     // Load the textures
     loadEarthTextures(material, (earthLoaded, bumpLoaded) => {
@@ -90,7 +91,7 @@ export function useGlobeTextures(
           onTexturesLoaded();
         }
       } else if (!allLoaded && retryCountRef.current < MAX_RETRIES && mountedRef.current) {
-        // Retry texture loading after a delay
+        // Retry texture loading after a shorter delay
         if (textureRetryTimerRef.current) {
           clearTimeout(textureRetryTimerRef.current);
         }
@@ -103,7 +104,7 @@ export function useGlobeTextures(
             loadStartedRef.current = false; // Allow new load attempt
             handleTextureLoading();
           }
-        }, 800); // Slightly reduced time between retries
+        }, 500); // Reduced from 800ms to 500ms for faster retry
       } else if ((retryCountRef.current >= MAX_RETRIES || !allLoaded) && mountedRef.current) {
         // After max retries, continue anyway with fallback appearance
         console.log("Max texture load retries reached, continuing with basic appearance");
@@ -121,19 +122,14 @@ export function useGlobeTextures(
     });
   }, [earthMesh, onTexturesLoaded, cleanup]);
   
-  // Initialize texture loading when mesh is available
+  // Initialize texture loading when mesh is available - now with immediate attempt
   useEffect(() => {
     if (!earthMesh || texturesLoaded || !mountedRef.current) return;
     
-    // Short delay before starting texture load to ensure mesh is fully setup
-    const startLoadTimer = setTimeout(() => {
-      if (mountedRef.current) {
-        handleTextureLoading();
-      }
-    }, 100);
+    // Start texture loading immediately
+    handleTextureLoading();
     
     return () => {
-      clearTimeout(startLoadTimer);
       cleanup();
     };
   }, [earthMesh, texturesLoaded, handleTextureLoading, cleanup]);
