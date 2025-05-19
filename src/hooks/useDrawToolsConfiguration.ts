@@ -1,7 +1,12 @@
 
 import L from 'leaflet';
 import { useEffect } from 'react';
-import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
+import { 
+  configureSvgRenderer, 
+  optimizePolygonDrawing, 
+  enhancePathPreservation, 
+  enhanceRectangleDrawing 
+} from '@/utils/draw-tools-utils';
 
 /**
  * Hook to handle SVG configuration and optimizations for drawing tools
@@ -20,6 +25,9 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     
     // Optimize polygon drawing specifically
     const originalOnMarkerDrag = optimizePolygonDrawing();
+    
+    // Enhance rectangle drawing specifically
+    const originalRectDrawShape = enhanceRectangleDrawing();
     
     // Set up path preservation
     const cleanupPathPreservation = enhancePathPreservation(map);
@@ -105,6 +113,11 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
       // Restore original marker drag handler if it was modified
       if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
         (L.Edit as any).Poly.prototype._onMarkerDrag = originalOnMarkerDrag;
+      }
+      
+      // Restore original rectangle draw handler if it was modified
+      if (originalRectDrawShape && L.Draw && (L.Draw as any).Rectangle) {
+        (L.Draw as any).Rectangle.prototype._drawShape = originalRectDrawShape;
       }
       
       // Remove the style element

@@ -60,6 +60,20 @@ if (typeof document !== 'undefined') {
     .leaflet-draw-draw-circle {
       pointer-events: auto !important;
     }
+
+    /* Fix specific rectangle drawing issues */
+    .leaflet-rectangle-editing path.leaflet-interactive,
+    .leaflet-draw-draw-rectangle + path.leaflet-interactive,
+    .leaflet-editing-rectangle {
+      stroke-width: 4px !important;
+      stroke: #33C3F0 !important;
+      stroke-opacity: 1 !important;
+      stroke-linecap: round !important;
+      stroke-linejoin: round !important;
+      vector-effect: non-scaling-stroke;
+      pointer-events: auto !important;
+      fill-opacity: 0.6 !important;
+    }
     
     .leaflet-draw-tooltip {
       background: rgba(0, 0, 0, 0.7) !important;

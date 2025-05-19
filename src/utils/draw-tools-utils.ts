@@ -49,8 +49,27 @@ export const configureSvgRenderer = (): () => void => {
         originalInitialize.apply(this, arguments);
         if (this.options && this.options.shapeOptions) {
           this.options.shapeOptions.renderer = L.svg();
+          // Add these explicit settings for rectangle
+          this.options.shapeOptions.stroke = true;
+          this.options.shapeOptions.lineCap = 'round';
+          this.options.shapeOptions.lineJoin = 'round';
         }
       };
+      
+      // Fix Rectangle rendering
+      const originalRect = (L.Draw as any).Rectangle.prototype._drawShape;
+      if (originalRect) {
+        (L.Draw as any).Rectangle.prototype._drawShape = function(latlng: any) {
+          originalRect.call(this, latlng);
+          
+          // Force SVG rendering after rectangle shape is drawn
+          if (this._shape && this._shape._path) {
+            this._shape._path.classList.add('leaflet-drawing');
+            this._shape._path.style.transform = 'translateZ(0)';
+            this._shape._path.style.willChange = 'transform';
+          }
+        };
+      }
     }
 
     // Force SVG renderer for Circle
@@ -111,8 +130,50 @@ export const optimizePolygonDrawing = () => {
       }
     };
     
-    // Return the original method to allow for cleanup
     return originalOnMarkerDrag;
+  }
+  
+  return null;
+};
+
+/**
+ * Enhances rectangle rendering
+ */
+export const enhanceRectangleDrawing = () => {
+  // Only enhance if Rectangle exists
+  if (L.Draw && (L.Draw as any).Rectangle) {
+    // Store original _drawShape method
+    const originalDrawShape = (L.Draw as any).Rectangle.prototype._drawShape;
+    
+    if (originalDrawShape) {
+      // Override the _drawShape method to enhance rectangle rendering
+      (L.Draw as any).Rectangle.prototype._drawShape = function(latlng: any) {
+        // Call original method
+        originalDrawShape.call(this, latlng);
+        
+        // Apply additional enhancements to ensure path is rendered as SVG
+        if (this._shape && this._shape._path) {
+          // Add visibility classes
+          this._shape._path.classList.add('visible-path-stroke');
+          this._shape._path.classList.add('leaflet-drawing');
+          
+          // Force hardware acceleration
+          this._shape._path.style.transform = 'translateZ(0)';
+          this._shape._path.style.willChange = 'transform';
+          
+          // Ensure path properties are set
+          this._shape._path.setAttribute('stroke-linecap', 'round');
+          this._shape._path.setAttribute('stroke-linejoin', 'round');
+          this._shape._path.setAttribute('vector-effect', 'non-scaling-stroke');
+          this._shape._path.setAttribute('stroke-width', '4px');
+          
+          // Force a reflow
+          this._shape._path.getBoundingClientRect();
+        }
+      };
+    }
+    
+    return originalDrawShape;
   }
   
   return null;
@@ -123,6 +184,9 @@ export const optimizePolygonDrawing = () => {
  */
 export const enhancePathPreservation = (map: L.Map): () => void => {
   if (!map) return () => {};
+  
+  // Add rectangle enhancement
+  const originalRectDrawShape = enhanceRectangleDrawing();
   
   // Create a mutation observer to watch for newly added SVG paths
   const observer = new MutationObserver((mutations) => {
@@ -141,6 +205,9 @@ export const enhancePathPreservation = (map: L.Map): () => void => {
                 // Apply performance optimizations
                 path.setAttribute('shape-rendering', 'geometricPrecision');
                 (path as HTMLElement).style.transform = 'translateZ(0)';
+                
+                // Add visibility class
+                path.classList.add('visible-path-stroke');
               }
             });
           }
@@ -161,5 +228,10 @@ export const enhancePathPreservation = (map: L.Map): () => void => {
   // Return cleanup function
   return () => {
     observer.disconnect();
+    
+    // Restore original methods
+    if (originalRectDrawShape && L.Draw && (L.Draw as any).Rectangle) {
+      (L.Draw as any).Rectangle.prototype._drawShape = originalRectDrawShape;
+    }
   };
 };

@@ -13,7 +13,9 @@ export const getDrawOptions = () => {
         opacity: 1,
         fillOpacity: 0.3,
         stroke: true,
-        renderer: L.svg() // Force SVG renderer for rectangles
+        renderer: L.svg(), // Force SVG renderer for rectangles
+        lineCap: 'round',  // Add round line caps for rectangles too
+        lineJoin: 'round'  // Add round line joins for rectangles too
       }
     },
     polygon: {
