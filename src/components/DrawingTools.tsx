@@ -86,15 +86,22 @@ const DrawingTools = ({
     }
     
     // Toggle active button
-    setActiveButton(tool === activeButton ? null : tool);
+    setActiveButton(prev => tool === prev ? null : tool);
     onToolSelect(tool);
+    
+    if (tool === 'edit') {
+      // Show info about edit mode to guide the user
+      toast.success('Edit mode enabled! Click on any shape to modify it.', {
+        duration: 3000
+      });
+    }
   };
 
   const processClientClearAll = () => {
     if (!containerRef.current) return;
     
     // Use the enhanced clear all handler from ClearAllHandler
-    const featureGroup = window.featureGroup;
+    const featureGroup = (window as any).featureGroup;
     if (featureGroup) {
       handleClearAll({ 
         featureGroup,

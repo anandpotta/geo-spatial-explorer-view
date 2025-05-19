@@ -14,6 +14,7 @@ import FileUploadHandler from './drawing/FileUploadHandler';
 import DrawingControlsEffects from './drawing/DrawingControlsEffects';
 import LayerManagerWrapper from './drawing/LayerManagerWrapper';
 import DrawToolsWrapper from './drawing/DrawToolsWrapper';
+import { makeFeatureGroupGlobal } from '@/utils/draw-tools-utils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -82,16 +83,24 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     }
   }));
   
-  // Effect for initialization
+  // Effect for initialization and making feature group globally available
   useEffect(() => {
     if (featureGroupRef.current) {
       setIsInitialized(true);
+      
+      // Make feature group globally available for edit operations
+      const cleanup = makeFeatureGroupGlobal(featureGroupRef.current);
+      
+      return () => {
+        cleanup();
+        mountedRef.current = false;
+      };
     }
     
     return () => {
       mountedRef.current = false;
     };
-  }, []);
+  }, [featureGroupRef.current]);
 
   // Handle user changes - reload drawings when user changes
   useEffect(() => {

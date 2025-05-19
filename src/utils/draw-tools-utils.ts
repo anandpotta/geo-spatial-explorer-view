@@ -174,6 +174,33 @@ export const configureSvgRenderer = (): () => void => {
         }
       };
     }
+
+    // Set up the edit handlers if they're missing
+    if (!(L.Edit as any).Poly) {
+      (L.Edit as any).Poly = L.Handler.extend({
+        // Minimally required methods
+        initialize: function(poly: any) {
+          this._poly = poly;
+        },
+        addHooks: function() {
+          if (this._poly._map) {
+            if (!this._markerGroup) {
+              this._initMarkers();
+            }
+            this._poly._map.addLayer(this._markerGroup);
+          }
+        },
+        removeHooks: function() {
+          if (this._poly._map) {
+            this._poly._map.removeLayer(this._markerGroup);
+          }
+        },
+        _initMarkers: function() {
+          // Implementation depends on the specific edit functionality needed
+          this._markerGroup = new L.LayerGroup();
+        }
+      });
+    }
   }
 
   // Create a helper function to get corners from bounds without modifying the prototype
@@ -216,7 +243,9 @@ export const optimizePolygonDrawing = () => {
     // Override the marker drag event to prevent excessive redraws
     (L.Edit as any).Poly.prototype._onMarkerDrag = function(e: any) {
       // Call the original method
-      originalOnMarkerDrag.call(this, e);
+      if (originalOnMarkerDrag) {
+        originalOnMarkerDrag.call(this, e);
+      }
       
       // Apply additional optimizations
       if (this._poly && this._poly._path) {
@@ -287,6 +316,9 @@ export const enhanceRectangleDrawing = () => {
 export const enhancePathPreservation = (map: L.Map): () => void => {
   if (!map) return () => {};
   
+  // Make the featureGroup available globally so other components can access it
+  const existingFeatureGroup = (window as any).featureGroup;
+  
   // Add rectangle enhancement
   const originalRectDrawShape = enhanceRectangleDrawing();
   
@@ -336,4 +368,19 @@ export const enhancePathPreservation = (map: L.Map): () => void => {
       (L.Draw as any).Rectangle.prototype._drawShape = originalRectDrawShape;
     }
   };
+};
+
+/**
+ * Makes the feature group available globally for edit operations
+ */
+export const makeFeatureGroupGlobal = (featureGroup: L.FeatureGroup | null) => {
+  if (featureGroup) {
+    // Store the feature group in the window object for global access
+    (window as any).featureGroup = featureGroup;
+    return () => {
+      // Cleanup function to remove the global reference
+      delete (window as any).featureGroup;
+    };
+  }
+  return () => {};
 };

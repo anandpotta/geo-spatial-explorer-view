@@ -45,41 +45,65 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
       
       if (!layers) return;
       
+      // Get the DrawFeatureGroup if it exists in the global window object
+      // This helps with accessing the drawing feature group directly
+      const featureGroup = (window as any).featureGroup || null;
+      let foundDrawableLayers = false;
+      
       // Make all layers editable
       Object.keys(layers).forEach(layerId => {
         const layer = layers[layerId];
         
+        // Skip non-drawable layers or layers without proper geometry
+        if (!layer || !layer.getLatLngs) return;
+        
         // Check if this is a drawable layer
-        if (layer && 
-            (layer instanceof L.Path || 
-             layer instanceof L.Polyline || 
-             layer instanceof L.Polygon ||
-             layer instanceof L.Rectangle ||
-             layer instanceof L.Circle)) {
+        if (layer instanceof L.Path || 
+            layer instanceof L.Polyline || 
+            layer instanceof L.Polygon ||
+            layer instanceof L.Rectangle ||
+            layer instanceof L.Circle) {
           
-          // Use type assertion to access editing property
+          foundDrawableLayers = true;
           const editableLayer = layer as any;
           
-          // Ensure edit handlers are added to the layer
-          if (!editableLayer.editing) {
-            // Create editing capability if it doesn't exist
-            if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-              editableLayer.editing = new (L.Edit as any).Poly(layer);
-            } else if (layer instanceof L.Rectangle) {
-              editableLayer.editing = new (L.Edit as any).Rectangle(layer);
-            } else if (layer instanceof L.Circle) {
-              editableLayer.editing = new (L.Edit as any).Circle(layer);
+          // Create proper editing handlers based on layer type
+          try {
+            if (!editableLayer.editing) {
+              if (layer instanceof L.Polygon || layer instanceof L.Polyline) {
+                // Make sure L.Edit.Poly is available
+                if ((L.Edit as any).Poly) {
+                  editableLayer.editing = new (L.Edit as any).Poly(layer);
+                }
+              } else if (layer instanceof L.Rectangle) {
+                // Make sure L.Edit.Rectangle is available
+                if ((L.Edit as any).Rectangle) {
+                  editableLayer.editing = new (L.Edit as any).Rectangle(layer as any);
+                }
+              } else if (layer instanceof L.Circle) {
+                // Make sure L.Edit.Circle is available
+                if ((L.Edit as any).Circle) {
+                  editableLayer.editing = new (L.Edit as any).Circle(layer as any);
+                }
+              }
             }
-          }
-          
-          // Only enable if it has an editing capability
-          if (editableLayer.editing && typeof editableLayer.editing.enable === 'function') {
-            editableLayer.editing.enable();
+            
+            // Enable editing if handler was successfully created
+            if (editableLayer.editing && typeof editableLayer.editing.enable === 'function') {
+              editableLayer.editing.enable();
+            }
+          } catch (err) {
+            console.error('Error setting up edit handler for layer:', err);
           }
         }
       });
       
-      toast.info('Edit mode enabled. Click any shape to modify it.');
+      // If we found drawable layers, show success message
+      if (foundDrawableLayers) {
+        toast.info('Edit mode enabled. Click any shape to modify it.');
+      } else {
+        toast.info('No editable shapes found. Try drawing something first.');
+      }
     } catch (err) {
       console.error('Error enabling edit mode:', err);
       toast.error('Failed to enable edit mode');
@@ -99,8 +123,11 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
       // Disable editing on all layers
       Object.keys(layers).forEach(layerId => {
         const layer = layers[layerId];
+        if (!layer) return;
+        
         const editableLayer = layer as any;
-        if (editableLayer && editableLayer.editing && typeof editableLayer.editing.disable === 'function') {
+        if (editableLayer && editableLayer.editing && 
+            typeof editableLayer.editing.disable === 'function') {
           editableLayer.editing.disable();
         }
       });
