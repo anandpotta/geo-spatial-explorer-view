@@ -1,13 +1,24 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   
-  const handleClearAllWrapper = useCallback(() => {
+  const executeClearAll = useCallback(() => {
     if (!isAuthenticated) {
       toast.error('Please log in to clear drawings');
       return;
@@ -40,7 +51,35 @@ export function useClearAllOperation(onClearAll?: () => void) {
     }
   }, [isAuthenticated, onClearAll]);
   
+  const handleClearAllWrapper = useCallback(() => {
+    setIsConfirmDialogOpen(true);
+  }, []);
+  
+  const ClearAllConfirmDialog = () => (
+    <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear All Map Data</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to remove all paths, markers, and annotations from the map? 
+            This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => {
+            executeClearAll();
+            setIsConfirmDialogOpen(false);
+          }}>
+            Clear All
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+  
   return {
-    handleClearAllWrapper
+    handleClearAllWrapper,
+    ClearAllConfirmDialog
   };
 }

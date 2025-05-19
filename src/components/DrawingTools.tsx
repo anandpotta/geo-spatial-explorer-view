@@ -1,18 +1,8 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
-import { handleClearAll } from './map/drawing/ClearAllHandler';
-import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+import { useClearAllOperation } from '@/hooks/useClearAllOperation';
 
 interface Position {
   x: number;
@@ -37,9 +27,10 @@ const DrawingTools = ({
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
-  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  const { handleClearAllWrapper, ClearAllConfirmDialog } = useClearAllOperation(onClearAll);
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
@@ -79,70 +70,11 @@ const DrawingTools = ({
 
   const handleToolClick = (tool: string) => {
     if (tool === 'clear') {
-      setIsClearDialogOpen(true);
+      handleClearAllWrapper();
       return;
     }
     
     onToolSelect(tool);
-  };
-
-  const processClientClearAll = () => {
-    if (!containerRef.current) return;
-    
-    // Use the enhanced clear all handler from ClearAllHandler
-    const featureGroup = window.featureGroup;
-    if (featureGroup) {
-      handleClearAll({ 
-        featureGroup,
-        onClearAll: () => {
-          // Additional cleanup after clearing
-          if (onClearAll) {
-            onClearAll();
-          }
-          
-          // Force redraw of the map after a short delay
-          setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-          }, 100);
-        }
-      });
-    } else {
-      // Fallback if featureGroup is not available - perform direct localStorage clearing
-      // Preserve authentication data
-      const authState = localStorage.getItem('geospatial_auth_state');
-      const users = localStorage.getItem('geospatial_users');
-      
-      // Clear everything
-      localStorage.clear();
-      
-      // Restore authentication data
-      if (authState) {
-        localStorage.setItem('geospatial_auth_state', authState);
-      }
-      if (users) {
-        localStorage.setItem('geospatial_users', users);
-      }
-      
-      // Forcefully clear specific storages that might be causing issues
-      localStorage.removeItem('savedDrawings');
-      localStorage.removeItem('savedMarkers');
-      localStorage.removeItem('floorPlans');
-      localStorage.removeItem('svgPaths');
-      
-      // Dispatch events to notify components
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('markersUpdated'));
-      window.dispatchEvent(new Event('drawingsUpdated'));
-      window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
-      
-      if (onClearAll) {
-        onClearAll();
-      }
-      
-      toast.success('All map data cleared while preserving user accounts');
-    }
-    
-    setIsClearDialogOpen(false);
   };
 
   return (
@@ -177,20 +109,7 @@ const DrawingTools = ({
         </button>
       </div>
 
-      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to clear all drawings and markers? User accounts will be preserved, but all other data will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={processClientClearAll}>Clear All</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ClearAllConfirmDialog />
     </>
   );
 };

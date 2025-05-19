@@ -2,6 +2,16 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface DrawingToolHandlerProps {
   currentView: 'cesium' | 'leaflet';
@@ -18,43 +28,71 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   setActiveTool,
   onToolSelect
 }) => {
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  
+  const clearAllLayers = () => {
+    if (currentView === 'cesium') {
+      toast.info('Clearing all shapes');
+    } else if (currentView === 'leaflet' && leafletMapRef.current) {
+      try {
+        // Validate the map instance before using it
+        if (isMapValid(leafletMapRef.current)) {
+          const layers = leafletMapRef.current._layers;
+          if (layers) {
+            Object.keys(layers).forEach(layerId => {
+              const layer = layers[layerId];
+              if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+                leafletMapRef.current.removeLayer(layer);
+              }
+            });
+            toast.info('All shapes cleared');
+          }
+        } else {
+          console.warn('Leaflet map instance is not valid for clear operation');
+          toast.error('Map control error. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error during clear operation:', err);
+        toast.error('Failed to clear shapes. Please try again.');
+      }
+    }
+  };
+  
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
     setActiveTool(tool === activeTool ? null : tool);
     onToolSelect(tool);
     
-    if (currentView === 'cesium') {
-      if (tool === 'clear') {
-        toast.info('Clearing all shapes');
-      }
-    } else if (currentView === 'leaflet') {
-      if (tool === 'clear' && leafletMapRef.current) {
-        try {
-          // Validate the map instance before using it
-          if (isMapValid(leafletMapRef.current)) {
-            const layers = leafletMapRef.current._layers;
-            if (layers) {
-              Object.keys(layers).forEach(layerId => {
-                const layer = layers[layerId];
-                if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-                  leafletMapRef.current.removeLayer(layer);
-                }
-              });
-              toast.info('All shapes cleared');
-            }
-          } else {
-            console.warn('Leaflet map instance is not valid for clear operation');
-            toast.error('Map control error. Please try again.');
-          }
-        } catch (err) {
-          console.error('Error during clear operation:', err);
-          toast.error('Failed to clear shapes. Please try again.');
-        }
-      }
+    if (tool === 'clear') {
+      setIsConfirmDialogOpen(true);
+      return;
     }
   };
 
-  return null; // This is a logic component with no UI
+  return (
+    <>
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Map Data</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove all paths, markers, and annotations from the map? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              clearAllLayers();
+              setIsConfirmDialogOpen(false);
+            }}>
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 };
 
 export default DrawingToolHandler;
