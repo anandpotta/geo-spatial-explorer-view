@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 
 /**
@@ -46,7 +47,7 @@ export const fixTypeIsNotDefinedError = (): () => void => {
     };
     
     return () => {
-      // Clean up by deleting our added function
+      // Clean up by adding our added function
       if (L.GeometryUtil) {
         delete L.GeometryUtil.readableArea;
       }
@@ -135,7 +136,15 @@ export const configureSvgRenderer = (): () => void => {
           // Make sure we don't reference 'type' directly
           if (result && result.text && this._shape) {
             const bounds = this._shape.getBounds();
-            const area = L.GeometryUtil.geodesicArea(bounds.getCorners());
+            // Fix: Define our own getCorners method instead of relying on the native one
+            const corners = [
+              bounds.getNorthWest(), 
+              bounds.getNorthEast(), 
+              bounds.getSouthEast(), 
+              bounds.getSouthWest(),
+              bounds.getNorthWest() // Close the polygon
+            ];
+            const area = L.GeometryUtil.geodesicArea(corners);
             const areaText = L.GeometryUtil.readableArea(area, true);
             result.text = result.text.replace(/\{[^\}]*\}/, areaText);
           }
@@ -167,14 +176,16 @@ export const configureSvgRenderer = (): () => void => {
     }
   }
 
-  // Add LatLngBounds.getCorners method if it doesn't exist
-  if (L.LatLngBounds && !L.LatLngBounds.prototype.getCorners) {
-    L.LatLngBounds.prototype.getCorners = function() {
-      const northwest = this.getNorthWest();
-      const northeast = this.getNorthEast();
-      const southeast = this.getSouthEast();
-      const southwest = this.getSouthWest();
-      return [northwest, northeast, southeast, southwest, northwest];
+  // Add our own implementation of getCorners instead of extending LatLngBounds prototype
+  if (!L.GeometryUtil.getCorners) {
+    L.GeometryUtil.getCorners = function(bounds: L.LatLngBounds) {
+      return [
+        bounds.getNorthWest(),
+        bounds.getNorthEast(),
+        bounds.getSouthEast(),
+        bounds.getSouthWest(),
+        bounds.getNorthWest() // Close the polygon
+      ];
     };
   }
 
@@ -183,9 +194,9 @@ export const configureSvgRenderer = (): () => void => {
     // Restore original method when component unmounts
     (L.SVG.prototype as any)._updateStyle = originalUpdateStyle;
 
-    // Clean up LatLngBounds enhancement
-    if (L.LatLngBounds && L.LatLngBounds.prototype.getCorners) {
-      delete L.LatLngBounds.prototype.getCorners;
+    // Clean up our enhancement
+    if (L.GeometryUtil && L.GeometryUtil.getCorners) {
+      delete (L.GeometryUtil as any).getCorners;
     }
   };
 };

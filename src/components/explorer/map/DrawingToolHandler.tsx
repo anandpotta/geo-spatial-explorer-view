@@ -57,21 +57,24 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
              layer instanceof L.Rectangle ||
              layer instanceof L.Circle)) {
           
+          // Use type assertion to access editing property
+          const editableLayer = layer as any;
+          
           // Ensure edit handlers are added to the layer
-          if (!layer.editing) {
+          if (!editableLayer.editing) {
             // Create editing capability if it doesn't exist
             if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
-              layer.editing = new L.Edit.Poly(layer);
+              editableLayer.editing = new (L.Edit as any).Poly(layer);
             } else if (layer instanceof L.Rectangle) {
-              layer.editing = new L.Edit.Rectangle(layer);
+              editableLayer.editing = new (L.Edit as any).Rectangle(layer);
             } else if (layer instanceof L.Circle) {
-              layer.editing = new L.Edit.Circle(layer);
+              editableLayer.editing = new (L.Edit as any).Circle(layer);
             }
           }
           
           // Only enable if it has an editing capability
-          if (layer.editing && typeof layer.editing.enable === 'function') {
-            layer.editing.enable();
+          if (editableLayer.editing && typeof editableLayer.editing.enable === 'function') {
+            editableLayer.editing.enable();
           }
         }
       });
@@ -96,8 +99,9 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
       // Disable editing on all layers
       Object.keys(layers).forEach(layerId => {
         const layer = layers[layerId];
-        if (layer && layer.editing && typeof layer.editing.disable === 'function') {
-          layer.editing.disable();
+        const editableLayer = layer as any;
+        if (editableLayer && editableLayer.editing && typeof editableLayer.editing.disable === 'function') {
+          editableLayer.editing.disable();
         }
       });
       
