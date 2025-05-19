@@ -49,9 +49,9 @@ if (typeof document !== 'undefined') {
       visibility: visible !important;
     }
     
-    /* Ensure SVG patterns render correctly */
-    svg path {
-      fill-opacity: 1 !important;
+    /* Set default fill-opacity for all SVG paths */
+    svg path:not([data-has-clip-mask="true"]):not([fill^="url(#pattern-"]):not(.visible-path-stroke):not(.has-image-fill) {
+      fill-opacity: 0.6 !important;
     }
     
     @keyframes dash {
