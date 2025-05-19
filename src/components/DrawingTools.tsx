@@ -1,19 +1,10 @@
 
-import { useState, useRef, useEffect } from 'react';
-import { Trash2, Pencil } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import MapControls from './drawing/MapControls';
-import { handleClearAll } from './map/drawing/ClearAllHandler';
+import ClearConfirmationDialog from './drawing/ConfirmationDialog';
+import ToolbarContainer from './drawing/ToolbarContainer';
+import ToolButtons from './drawing/ToolButtons';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
 
 interface Position {
   x: number;
@@ -40,14 +31,13 @@ const DrawingTools = ({
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       
-      const newX = Math.max(0, Math.min(window.innerWidth - (containerRef.current?.offsetWidth || 0), e.clientX - dragOffset.x));
-      const newY = Math.max(0, Math.min(window.innerHeight - (containerRef.current?.offsetHeight || 0), e.clientY - dragOffset.y));
+      const newX = Math.max(0, Math.min(window.innerWidth - 200, e.clientX - dragOffset.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - 200, e.clientY - dragOffset.y));
       
       setPosition({ x: newX, y: newY });
     };
@@ -68,9 +58,7 @@ const DrawingTools = ({
   }, [isDragging, dragOffset]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     setDragOffset({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
@@ -98,25 +86,18 @@ const DrawingTools = ({
   };
 
   const processClientClearAll = () => {
-    if (!containerRef.current) return;
-    
     // Use the enhanced clear all handler from ClearAllHandler
     const featureGroup = (window as any).featureGroup;
     if (featureGroup) {
-      handleClearAll({ 
-        featureGroup,
-        onClearAll: () => {
-          // Additional cleanup after clearing
-          if (onClearAll) {
-            onClearAll();
-          }
-          
-          // Force redraw of the map after a short delay
-          setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-          }, 100);
-        }
-      });
+      // Call the passed in onClearAll prop
+      if (onClearAll) {
+        onClearAll();
+      }
+      
+      // Force redraw of the map after a short delay
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
     } else {
       // Fallback if featureGroup is not available - perform direct localStorage clearing
       // Preserve authentication data
@@ -158,16 +139,10 @@ const DrawingTools = ({
 
   return (
     <>
-      <div 
-        ref={containerRef}
-        className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move select-none transition-shadow hover:shadow-lg active:shadow-md"
-        style={{ 
-          left: position.x,
-          top: position.y,
-          zIndex: 20000,
-          isolation: 'isolate',
-          touchAction: 'none'
-        }}
+      <ToolbarContainer 
+        position={position}
+        isDragging={isDragging}
+        dragOffset={dragOffset}
         onMouseDown={handleMouseDown}
       >
         <MapControls 
@@ -178,40 +153,17 @@ const DrawingTools = ({
         
         <div className="h-4" />
         
-        {/* Edit button */}
-        <button
-          className={`w-full p-2 rounded-md mb-2 flex items-center justify-center transition-colors ${activeButton === 'edit' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-          onClick={() => handleToolClick('edit')}
-          aria-label="Edit shapes"
-        >
-          <Pencil className="h-5 w-5" />
-          <span className="ml-2">Edit</span>
-        </button>
-        
-        <button
-          className="w-full p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"
-          onClick={() => handleToolClick('clear')}
-          aria-label="Clear all layers"
-        >
-          <Trash2 className="h-5 w-5" />
-          <span className="ml-2">Clear All</span>
-        </button>
-      </div>
+        <ToolButtons 
+          activeButton={activeButton}
+          onToolClick={handleToolClick}
+        />
+      </ToolbarContainer>
 
-      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to clear all drawings and markers? User accounts will be preserved, but all other data will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={processClientClearAll}>Clear All</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ClearConfirmationDialog 
+        isOpen={isClearDialogOpen} 
+        onConfirm={processClientClearAll}
+        onCancel={() => setIsClearDialogOpen(false)}
+      />
     </>
   );
 };
