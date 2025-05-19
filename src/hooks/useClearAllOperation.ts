@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
+import { preserveAuthData } from '@/utils/clear-operations';
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
@@ -33,6 +34,17 @@ export function useClearAllOperation(onClearAll?: () => void) {
     } else {
       // Fallback if featureGroup is not available
       console.warn('Feature group not available for clear operation, using localStorage fallback');
+      
+      // Get restore function for auth data
+      const restoreAuth = preserveAuthData();
+      
+      // Clear localStorage
+      localStorage.clear();
+      
+      // Restore auth data
+      restoreAuth();
+      
+      // Forcefully clear specific items
       localStorage.removeItem('savedDrawings');
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('floorPlans');

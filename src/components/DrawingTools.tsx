@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import MapControls from './drawing/MapControls';
 import ClearConfirmationDialog from './drawing/ConfirmationDialog';
 import ToolbarContainer from './drawing/ToolbarContainer';
 import ToolButtons from './drawing/ToolButtons';
 import { toast } from 'sonner';
+import { preserveAuthData } from '@/utils/clear-operations';
 
 interface Position {
   x: number;
@@ -100,20 +100,14 @@ const DrawingTools = ({
       }, 100);
     } else {
       // Fallback if featureGroup is not available - perform direct localStorage clearing
-      // Preserve authentication data
-      const authState = localStorage.getItem('geospatial_auth_state');
-      const users = localStorage.getItem('geospatial_users');
+      // Preserve authentication data and get restore function
+      const restoreAuth = preserveAuthData();
       
       // Clear everything
       localStorage.clear();
       
       // Restore authentication data
-      if (authState) {
-        localStorage.setItem('geospatial_auth_state', authState);
-      }
-      if (users) {
-        localStorage.setItem('geospatial_users', users);
-      }
+      restoreAuth();
       
       // Forcefully clear specific storages that might be causing issues
       localStorage.removeItem('savedDrawings');

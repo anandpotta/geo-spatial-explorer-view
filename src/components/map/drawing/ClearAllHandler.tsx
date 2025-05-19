@@ -5,7 +5,6 @@ import {
   clearAllMarkers,
   clearAllDrawings,
   preserveAuthData,
-  restoreAuthData,
   forceMapRefresh
 } from '@/utils/clear-operations';
 
@@ -26,14 +25,14 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       // Clear markers
       clearAllMarkers();
       
-      // Preserve authentication data
-      const authData = preserveAuthData();
+      // Preserve authentication data and get restore function
+      const restoreAuth = preserveAuthData();
       
       // Clear everything from localStorage
       localStorage.clear();
       
       // Restore authentication data
-      restoreAuthData(authData);
+      restoreAuth();
       
       // Clear drawings
       clearAllDrawings();
