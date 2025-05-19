@@ -55,28 +55,30 @@ export function useClearAllOperation(onClearAll?: () => void) {
     setIsConfirmDialogOpen(true);
   }, []);
   
-  const ClearAllConfirmDialog = () => (
-    <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Clear All Map Data</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to remove all paths, markers, and annotations from the map? 
-            This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={() => {
-            executeClearAll();
-            setIsConfirmDialogOpen(false);
-          }}>
-            Clear All
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
+  const ClearAllConfirmDialog = () => {
+    return (
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Map Data</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove all paths, markers, and annotations from the map? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              executeClearAll();
+              setIsConfirmDialogOpen(false);
+            }}>
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  };
   
   return {
     handleClearAllWrapper,
