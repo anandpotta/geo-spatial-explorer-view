@@ -14,7 +14,7 @@ import FileUploadHandler from './drawing/FileUploadHandler';
 import DrawingControlsEffects from './drawing/DrawingControlsEffects';
 import LayerManagerWrapper from './drawing/LayerManagerWrapper';
 import DrawToolsWrapper from './drawing/DrawToolsWrapper';
-import { makeFeatureGroupGlobal } from '@/utils/draw-tools-utils';
+import { makeFeatureGroupGlobal } from '@/utils/drawing-tools/feature-group-utils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
