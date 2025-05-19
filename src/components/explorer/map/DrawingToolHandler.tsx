@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
+import L from 'leaflet';
 
 interface DrawingToolHandlerProps {
   currentView: 'cesium' | 'leaflet';
@@ -18,6 +19,94 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   setActiveTool,
   onToolSelect
 }) => {
+  // Track previous tool to handle deactivation
+  const [previousTool, setPreviousTool] = useState<string | null>(null);
+  
+  // Effect to handle tool changes
+  useEffect(() => {
+    if (currentView === 'leaflet' && leafletMapRef.current) {
+      if (activeTool === 'edit') {
+        enableEditMode();
+      } else if (previousTool === 'edit' && activeTool !== 'edit') {
+        disableEditMode();
+      }
+      
+      setPreviousTool(activeTool);
+    }
+  }, [activeTool, currentView]);
+
+  // Enable edit mode on all drawable layers
+  const enableEditMode = () => {
+    if (!leafletMapRef.current || !isMapValid(leafletMapRef.current)) return;
+    
+    try {
+      const map = leafletMapRef.current;
+      const layers = map._layers;
+      
+      if (!layers) return;
+      
+      // Make all layers editable
+      Object.keys(layers).forEach(layerId => {
+        const layer = layers[layerId];
+        
+        // Check if this is a drawable layer
+        if (layer && 
+            (layer instanceof L.Path || 
+             layer instanceof L.Polyline || 
+             layer instanceof L.Polygon ||
+             layer instanceof L.Rectangle ||
+             layer instanceof L.Circle)) {
+          
+          // Ensure edit handlers are added to the layer
+          if (!layer.editing) {
+            // Create editing capability if it doesn't exist
+            if (layer instanceof L.Polyline || layer instanceof L.Polygon) {
+              layer.editing = new L.Edit.Poly(layer);
+            } else if (layer instanceof L.Rectangle) {
+              layer.editing = new L.Edit.Rectangle(layer);
+            } else if (layer instanceof L.Circle) {
+              layer.editing = new L.Edit.Circle(layer);
+            }
+          }
+          
+          // Only enable if it has an editing capability
+          if (layer.editing && typeof layer.editing.enable === 'function') {
+            layer.editing.enable();
+          }
+        }
+      });
+      
+      toast.info('Edit mode enabled. Click any shape to modify it.');
+    } catch (err) {
+      console.error('Error enabling edit mode:', err);
+      toast.error('Failed to enable edit mode');
+    }
+  };
+
+  // Disable edit mode on all layers
+  const disableEditMode = () => {
+    if (!leafletMapRef.current || !isMapValid(leafletMapRef.current)) return;
+    
+    try {
+      const map = leafletMapRef.current;
+      const layers = map._layers;
+      
+      if (!layers) return;
+      
+      // Disable editing on all layers
+      Object.keys(layers).forEach(layerId => {
+        const layer = layers[layerId];
+        if (layer && layer.editing && typeof layer.editing.disable === 'function') {
+          layer.editing.disable();
+        }
+      });
+      
+      toast.info('Edit mode disabled');
+    } catch (err) {
+      console.error('Error disabling edit mode:', err);
+    }
+  };
+
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
     setActiveTool(tool === activeTool ? null : tool);
