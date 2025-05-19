@@ -13,24 +13,31 @@ interface UserMarkerProps {
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
   
-  // Add data attribute to marker icon
+  // Add data attribute to marker icon and create persistent tooltip
   useEffect(() => {
     if (markerRef.current) {
       const icon = markerRef.current.getElement();
       if (icon) {
         icon.setAttribute('data-marker-id', marker.id);
         
-        // Create tooltip for the marker if it doesn't exist
-        if (!icon.querySelector('.marker-tooltip')) {
-          const tooltip = document.createElement('div');
-          tooltip.className = 'marker-tooltip bg-white px-2 py-0.5 rounded shadow text-sm absolute z-50';
-          tooltip.style.left = '25px';
-          tooltip.style.top = '0';
-          tooltip.style.pointerEvents = 'none';
-          tooltip.setAttribute('data-marker-tooltip-id', marker.id);
-          tooltip.textContent = marker.name;
-          icon.appendChild(tooltip);
+        // Remove any existing tooltip first to prevent duplicates
+        const existingTooltip = icon.querySelector('.marker-tooltip');
+        if (existingTooltip) {
+          existingTooltip.remove();
         }
+        
+        // Create tooltip for the marker
+        const tooltip = document.createElement('div');
+        tooltip.className = 'marker-tooltip bg-white px-2 py-0.5 rounded shadow text-sm absolute z-50';
+        tooltip.style.left = '25px';
+        tooltip.style.top = '0';
+        tooltip.style.whiteSpace = 'nowrap';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.transform = 'translateY(-50%)';
+        tooltip.style.border = '1px solid #ccc';
+        tooltip.setAttribute('data-marker-tooltip-id', marker.id);
+        tooltip.textContent = marker.name;
+        icon.appendChild(tooltip);
       }
     }
   }, [marker.id, marker.name]);
