@@ -11,10 +11,10 @@ export function useGlobeFlightControl(
   globeAPI: any,
   isFlying: boolean,
   setIsFlying: (value: boolean) => void,
-  onFlyComplete?: () => void,
-  lastFlyLocationRef: React.RefObject<string | null>,
-  flyCompletedCallbackRef: React.RefObject<(() => void) | null>,
-  mountedRef: React.RefObject<boolean>
+  lastFlyLocationRef: React.MutableRefObject<string | null>,
+  flyCompletedCallbackRef: React.MutableRefObject<(() => void) | null>,
+  mountedRef: React.MutableRefObject<boolean>,
+  onFlyComplete?: () => void
 ) {
   // Handle fly completion with debouncing
   const handleFlyComplete = () => {

@@ -10,12 +10,12 @@ export function useGlobeInitialization(
   isInitialized: boolean,
   setIsInitialized: (value: boolean) => void,
   setLoadingStatus: (status: 'loading' | 'partial' | 'complete') => void,
-  onMapReady?: (viewer?: any) => void,
-  mountedRef: React.RefObject<boolean>,
-  initializationAttemptedRef: React.RefObject<boolean>,
-  readyCallbackFiredRef: React.RefObject<boolean>,
-  globeInitializedRef: React.RefObject<boolean>,
-  failsafeTimerRef: React.RefObject<NodeJS.Timeout | null>
+  initializationAttemptedRef: React.MutableRefObject<boolean>,
+  readyCallbackFiredRef: React.MutableRefObject<boolean>,
+  globeInitializedRef: React.MutableRefObject<boolean>,
+  mountedRef: React.MutableRefObject<boolean>,
+  failsafeTimerRef: React.MutableRefObject<NodeJS.Timeout | null>,
+  onMapReady?: (viewer?: any) => void
 ) {
   // Initialize globe with improved reliability via a staggered loading approach
   const handleInitialization = () => {

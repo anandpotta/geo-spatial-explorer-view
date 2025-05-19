@@ -9,7 +9,7 @@ export function useGlobeState() {
   const [isFlying, setIsFlying] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState<'loading' | 'partial' | 'complete'>('loading');
   
-  // References for tracking state
+  // References for tracking state - using MutableRefObject instead of RefObject
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
   const readyCallbackFiredRef = useRef(false);
@@ -27,7 +27,7 @@ export function useGlobeState() {
     loadingStatus,
     setLoadingStatus,
     
-    // Refs
+    // Refs - these should be mutable
     lastFlyLocationRef,
     initializationAttemptedRef,
     readyCallbackFiredRef,

@@ -48,12 +48,12 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     isInitialized,
     setIsInitialized,
     setLoadingStatus,
-    onMapReady,
-    mountedRef,
     initializationAttemptedRef,
     readyCallbackFiredRef,
     globeInitializedRef,
-    failsafeTimerRef
+    mountedRef,
+    failsafeTimerRef,
+    onMapReady
   );
   
   // Flight control hook
@@ -62,10 +62,10 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     globeAPI,
     isFlying,
     setIsFlying,
-    onFlyComplete,
     lastFlyLocationRef,
     flyCompletedCallbackRef,
-    mountedRef
+    mountedRef,
+    onFlyComplete
   );
   
   // Clean up on unmount
