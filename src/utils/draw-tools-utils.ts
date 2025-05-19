@@ -1,13 +1,5 @@
 import L from 'leaflet';
 
-// Add the getCorners method to the LatLngBounds prototype
-// We need to extend the LatLngBounds type definition first
-declare module 'leaflet' {
-  interface LatLngBounds {
-    getCorners(): L.LatLng[];
-  }
-}
-
 /**
  * Fixes the "type is not defined" error in the Leaflet Draw library's area calculation
  */
@@ -143,22 +135,11 @@ export const configureSvgRenderer = (): () => void => {
           // Make sure we don't reference 'type' directly
           if (result && result.text && this._shape) {
             const bounds = this._shape.getBounds();
-            const area = L.GeometryUtil.geodesicArea(this._getCorners(bounds));
+            const area = L.GeometryUtil.geodesicArea(bounds.getCorners());
             const areaText = L.GeometryUtil.readableArea(area, true);
             result.text = result.text.replace(/\{[^\}]*\}/, areaText);
           }
           return result;
-        };
-      }
-      
-      // Add a method to get corners from bounds to the Rectangle prototype
-      if (!(L.Draw as any).Rectangle.prototype._getCorners) {
-        (L.Draw as any).Rectangle.prototype._getCorners = function(bounds: L.LatLngBounds) {
-          const northwest = bounds.getNorthWest();
-          const northeast = bounds.getNorthEast();
-          const southeast = bounds.getSouthEast();
-          const southwest = bounds.getSouthWest();
-          return [northwest, northeast, southeast, southwest, northwest];
         };
       }
     }
