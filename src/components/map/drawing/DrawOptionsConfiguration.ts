@@ -1,4 +1,6 @@
 
+import L from 'leaflet';
+
 /**
  * Configuration for drawing tool options
  */
