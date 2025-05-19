@@ -16,7 +16,6 @@ export function useThreeScene(
   // Core Three.js objects
   const sceneRef = useRef<THREE.Scene | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const mountedRef = useRef<boolean>(true);
   
   // State
   const [isInitialized, setIsInitialized] = useState(false);
@@ -28,8 +27,6 @@ export function useThreeScene(
   
   // Initialize scene
   const createScene = useCallback(() => {
-    if (!mountedRef.current) return null;
-    
     const options = createThreeViewerOptions();
     
     // Create scene with natural background color
@@ -56,22 +53,6 @@ export function useThreeScene(
     
     // Dispose scene
     if (sceneRef.current) {
-      sceneRef.current.traverse((obj) => {
-        if (obj instanceof THREE.Mesh) {
-          if (obj.geometry) {
-            obj.geometry.dispose();
-          }
-          
-          if (obj.material) {
-            if (Array.isArray(obj.material)) {
-              obj.material.forEach(material => material.dispose());
-            } else {
-              obj.material.dispose();
-            }
-          }
-        }
-      });
-      
       sceneRef.current.clear();
       sceneRef.current = null;
     }
@@ -86,34 +67,14 @@ export function useThreeScene(
   
   // Handle window resize
   const handleResize = useCallback(() => {
-    if (!mountedRef.current) return;
-    
     updateCameraAspect();
     resizeRenderer();
   }, [updateCameraAspect, resizeRenderer]);
   
-  // Check if container is in DOM
-  const isContainerInDOM = useCallback(() => {
-    if (!containerRef.current) {
-      return false;
-    }
-    
-    // Check if the container is actually in the DOM
-    let element: Node | null = containerRef.current;
-    while (element && element.parentNode) {
-      element = element.parentNode;
-      if (element === document.body) {
-        return true;
-      }
-    }
-    
-    console.log("Container not in DOM, skipping initialization");
-    return false;
-  }, [containerRef]);
-  
   // Initialize scene
   useEffect(() => {
-    if (!containerRef.current || !mountedRef.current || !isContainerInDOM()) {
+    if (!containerRef.current) {
+      console.warn("Container ref not available for Three.js scene");
       return;
     }
     
@@ -124,10 +85,6 @@ export function useThreeScene(
     
     // Create scene
     const scene = createScene();
-    if (!scene) {
-      console.error("Failed to create scene");
-      return;
-    }
     
     // Create camera
     const camera = createCamera();
@@ -156,7 +113,7 @@ export function useThreeScene(
     console.log("Three.js scene initialized with natural colors settings");
     
     // Call the onSceneReady callback if provided
-    if (onSceneReady && mountedRef.current) {
+    if (onSceneReady) {
       onSceneReady();
     }
     
@@ -173,15 +130,7 @@ export function useThreeScene(
       window.removeEventListener('resize', handleResize);
       cleanup();
     };
-  }, [containerRef, cleanup, onSceneReady, createScene, createCamera, createRenderer, createControls, canvasElementRef, handleResize, isContainerInDOM]);
-  
-  // Handle unmount
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-      cleanup();
-    };
-  }, [cleanup]);
+  }, [containerRef, cleanup, onSceneReady, createScene, createCamera, createRenderer, createControls, canvasElementRef, handleResize]);
   
   return {
     scene: sceneRef.current,
@@ -192,7 +141,6 @@ export function useThreeScene(
     setIsInitialized,
     animationFrameRef,
     canvasElementRef,
-    controlsRef,
-    cleanup
+    controlsRef
   };
 }

@@ -23,7 +23,7 @@ export const setupLayerClickHandlers = (
     return;
   }
   
-  layer.on('click', (e: L.LeafletEvent) => {
+  layer.on('click', (e) => {
     // Stop event propagation to prevent map click
     if (e.originalEvent) {
       L.DomEvent.stopPropagation(e.originalEvent);

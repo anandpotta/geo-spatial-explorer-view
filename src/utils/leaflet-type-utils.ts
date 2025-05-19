@@ -2,54 +2,86 @@
 import L from 'leaflet';
 
 /**
- * Safely checks if a map instance is valid and ready for use
+ * Safely gets the map from a Leaflet layer
  */
-export function isMapValid(map: any): map is L.Map {
-  if (!map) return false;
-  
-  // Check if map instance exists and has required methods
-  if (typeof map.getContainer !== 'function') return false;
-  
-  try {
-    // Check if the container element exists in the DOM
-    const container = map.getContainer();
-    if (!container || !document.body.contains(container)) {
-      return false;
-    }
-    
-    // For maximum safety, check that map has core Leaflet methods
-    return typeof map.setView === 'function' && 
-           typeof map.addLayer === 'function' && 
-           typeof map.getZoom === 'function';
-  } catch (err) {
-    console.warn('Error checking map validity:', err);
-    return false;
-  }
-}
-
-/**
- * Gets the map instance from a layer
- */
-export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
+export const getMapFromLayer = (layer: L.Layer): L.Map | null => {
   if (!layer) return null;
   
   try {
-    // Check if layer has a _map property
-    if ((layer as any)._map) {
-      return (layer as any)._map;
-    }
+    // Type assertion to access _map property
+    const map = (layer as any)._map;
+    if (map) return map;
     
-    // For feature groups, check the first layer
-    if (layer instanceof L.FeatureGroup && layer.getLayers().length > 0) {
-      const firstLayer = layer.getLayers()[0];
-      if ((firstLayer as any)._map) {
-        return (firstLayer as any)._map;
+    // Alternative approach for FeatureGroup
+    if (typeof (layer as any).getLayer === 'function') {
+      const firstLayer = (layer as any).getLayer(
+        Object.keys((layer as any)._layers)[0]
+      );
+      if (firstLayer && firstLayer._map) {
+        return firstLayer._map;
       }
     }
     
     return null;
   } catch (err) {
-    console.error("Error getting map from layer:", err);
+    console.error('Error getting map from layer:', err);
     return null;
   }
-}
+};
+
+/**
+ * Checks if a map instance is valid and fully initialized
+ */
+export const isMapValid = (map: L.Map | null | undefined): boolean => {
+  if (!map) return false;
+  
+  try {
+    // Check if container exists and is in the DOM
+    const container = map.getContainer();
+    if (!container || !document.body.contains(container)) {
+      return false;
+    }
+    
+    // Check if map panes are initialized
+    const internalMap = map as any;
+    if (!internalMap._panes || !internalMap._panes.mapPane) {
+      return false;
+    }
+    
+    // Check if position info is available
+    if (!internalMap._panes.mapPane._leaflet_pos) {
+      return false;
+    }
+    
+    // Additional check: verify that the map actually has dimensions
+    const size = map.getSize();
+    if (!size || size.x === 0 || size.y === 0) {
+      return false;
+    }
+    
+    // If we pass all checks, the map should be valid
+    return true;
+  } catch (err) {
+    console.error('Error validating map:', err);
+    return false;
+  }
+};
+
+/**
+ * Safely execute a map operation with validation
+ */
+export const safeMapOperation = <T>(
+  map: L.Map | null | undefined, 
+  operation: (map: L.Map) => T,
+  fallback: T
+): T => {
+  if (isMapValid(map)) {
+    try {
+      return operation(map as L.Map);
+    } catch (err) {
+      console.error('Map operation failed:', err);
+      return fallback;
+    }
+  }
+  return fallback;
+};

@@ -9,14 +9,12 @@ interface MapReferenceProps {
 }
 
 // Define interface for internal map properties not exposed in TypeScript definitions
-// Use type intersection instead of extends to avoid interface compatibility issues
-interface LeafletMapInternal {
+interface LeafletMapInternal extends L.Map {
   _panes?: {
     mapPane?: {
       _leaflet_pos?: any;
     };
   };
-  _isDestroyed?: boolean;
 }
 
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
@@ -38,7 +36,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     if (map && onMapReady && !hasCalledOnReady.current) {
       console.log('Map is ready, will call onMapReady after initialization');
       
-      // Call onMapReady sooner to start initialization process
+      // Wait until the map is fully initialized before calling onMapReady
       const timeout = setTimeout(() => {
         try {
           // Check if map container still exists and is attached to DOM
@@ -46,12 +44,22 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             // Mark as called immediately to prevent duplicate calls
             hasCalledOnReady.current = true;
             
-            // Always invalidate size immediately for better responsiveness
+            // Check if map is valid before trying to invalidate size
             try {
-              map.invalidateSize(true);
-              console.log('Initial size invalidation completed');
+              // Cast to internal map type to access private properties
+              const internalMap = map as LeafletMapInternal;
+              
+              // Only invalidate size if map is properly initialized
+              if (internalMap && 
+                  internalMap._panes && 
+                  internalMap._panes.mapPane) {
+                console.log('Map panes initialized, calling invalidateSize');
+                map.invalidateSize(true);
+              } else {
+                console.log('Map panes not fully initialized yet, skipping invalidateSize');
+              }
             } catch (err) {
-              console.log('Initial invalidateSize encountered an issue, continuing');
+              console.log('Skipping invalidateSize due to initialization state');
             }
             
             console.log('Map container verified, calling onMapReady');
@@ -60,11 +68,11 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             // Mark map as stable after initial setup
             setTimeout(() => {
               setIsStable(true);
-            }, 300); // Shorter delay for faster stabilization
+            }, 500);
             
             // Just one additional invalidation after a reasonable delay
             const additionalTimeout = setTimeout(() => {
-              if (map && !(map as L.Map & LeafletMapInternal)._isDestroyed) {
+              if (map && !map.remove['_leaflet_id']) {
                 try {
                   map.invalidateSize(true);
                   console.log('Final map invalidation completed');
@@ -72,7 +80,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
                   // Ignore errors during additional invalidations
                 }
               }
-            }, 1000); // Faster final invalidation
+            }, 1500);
             timeoutRefs.current.push(additionalTimeout);
           } else {
             console.log('Map container not ready or not attached to DOM');
@@ -89,14 +97,14 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
                   console.warn('Failed to initialize map on retry');
                 }
               }
-            }, 500); // Faster retry
+            }, 1000);
             timeoutRefs.current.push(retryTimeout);
           }
         } catch (err) {
           console.error('Error in map initialization:', err);
           toast.error("Map initialization issue. Please refresh the page.");
         }
-      }, 100); // Much faster initial call
+      }, 250);
       
       timeoutRefs.current.push(timeout);
     }

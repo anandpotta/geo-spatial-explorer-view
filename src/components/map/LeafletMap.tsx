@@ -1,179 +1,143 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import L from 'leaflet';
-import { useMapInitialization } from '@/hooks/useMapInitialization';
-import { useMapEvents } from '@/hooks/useMapEvents';
-import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { Location } from '@/utils/geo-utils';
-import { isMapValid } from '@/utils/leaflet-type-utils';
-import { toast } from 'sonner';
+import { useMapState } from '@/hooks/useMapState';
+import { useMapInitialization } from '@/hooks/useMapInitialization';
+import { useLocationSelection } from '@/hooks/useLocationSelection';
+import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
+import { getSavedMarkers } from '@/utils/marker-utils';
+import MapView from './MapView';
+import FloorPlanView from './FloorPlanView';
+import { setupLeafletIcons } from './LeafletMapIcons';
 import 'leaflet/dist/leaflet.css';
-
-// Import our new components
-import MapInitializer from './initialization/MapInitializer';
-import TileLayer from './tiles/TileLayer';
-import MapResizeHandler from './utilities/MapResizeHandler';
-import TileRefresher from './tiles/TileRefresher';
-import MapLoadingIndicator from './feedback/MapLoadingIndicator';
-import MapErrorDisplay from './feedback/MapErrorDisplay';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
   onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
+  onLocationSelect?: (location: Location) => void;
   onClearAll?: () => void;
-  preload?: boolean;
 }
 
-const LeafletMap: React.FC<LeafletMapProps> = ({ 
+const LeafletMap = ({ 
   selectedLocation, 
-  onMapReady,
-  activeTool,
-  onClearAll,
-  preload = false
-}) => {
+  onMapReady, 
+  activeTool, 
+  onLocationSelect, 
+  onClearAll 
+}: LeafletMapProps) => {
+  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
+  
+  // Initialize Leaflet icons
+  useEffect(() => {
+    setupLeafletIcons();
+  }, []);
+  
+  // Custom hooks
+  const mapState = useMapState(selectedLocation);
   const { 
     mapRef, 
     mapInstanceKey, 
     isMapReady, 
     handleSetMapRef 
   } = useMapInitialization(selectedLocation);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(true);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const isReadyRef = useRef(false);
-  
-  // Handle map events for location selection
-  useMapEvents(mapRef.current, selectedLocation);
-  
-  // Setup drawing tools on the map
+  const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
+  const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
+
+  // Handle markers updates
   useEffect(() => {
-    if (!mapRef.current || !isMapReady) return;
-    
-    try {
-      // Setup drawing tools and options based on activeTool
-      if (activeTool === 'draw-polygon' && mapRef.current) {
-        console.log('Activating polygon drawing tool');
-      } else if (activeTool === 'draw-marker' && mapRef.current) {
-        console.log('Activating marker drawing tool');
-      }
-    } catch (err) {
-      console.error("Error setting up drawing tools:", err);
-    }
-  }, [mapRef.current, isMapReady, activeTool]);
-  
-  // Handle location selection
-  const { handleLocationSelect, handleClearAll: clearLocations } = useLocationSelection(
-    mapRef,
-    isMapReady,
-    (location) => {
-      console.log("Location selected:", location);
-    }
-  );
-  
-  // Enhanced map initialization with error handling
-  const initMap = (element: HTMLElement) => {
-    if (!element) return;
-  };
-  
-  // Handle when the map is initialized
-  const handleMapInitialized = (map: L.Map) => {
-    handleSetMapRef(map);
-  };
-  
-  // Handle when tiles are loaded
-  const handleTilesLoaded = () => {
-    setLoading(false);
-    
-    if (onMapReady && !isReadyRef.current) {
-      isReadyRef.current = true;
-      console.log('Calling onMapReady from LeafletMap after tiles loaded');
-      if (mapRef.current) {
-        onMapReady(mapRef.current);
-      }
-    }
-  };
-  
-  // Backup ready notification in case tile events don't fire
-  useEffect(() => {
-    const backupTimeout = setTimeout(() => {
-      if (!isReadyRef.current && onMapReady && mapRef.current) {
-        isReadyRef.current = true;
-        setLoading(false);
-        console.log('Calling onMapReady from timeout backup');
-        onMapReady(mapRef.current);
-        toast.success("Map loaded", { id: "map-loaded", duration: 2000 });
-      }
-    }, 1000);
-    
-    return () => clearTimeout(backupTimeout);
-  }, [onMapReady, mapRef]);
-  
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      isReadyRef.current = false;
-      
-      // Clean up the map instance
-      if (mapRef.current) {
-        try {
-          mapRef.current.remove();
-          mapRef.current = null;
-        } catch (err) {
-          console.log('Error during map cleanup:', err);
-        }
-      }
-      
-      if (onClearAll) onClearAll();
+    const handleMarkersUpdated = () => {
+      const savedMarkers = getSavedMarkers();
+      mapState.setMarkers(savedMarkers);
     };
-  }, [mapRef, onClearAll]);
+    
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+    };
+  }, []);
+
+  // Handle selected location changes
+  useEffect(() => {
+    if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
+      try {
+        const container = mapRef.current.getContainer();
+        if (container && document.body.contains(container)) {
+          console.log('Flying to selected location:', selectedLocation);
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+            animate: true,
+            duration: 1.5
+          });
+        }
+      } catch (err) {
+        console.error('Error flying to location:', err);
+      }
+    }
+  }, [selectedLocation, isMapReady, isMapReferenceSet]);
+
+  // Custom map reference handler that sets our local state
+  const handleMapRefWrapper = (map: L.Map) => {
+    handleSetMapRef(map);
+    setIsMapReferenceSet(true);
+    
+    // Only call parent onMapReady once when the map is first ready
+    if (onMapReady && !isMapReferenceSet) {
+      onMapReady(map);
+    }
+  };
+
+  // Clear all layers and reset state
+  const handleClearAllWrapper = () => {
+    mapState.setTempMarker(null);
+    mapState.setMarkerName('');
+    mapState.setMarkerType('building');
+    mapState.setCurrentDrawing(null);
+    mapState.setShowFloorPlan(false);
+    mapState.setSelectedDrawing(null);
+    
+    if (onClearAll) {
+      onClearAll();
+    }
+    
+    handleClearAll();
+  };
+
+  if (mapState.showFloorPlan) {
+    return (
+      <FloorPlanView 
+        onBack={() => mapState.setShowFloorPlan(false)} 
+        drawing={mapState.selectedDrawing}
+      />
+    );
+  }
 
   return (
-    <div 
-      className="relative w-full h-full"
-      ref={containerRef}
-    >
-      {/* Container for the Leaflet map */}
-      <div
-        className="absolute inset-0 bg-gray-100"
-        key={mapInstanceKey}
-        id="leaflet-map-container" 
-        ref={(el) => {
-          if (el && !mapRef.current) {
-            // Initialize map when the container is available
-            const element = el;
-            if (element) {
-              // Use the MapInitializer component via direct DOM reference
-              // instead of as a React child to avoid leaflet initialization issues
-              initMap(element);
-            }
-          }
-        }}
-      />
-      
-      {/* Conditionally render components based on map state */}
-      {containerRef.current && !mapRef.current && (
-        <MapInitializer 
-          containerElement={containerRef.current.querySelector('#leaflet-map-container') as HTMLElement}
-          selectedLocation={selectedLocation}
-          onMapInitialized={handleMapInitialized}
-        />
-      )}
-      
-      {/* Add map utilities when map is available */}
-      {mapRef.current && (
-        <>
-          <MapResizeHandler map={mapRef.current} containerRef={containerRef} />
-          <TileLayer map={mapRef.current} onTilesLoaded={handleTilesLoaded} />
-          <TileRefresher map={mapRef.current} isMapReady={isMapReady} />
-        </>
-      )}
-      
-      {/* Loading and error indicators */}
-      <MapLoadingIndicator loading={loading} preload={preload} />
-      <MapErrorDisplay error={mapError} />
-    </div>
+    <MapView
+      key={`map-view-${mapInstanceKey}`}
+      position={mapState.position}
+      zoom={mapState.zoom}
+      markers={mapState.markers}
+      tempMarker={mapState.tempMarker}
+      markerName={mapState.markerName}
+      markerType={mapState.markerType}
+      onMapReady={handleMapRefWrapper}
+      onLocationSelect={handleLocationSelect}
+      onMapClick={handleMapClick}
+      onDeleteMarker={mapState.handleDeleteMarker}
+      onSaveMarker={mapState.handleSaveMarker}
+      setMarkerName={mapState.setMarkerName}
+      setMarkerType={mapState.setMarkerType}
+      onShapeCreated={handleShapeCreated}
+      activeTool={activeTool || mapState.activeTool}
+      onRegionClick={mapState.handleRegionClick}
+      onClearAll={handleClearAllWrapper}
+      isMapReady={isMapReady}
+    />
   );
 };
 

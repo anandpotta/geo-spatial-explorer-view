@@ -1,81 +1,51 @@
 
-import { useRef, useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import * as THREE from 'three';
 
+/**
+ * Hook for managing markers on a Three.js globe
+ */
 export function useMarkers(scene: THREE.Scene | null) {
+  // Store markers
   const markersRef = useRef<Map<string, THREE.Mesh>>(new Map());
   
-  // Add a marker to the scene
-  const addMarker = useCallback((id: string, position: THREE.Vector3, label?: string): THREE.Mesh => {
-    if (!scene) {
-      console.warn("Cannot add marker: Scene not available");
-      // Return a dummy mesh that won't be added to scene
-      return new THREE.Mesh();
-    }
+  // Add marker at specific coordinates
+  const addMarker = useCallback((id: string, position: THREE.Vector3, label?: string) => {
+    if (!scene) return;
     
-    // Remove any existing marker with the same ID
+    // Remove existing marker with the same ID if it exists
     if (markersRef.current.has(id)) {
       const existingMarker = markersRef.current.get(id);
-      if (existingMarker && scene.children.includes(existingMarker)) {
+      if (existingMarker) {
         scene.remove(existingMarker);
-        // Dispose geometry and material
-        if (existingMarker.geometry) existingMarker.geometry.dispose();
-        if (existingMarker.material) {
-          if (Array.isArray(existingMarker.material)) {
-            existingMarker.material.forEach(m => m.dispose());
-          } else {
-            existingMarker.material.dispose();
-          }
-        }
       }
       markersRef.current.delete(id);
     }
     
-    // Create marker geometry and material
-    const markerGeometry = new THREE.SphereGeometry(0.02, 8, 8); // Reduced segments for better performance
-    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff4500 });
-    
-    // Create marker mesh
+    // Create marker geometry
+    const markerGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-    marker.position.copy(position);
-    marker.name = `marker-${id}`;
     
-    // Add marker to scene
+    // Set position
+    marker.position.copy(position);
+    
+    // Add to scene
     scene.add(marker);
     
-    // Store marker reference
+    // Store in markers map
     markersRef.current.set(id, marker);
     
-    console.log(`Added marker for: ${label || id}`);
-    return marker;
-  }, [scene]);
-  
-  // Cleanup function to remove all markers
-  const cleanup = useCallback(() => {
-    if (!scene) return;
-    
-    if (markersRef.current.size > 0) {
-      console.log("Cleaning up markers");
-      markersRef.current.forEach((marker) => {
-        if (scene.children.includes(marker)) {
-          scene.remove(marker);
-          if (marker.geometry) marker.geometry.dispose();
-          if (marker.material) {
-            if (Array.isArray(marker.material)) {
-              marker.material.forEach(m => m.dispose());
-            } else {
-              marker.material.dispose();
-            }
-          }
-        }
-      });
-      markersRef.current.clear();
+    // If there's a label, add it
+    if (label) {
+      console.log(`Added marker for: ${label}`);
     }
+    
+    return marker;
   }, [scene]);
   
   return {
     addMarker,
-    markersRef,
-    cleanup
+    markersRef
   };
 }

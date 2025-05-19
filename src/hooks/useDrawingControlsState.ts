@@ -1,28 +1,41 @@
 
-import { useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
+import { DrawingData } from '@/utils/drawing-utils';
 
 export function useDrawingControlsState(onUploadToDrawing?: (drawingId: string, file: File) => void) {
-  const [isEditModeActive, setIsEditModeActive] = useState(false);
-
+  const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
+  
   const handleUploadRequest = useCallback((drawingId: string) => {
-    if (onUploadToDrawing) {
-      // Trigger file upload dialog for the specific drawing
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.onchange = (e) => {
-        const files = (e.target as HTMLInputElement).files;
-        if (files && files.length > 0) {
-          onUploadToDrawing(drawingId, files[0]);
-        }
-      };
-      fileInput.click();
+    if (onUploadToDrawing && drawingId) {
+      const fileInput = uploadFileInputRef.current;
+      if (fileInput) {
+        setSelectedDrawing(drawingId);
+        fileInput.click();
+      }
     }
   }, [onUploadToDrawing]);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadFileInputRef = useRef<HTMLInputElement>(null);
+  
+  const openFileUploadDialog = useCallback((drawingId: string) => {
+    setSelectedDrawing(drawingId);
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, []);
+
+  const handleDrawingClick = useCallback((drawing: DrawingData) => {
+    // Implementation of drawing click logic
+  }, []);
 
   return {
-    isEditModeActive,
-    setIsEditModeActive,
-    handleUploadRequest
+    selectedDrawing,
+    setSelectedDrawing,
+    handleUploadRequest,
+    fileInputRef,
+    uploadFileInputRef,
+    openFileUploadDialog,
+    handleDrawingClick
   };
 }

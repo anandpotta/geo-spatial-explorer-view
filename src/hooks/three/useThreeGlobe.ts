@@ -1,13 +1,13 @@
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import * as THREE from 'three';
 import { useThreeScene } from './useThreeScene';
 import { useAutoRotation } from './useAutoRotation';
 import { useEnhancedFlyToLocation } from './useEnhancedFlyToLocation';
 import { useMarkers } from './useMarkers';
+import { useGlobeSetup } from './useGlobeSetup';
+import { useGlobeAnimation } from './useGlobeAnimation';
 import { EARTH_RADIUS } from '@/utils/three/globe-factory';
-import { useGlobeInit } from './useGlobeInit';
-import { useGlobeCallbacks } from './useGlobeCallbacks';
-import { useGlobeCleanup } from './useGlobeCleanup';
 
 export function useThreeGlobe(
   containerRef: React.RefObject<HTMLDivElement>,
@@ -21,59 +21,78 @@ export function useThreeGlobe(
     isInitialized,
     setIsInitialized,
     canvasElementRef,
-    controlsRef,
-    cleanup: sceneCleanup
+    controlsRef
   } = useThreeScene(containerRef);
 
-  // State and refs
+  // Refs for tracking state
+  const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
   
-  // Manage callbacks and initialization
-  const { handleTexturesLoaded } = useGlobeCallbacks(
-    isInitialized,
-    setIsInitialized,
+  // Get markers functionality
+  const { addMarker } = useMarkers(scene);
+  
+  // Handle textures loaded callback
+  const handleTexturesLoaded = useCallback(() => {
+    if (onInitialized && isInitialized) {
+      console.log("Calling onInitialized callback - textures loaded");
+      onInitialized();
+    }
+  }, [onInitialized, isInitialized]);
+  
+  // Use globe setup hook with texture callback
+  const { globe } = useGlobeSetup(
+    scene,
+    camera,
+    controlsRef,
     containerRef,
-    onInitialized
+    handleTexturesLoaded
   );
   
-  // Initialize the globe components
-  const { globe, setupRenderer, cleanup: initCleanup } = useGlobeInit(
+  // Set up animation loop
+  useGlobeAnimation(
     scene,
     camera,
     renderer,
     controlsRef,
-    containerRef,
     autoRotationEnabledRef,
-    isFlyingRef,
-    handleTexturesLoaded
+    isFlyingRef
   );
   
-  // Get markers functionality
-  const { addMarker, cleanup: markersCleanup } = useMarkers(scene);
-  
   // Get enhanced fly to location functionality
-  const { enhancedFlyToLocation, cleanup: flyCleanup } = useEnhancedFlyToLocation(
+  const { enhancedFlyToLocation } = useEnhancedFlyToLocation(
     camera,
     controlsRef,
     EARTH_RADIUS,
     isFlyingRef
   );
   
-  // Set up renderer when it's available
-  if (renderer && !initCleanup) {
-    setupRenderer();
-  }
-  
-  // Create master cleanup function
-  const cleanupAll = useGlobeCleanup([
-    flyCleanup,
-    initCleanup,
-    markersCleanup,
-    sceneCleanup
-  ]);
+  // Initialize effect - mark as initialized after a small timeout
+  useEffect(() => {
+    if (isSetupCompleteRef.current || !containerRef.current) return;
+    
+    // Mark as initialized after a small timeout to ensure everything is ready
+    setTimeout(() => {
+      if (!isInitialized && containerRef.current) {
+        console.log("Setting isInitialized to true");
+        setIsInitialized(true);
+        isSetupCompleteRef.current = true;
+        
+        // Even if textures are still loading, we'll consider the globe ready
+        // to avoid getting stuck at the loading screen
+        if (onInitialized) {
+          console.log("Calling onInitialized even though textures may not be fully loaded");
+          onInitialized();
+        }
+      }
+    }, 2000); // Give it 2 seconds to load, then move on regardless
+    
+    return () => {
+      isSetupCompleteRef.current = false;
+    };
+  }, [isInitialized, setIsInitialized, onInitialized, containerRef]);
   
   return {
     scene,
@@ -84,7 +103,6 @@ export function useThreeGlobe(
     isInitialized,
     flyToLocation: enhancedFlyToLocation,
     setAutoRotation,
-    addMarker,
-    cleanup: cleanupAll
+    addMarker
   };
 }

@@ -7,110 +7,90 @@ import { createThreeViewerOptions } from '@/utils/threejs-viewer/viewer-options'
  */
 export function loadEarthTextures(
   material: THREE.MeshPhongMaterial,
-  onLoad: (earthLoaded: boolean, bumpMapLoaded: boolean) => void
+  onLoad: (earthLoaded: boolean, bumpLoaded: boolean) => void
 ): void {
   const options = createThreeViewerOptions();
+  const textureLoader = new THREE.TextureLoader();
   
   // Track texture loading progress
   let earthTextureLoaded = false;
   let bumpMapLoaded = false;
   
-  // Set texture loading manager to handle loading and errors better
-  const loadingManager = new THREE.LoadingManager();
-  loadingManager.onStart = (url) => {
-    console.log('Started loading texture:', url);
-  };
-  
-  // Add timeout to the loading manager
-  let loadingTimeout = setTimeout(() => {
-    console.warn('Texture loading timed out, using fallbacks');
-    if (!earthTextureLoaded || !bumpMapLoaded) {
-      onLoad(earthTextureLoaded, bumpMapLoaded);
+  // Load Earth texture
+  // We'll use a placeholder texture initially for faster loading
+  const placeholderTexture = new THREE.TextureLoader().load('/placeholder.svg', undefined, undefined, 
+    (error) => {
+      console.warn('Placeholder texture failed to load, using color instead');
+      // If even placeholder fails, just use a color
+      material.color = new THREE.Color(0x1a2b3c);
+      material.needsUpdate = true;
     }
-  }, 3000); // 3 second timeout
+  );
+  material.map = placeholderTexture;
   
-  loadingManager.onError = (url) => {
-    console.error('Error loading texture:', url);
-    // Call onLoad with current state to allow fallbacks
-    if (!earthTextureLoaded || !bumpMapLoaded) {
+  // Load the Earth texture
+  textureLoader.load(
+    options.textures.earthBaseUrl,
+    (texture) => {
+      console.log('Earth texture loaded');
+      // THREE.js v0.133.0 uses encoding instead of colorSpace
+      texture.encoding = THREE.sRGBEncoding; // For more accurate colors
+      material.map = texture;
+      material.needsUpdate = true;
+      earthTextureLoaded = true;
       onLoad(earthTextureLoaded, bumpMapLoaded);
-    }
-  };
-  
-  // Use loading manager with texture loader
-  const managedLoader = new THREE.TextureLoader(loadingManager);
-  
-  // Use a simple blue color for immediate feedback
-  material.color = new THREE.Color(0x1a5276);
-  material.needsUpdate = true;
-  
-  // Load Earth texture with progressive enhancement
-  const loadMainTexture = () => {
-    // Try to load from a CDN first for better performance
-    const textureSources = [
-      options.textures.earthBaseUrl,
-      '/placeholder.svg', // Fallback to local
-    ];
-    
-    let sourceIndex = 0;
-    
-    const tryLoadTexture = () => {
-      if (sourceIndex >= textureSources.length) {
-        console.warn('All Earth textures failed, using blue color');
-        material.color = new THREE.Color(0x1a5276);
-        material.needsUpdate = true;
-        earthTextureLoaded = true;
-        checkAllLoaded();
-        return;
-      }
-      
-      const source = textureSources[sourceIndex];
-      sourceIndex++;
-      
-      managedLoader.load(
-        source,
-        (texture) => {
-          console.log('Earth texture loaded');
-          // THREE.js v0.133.0 uses encoding instead of colorSpace
-          texture.encoding = THREE.sRGBEncoding;
-          material.map = texture;
+    },
+    undefined, // Progress callback not needed
+    (error) => {
+      console.error('Error loading Earth texture:', error);
+      // Fallback to a local texture or directly bundled image
+      textureLoader.load(
+        '/placeholder.svg',
+        (fallbackTexture) => {
+          console.log('Using simple placeholder as Earth texture');
+          fallbackTexture.encoding = THREE.sRGBEncoding;
+          material.map = fallbackTexture;
           material.needsUpdate = true;
           earthTextureLoaded = true;
-          checkAllLoaded();
+          onLoad(earthTextureLoaded, bumpMapLoaded);
         },
-        // Progress callback - not needed
         undefined,
         () => {
-          console.warn(`Failed to load texture from ${source}, trying next source`);
-          tryLoadTexture();
+          console.warn('All Earth textures failed, using blue color');
+          material.color = new THREE.Color(0x1a5276);
+          material.needsUpdate = true;
+          earthTextureLoaded = true;
+          onLoad(earthTextureLoaded, bumpMapLoaded);
         }
       );
-    };
-    
-    // Start loading from first source
-    tryLoadTexture();
-  };
+    }
+  );
   
-  // Skip bump map initially for faster loading - just mark it as loaded
-  bumpMapLoaded = true;
-  
-  // Check if all textures are loaded and trigger callback
-  const checkAllLoaded = () => {
-    if (earthTextureLoaded && bumpMapLoaded) {
-      clearTimeout(loadingTimeout);
+  // Load bump map for terrain
+  textureLoader.load(
+    options.textures.bumpMapUrl,
+    (texture) => {
+      console.log('Bump texture loaded');
+      material.bumpMap = texture;
+      material.bumpScale = 0.08; // Subtle bump effect
+      material.needsUpdate = true;
+      bumpMapLoaded = true;
+      onLoad(earthTextureLoaded, bumpMapLoaded);
+    },
+    undefined,
+    (error) => {
+      console.error('Error loading bump texture:', error);
+      bumpMapLoaded = true; // Mark as loaded even though it failed
       onLoad(earthTextureLoaded, bumpMapLoaded);
     }
-  };
-  
-  // Start loading textures
-  loadMainTexture();
+  );
 }
 
 /**
  * Create starfield background
  */
 export function createStarfield(scene: THREE.Scene): THREE.Points {
-  // Create a star field using points - with fewer stars for performance
+  // Create a star field using points
   const starsGeometry = new THREE.BufferGeometry();
   const starsMaterial = new THREE.PointsMaterial({
     color: 0xFFFFFF,
@@ -118,9 +98,9 @@ export function createStarfield(scene: THREE.Scene): THREE.Points {
     transparent: true
   });
   
-  // Create 1000 stars instead of 2000 for better performance
+  // Create 2000 stars at random positions
   const starsVertices = [];
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < 2000; i++) {
     const x = (Math.random() - 0.5) * 100;
     const y = (Math.random() - 0.5) * 100;
     const z = (Math.random() - 0.5) * 100;

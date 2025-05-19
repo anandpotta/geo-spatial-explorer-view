@@ -3,23 +3,6 @@
 // by ensuring that we can still pass certain props like featureGroup to EditControl
 import { EditControl as OriginalEditControl } from "react-leaflet-draw";
 import React, { forwardRef } from 'react';
-import L from 'leaflet';
-
-// Define proper types for edit options
-interface EditOptions {
-  featureGroup: any;
-  edit?: boolean | {
-    selectedPathOptions?: {
-      maintainColor?: boolean;
-      opacity?: number;
-      dashArray?: string;
-      fill?: boolean;
-      fillColor?: string;
-      fillOpacity?: number;
-    };
-  };
-  remove?: boolean;
-}
 
 // Create a wrapper component that forwards the ref and handles the featureGroup prop
 export const EditControl = forwardRef((props: any, ref: any) => {
@@ -27,60 +10,51 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   const { featureGroup, edit, ...otherProps } = props;
   
   // Format the edit options properly based on what was passed
-  let editOptions: EditOptions = {
-    featureGroup: featureGroup
-  };
+  let editOptions;
   
   // Handle different types of edit parameters
   if (edit === true) {
     // If edit is boolean true, create a proper object structure
     editOptions = { 
       featureGroup: featureGroup,
-      edit: {
-        selectedPathOptions: {
-          maintainColor: true,
-          opacity: 0.7,
-          dashArray: '10, 10',
-          fill: true,
-          fillColor: '#ffffff',
-          fillOpacity: 0.1
-        }
-      },
-      remove: true
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
     };
   } else if (edit === false) {
-    // If edit is boolean false, disable edit mode
-    editOptions = {
-      featureGroup: featureGroup,
-      edit: false,
-      remove: false
-    };
+    // If edit is boolean false, we need to use null instead
+    // react-leaflet-draw expects null or an object, not boolean false
+    editOptions = null;
   } else if (edit && typeof edit === 'object') {
-    // If edit is an object, merge with featureGroup but preserve structure
+    // If edit is an object, merge with featureGroup but don't overwrite featureGroup
+    editOptions = {
+      ...edit,
+      featureGroup: featureGroup
+    };
+    
+    // Ensure selectedPathOptions is properly defined if not already
+    if (!editOptions.selectedPathOptions) {
+      editOptions.selectedPathOptions = {
+        maintainColor: true,
+        opacity: 0.7
+      };
+    }
+  } else {
+    // Default case if edit is undefined or null
     editOptions = {
       featureGroup: featureGroup,
-      edit: {
-        ...edit,
-        selectedPathOptions: {
-          maintainColor: true,
-          opacity: 0.7,
-          dashArray: '10, 10',
-          fill: true,
-          fillColor: '#ffffff',
-          fillOpacity: 0.1,
-          ...(edit.selectedPathOptions || {})
-        }
-      },
-      remove: edit.remove !== undefined ? edit.remove : true
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
     };
   }
   
   // Create the element with React.createElement to properly pass the ref
   return React.createElement(OriginalEditControl, {
     ...otherProps,
-    edit: editOptions.edit,
-    remove: editOptions.remove,
-    featureGroup: featureGroup,
+    edit: editOptions,
     ref: ref
   });
 });

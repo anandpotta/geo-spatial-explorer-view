@@ -1,9 +1,8 @@
 
-import React, { useCallback, useState } from 'react';
-import { Marker, useMap } from 'react-leaflet';
+import React, { useCallback } from 'react';
+import { Marker } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
-import { isMapValid } from '@/utils/leaflet-type-utils';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -11,9 +10,6 @@ interface UserMarkerProps {
 }
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
-  const map = useMap();
-  const [isMounted, setIsMounted] = useState(true);
-  
   const handleDragEnd = useCallback((e: any) => {
     const updatedMarker = e.target;
     const newPosition = updatedMarker.getLatLng();
@@ -36,19 +32,13 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     window.dispatchEvent(new CustomEvent('markersUpdated'));
   }, [marker.id]);
   
-  // If the map isn't valid, don't render
-  if (!isMapValid(map) || !isMounted) {
-    return null;
-  }
-  
   return (
     <Marker 
       position={marker.position} 
       key={`marker-${marker.id}`}
       draggable={true}
       eventHandlers={{
-        dragend: handleDragEnd,
-        remove: () => setIsMounted(false)
+        dragend: handleDragEnd
       }}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
