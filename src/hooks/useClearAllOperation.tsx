@@ -14,6 +14,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Add TypeScript declaration for window.featureGroup
+declare global {
+  interface Window {
+    featureGroup: L.FeatureGroup | undefined;
+  }
+}
+
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
