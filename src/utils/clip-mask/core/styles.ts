@@ -54,6 +54,20 @@ if (typeof document !== 'undefined') {
       fill-opacity: 0.6 !important;
     }
     
+    /* Ensure all draw shapes use SVG path */
+    .leaflet-draw-draw-polygon,
+    .leaflet-draw-draw-rectangle,
+    .leaflet-draw-draw-circle {
+      pointer-events: auto !important;
+    }
+    
+    .leaflet-draw-tooltip {
+      background: rgba(0, 0, 0, 0.7) !important;
+      color: white !important;
+      border: 1px solid #33C3F0 !important;
+      pointer-events: none !important;
+    }
+    
     @keyframes dash {
       to {
         stroke-dashoffset: 8;

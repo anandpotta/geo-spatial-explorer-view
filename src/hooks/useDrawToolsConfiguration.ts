@@ -47,6 +47,23 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
           backface-visibility: hidden;
           pointer-events: auto !important;
         }
+        
+        /* Force SVG rendering for all draw shapes */
+        .leaflet-draw-draw-polygon,
+        .leaflet-draw-draw-rectangle,
+        .leaflet-draw-draw-circle {
+          pointer-events: auto !important;
+        }
+        
+        /* Ensure path elements are visible */
+        .leaflet-overlay-pane path,
+        .leaflet-draw-item path {
+          fill-opacity: 0.6 !important;
+          stroke-width: 4px !important;
+          stroke-opacity: 1 !important;
+          pointer-events: auto !important;
+        }
+        
         .image-controls-wrapper {
           opacity: 1 !important;
           transition: opacity 0.2s ease-in-out;

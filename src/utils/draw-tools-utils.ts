@@ -32,8 +32,49 @@ export const configureSvgRenderer = (): () => void => {
       if (!layer._path.classList.contains('leaflet-drawing')) {
         layer._path.classList.add('leaflet-drawing');
       }
+      
+      // Ensure all path elements are properly configured for SVG
+      if (layer.options && layer.options.fill !== false) {
+        layer._path.setAttribute('fill-opacity', '0.6');
+      }
     }
   };
+
+  // Force SVG renderer for Draw control
+  if (L.Draw) {
+    // Force SVG renderer for Rectangle
+    if ((L.Draw as any).Rectangle) {
+      const originalInitialize = (L.Draw as any).Rectangle.prototype.initialize;
+      (L.Draw as any).Rectangle.prototype.initialize = function() {
+        originalInitialize.apply(this, arguments);
+        if (this.options && this.options.shapeOptions) {
+          this.options.shapeOptions.renderer = L.svg();
+        }
+      };
+    }
+
+    // Force SVG renderer for Circle
+    if ((L.Draw as any).Circle) {
+      const originalInitialize = (L.Draw as any).Circle.prototype.initialize;
+      (L.Draw as any).Circle.prototype.initialize = function() {
+        originalInitialize.apply(this, arguments);
+        if (this.options && this.options.shapeOptions) {
+          this.options.shapeOptions.renderer = L.svg();
+        }
+      };
+    }
+
+    // Force SVG renderer for Polygon
+    if ((L.Draw as any).Polygon) {
+      const originalInitialize = (L.Draw as any).Polygon.prototype.initialize;
+      (L.Draw as any).Polygon.prototype.initialize = function() {
+        originalInitialize.apply(this, arguments);
+        if (this.options && this.options.shapeOptions) {
+          this.options.shapeOptions.renderer = L.svg();
+        }
+      };
+    }
+  }
 
   // Return a cleanup function
   return () => {

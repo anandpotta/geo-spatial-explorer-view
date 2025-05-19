@@ -10,7 +10,8 @@ export const getDrawOptions = () => {
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
-        stroke: true
+        stroke: true,
+        renderer: L.svg() // Force SVG renderer for rectangles
       }
     },
     polygon: {
@@ -26,7 +27,8 @@ export const getDrawOptions = () => {
         fillOpacity: 0.3,
         stroke: true,
         lineCap: 'round',
-        lineJoin: 'round'
+        lineJoin: 'round',
+        renderer: L.svg() // Force SVG renderer for polygons
       },
       showArea: false,
       metric: true,
@@ -38,7 +40,8 @@ export const getDrawOptions = () => {
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
-        stroke: true
+        stroke: true,
+        renderer: L.svg() // Force SVG renderer for circles
       }
     },
     circlemarker: false,
