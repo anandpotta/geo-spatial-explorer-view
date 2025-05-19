@@ -38,6 +38,14 @@ export function useClearAllOperation(onClearAll?: () => void) {
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
       
+      // Clean up all marker tooltips
+      const tooltips = document.querySelectorAll('.marker-tooltip');
+      tooltips.forEach(tooltip => {
+        if (tooltip.parentNode) {
+          tooltip.parentNode.removeChild(tooltip);
+        }
+      });
+      
       // Dispatch events to notify components
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));

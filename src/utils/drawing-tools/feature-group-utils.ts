@@ -33,8 +33,19 @@ export const enhanceFeatureGroupRemoval = (featureGroup: L.FeatureGroup) => {
     if (layer) {
       // Get the drawing ID from the layer options
       const drawingId = (layer as any).options?.id;
+      const markerId = (layer as any).options?.markerId;
       
       try {
+        // Clean up marker tooltips if this is a marker
+        if (markerId) {
+          const tooltips = document.querySelectorAll(`[data-marker-tooltip-id="${markerId}"]`);
+          tooltips.forEach(tooltip => {
+            if (tooltip.parentNode) {
+              tooltip.parentNode.removeChild(tooltip);
+            }
+          });
+        }
+        
         if (drawingId) {
           // Remove any associated marker icons
           const markerIcons = document.querySelectorAll(`.leaflet-marker-icon[data-drawing-id="${drawingId}"]`);
@@ -49,6 +60,14 @@ export const enhanceFeatureGroupRemoval = (featureGroup: L.FeatureGroup) => {
           controlElements.forEach(element => {
             if (element && element.parentNode) {
               element.parentNode.removeChild(element);
+            }
+          });
+          
+          // Remove tooltips for this drawing
+          const tooltips = document.querySelectorAll(`[data-marker-tooltip-id="${drawingId}"]`);
+          tooltips.forEach(tooltip => {
+            if (tooltip.parentNode) {
+              tooltip.parentNode.removeChild(tooltip);
             }
           });
           
