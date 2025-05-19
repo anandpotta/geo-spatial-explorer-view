@@ -13,6 +13,7 @@ interface MapSearchOverlayProps {
 const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect, flyCompleted = true }) => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [markerPos, setMarkerPos] = useState<{ x: number; y: number } | null>(null);
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const positionUpdateTimerRef = useRef<number | null>(null);
   const lastFlyCompleted = useRef<boolean>(flyCompleted);
@@ -103,8 +104,17 @@ const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect, f
     if (cesiumMap) observer.observe(cesiumMap, { attributes: true });
     if (leafletMap) observer.observe(leafletMap, { attributes: true });
     
+    // Listen for map ready event to know when the map is loaded
+    const handleMapReady = () => {
+      console.log("Map is now loaded, enabling location tag display");
+      setMapLoaded(true);
+    };
+    
+    window.addEventListener('leafletMapReady', handleMapReady);
+    
     return () => {
       observer.disconnect();
+      window.removeEventListener('leafletMapReady', handleMapReady);
     };
   }, []);
   
@@ -183,7 +193,7 @@ const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect, f
         <LocationSearch onLocationSelect={handleLocationSelect} />
       </div>
 
-      {selectedLocation && markerPos && mapContainerRef.current && createPortal(
+      {selectedLocation && markerPos && mapContainerRef.current && mapLoaded && createPortal(
         <div 
           style={{
             position: 'absolute',
