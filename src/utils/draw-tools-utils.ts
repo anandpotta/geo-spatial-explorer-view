@@ -136,7 +136,7 @@ export const configureSvgRenderer = (): () => void => {
           // Make sure we don't reference 'type' directly
           if (result && result.text && this._shape) {
             const bounds = this._shape.getBounds();
-            // Fix: Define our own getCorners method instead of relying on the native one
+            // Fix: Define our own corners array instead of relying on getCorners
             const corners = [
               bounds.getNorthWest(), 
               bounds.getNorthEast(), 
@@ -176,17 +176,20 @@ export const configureSvgRenderer = (): () => void => {
     }
   }
 
-  // Add our own implementation of getCorners instead of extending LatLngBounds prototype
-  if (!L.GeometryUtil.getCorners) {
-    L.GeometryUtil.getCorners = function(bounds: L.LatLngBounds) {
-      return [
-        bounds.getNorthWest(),
-        bounds.getNorthEast(),
-        bounds.getSouthEast(),
-        bounds.getSouthWest(),
-        bounds.getNorthWest() // Close the polygon
-      ];
-    };
+  // Create a helper function to get corners from bounds without modifying the prototype
+  const getCorners = function(bounds: L.LatLngBounds): L.LatLng[] {
+    return [
+      bounds.getNorthWest(),
+      bounds.getNorthEast(),
+      bounds.getSouthEast(),
+      bounds.getSouthWest(),
+      bounds.getNorthWest() // Close the polygon
+    ];
+  };
+
+  // Extend GeometryUtil if it exists
+  if (L.GeometryUtil) {
+    (L.GeometryUtil as any).getCorners = getCorners;
   }
 
   // Return a cleanup function
@@ -195,7 +198,7 @@ export const configureSvgRenderer = (): () => void => {
     (L.SVG.prototype as any)._updateStyle = originalUpdateStyle;
 
     // Clean up our enhancement
-    if (L.GeometryUtil && L.GeometryUtil.getCorners) {
+    if (L.GeometryUtil) {
       delete (L.GeometryUtil as any).getCorners;
     }
   };
