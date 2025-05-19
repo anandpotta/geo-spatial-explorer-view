@@ -7,12 +7,15 @@ import LocationTag from './LocationTag';
 
 interface MapSearchOverlayProps {
   onLocationSelect: (location: Location) => void;
+  flyCompleted?: boolean;
 }
 
-const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect }) => {
+const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect, flyCompleted = true }) => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [markerPos, setMarkerPos] = useState<{ x: number; y: number } | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const positionUpdateTimerRef = useRef<number | null>(null);
+  const lastFlyCompleted = useRef<boolean>(flyCompleted);
   
   useEffect(() => {
     // Find the map container to use as reference point
@@ -51,6 +54,18 @@ const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect })
       observer.disconnect();
     };
   }, []);
+  
+  // Handle fly completion changes
+  useEffect(() => {
+    // When fly is completed, recalculate the marker position
+    if (flyCompleted && !lastFlyCompleted.current && selectedLocation) {
+      console.log("Fly completed, recalculating marker position");
+      // Give the map a moment to settle before recalculating position
+      setTimeout(() => calculateMarkerPosition(), 500);
+    }
+    
+    lastFlyCompleted.current = flyCompleted;
+  }, [flyCompleted]);
   
   useEffect(() => {
     if (!selectedLocation || !mapContainerRef.current) return;
@@ -107,21 +122,44 @@ const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect })
       }
     };
     
+    // Calculate initial position
     calculateMarkerPosition();
     
-    // Recalculate when the map moves
-    const handleMapMove = () => {
-      calculateMarkerPosition();
+    // Function to schedule position updates with debounce
+    const schedulePositionUpdate = () => {
+      if (positionUpdateTimerRef.current) {
+        clearTimeout(positionUpdateTimerRef.current);
+      }
+      positionUpdateTimerRef.current = window.setTimeout(() => {
+        calculateMarkerPosition();
+        positionUpdateTimerRef.current = null;
+      }, 200);
     };
     
+    // Save the function so we can reference it in the useEffect cleanup
+    const handleMapMove = schedulePositionUpdate;
+    
+    // Add event listeners for map movements and resizing
     window.addEventListener('mapMove', handleMapMove);
-    window.addEventListener('resize', calculateMarkerPosition);
+    window.addEventListener('resize', handleMapMove);
+    
+    // Recalculate position periodically while showing tag (for transitions)
+    const intervalId = setInterval(() => {
+      if (!flyCompleted) {
+        calculateMarkerPosition();
+      }
+    }, 500);
     
     return () => {
       window.removeEventListener('mapMove', handleMapMove);
-      window.removeEventListener('resize', calculateMarkerPosition);
+      window.removeEventListener('resize', handleMapMove);
+      clearInterval(intervalId);
+      if (positionUpdateTimerRef.current) {
+        clearTimeout(positionUpdateTimerRef.current);
+        positionUpdateTimerRef.current = null;
+      }
     };
-  }, [selectedLocation]);
+  }, [selectedLocation, flyCompleted]);
 
   const handleLocationSelect = (location: Location) => {
     setSelectedLocation(location);

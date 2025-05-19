@@ -8,11 +8,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface LocationTagProps {
   location: Location;
   onClose: () => void;
+  style?: React.CSSProperties;
 }
 
-const LocationTag: React.FC<LocationTagProps> = ({ location, onClose }) => {
+const LocationTag: React.FC<LocationTagProps> = ({ location, onClose, style }) => {
   return (
-    <div className="absolute bg-background border shadow-md rounded-md p-2 flex items-center gap-2 animate-fade-in z-[1000] max-w-[300px] transform -translate-x-1/2 translate-y-2">
+    <div 
+      className="absolute bg-background border shadow-md rounded-md p-2 flex items-center gap-2 animate-fade-in z-[1000] max-w-[300px] transform -translate-x-1/2 translate-y-2"
+      style={style}
+    >
       <Tag className="h-4 w-4 text-primary flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{location.label}</p>
