@@ -99,9 +99,9 @@ export function useThreeScene(
     }
     
     // Check if the container is actually in the DOM
-    let element = containerRef.current;
-    while (element.parentNode) {
-      element = element.parentNode as HTMLElement;
+    let element: Node | null = containerRef.current;
+    while (element && element.parentNode) {
+      element = element.parentNode;
       if (element === document.body) {
         return true;
       }

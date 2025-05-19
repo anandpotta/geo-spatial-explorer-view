@@ -24,38 +24,54 @@ export function useGlobeAnimation(
   
   // Setup and handle the animation loop
   useEffect(() => {
-    if (!scene || !camera || !renderer || !controlsRef.current) {
+    if (!scene || !camera || !renderer) {
       console.log("Animation cannot start - missing required objects");
-      return;
+      return cleanup;
+    }
+    
+    // Make sure controls exist
+    if (!controlsRef.current) {
+      console.log("Animation cannot start - missing controls");
+      return cleanup;
     }
     
     console.log("Starting globe animation loop");
     
-    // Animation function
+    // Animation function with safety checks
     const animate = () => {
       // Check if unmounted
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        cleanup();
+        return;
+      }
+      
+      // Request next frame first to ensure smoother animation
+      animationFrameRef.current = requestAnimationFrame(animate);
       
       // Check if all required objects are still available
       if (!scene || !camera || !renderer || !controlsRef.current) {
         console.warn("Animation loop missing required objects");
+        cleanup();
         return;
       }
       
-      animationFrameRef.current = requestAnimationFrame(animate);
-      
-      // If auto rotation is enabled and not flying to a location
-      if (autoRotationEnabledRef.current && !isFlyingRef.current) {
-        // Let the orbit controls handle rotation
-        controlsRef.current.update();
-      } else if (controlsRef.current) {
-        // Still update controls for other interactions
-        controlsRef.current.update();
-      }
-      
-      // Ensure the renderer is drawing the scene with high quality
-      if (renderer && renderer.domElement && renderer.domElement.parentElement) {
-        renderer.render(scene, camera);
+      try {
+        // If auto rotation is enabled and not flying to a location
+        if (autoRotationEnabledRef.current && !isFlyingRef.current) {
+          // Let the orbit controls handle rotation
+          controlsRef.current.update();
+        } else if (controlsRef.current) {
+          // Still update controls for other interactions
+          controlsRef.current.update();
+        }
+        
+        // Ensure the renderer is drawing the scene with high quality
+        if (renderer && renderer.domElement && renderer.domElement.parentElement) {
+          renderer.render(scene, camera);
+        }
+      } catch (error) {
+        console.error("Error in animation loop:", error);
+        cleanup();
       }
     };
     

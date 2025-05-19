@@ -3,200 +3,155 @@ import { useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-// Define a type that accepts either a direct camera instance or a React ref to a camera
-type CameraRefType = React.MutableRefObject<THREE.PerspectiveCamera | null> | {
-  current: THREE.PerspectiveCamera | null;
-};
-
 /**
- * Hook providing functionality to fly to a specific location on the globe
+ * Hook to provide flying to a specific location on the globe
  */
 export function useFlyToLocation(
-  cameraRef: CameraRefType,
-  controlsRef: React.MutableRefObject<OrbitControls | null>,
-  globeRadius: number
+  cameraRef: React.RefObject<THREE.PerspectiveCamera>,
+  controlsRef: React.RefObject<OrbitControls>,
+  globeRadius: number = 1
 ) {
-  // Animation frame reference for cleanup
+  // Animation refs
   const animationFrameRef = useRef<number | null>(null);
-  const isDisposedRef = useRef(false);
+  const animationStartTimeRef = useRef<number | null>(null);
+  const animationDurationRef = useRef<number>(2000); // 2 seconds animation duration
   
-  // Method to fly to a specific location on the globe
-  const flyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
-    // Reset disposed state
-    isDisposedRef.current = false;
-    
-    // Clear any existing animation frame
+  // Cleanup function to cancel any ongoing animation
+  const cleanup = useCallback(() => {
     if (animationFrameRef.current !== null) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
+      animationStartTimeRef.current = null;
     }
+  }, []);
+  
+  // Calculate target position on the globe based on latitude and longitude
+  const getTargetPosition = useCallback((longitude: number, latitude: number): THREE.Vector3 => {
+    // Convert to radians
+    const latRad = (latitude * Math.PI) / 180;
+    const lonRad = (longitude * Math.PI) / 180;
     
-    // Check if camera and controls exist
+    // Calculate position
+    const x = -globeRadius * Math.cos(latRad) * Math.cos(lonRad);
+    const y = globeRadius * Math.sin(latRad);
+    const z = globeRadius * Math.cos(latRad) * Math.sin(lonRad);
+    
+    return new THREE.Vector3(x, y, z);
+  }, [globeRadius]);
+  
+  // Calculate camera position with an offset from the target position
+  const getCameraPosition = useCallback((targetPosition: THREE.Vector3): THREE.Vector3 => {
+    // Create a position that is at an offset from the target
+    const offsetFactor = 1.8; // Distance multiplier from globe surface
+    return targetPosition.clone().multiplyScalar(offsetFactor);
+  }, []);
+  
+  // Animate camera movement using requestAnimationFrame
+  const flyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void): (() => void) => {
     if (!cameraRef.current || !controlsRef.current) {
-      console.warn("Cannot fly to location - camera or controls not initialized");
+      console.warn("Camera or controls not available for fly animation");
       if (onComplete) onComplete();
-      return;
+      return () => {};
     }
     
-    // Validate inputs to avoid NaN errors
-    if (isNaN(longitude) || isNaN(latitude)) {
-      console.error(`Invalid coordinates: longitude=${longitude}, latitude=${latitude}`);
-      if (onComplete) onComplete();
-      return;
-    }
+    // Calculate target position on globe
+    const targetPosition = getTargetPosition(longitude, latitude);
     
-    console.log(`Flying to location: ${latitude}, ${longitude}`);
+    // Calculate camera position
+    const targetCameraPosition = getCameraPosition(targetPosition);
     
-    // Convert lat/long to 3D coordinates
-    const phi = (90 - latitude) * (Math.PI / 180);
-    const theta = (longitude + 180) * (Math.PI / 180);
+    console.log(`Flying to location: ${longitude}, ${latitude}`);
     
-    // Calculate the point on the globe's surface
-    const targetX = -globeRadius * Math.sin(phi) * Math.cos(theta);
-    const targetY = globeRadius * Math.cos(phi);
-    const targetZ = globeRadius * Math.sin(phi) * Math.sin(theta);
+    // Store initial camera position and rotation
+    const startPosition = cameraRef.current.position.clone();
+    const startRotation = new THREE.Quaternion().setFromEuler(cameraRef.current.rotation.clone());
     
-    const target = new THREE.Vector3(targetX, targetY, targetZ);
+    // Store target rotation (looking at the target)
+    const lookAtVector = new THREE.Vector3().copy(targetPosition);
+    const tempCamera = cameraRef.current.clone();
+    tempCamera.position.copy(targetCameraPosition);
+    tempCamera.lookAt(lookAtVector);
+    const targetRotation = new THREE.Quaternion().setFromEuler(tempCamera.rotation);
     
-    // Calculate camera position (at a specified distance from the target point)
-    const distance = globeRadius * 1.5; // Slightly further for smoother view
-    const cameraTargetX = -distance * Math.sin(phi) * Math.cos(theta);
-    const cameraTargetY = distance * Math.cos(phi);
-    const cameraTargetZ = distance * Math.sin(phi) * Math.sin(theta);
+    // Clean up any existing animation
+    cleanup();
     
-    // Ensure we have valid current positions before proceeding
-    if (!cameraRef.current.position) {
-      console.error("Camera position is null or undefined");
-      if (onComplete) onComplete();
-      return;
-    }
+    // Get the current time
+    animationStartTimeRef.current = Date.now();
     
-    const currentPos = cameraRef.current.position.clone();
-    const targetPos = new THREE.Vector3(cameraTargetX, cameraTargetY, cameraTargetZ);
-    
-    // Ensure controls target is not null
-    if (!controlsRef.current.target) {
-      console.error("OrbitControls target is null");
-      controlsRef.current.target = new THREE.Vector3(0, 0, 0);
-    }
-    
-    // Save the current target of the controls with null check
-    const currentTarget = controlsRef.current.target.clone();
-    const finalTarget = new THREE.Vector3(targetX * 0.2, targetY * 0.2, targetZ * 0.2);
-    
-    // Temporarily disable auto-rotation and damping during transition for precision
-    const wasAutoRotating = controlsRef.current.autoRotate;
-    const wasDamping = controlsRef.current.enableDamping;
-    controlsRef.current.autoRotate = false;
-    controlsRef.current.enableDamping = false;
-    
-    // Animate camera position
-    let startTime: number | null = null;
-    const duration = 2000; // Slower animation (2 seconds) for smoother movement
-    
-    const animateCamera = (timestamp: number) => {
-      // Stop animation if the component has been disposed
-      if (isDisposedRef.current) {
-        if (onComplete) onComplete();
-        return;
-      }
-      
-      // Check if camera and controls still exist
+    // Animation function
+    const animateCamera = () => {
       if (!cameraRef.current || !controlsRef.current) {
         console.warn("Camera or controls no longer exist during animation");
+        cleanup();
         if (onComplete) onComplete();
         return;
       }
       
-      if (startTime === null) startTime = timestamp;
-      const elapsed = timestamp - startTime;
+      const currentTime = Date.now();
+      const startTime = animationStartTimeRef.current || currentTime;
+      const elapsed = currentTime - startTime;
+      const duration = animationDurationRef.current;
+      
+      // Calculate progress (0 to 1)
       const progress = Math.min(elapsed / duration, 1);
       
-      // Use custom easing function for smoother motion
-      // This is a combination of ease-out-cubic at start and ease-in-cubic near end
-      let ease;
-      if (progress < 0.5) {
-        // First half: accelerate out of starting position (ease-out-cubic)
-        ease = 0.5 * (1 - Math.pow(1 - 2 * progress, 3));
-      } else {
-        // Second half: decelerate into final position (ease-in-out)
-        ease = 0.5 * (1 + Math.pow(2 * progress - 1, 3));
+      // Easing function for smoother animation (ease-out)
+      const easeOutProgress = 1 - Math.pow(1 - progress, 3);
+      
+      // Interpolate position
+      const newPosition = new THREE.Vector3().lerpVectors(
+        startPosition,
+        targetCameraPosition,
+        easeOutProgress
+      );
+      
+      // Interpolate rotation
+      const newRotation = new THREE.Quaternion().slerpQuaternions(
+        startRotation,
+        targetRotation,
+        easeOutProgress
+      );
+      
+      // Apply new position and rotation
+      cameraRef.current.position.copy(newPosition);
+      cameraRef.current.quaternion.copy(newRotation);
+      
+      // Update controls target to look at the location on the globe
+      controlsRef.current.target.copy(targetPosition);
+      
+      // Update controls
+      try {
+        controlsRef.current.update();
+      } catch (error) {
+        console.error("Error updating controls during animation:", error);
       }
       
-      try {
-        // Interpolate camera position
-        const newX = currentPos.x + (targetPos.x - currentPos.x) * ease;
-        const newY = currentPos.y + (targetPos.y - currentPos.y) * ease;
-        const newZ = currentPos.z + (targetPos.z - currentPos.z) * ease;
+      // If animation is complete
+      if (progress >= 1) {
+        console.log("Fly animation complete, calling completion callback");
+        cleanup();
         
-        // Interpolate target (where the camera is looking)
-        const newTargetX = currentTarget.x + (finalTarget.x - currentTarget.x) * ease;
-        const newTargetY = currentTarget.y + (finalTarget.y - currentTarget.y) * ease;
-        const newTargetZ = currentTarget.z + (finalTarget.z - currentTarget.z) * ease;
-        
-        // Update camera with null checks
-        if (cameraRef.current && cameraRef.current.position) {
-          cameraRef.current.position.set(newX, newY, newZ);
-        }
-        
-        if (controlsRef.current && controlsRef.current.target) {
-          controlsRef.current.target.set(newTargetX, newTargetY, newTargetZ);
+        // Ensure controls are pointing at the target
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(targetPosition);
           controlsRef.current.update();
         }
-      } catch (error) {
-        console.error("Error during camera animation:", error);
+        
+        // Call completion callback
         if (onComplete) onComplete();
-        return;
-      }
-      
-      // Continue animation if not complete
-      if (progress < 1 && !isDisposedRef.current) {
-        animationFrameRef.current = requestAnimationFrame(animateCamera);
       } else {
-        // Animation complete or component disposed
-        animationFrameRef.current = null;
-        
-        // Don't attempt to modify disposed controls
-        if (!isDisposedRef.current && controlsRef.current) {
-          // Restore controls settings with null checks
-          controlsRef.current.enableDamping = wasDamping;
-          
-          // Delay auto-rotation restart slightly to avoid jump
-          setTimeout(() => {
-            if (!isDisposedRef.current && controlsRef.current && wasAutoRotating) {
-              controlsRef.current.autoRotate = true;
-            }
-          }, 300);
-        }
-        
-        if (onComplete && !isDisposedRef.current) {
-          console.log("Fly animation complete, calling completion callback");
-          onComplete();
-        }
+        // Continue animation
+        animationFrameRef.current = requestAnimationFrame(animateCamera);
       }
     };
     
     // Start animation
     animationFrameRef.current = requestAnimationFrame(animateCamera);
     
-    // Return a cleanup function
-    return () => {
-      isDisposedRef.current = true;
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-    };
-  }, [cameraRef, controlsRef, globeRadius]);
-  
-  // Cleanup function to cancel animations
-  const cleanup = useCallback(() => {
-    isDisposedRef.current = true;
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-  }, []);
+    // Return a function to cancel animation if needed
+    return cleanup;
+  }, [cameraRef, controlsRef, getTargetPosition, getCameraPosition, cleanup]);
   
   return {
     flyToLocation,

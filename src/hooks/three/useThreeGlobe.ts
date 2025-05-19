@@ -37,8 +37,10 @@ export function useThreeGlobe(
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
   
-  // Get markers functionality
-  const { addMarker, cleanup: markersCleanup } = useMarkers(scene);
+  // Get markers functionality with explicit cleanup
+  const markers = useMarkers(scene);
+  const { addMarker } = markers;
+  const markersCleanup = markers.cleanup || (() => {}); // Provide a default if cleanup is undefined
   
   // Handle textures loaded callback with delay to ensure smooth appearance
   const handleTexturesLoaded = useCallback(() => {
