@@ -14,12 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Add TypeScript declaration for window.featureGroup
-declare global {
-  interface Window {
-    featureGroup: L.FeatureGroup | undefined;
-  }
-}
+// No need to redeclare window.featureGroup since it's already declared in global.d.ts
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
