@@ -39,10 +39,10 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       fadeAnimation={true}
       markerZoomAnimation={true}
       preferCanvas={true}
-      // Add additional props to help with instance cleanup
-      whenCreated={(map) => {
+      // Change whenCreated to whenReady
+      whenReady={(map) => {
         // Store instance ID on the container element
-        const container = map.getContainer();
+        const container = map.target.getContainer();
         container.dataset.instanceId = mapKey;
       }}
     >
