@@ -17,6 +17,59 @@ const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect, f
   const positionUpdateTimerRef = useRef<number | null>(null);
   const lastFlyCompleted = useRef<boolean>(flyCompleted);
   
+  // Define the calculateMarkerPosition function at the component level
+  // so it can be referenced from anywhere within the component
+  const calculateMarkerPosition = () => {
+    const container = mapContainerRef.current;
+    if (!container || !selectedLocation) return;
+    
+    // For 3D globe view (center of the screen for simplicity)
+    const isCesium = container.getAttribute('data-map-type') === 'cesium';
+    
+    if (isCesium) {
+      // Place in center for 3D view
+      const rect = container.getBoundingClientRect();
+      setMarkerPos({
+        x: rect.width / 2,
+        y: rect.height / 2,
+      });
+    } else {
+      // For Leaflet maps we can compute projected coordinates
+      try {
+        // Try to get Leaflet map instance
+        const leafletMapInstance = (window as any).leafletMapInstance;
+        
+        if (leafletMapInstance && selectedLocation) {
+          // Project lat/lng to pixel coordinates
+          const point = leafletMapInstance.latLngToContainerPoint([
+            selectedLocation.y,
+            selectedLocation.x
+          ]);
+          
+          setMarkerPos({
+            x: point.x,
+            y: point.y,
+          });
+        } else {
+          // Fallback to center if we can't get the map instance
+          const rect = container.getBoundingClientRect();
+          setMarkerPos({
+            x: rect.width / 2,
+            y: rect.height / 2,
+          });
+        }
+      } catch (err) {
+        console.error('Error calculating marker position:', err);
+        // Fallback to center
+        const rect = container.getBoundingClientRect();
+        setMarkerPos({
+          x: rect.width / 2,
+          y: rect.height / 2,
+        });
+      }
+    }
+  };
+  
   useEffect(() => {
     // Find the map container to use as reference point
     const findMapContainer = () => {
@@ -65,62 +118,10 @@ const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect, f
     }
     
     lastFlyCompleted.current = flyCompleted;
-  }, [flyCompleted]);
+  }, [flyCompleted, selectedLocation]);
   
   useEffect(() => {
     if (!selectedLocation || !mapContainerRef.current) return;
-    
-    // Calculate marker position in the visible viewport
-    const calculateMarkerPosition = () => {
-      const container = mapContainerRef.current;
-      if (!container) return;
-      
-      // For 3D globe view (center of the screen for simplicity)
-      const isCesium = container.getAttribute('data-map-type') === 'cesium';
-      
-      if (isCesium) {
-        // Place in center for 3D view
-        const rect = container.getBoundingClientRect();
-        setMarkerPos({
-          x: rect.width / 2,
-          y: rect.height / 2,
-        });
-      } else {
-        // For Leaflet maps we can compute projected coordinates
-        try {
-          // Try to get Leaflet map instance
-          const leafletMapInstance = (window as any).leafletMapInstance;
-          
-          if (leafletMapInstance && selectedLocation) {
-            // Project lat/lng to pixel coordinates
-            const point = leafletMapInstance.latLngToContainerPoint([
-              selectedLocation.y,
-              selectedLocation.x
-            ]);
-            
-            setMarkerPos({
-              x: point.x,
-              y: point.y,
-            });
-          } else {
-            // Fallback to center if we can't get the map instance
-            const rect = container.getBoundingClientRect();
-            setMarkerPos({
-              x: rect.width / 2,
-              y: rect.height / 2,
-            });
-          }
-        } catch (err) {
-          console.error('Error calculating marker position:', err);
-          // Fallback to center
-          const rect = container.getBoundingClientRect();
-          setMarkerPos({
-            x: rect.width / 2,
-            y: rect.height / 2,
-          });
-        }
-      }
-    };
     
     // Calculate initial position
     calculateMarkerPosition();
