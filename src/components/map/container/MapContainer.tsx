@@ -39,11 +39,12 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       fadeAnimation={true}
       markerZoomAnimation={true}
       preferCanvas={true}
-      // Change whenCreated to whenReady
-      whenReady={(map) => {
-        // Store instance ID on the container element
-        const container = map.target.getContainer();
-        container.dataset.instanceId = mapKey;
+      whenReady={() => {
+        // Access the map instance through the global variable
+        const leafletMap = document.querySelector(`.leaflet-container[data-map-key="${mapKey}"]`);
+        if (leafletMap) {
+          leafletMap.setAttribute('data-instance-id', mapKey);
+        }
       }}
     >
       <TileLayer 
