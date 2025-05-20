@@ -35,6 +35,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     draggable: true,
     autoPan: true,
     zIndexOffset: 9999, // Higher z-index to ensure visibility
+    className: 'leaflet-marker-draggable', // Add draggable class explicitly
     eventHandlers: {
       dragend: (e: L.LeafletEvent) => {
         // Update marker position when dragged
@@ -64,6 +65,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
             }));
           }
         }, 100);
+      },
+      dragstart: () => {
+        // Ensure the marker gets the draggable class when dragging starts
+        if (markerRef.current) {
+          const element = markerRef.current.getElement();
+          if (element) {
+            element.classList.add('leaflet-marker-draggable');
+          }
+        }
       }
     }
   };
@@ -102,6 +112,16 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     hasInitialized.current = false;
   }, [position]);
   
+  // Add effect to apply draggable class after marker is created
+  useEffect(() => {
+    if (markerRef.current) {
+      const element = markerRef.current.getElement();
+      if (element) {
+        element.classList.add('leaflet-marker-draggable');
+      }
+    }
+  }, [markerRef.current]);
+  
   return (
     <Marker 
       position={position} 
@@ -111,6 +131,12 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         // In react-leaflet v4, we access the leaflet instance directly
         if (ref) {
           markerRef.current = ref;
+          
+          // Apply draggable class immediately after ref is set
+          const element = ref.getElement();
+          if (element) {
+            element.classList.add('leaflet-marker-draggable');
+          }
         }
       }}
     >

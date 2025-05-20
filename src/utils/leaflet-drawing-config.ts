@@ -30,6 +30,19 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
         l.options.color = '#33C3F0'; // Sky blue color
         l.options.lineCap = 'round';
         l.options.lineJoin = 'round';
+        
+        // Make sure markers are draggable
+        if (l instanceof L.Marker) {
+          l.options.draggable = true;
+          if (l.dragging) {
+            l.dragging.enable();
+          }
+          
+          // Add draggable class to icon element when available
+          if (l._icon) {
+            l._icon.classList.add('leaflet-marker-draggable');
+          }
+        }
       }
       
       // Store SVG path data if available
@@ -72,6 +85,14 @@ export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
   stroke: true, // Explicitly enable stroke
   lineCap: 'round', // Round line caps
   lineJoin: 'round' // Round line joins
+});
+
+// Enhance with draggable configuration for markers
+export const getMarkerOptions = (): L.MarkerOptions => ({
+  draggable: true,
+  autoPan: true,
+  zIndexOffset: 1000,
+  className: 'leaflet-marker-draggable'
 });
 
 export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {

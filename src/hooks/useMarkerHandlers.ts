@@ -3,11 +3,29 @@ import { toast } from 'sonner';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 export function useMarkerHandlers(mapState: any) {
   const { currentUser } = useAuth();
   const isAddingMarkerRef = useRef(false);
+  
+  // Make sure markers get draggable class
+  useEffect(() => {
+    const makeMarkersDraggable = () => {
+      const markerElements = document.querySelectorAll('.leaflet-marker-icon:not(.leaflet-marker-draggable)');
+      markerElements.forEach(marker => {
+        marker.classList.add('leaflet-marker-draggable');
+      });
+    };
+    
+    // Run once on mount
+    makeMarkersDraggable();
+    
+    // Set up interval to check for new markers
+    const interval = setInterval(makeMarkersDraggable, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   const handleMapClick = (latlng: L.LatLng) => {
     if ((mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) && !isAddingMarkerRef.current) {
@@ -35,6 +53,12 @@ export function useMarkerHandlers(mapState: any) {
           (inputField as HTMLElement).focus();
         }
         
+        // Make sure the marker is draggable
+        const markerElement = document.querySelector('.leaflet-marker-icon:not(.leaflet-marker-draggable)');
+        if (markerElement) {
+          markerElement.classList.add('leaflet-marker-draggable');
+        }
+        
         // Reset the flag after a delay
         setTimeout(() => {
           isAddingMarkerRef.current = false;
@@ -55,6 +79,19 @@ export function useMarkerHandlers(mapState: any) {
     window.dispatchEvent(new CustomEvent('drawingStart'));
     
     if (shape.type === 'marker') {
+      // Make sure the marker is draggable if it's a leaflet-draw marker
+      if (shape.layer && shape.layer instanceof L.Marker) {
+        shape.layer.options.draggable = true;
+        if (shape.layer.dragging) {
+          shape.layer.dragging.enable();
+        }
+        
+        // Add CSS class to make it visually draggable
+        if (shape.layer._icon) {
+          shape.layer._icon.classList.add('leaflet-marker-draggable');
+        }
+      }
+      
       // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
         const exactPosition: [number, number] = [
