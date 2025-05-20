@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
-import L from 'leaflet';
 
 interface DrawingToolHandlerProps {
   currentView: 'cesium' | 'leaflet';
@@ -19,125 +18,6 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   setActiveTool,
   onToolSelect
 }) => {
-  // Track previous tool to handle deactivation
-  const [previousTool, setPreviousTool] = useState<string | null>(null);
-  
-  // Effect to handle tool changes
-  useEffect(() => {
-    if (currentView === 'leaflet' && leafletMapRef.current) {
-      if (activeTool === 'edit') {
-        enableEditMode();
-      } else if (previousTool === 'edit' && activeTool !== 'edit') {
-        disableEditMode();
-      }
-      
-      setPreviousTool(activeTool);
-    }
-  }, [activeTool, currentView]);
-
-  // Enable edit mode on all drawable layers
-  const enableEditMode = () => {
-    if (!leafletMapRef.current || !isMapValid(leafletMapRef.current)) return;
-    
-    try {
-      const map = leafletMapRef.current;
-      const layers = map._layers;
-      
-      if (!layers) return;
-      
-      // Get the DrawFeatureGroup if it exists in the global window object
-      // This helps with accessing the drawing feature group directly
-      const featureGroup = (window as any).featureGroup || null;
-      let foundDrawableLayers = false;
-      
-      // Make all layers editable
-      Object.keys(layers).forEach(layerId => {
-        const layer = layers[layerId];
-        
-        // Skip non-drawable layers or layers without proper geometry
-        if (!layer || !layer.getLatLngs) return;
-        
-        // Check if this is a drawable layer
-        if (layer instanceof L.Path || 
-            layer instanceof L.Polyline || 
-            layer instanceof L.Polygon ||
-            layer instanceof L.Rectangle ||
-            layer instanceof L.Circle) {
-          
-          foundDrawableLayers = true;
-          const editableLayer = layer as any;
-          
-          // Create proper editing handlers based on layer type
-          try {
-            if (!editableLayer.editing) {
-              if (layer instanceof L.Polygon || layer instanceof L.Polyline) {
-                // Make sure L.Edit.Poly is available
-                if ((L.Edit as any).Poly) {
-                  editableLayer.editing = new (L.Edit as any).Poly(layer);
-                }
-              } else if (layer instanceof L.Rectangle) {
-                // Make sure L.Edit.Rectangle is available
-                if ((L.Edit as any).Rectangle) {
-                  editableLayer.editing = new (L.Edit as any).Rectangle(layer as any);
-                }
-              } else if (layer instanceof L.Circle) {
-                // Make sure L.Edit.Circle is available
-                if ((L.Edit as any).Circle) {
-                  editableLayer.editing = new (L.Edit as any).Circle(layer as any);
-                }
-              }
-            }
-            
-            // Enable editing if handler was successfully created
-            if (editableLayer.editing && typeof editableLayer.editing.enable === 'function') {
-              editableLayer.editing.enable();
-            }
-          } catch (err) {
-            console.error('Error setting up edit handler for layer:', err);
-          }
-        }
-      });
-      
-      // If we found drawable layers, show success message
-      if (foundDrawableLayers) {
-        toast.info('Edit mode enabled. Click any shape to modify it.');
-      } else {
-        toast.info('No editable shapes found. Try drawing something first.');
-      }
-    } catch (err) {
-      console.error('Error enabling edit mode:', err);
-      toast.error('Failed to enable edit mode');
-    }
-  };
-
-  // Disable edit mode on all layers
-  const disableEditMode = () => {
-    if (!leafletMapRef.current || !isMapValid(leafletMapRef.current)) return;
-    
-    try {
-      const map = leafletMapRef.current;
-      const layers = map._layers;
-      
-      if (!layers) return;
-      
-      // Disable editing on all layers
-      Object.keys(layers).forEach(layerId => {
-        const layer = layers[layerId];
-        if (!layer) return;
-        
-        const editableLayer = layer as any;
-        if (editableLayer && editableLayer.editing && 
-            typeof editableLayer.editing.disable === 'function') {
-          editableLayer.editing.disable();
-        }
-      });
-      
-      toast.info('Edit mode disabled');
-    } catch (err) {
-      console.error('Error disabling edit mode:', err);
-    }
-  };
-
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
     setActiveTool(tool === activeTool ? null : tool);

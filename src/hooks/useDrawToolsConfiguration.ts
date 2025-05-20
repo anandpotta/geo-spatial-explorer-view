@@ -4,13 +4,10 @@ import { useEffect } from 'react';
 import { 
   configureSvgRenderer, 
   optimizePolygonDrawing, 
-  enhancePathPreservation,
-  fixTypeIsNotDefinedError,
-  extendGeometryUtil,
-  setupEditHandlers,
-  configureDrawingTools,
-  makeFeatureGroupGlobal
-} from '@/utils/drawing-tools';
+  enhancePathPreservation, 
+  enhanceRectangleDrawing,
+  fixTypeIsNotDefinedError
+} from '@/utils/draw-tools-utils';
 
 /**
  * Hook to handle SVG configuration and optimizations for drawing tools
@@ -27,26 +24,17 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     // Fix the "type is not defined" error in area calculations
     const cleanupTypePatching = fixTypeIsNotDefinedError();
     
-    // Extend GeometryUtil with getCorners function
-    const cleanupGeometryUtil = extendGeometryUtil();
-    
     // Set up SVG renderer configuration to reduce flickering
     const cleanupSvgRenderer = configureSvgRenderer();
-    
-    // Set up edit handlers if needed
-    const cleanupEditHandlers = setupEditHandlers();
-    
-    // Configure additional drawing tools
-    const cleanupDrawingTools = configureDrawingTools();
     
     // Optimize polygon drawing specifically
     const originalOnMarkerDrag = optimizePolygonDrawing();
     
+    // Enhance rectangle drawing specifically
+    const originalRectDrawShape = enhanceRectangleDrawing();
+    
     // Set up path preservation
     const cleanupPathPreservation = enhancePathPreservation(map);
-    
-    // Make feature group globally available for edit operations
-    const cleanupFeatureGroup = makeFeatureGroupGlobal(featureGroup);
     
     // Apply additional anti-flickering CSS to the map container
     const mapContainer = map.getContainer();
@@ -124,16 +112,17 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     // Cleanup function
     return () => {
       cleanupTypePatching();
-      cleanupGeometryUtil();
       cleanupSvgRenderer();
-      cleanupEditHandlers();
-      cleanupDrawingTools();
       cleanupPathPreservation();
-      cleanupFeatureGroup();
       
       // Restore original marker drag handler if it was modified
       if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
         (L.Edit as any).Poly.prototype._onMarkerDrag = originalOnMarkerDrag;
+      }
+      
+      // Restore original rectangle draw handler if it was modified
+      if (originalRectDrawShape && L.Draw && (L.Draw as any).Rectangle) {
+        (L.Draw as any).Rectangle.prototype._drawShape = originalRectDrawShape;
       }
       
       // Remove the style element

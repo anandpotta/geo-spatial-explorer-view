@@ -34,7 +34,6 @@ const MapViews: React.FC<MapViewsProps> = ({
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
   const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
   const [fadeIn, setFadeIn] = useState(false);
-  const [leafletMapLoaded, setLeafletMapLoaded] = useState(false);
   
   // Track location changes to prevent duplicate transitions
   useEffect(() => {
@@ -45,17 +44,6 @@ const MapViews: React.FC<MapViewsProps> = ({
       setLastSelectedLocation(selectedLocation);
     }
   }, [selectedLocation, lastSelectedLocation]);
-
-  // When the view changes to Leaflet and we have a selected location, ensure proper navigation
-  useEffect(() => {
-    if (currentView === 'leaflet' && selectedLocation && leafletMapLoaded) {
-      console.log('MapViews: Leaflet view is active and location is selected, ensuring navigation');
-      // Dispatch navigation event after a short delay to ensure map is ready
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('mapNavigationRequest'));
-      }, 500);
-    }
-  }, [currentView, selectedLocation, leafletMapLoaded]);
   
   // Handle view transitions
   useEffect(() => {
@@ -86,13 +74,6 @@ const MapViews: React.FC<MapViewsProps> = ({
     
     setPreviousView(currentView);
   }, [currentView, previousView]);
-  
-  // Handle Leaflet map ready event
-  const handleLeafletMapReady = (map: any) => {
-    handleLeafletMapRef(map);
-    setLeafletMapLoaded(true);
-    console.log("Leaflet map is now loaded and ready");
-  };
   
   // Calculate transition progress for smoother animations
   const getTransitionStyles = (isCurrentView: boolean): React.CSSProperties => {
@@ -182,7 +163,7 @@ const MapViews: React.FC<MapViewsProps> = ({
       >
         <LeafletMap 
           selectedLocation={selectedLocation} 
-          onMapReady={handleLeafletMapReady}
+          onMapReady={handleLeafletMapRef}
           activeTool={activeTool}
           key={`leaflet-${mapKey}`}
           onClearAll={handleClearAll}
