@@ -28,7 +28,10 @@ export function useMapRef(
       
       if (container && document.body.contains(container)) {
         console.log('Map container verified, storing reference');
-        mapRef.current = map;
+        
+        // Use Object.assign instead of direct assignment to avoid TypeScript errors with readonly property
+        Object.assign(mapRef, { current: map });
+        
         mapAttachedRef.current = true;
         
         // Reset counters when we get a valid map

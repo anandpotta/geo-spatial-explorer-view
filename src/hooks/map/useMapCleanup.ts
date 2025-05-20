@@ -43,8 +43,11 @@ export function useMapCleanup(
           console.error('Error cleaning up map:', err);
         }
         
-        // Clear reference regardless of success
-        mapRef.current = null;
+        // We need to set mapRef.current to null, but we can't do it directly
+        // as it's a read-only property. For React refs we need to use the object itself.
+        Object.assign(mapRef, { current: null });
+        
+        // Update map state
         mapAttachedRef.current = false;
         setIsMapReady(false);
         
