@@ -39,6 +39,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
   const [newLocationLat, setNewLocationLat] = useState<number | undefined>(undefined);
   const [newLocationLng, setNewLocationLng] = useState<number | undefined>(undefined);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleDeleteClick = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -128,15 +129,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     toast.success(`Navigating to selected location`);
     
     // Close dropdown menu after selection
-    const dropdownTrigger = document.querySelector('[data-state="open"]');
-    if (dropdownTrigger) {
-      const closeEvent = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      });
-      dropdownTrigger.dispatchEvent(closeEvent);
-    }
+    setIsOpen(false);
     
     // Reset navigating status after a delay
     setTimeout(() => {
@@ -144,15 +137,21 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     }, 1000);
   };
 
+  // Make sure we handle dropdown open/close state
+  const handleOpenChange = (open: boolean) => {
+    console.log("Dropdown open state changed to:", open);
+    setIsOpen(open);
+  };
+
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
+          <Button variant="outline" className="z-[1010]">
             Saved Locations <MoreHorizontal className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
+        <DropdownMenuContent className="w-56 z-[1020]">
           <LocationsList
             markers={markers}
             onSelect={handleSelectLocation}

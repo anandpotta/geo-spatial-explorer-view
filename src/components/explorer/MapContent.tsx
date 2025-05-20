@@ -13,7 +13,17 @@ interface MapContentProps {
 }
 
 const MapContent = (props: MapContentProps) => {
-  return <MapContentContainer {...props} />;
+  // Add logging to help debug any issues
+  console.log("MapContent rendering with props:", {
+    view: props.currentView,
+    stayAtCurrentPosition: props.stayAtCurrentPosition
+  });
+  
+  return (
+    <div className="relative flex-1 overflow-hidden">
+      <MapContentContainer {...props} />
+    </div>
+  );
 };
 
 export default MapContent;
