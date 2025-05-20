@@ -44,8 +44,13 @@ export function isMapValid(map: any): boolean {
     // Check if map has essential properties
     if (!map.getContainer || typeof map.getContainer !== 'function') return false;
     
-    const container = map.getContainer();
-    if (!container || !document.body.contains(container)) return false;
+    // Get container and check if it's in the DOM
+    try {
+      const container = map.getContainer();
+      if (!container || !document.body.contains(container)) return false;
+    } catch (err) {
+      return false;
+    }
     
     // Check if map has been loaded
     const internalMap = map as LeafletMapInternal;
@@ -97,4 +102,38 @@ export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
   }
 }
 
-export default { isMapValid, getMapFromLayer };
+/**
+ * Creates a unique identifier for map instances
+ * @returns A unique string ID
+ */
+export function createUniqueMapId(): string {
+  return `map-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Checks if a map container is already in use by another map instance
+ * @param container The DOM element to check
+ * @param currentMapId ID of the current map instance
+ * @returns boolean indicating if container is already in use
+ */
+export function isContainerInUse(container: HTMLElement, currentMapId: string): boolean {
+  const containerId = container.id;
+  const mapKey = container.getAttribute('data-map-key');
+  
+  // Check if this container is already marked as in use
+  if (container.getAttribute('data-in-use') === 'true') {
+    const usedByMapId = container.getAttribute('data-used-by-map-id');
+    if (usedByMapId && usedByMapId !== currentMapId) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+export default { 
+  isMapValid, 
+  getMapFromLayer, 
+  createUniqueMapId, 
+  isContainerInUse 
+};

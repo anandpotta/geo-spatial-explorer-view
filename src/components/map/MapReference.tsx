@@ -32,6 +32,8 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
         const container = map.getContainer();
         if (container) {
           container.setAttribute('data-map-key', mapKey);
+          // Set a unique timestamp to ensure uniqueness
+          container.setAttribute('data-map-init-time', Date.now().toString());
         }
       }
     } catch (err) {
@@ -72,19 +74,18 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
             return;
           }
           
-          // Before calling onMapReady, make sure no other map is using this container
+          // Before calling onMapReady, check if any other map is using this container
           const container = map.getContainer();
-          const mapId = container.id;
           
-          // Check if any other map instances are using this container
-          const existingMaps = document.querySelectorAll(`[data-map-key]:not([data-map-key="${mapKey}"])`);
-          for (const elem of existingMaps) {
-            if (elem.id === mapId) {
-              console.error(`Map container ${mapId} is being reused by another instance with key ${elem.getAttribute('data-map-key')}`);
-              window.dispatchEvent(new Event('mapError'));
-              return;
-            }
+          // Check if container has already been marked as used by another instance
+          if (container.getAttribute('data-in-use') === 'true') {
+            console.error(`Map container is already in use by another instance`);
+            window.dispatchEvent(new Event('mapError'));
+            return;
           }
+          
+          // Mark this container as being used
+          container.setAttribute('data-in-use', 'true');
           
           // Check if map container still exists and is attached to DOM
           if (map && map.getContainer() && document.body.contains(map.getContainer())) {

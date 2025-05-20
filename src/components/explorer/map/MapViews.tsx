@@ -4,6 +4,7 @@ import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../map/LeafletMap';
 import CesiumView from '../../map/CesiumMapLoading';
 import ThreeGlobeMap from '../../map/ThreeGlobeMap';
+import { createUniqueMapId } from '@/utils/leaflet-type-utils';
 
 interface MapViewsProps {
   currentView: 'cesium' | 'leaflet';
@@ -32,9 +33,9 @@ const MapViews: React.FC<MapViewsProps> = ({
 }) => {
   console.log("MapViews rendering with stayAtCurrentPosition:", stayAtCurrentPosition);
   
-  // Create unique IDs for each view type to ensure we don't reuse containers
-  const [uniqueLeafletKey] = useState<string>(`leaflet-${mapKey}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
-  const [uniqueCesiumKey] = useState<string>(`cesium-${mapKey}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+  // Generate truly unique IDs for each view type using our utility function
+  const [uniqueLeafletKey] = useState<string>(createUniqueMapId());
+  const [uniqueCesiumKey] = useState<string>(createUniqueMapId());
   
   // Clean up any orphaned Leaflet elements when view changes or component unmounts
   useEffect(() => {

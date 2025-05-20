@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { useMapState } from '@/hooks/useMapState';
@@ -10,7 +10,7 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { setupLeafletIcons } from './LeafletMapIcons';
-import { isMapValid, LeafletMapInternal } from '@/utils/leaflet-type-utils';
+import { isMapValid, LeafletMapInternal, createUniqueMapId } from '@/utils/leaflet-type-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -31,11 +31,12 @@ const LeafletMap = ({
   onLocationSelect, 
   onClearAll,
   stayAtCurrentPosition = false,
-  mapInstanceKey = Date.now().toString()
+  mapInstanceKey = createUniqueMapId()
 }: LeafletMapProps) => {
   // Initialize state variables that were missing
   const [isMarkerActive, setIsMarkerActive] = useState(false);
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
+  const uniqueInstanceIdRef = useRef<string>(mapInstanceKey);
   
   // Initialize Leaflet icons
   useEffect(() => {
@@ -150,13 +151,15 @@ const LeafletMap = ({
       // and not currently placing a marker or drawing
       if (!mapState.stayAtCurrentPosition && !isMarkerActive) {
         try {
-          const container = mapRef.current.getContainer();
-          if (container && document.body.contains(container)) {
+          // Verify map is valid before trying to navigate
+          if (isMapValid(mapRef.current)) {
             console.log('Flying to selected location:', selectedLocation);
             mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
               animate: true,
               duration: 1.5
             });
+          } else {
+            console.warn('Map is not valid, cannot fly to location');
           }
         } catch (err) {
           console.error('Error flying to location:', err);
@@ -171,16 +174,20 @@ const LeafletMap = ({
 
   // Custom map reference handler that sets our local state
   const handleMapRefWrapper = (map: L.Map) => {
+    if (!map) return;
+    
+    // Generate a unique identifier for this map instance
+    const uniqueId = uniqueInstanceIdRef.current;
+    
     // Add consistent unique ID to map objects
-    if (map && map.getContainer) {
-      try {
-        const container = map.getContainer();
-        if (container) {
-          container.setAttribute('data-unique-map-id', mapInstanceKey);
-        }
-      } catch (err) {
-        console.warn('Could not set unique ID on map container', err);
+    try {
+      const container = map.getContainer();
+      if (container) {
+        container.setAttribute('data-unique-map-id', uniqueId);
+        container.setAttribute('data-instance-time', Date.now().toString());
       }
+    } catch (err) {
+      console.warn('Could not set unique ID on map container', err);
     }
     
     handleSetMapRef(map);
@@ -200,7 +207,7 @@ const LeafletMap = ({
     }
     
     // Only call parent onMapReady once when the map is first ready
-    if (onMapReady && !isMapReferenceSet) {
+    if (onMapReady && !isMapReferenceSet && isMapValid(map)) {
       onMapReady(map);
     }
   };
@@ -237,7 +244,7 @@ const LeafletMap = ({
 
   return (
     <MapView
-      key={`map-view-${mapInstanceKey}`}
+      key={`map-view-${uniqueInstanceIdRef.current}`}
       position={mapState.position}
       zoom={mapState.zoom}
       markers={mapState.markers}
@@ -256,7 +263,7 @@ const LeafletMap = ({
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAllWrapper}
       isMapReady={isMapReady}
-      mapKey={mapInstanceKey} // Pass forward the unique key
+      mapKey={uniqueInstanceIdRef.current} 
     />
   );
 };

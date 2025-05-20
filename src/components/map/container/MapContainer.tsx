@@ -83,6 +83,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       className="w-full h-full"
       id={uniqueIdRef.current}
       data-map-key={mapKey}
+      data-created-at={Date.now()}
     >
       <LeafletMapContainer 
         key={uniqueIdRef.current} // Ensure a new instance is created when key changes
@@ -94,6 +95,13 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
+        whenReady={(e) => {
+          // Mark container with map instance ID
+          if (containerRef.current && e.target) {
+            containerRef.current.setAttribute('data-map-instance-id', 
+              (e.target as any)._leaflet_id || Date.now().toString());
+          }
+        }}
       >
         <TileLayer 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
