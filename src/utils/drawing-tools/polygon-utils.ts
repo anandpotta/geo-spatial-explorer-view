@@ -83,15 +83,17 @@ export const setupEditHandlers = (): () => void => {
 export const configureDrawingTools = (): () => void => {
   const cleanups: Array<() => void> = [];
   
-  // Override polygon drawing to ensure vertex markers are visible
+  // Fix polygon drawing to improve marker visibility and connection line rendering
   if ((L.Draw as any).Polygon && (L.Draw as any).Polygon.prototype) {
+    // Override _addVertex to ensure vertex markers display correctly
     const originalAddVertex = (L.Draw as any).Polygon.prototype._addVertex;
+    
     if (originalAddVertex) {
       (L.Draw as any).Polygon.prototype._addVertex = function(latlng: L.LatLng) {
         // Call original method
         const result = originalAddVertex.call(this, latlng);
         
-        // Make sure markers are visible
+        // Make sure markers are visible and connection lines draw properly
         if (this._markers && this._markers.length > 0) {
           const lastMarker = this._markers[this._markers.length - 1];
           if (lastMarker) {
@@ -112,11 +114,48 @@ export const configureDrawingTools = (): () => void => {
           }
         }
         
+        // Ensure polyline visibility between points
+        if (this._poly && this._poly._path) {
+          this._poly._path.style.stroke = 'rgba(51, 195, 240, 1)';
+          this._poly._path.style.strokeWidth = '4px';
+          this._poly._path.style.strokeDasharray = '';
+          this._poly._path.style.strokeLinecap = 'round';
+          this._poly._path.style.strokeLinejoin = 'round';
+        }
+        
         return result;
       };
       
       cleanups.push(() => {
         (L.Draw as any).Polygon.prototype._addVertex = originalAddVertex;
+      });
+    }
+    
+    // Fix _updateFinishHandler to ensure finish button works correctly
+    const originalUpdateFinishHandler = (L.Draw as any).Polygon.prototype._updateFinishHandler;
+    
+    if (originalUpdateFinishHandler) {
+      (L.Draw as any).Polygon.prototype._updateFinishHandler = function() {
+        const result = originalUpdateFinishHandler.call(this);
+        
+        // Ensure the finish handler is visible and interactive
+        if (this._markers && this._markers.length > 2) {
+          if (this._finishShape) {
+            // Make sure finish shape is called properly
+            // Some versions of leaflet-draw have issues here
+            const finishShape = this._finishShape.bind(this);
+            if (this._markers[0] && this._markers[0]._icon) {
+              this._markers[0]._icon.style.pointerEvents = 'auto';
+              this._markers[0]._icon.style.cursor = 'pointer';
+            }
+          }
+        }
+        
+        return result;
+      };
+      
+      cleanups.push(() => {
+        (L.Draw as any).Polygon.prototype._updateFinishHandler = originalUpdateFinishHandler;
       });
     }
   }
@@ -143,24 +182,52 @@ export const configureDrawingTools = (): () => void => {
       originalInitialize.apply(this, arguments);
       if (this.options && this.options.shapeOptions) {
         this.options.shapeOptions.renderer = L.svg(); // Force SVG renderer for polygons
+        this.options.shapeOptions.weight = 4;
+        this.options.shapeOptions.opacity = 1;
       }
       
-      // Enhance marker visibility for polygon drawing
+      // Ensure guide line is clearly visible
       if (this.options) {
-        // Ensure guide line is clearly visible
-        if (this.options.guidelineDistance === undefined) {
-          this.options.guidelineDistance = 10;
-        }
-        if (this.options.shapeOptions) {
-          this.options.shapeOptions.weight = 4;
-          this.options.shapeOptions.opacity = 1;
-        }
+        this.options.guidelineDistance = 10;
+        this.options.shapeOptions = this.options.shapeOptions || {};
+        this.options.guidelineOptions = {
+          color: '#33C3F0',
+          weight: 2,
+          opacity: 1,
+          dashArray: '5, 5'
+        };
       }
     };
     
     cleanups.push(() => {
       (L.Draw as any).Polygon.prototype.initialize = originalInitialize;
     });
+    
+    // Fix the vertex connection issue by overriding _onMouseMove
+    const originalOnMouseMove = (L.Draw as any).Polygon.prototype._onMouseMove;
+    if (originalOnMouseMove) {
+      (L.Draw as any).Polygon.prototype._onMouseMove = function(e: any) {
+        const result = originalOnMouseMove.call(this, e);
+        
+        // Force update the guideline to make it visible
+        if (this._poly) {
+          const latlngs = this._poly.getLatLngs();
+          if (latlngs.length > 0 && latlngs[0].length > 0) {
+            // Make sure the guideline is visible
+            if (this._guidesContainer) {
+              this._guidesContainer.style.display = 'block';
+              this._guidesContainer.style.opacity = '1';
+            }
+          }
+        }
+        
+        return result;
+      };
+      
+      cleanups.push(() => {
+        (L.Draw as any).Polygon.prototype._onMouseMove = originalOnMouseMove;
+      });
+    }
   }
   
   return () => {

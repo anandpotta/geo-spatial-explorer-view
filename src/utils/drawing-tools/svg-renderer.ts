@@ -37,6 +37,11 @@ export const configureSvgRenderer = (): () => void => {
       if (layer.options && layer.options.fill !== false) {
         layer._path.setAttribute('fill-opacity', '0.6');
       }
+      
+      // Ensure stroke is visible - extra important for polygon drawing
+      layer._path.style.stroke = layer.options.color || '#33C3F0';
+      layer._path.style.strokeWidth = (layer.options.weight || 4) + 'px';
+      layer._path.style.strokeOpacity = layer.options.opacity || 1;
     }
   };
   

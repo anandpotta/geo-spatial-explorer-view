@@ -121,6 +121,34 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
           margin-top: -5px !important;
         }
         
+        /* Critical fix for the polygon drawing lines */
+        .leaflet-editing-icon {
+          z-index: 1000 !important;
+          pointer-events: auto !important;
+        }
+        
+        /* Ensure polyline segments are visible */
+        .leaflet-draw-guide-dash {
+          stroke: #33C3F0 !important;
+          stroke-width: 2px !important;
+          stroke-opacity: 1 !important;
+          stroke-dasharray: 5, 5;
+          pointer-events: none;
+        }
+        
+        /* Fix for polygon drawing - ensure vertices connect properly */
+        .leaflet-draw-polyline-guide {
+          stroke: #33C3F0 !important;
+          stroke-width: 2px !important;
+          stroke-opacity: 1 !important;
+          pointer-events: none;
+        }
+        
+        /* Ensure polygon guide lines are visible */
+        .leaflet-zoom-animated path {
+          stroke-opacity: 1 !important;
+        }
+        
         .image-controls-wrapper {
           opacity: 1 !important;
           transition: opacity 0.2s ease-in-out;
