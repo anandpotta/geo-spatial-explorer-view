@@ -16,9 +16,17 @@ export function useMapTransition({ viewTransitionInProgress, currentView }: UseM
     setTransitioning(viewTransitionInProgress);
   }, [viewTransitionInProgress]);
   
-  // Handle view transitions
+  // Handle view transitions with better initialization
   useEffect(() => {
-    if (previousView && previousView !== currentView) {
+    // If this is the first render, just set the previous view without transition
+    if (previousView === null) {
+      console.log(`Initial view set to ${currentView}`);
+      setPreviousView(currentView);
+      return;
+    }
+    
+    if (previousView !== currentView) {
+      console.log(`View changing from ${previousView} to ${currentView}`);
       // Start transition effect
       setTransitioning(true);
       setViewChangeStarted(Date.now());

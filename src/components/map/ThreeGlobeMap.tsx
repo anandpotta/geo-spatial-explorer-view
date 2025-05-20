@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
+import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeMapProps {
   selectedLocation?: Location;
@@ -20,6 +21,32 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initializedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Add a component mount effect to debug
+  useEffect(() => {
+    console.log("ThreeGlobeMap mounted - starting 3D globe initialization");
+    
+    // Force initialization if it doesn't happen naturally
+    initializedTimeoutRef.current = setTimeout(() => {
+      if (!viewerInitializedRef.current && onMapReady) {
+        console.log("Forcing globe initialization after timeout");
+        viewerInitializedRef.current = true;
+        setIsLoading(false);
+        onMapReady(globeInstanceRef.current);
+      }
+    }, 3000);
+    
+    return () => {
+      console.log("ThreeGlobeMap unmounted, cleaning up resources");
+      if (initializedTimeoutRef.current) {
+        clearTimeout(initializedTimeoutRef.current);
+      }
+      viewerInitializedRef.current = false;
+      lastLocationRef.current = null;
+      globeInstanceRef.current = null;
+    };
+  }, [onMapReady]);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
@@ -29,6 +56,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         console.log('Skipping duplicate location selection:', locationId);
         return;
       }
+      console.log('New location selected for globe:', selectedLocation.label);
       lastLocationRef.current = locationId;
     }
   }, [selectedLocation]);
@@ -50,7 +78,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     };
   }, [isLoading]);
   
-  // Handle map ready state
+  // Handle map ready state with more reliable initialization
   const handleMapReady = (viewer?: any) => {
     if (viewerInitializedRef.current) {
       console.log('Globe is already initialized, skipping duplicate ready event');
@@ -65,24 +93,35 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       globeInstanceRef.current = viewer;
     }
     
-    if (onMapReady) onMapReady(globeInstanceRef.current);
+    if (onMapReady) {
+      console.log("Calling onMapReady with globe instance");
+      onMapReady(globeInstanceRef.current);
+      
+      // Show success toast
+      toast({
+        title: "3D Globe Ready",
+        description: "Interactive globe has been loaded successfully",
+        duration: 3000,
+      });
+    }
+    
+    // Clear initialization timeout since we're initialized
+    if (initializedTimeoutRef.current) {
+      clearTimeout(initializedTimeoutRef.current);
+    }
   };
-  
-  // Clean up resources on unmount
-  React.useEffect(() => {
-    return () => {
-      console.log("ThreeGlobeMap unmounted, cleaning up resources");
-      viewerInitializedRef.current = false;
-      lastLocationRef.current = null;
-      globeInstanceRef.current = null;
-    };
-  }, []);
   
   // Handle errors that might occur
   const handleError = (error: Error) => {
     console.error("Globe error:", error);
     setMapError(error.message || "Failed to initialize 3D globe");
     setIsLoading(false); // End loading state on error
+    toast({
+      title: "Globe Error",
+      description: "Failed to initialize 3D globe. Trying to recover...",
+      variant: "destructive",
+      duration: 3000,
+    });
   };
   
   return (

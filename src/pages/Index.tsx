@@ -6,6 +6,7 @@ import { Location } from '@/utils/geo-utils';
 import { toast } from '@/components/ui/use-toast';
 
 const Index = () => {
+  // Make sure we're explicitly setting 'cesium' as the default view
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
   const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium');
   const [flyCompleted, setFlyCompleted] = useState<boolean>(true);
@@ -13,6 +14,17 @@ const Index = () => {
   const locationSelectionTimeRef = useRef<number | null>(null);
   const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
   const previousLocationRef = useRef<string | null>(null);
+  const initialRenderRef = useRef(true);
+
+  // Ensure cesium view on initial render
+  useEffect(() => {
+    if (initialRenderRef.current) {
+      initialRenderRef.current = false;
+      // Force cesium view on initial render
+      setCurrentView('cesium');
+      console.log("Index: Initializing with 3D Globe view");
+    }
+  }, []);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
