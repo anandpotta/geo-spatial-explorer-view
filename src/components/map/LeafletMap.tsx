@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -9,7 +10,7 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { setupLeafletIcons } from './LeafletMapIcons';
-import { isMapValid } from '@/utils/leaflet-type-utils';
+import { isMapValid, LeafletMapInternal } from '@/utils/leaflet-type-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -22,11 +23,6 @@ interface LeafletMapProps {
   stayAtCurrentPosition?: boolean;
 }
 
-// Define interface for internal map properties not exposed in TypeScript definitions
-interface LeafletMapInternal extends L.Map {
-  _layers?: Record<string, L.Layer>;
-}
-
 const LeafletMap = ({ 
   selectedLocation, 
   onMapReady, 
@@ -35,6 +31,10 @@ const LeafletMap = ({
   onClearAll,
   stayAtCurrentPosition = false
 }: LeafletMapProps) => {
+  // Initialize state variables that were missing
+  const [isMarkerActive, setIsMarkerActive] = useState(false);
+  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
+  
   // Initialize Leaflet icons
   useEffect(() => {
     setupLeafletIcons();

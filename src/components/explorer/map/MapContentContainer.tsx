@@ -8,6 +8,7 @@ import MapTools from './MapTools';
 import DrawingToolHandler from './DrawingToolHandler';
 import { toast } from '@/components/ui/use-toast';
 import L from 'leaflet';
+import { ExtendedLayer, LeafletMapInternal } from '@/utils/leaflet-type-utils';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -16,10 +17,6 @@ interface MapContentContainerProps {
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
   stayAtCurrentPosition?: boolean;
-}
-
-interface LeafletMapInternal extends L.Map {
-  _layers?: Record<string, L.Layer>;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -174,7 +171,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         const layers = leafletMapRef.current._layers;
         if (layers) {
           Object.keys(layers).forEach(layerId => {
-            const layer = layers[layerId];
+            const layer = layers[layerId] as ExtendedLayer;
             if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
               leafletMapRef.current.removeLayer(layer);
             }

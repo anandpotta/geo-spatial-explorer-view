@@ -14,6 +14,21 @@ export interface LeafletMapInternal extends L.Map {
 }
 
 /**
+ * Extended interface for Leaflet LayerOptions with custom properties
+ */
+export interface ExtendedLayerOptions extends L.LayerOptions {
+  isDrawn?: boolean;
+  id?: string;
+}
+
+/**
+ * Extended interface for Leaflet Layer with customized options
+ */
+export interface ExtendedLayer extends L.Layer {
+  options?: ExtendedLayerOptions;
+}
+
+/**
  * Safely gets the map from a Leaflet layer
  */
 export const getMapFromLayer = (layer: L.Layer): L.Map | null => {
