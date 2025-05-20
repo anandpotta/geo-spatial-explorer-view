@@ -2,6 +2,18 @@
 import L from 'leaflet';
 
 /**
+ * Interface for internal Leaflet Map properties not exposed in TypeScript definitions
+ */
+export interface LeafletMapInternal extends L.Map {
+  _layers?: Record<string, L.Layer>;
+  _panes?: {
+    mapPane?: {
+      _leaflet_pos?: any;
+    };
+  };
+}
+
+/**
  * Safely gets the map from a Leaflet layer
  */
 export const getMapFromLayer = (layer: L.Layer): L.Map | null => {
@@ -43,7 +55,7 @@ export const isMapValid = (map: L.Map | null | undefined): boolean => {
     }
     
     // Check if map panes are initialized
-    const internalMap = map as any;
+    const internalMap = map as LeafletMapInternal;
     if (!internalMap._panes || !internalMap._panes.mapPane) {
       return false;
     }

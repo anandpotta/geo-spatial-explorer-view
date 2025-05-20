@@ -12,6 +12,11 @@ interface DrawingToolHandlerProps {
   onToolSelect: (tool: string) => void;
 }
 
+// Define interface for internal map properties not exposed in TypeScript definitions
+interface LeafletMapInternal extends L.Map {
+  _layers?: Record<string, L.Layer>;
+}
+
 const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   currentView,
   leafletMapRef,
@@ -40,7 +45,7 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
     if (!leafletMapRef.current || !isMapValid(leafletMapRef.current)) return;
     
     try {
-      const map = leafletMapRef.current;
+      const map = leafletMapRef.current as LeafletMapInternal;
       const layers = map._layers;
       
       if (!layers) return;
@@ -91,7 +96,7 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
     if (!leafletMapRef.current || !isMapValid(leafletMapRef.current)) return;
     
     try {
-      const map = leafletMapRef.current;
+      const map = leafletMapRef.current as LeafletMapInternal;
       const layers = map._layers;
       
       if (!layers) return;
@@ -125,11 +130,12 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         try {
           // Validate the map instance before using it
           if (isMapValid(leafletMapRef.current)) {
-            const layers = leafletMapRef.current._layers;
+            const internalMap = leafletMapRef.current as LeafletMapInternal;
+            const layers = internalMap._layers;
             if (layers) {
               Object.keys(layers).forEach(layerId => {
                 const layer = layers[layerId];
-                if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+                if (layer && (layer as any).options && ((layer as any).options.isDrawn || (layer as any).options.id)) {
                   leafletMapRef.current.removeLayer(layer);
                 }
               });

@@ -7,6 +7,7 @@ import MapViews from './MapViews';
 import MapTools from './MapTools';
 import DrawingToolHandler from './DrawingToolHandler';
 import { toast } from '@/components/ui/use-toast';
+import L from 'leaflet';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -15,6 +16,10 @@ interface MapContentContainerProps {
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
   stayAtCurrentPosition?: boolean;
+}
+
+interface LeafletMapInternal extends L.Map {
+  _layers?: Record<string, L.Layer>;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -26,7 +31,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   stayAtCurrentPosition = false
 }) => {
   const cesiumViewerRef = useRef<any>(null);
-  const leafletMapRef = useRef<any>(null);
+  const leafletMapRef = useRef<LeafletMapInternal>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);

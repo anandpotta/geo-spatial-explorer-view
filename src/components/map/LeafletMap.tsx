@@ -9,6 +9,7 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { setupLeafletIcons } from './LeafletMapIcons';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -21,6 +22,11 @@ interface LeafletMapProps {
   stayAtCurrentPosition?: boolean;
 }
 
+// Define interface for internal map properties not exposed in TypeScript definitions
+interface LeafletMapInternal extends L.Map {
+  _layers?: Record<string, L.Layer>;
+}
+
 const LeafletMap = ({ 
   selectedLocation, 
   onMapReady, 
@@ -29,9 +35,6 @@ const LeafletMap = ({
   onClearAll,
   stayAtCurrentPosition = false
 }: LeafletMapProps) => {
-  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
-  const [isMarkerActive, setIsMarkerActive] = useState(false);
-  
   // Initialize Leaflet icons
   useEffect(() => {
     setupLeafletIcons();
@@ -157,11 +160,14 @@ const LeafletMap = ({
     // Store the feature group reference globally
     if (map) {
       // Find feature group in the map
-      Object.values(map._layers || {}).forEach(layer => {
-        if (layer instanceof L.FeatureGroup) {
-          window.featureGroup = layer;
-        }
-      });
+      const internalMap = map as LeafletMapInternal;
+      if (internalMap._layers) {
+        Object.values(internalMap._layers).forEach(layer => {
+          if (layer instanceof L.FeatureGroup) {
+            window.featureGroup = layer;
+          }
+        });
+      }
     }
     
     // Only call parent onMapReady once when the map is first ready
