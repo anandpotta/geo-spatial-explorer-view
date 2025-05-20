@@ -1,15 +1,15 @@
 
-import { MutableRefObject, SetStateAction, Dispatch } from 'react';
+import { MutableRefObject } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 
 export function useMarkers(
   mapRef: MutableRefObject<any>,
-  setMarkers: Dispatch<SetStateAction<LocationMarker[]>>,
-  setTempMarker: Dispatch<SetStateAction<[number, number] | null>>,
-  setIsMarkerActive: Dispatch<SetStateAction<boolean>>,
-  setMapInstanceKey: Dispatch<SetStateAction<number>>
+  setMarkers: React.Dispatch<React.SetStateAction<LocationMarker[]>>,
+  setTempMarker: React.Dispatch<React.SetStateAction<[number, number] | null>>,
+  setIsMarkerActive: React.Dispatch<React.SetStateAction<boolean>>,
+  setMapInstanceKey: React.Dispatch<React.SetStateAction<number>>
 ) {
   const handleMapClick = (e: any) => {
     const { lat, lng } = e.latlng;
@@ -36,7 +36,8 @@ export function useMarkers(
       name: name.trim(),
       position,
       type,
-      createdAt: new Date().toISOString()
+      createdAt: new Date(),
+      userId: 'default-user' // Adding userId as it's required by the type
     };
 
     setMarkers(prevMarkers => {
@@ -44,6 +45,9 @@ export function useMarkers(
       localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
       return updatedMarkers;
     });
+
+    // Broadcast marker changes
+    window.dispatchEvent(new CustomEvent('markersUpdated'));
     
     toast.success('Location saved');
   };
@@ -56,6 +60,9 @@ export function useMarkers(
     });
     
     toast.success('Location deleted');
+    
+    // Broadcast marker changes
+    window.dispatchEvent(new CustomEvent('markersUpdated'));
   };
 
   return {
