@@ -4,6 +4,9 @@ import { Marker } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
 import L from 'leaflet';
+import { Tooltip } from '@/components/ui/tooltip';
+import { TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { MapPin } from 'lucide-react';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -61,6 +64,16 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       }}
       ref={markerRef}
     >
+      {/* Add permanent tooltip to the marker */}
+      <L.Tooltip 
+        permanent={true} 
+        direction="top" 
+        className="custom-leaflet-tooltip" 
+        offset={[0, -10]}
+      >
+        <div className="font-medium text-sm">{marker.name}</div>
+      </L.Tooltip>
+      
       <MarkerPopup marker={marker} onDelete={onDelete} />
     </Marker>
   );
