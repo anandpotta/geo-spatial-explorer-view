@@ -19,7 +19,6 @@ export function useThreeScene(
   
   // State
   const [isInitialized, setIsInitialized] = useState(false);
-  const initializationAttemptedRef = useRef(false);
   
   // Use sub-hooks
   const { rendererRef, canvasElementRef, createRenderer, disposeRenderer, resizeRenderer } = useThreeRenderer(containerRef);
@@ -32,7 +31,7 @@ export function useThreeScene(
     
     // Create scene with natural background color
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000011); // Ensure we have a visible background
+    scene.background = options.backgroundColor;
     sceneRef.current = scene;
     
     console.log("Three.js scene created");
@@ -74,11 +73,11 @@ export function useThreeScene(
   
   // Initialize scene
   useEffect(() => {
-    if (!containerRef.current || initializationAttemptedRef.current) {
+    if (!containerRef.current) {
+      console.warn("Container ref not available for Three.js scene");
       return;
     }
     
-    initializationAttemptedRef.current = true;
     console.log("Initializing Three.js scene");
     
     // Clean up any previous instance
@@ -96,36 +95,20 @@ export function useThreeScene(
     
     // Create renderer
     const renderer = createRenderer();
-    if (!renderer) {
-      console.error("Failed to create renderer");
+    if (!renderer || !canvasElementRef.current) {
+      console.error("Failed to create renderer or canvas element");
       return;
     }
     
-    // Make sure the canvas element is added to the container
-    if (canvasElementRef.current && !containerRef.current.contains(canvasElementRef.current)) {
-      try {
-        containerRef.current.appendChild(canvasElementRef.current);
-        console.log("Canvas element added to container");
-      } catch (err) {
-        console.error("Error appending canvas to container:", err);
-      }
-    }
-    
-    // Create controls only if we have both camera and canvas
-    if (camera && canvasElementRef.current) {
-      const controls = createControls(camera, canvasElementRef.current);
-      if (!controls) {
-        console.error("Failed to create controls");
-      }
-    } else {
-      console.error("Cannot create controls: missing camera or canvas element");
+    // Create controls
+    const controls = createControls(camera, canvasElementRef.current);
+    if (!controls) {
+      console.error("Failed to create controls");
+      return;
     }
     
     // Initial render to make sure something is visible
-    if (renderer && camera && scene) {
-      renderer.render(scene, camera);
-      console.log("Initial render completed");
-    }
+    renderer.render(scene, camera);
     
     console.log("Three.js scene initialized with natural colors settings");
     
@@ -146,7 +129,6 @@ export function useThreeScene(
     return () => {
       window.removeEventListener('resize', handleResize);
       cleanup();
-      initializationAttemptedRef.current = false;
     };
   }, [containerRef, cleanup, onSceneReady, createScene, createCamera, createRenderer, createControls, canvasElementRef, handleResize]);
   

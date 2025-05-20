@@ -6,7 +6,6 @@ import { Location } from '@/utils/geo-utils';
 import { toast } from '@/components/ui/use-toast';
 
 const Index = () => {
-  // Make sure we're explicitly setting 'cesium' as the default view
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
   const [currentView, setCurrentView] = useState<'cesium' | 'leaflet'>('cesium');
   const [flyCompleted, setFlyCompleted] = useState<boolean>(true);
@@ -14,49 +13,6 @@ const Index = () => {
   const locationSelectionTimeRef = useRef<number | null>(null);
   const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
   const previousLocationRef = useRef<string | null>(null);
-  const initialRenderRef = useRef(true);
-  const appFullyLoadedRef = useRef(false);
-
-  // Ensure cesium view on initial render with stronger enforcement
-  useEffect(() => {
-    if (initialRenderRef.current) {
-      initialRenderRef.current = false;
-      // Force cesium view on initial render
-      setCurrentView('cesium');
-      console.log("Index: Initializing with 3D Globe view");
-      
-      // After a short delay, mark the app as fully loaded
-      const timer = setTimeout(() => {
-        appFullyLoadedRef.current = true;
-        toast({
-          title: "3D Globe View",
-          description: "Exploring the world in 3D. You can switch to Map view using the toggle.",
-          duration: 3000,
-        });
-      }, 1500);
-      
-      // Additional enforcement to maintain cesium view
-      const enforceCesiumView = setTimeout(() => {
-        if (currentView !== 'cesium') {
-          console.log("Enforcing 3D Globe view");
-          setCurrentView('cesium');
-        }
-      }, 500);
-      
-      return () => {
-        clearTimeout(timer);
-        clearTimeout(enforceCesiumView);
-      };
-    }
-  }, []);
-
-  // Additional effect to ensure we stay in cesium view during initial load
-  useEffect(() => {
-    // Make sure we're in cesium view by default
-    if (currentView !== 'cesium' && !viewTransitionInProgressRef.current) {
-      setCurrentView('cesium');
-    }
-  }, [currentView]);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
@@ -94,7 +50,7 @@ const Index = () => {
     setFlyCompleted(true);
     
     // If we should switch to leaflet after fly completes, do it now
-    if (shouldSwitchToLeaflet && currentView === 'cesium' && appFullyLoadedRef.current) {
+    if (shouldSwitchToLeaflet && currentView === 'cesium') {
       console.log("Switching to leaflet view after fly completion");
       setTimeout(() => {
         setCurrentView('leaflet');

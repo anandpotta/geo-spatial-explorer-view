@@ -27,7 +27,6 @@ export function useThreeGlobe(
   // Refs for tracking state
   const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
-  const initCallbackFiredRef = useRef<boolean>(false);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
@@ -35,14 +34,13 @@ export function useThreeGlobe(
   // Get markers functionality
   const { addMarker } = useMarkers(scene);
   
-  // Handle textures loaded callback with debounce to prevent multiple calls
+  // Handle textures loaded callback
   const handleTexturesLoaded = useCallback(() => {
-    if (onInitialized && !initCallbackFiredRef.current) {
+    if (onInitialized && isInitialized) {
       console.log("Calling onInitialized callback - textures loaded");
       onInitialized();
-      initCallbackFiredRef.current = true;
     }
-  }, [onInitialized]);
+  }, [onInitialized, isInitialized]);
   
   // Use globe setup hook with texture callback
   const { globe } = useGlobeSetup(
@@ -76,23 +74,22 @@ export function useThreeGlobe(
     if (isSetupCompleteRef.current || !containerRef.current) return;
     
     // Mark as initialized after a small timeout to ensure everything is ready
-    const timer = setTimeout(() => {
+    setTimeout(() => {
       if (!isInitialized && containerRef.current) {
         console.log("Setting isInitialized to true");
         setIsInitialized(true);
         isSetupCompleteRef.current = true;
         
-        // Call initialization callback if textures aren't loaded within reasonable time
-        if (onInitialized && !initCallbackFiredRef.current) {
+        // Even if textures are still loading, we'll consider the globe ready
+        // to avoid getting stuck at the loading screen
+        if (onInitialized) {
           console.log("Calling onInitialized even though textures may not be fully loaded");
           onInitialized();
-          initCallbackFiredRef.current = true;
         }
       }
-    }, 1000); // Give it 1 second to load, then move on regardless
+    }, 2000); // Give it 2 seconds to load, then move on regardless
     
     return () => {
-      clearTimeout(timer);
       isSetupCompleteRef.current = false;
     };
   }, [isInitialized, setIsInitialized, onInitialized, containerRef]);

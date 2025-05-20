@@ -1,5 +1,6 @@
+
 import { useState, useRef, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 import MapControls from './drawing/MapControls';
 import { handleClearAll } from './map/drawing/ClearAllHandler';
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ const DrawingTools = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const [activeButton, setActiveButton] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -83,6 +85,8 @@ const DrawingTools = ({
       return;
     }
     
+    // Toggle active button
+    setActiveButton(tool === activeButton ? null : tool);
     onToolSelect(tool);
   };
 
@@ -166,6 +170,16 @@ const DrawingTools = ({
         />
         
         <div className="h-4" />
+        
+        {/* Edit button */}
+        <button
+          className={`w-full p-2 rounded-md mb-2 flex items-center justify-center transition-colors ${activeButton === 'edit' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+          onClick={() => handleToolClick('edit')}
+          aria-label="Edit shapes"
+        >
+          <Pencil className="h-5 w-5" />
+          <span className="ml-2">Edit</span>
+        </button>
         
         <button
           className="w-full p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"

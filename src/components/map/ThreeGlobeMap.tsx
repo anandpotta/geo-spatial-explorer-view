@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
-import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeMapProps {
   selectedLocation?: Location;
@@ -17,47 +16,9 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [renderKey, setRenderKey] = useState(Date.now());
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
-  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initializedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const recoveryAttemptsRef = useRef(0);
-  const onMapReadyCalledRef = useRef(false);
-  
-  // Add a component mount effect to debug
-  useEffect(() => {
-    console.log("ThreeGlobeMap mounted - starting 3D globe initialization");
-    
-    // Force initialization if it doesn't happen naturally
-    initializedTimeoutRef.current = setTimeout(() => {
-      if (!viewerInitializedRef.current && !onMapReadyCalledRef.current) {
-        console.log("Forcing globe initialization after timeout");
-        viewerInitializedRef.current = true;
-        onMapReadyCalledRef.current = true;
-        setIsLoading(false);
-        
-        if (onMapReady) {
-          onMapReady(globeInstanceRef.current);
-        }
-      }
-    }, 3000);
-    
-    return () => {
-      console.log("ThreeGlobeMap unmounted, cleaning up resources");
-      if (initializedTimeoutRef.current) {
-        clearTimeout(initializedTimeoutRef.current);
-      }
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-      viewerInitializedRef.current = false;
-      onMapReadyCalledRef.current = false;
-      lastLocationRef.current = null;
-      globeInstanceRef.current = null;
-    };
-  }, [onMapReady]);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
@@ -67,98 +28,42 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         console.log('Skipping duplicate location selection:', locationId);
         return;
       }
-      console.log('New location selected for globe:', selectedLocation.label);
       lastLocationRef.current = locationId;
     }
   }, [selectedLocation]);
   
-  // Force loading state to end after timeout (fallback)
-  useEffect(() => {
-    // Set a timeout to end loading state after a reasonable time
-    loadingTimeoutRef.current = setTimeout(() => {
-      if (isLoading) {
-        console.log("Forcing loading state to end after timeout");
-        setIsLoading(false);
-        
-        if (!viewerInitializedRef.current && !onMapReadyCalledRef.current) {
-          viewerInitializedRef.current = true;
-          onMapReadyCalledRef.current = true;
-          
-          if (onMapReady) {
-            onMapReady(globeInstanceRef.current);
-          }
-        }
-      }
-    }, 5000); // 5 seconds timeout
-    
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
-  }, [isLoading, onMapReady]);
-  
-  // Recovery mechanism for initialization failures
-  useEffect(() => {
-    if (mapError && recoveryAttemptsRef.current < 2) {
-      const timer = setTimeout(() => {
-        console.log(`Attempting globe recovery (${recoveryAttemptsRef.current + 1}/2)`);
-        recoveryAttemptsRef.current += 1;
-        setMapError(null);
-        setRenderKey(Date.now()); // Force re-render of ThreeGlobe component
-        setIsLoading(true);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [mapError]);
-  
-  // Handle map ready state with more reliable initialization
+  // Handle map ready state
   const handleMapReady = (viewer?: any) => {
-    if (viewerInitializedRef.current || onMapReadyCalledRef.current) {
+    if (viewerInitializedRef.current) {
       console.log('Globe is already initialized, skipping duplicate ready event');
       return;
     }
     
     console.log("ThreeGlobeMap: Globe is ready");
     viewerInitializedRef.current = true;
-    onMapReadyCalledRef.current = true;
     setIsLoading(false);
     
     if (viewer) {
       globeInstanceRef.current = viewer;
     }
     
-    if (onMapReady) {
-      console.log("Calling onMapReady with globe instance");
-      onMapReady(globeInstanceRef.current);
-      
-      // Show success toast
-      toast({
-        title: "3D Globe Ready",
-        description: "Interactive globe has been loaded successfully",
-        duration: 3000,
-      });
-    }
-    
-    // Clear initialization timeout since we're initialized
-    if (initializedTimeoutRef.current) {
-      clearTimeout(initializedTimeoutRef.current);
-    }
+    if (onMapReady) onMapReady(globeInstanceRef.current);
   };
+  
+  // Clean up resources on unmount
+  React.useEffect(() => {
+    return () => {
+      console.log("ThreeGlobeMap unmounted, cleaning up resources");
+      viewerInitializedRef.current = false;
+      lastLocationRef.current = null;
+      globeInstanceRef.current = null;
+    };
+  }, []);
   
   // Handle errors that might occur
   const handleError = (error: Error) => {
     console.error("Globe error:", error);
     setMapError(error.message || "Failed to initialize 3D globe");
-    setIsLoading(false); // End loading state on error
-    
-    toast({
-      title: "Globe Error",
-      description: "Failed to initialize 3D globe. Trying to recover...",
-      variant: "destructive",
-      duration: 3000,
-    });
   };
   
   return (
@@ -185,9 +90,8 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         </div>
       )}
       
-      {/* ThreeJS Globe with key for forced re-rendering */}
+      {/* ThreeJS Globe */}
       <ThreeGlobe 
-        key={renderKey}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
         onFlyComplete={onFlyComplete}
