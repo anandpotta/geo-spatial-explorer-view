@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/threejs-camera';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 
 interface MapControlsHandlerProps {
@@ -10,11 +10,14 @@ interface MapControlsHandlerProps {
   leafletMapRef: React.MutableRefObject<any>;
 }
 
-const MapControlsHandler: React.FC<MapControlsHandlerProps> = ({ 
+/**
+ * Custom hook for map controls functionality
+ */
+export const useMapControls = ({ 
   currentView, 
   cesiumViewerRef, 
   leafletMapRef 
-}) => {
+}: MapControlsHandlerProps) => {
   const handleZoomIn = () => {
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       zoomIn(cesiumViewerRef.current);
@@ -54,7 +57,7 @@ const MapControlsHandler: React.FC<MapControlsHandlerProps> = ({
       try {
         if (isMapValid(leafletMapRef.current)) {
           leafletMapRef.current.setView([0, 0], 2);
-          toast.success("View reset");
+          toast.info("View reset");
         } else {
           console.error('Error resetting leaflet map view: map is not valid');
         }
@@ -88,6 +91,11 @@ const MapControlsHandler: React.FC<MapControlsHandlerProps> = ({
     handleResetView,
     handleClearAll
   };
+};
+
+// The component just provides the hook implementation
+const MapControlsHandler: React.FC<MapControlsHandlerProps> = (props) => {
+  return null; // This is a logic component with no UI
 };
 
 export default MapControlsHandler;

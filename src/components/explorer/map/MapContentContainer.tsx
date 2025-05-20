@@ -7,8 +7,8 @@ import MapViews from './MapViews';
 import MapTools from './MapTools';
 import DrawingToolHandler from './DrawingToolHandler';
 import { useMapRefs } from '@/hooks/useMapRefs';
-import MapControlsHandler from './MapControlsHandler';
-import ToolSelectionHandler from './ToolSelectionHandler';
+import { useMapControls } from './MapControlsHandler';
+import { useToolSelection } from './ToolSelectionHandler';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -36,18 +36,18 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
     updateMapKeyOnViewChange
   } = useMapRefs();
 
-  // Set up tool selection functionality
-  const { activeTool, handleToolSelect } = ToolSelectionHandler({
+  // Set up tool selection functionality using the hook
+  const { activeTool, handleToolSelect } = useToolSelection({
     onToolChange: (tool) => console.log(`Tool changed to: ${tool}`)
   });
 
-  // Set up map controls
+  // Set up map controls using the hook
   const { 
     handleZoomIn, 
     handleZoomOut, 
     handleResetView, 
     handleClearAll 
-  } = MapControlsHandler({
+  } = useMapControls({
     currentView,
     cesiumViewerRef,
     leafletMapRef
@@ -56,7 +56,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   // Update map key when view changes
   useEffect(() => {
     return updateMapKeyOnViewChange(currentView);
-  }, [currentView]);
+  }, [currentView, updateMapKeyOnViewChange]);
 
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">

@@ -12,7 +12,7 @@ interface CesiumMapProps {
 }
 
 /**
- * Main Map component (now using ThreeJS)
+ * Main Map component (using ThreeJS)
  */
 const CesiumMap: React.FC<CesiumMapProps> = (props) => {
   return (

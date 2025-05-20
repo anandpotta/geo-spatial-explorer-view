@@ -6,9 +6,10 @@ interface ToolSelectionHandlerProps {
   onToolChange: (tool: string | null) => void;
 }
 
-const ToolSelectionHandler: React.FC<ToolSelectionHandlerProps> = ({ 
-  onToolChange 
-}) => {
+/**
+ * Custom hook to manage tool selection state and handlers
+ */
+export const useToolSelection = ({ onToolChange }: ToolSelectionHandlerProps) => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
   const handleToolSelect = (tool: string) => {
@@ -27,6 +28,11 @@ const ToolSelectionHandler: React.FC<ToolSelectionHandlerProps> = ({
     setActiveTool,
     handleToolSelect
   };
+};
+
+// The component just provides the hook implementation
+const ToolSelectionHandler: React.FC<ToolSelectionHandlerProps> = (props) => {
+  return null; // This is a logic component with no UI
 };
 
 export default ToolSelectionHandler;
