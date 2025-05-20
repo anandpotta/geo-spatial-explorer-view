@@ -24,20 +24,21 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
-  // Use memoized markers to prevent unnecessary re-renders
-  const memoizedMarkers = useMemo(() => {
-    // Ensure we have unique markers by ID
-    return markers.reduce((unique: LocationMarker[], marker) => {
-      if (!unique.find(m => m.id === marker.id)) {
-        unique.push(marker);
+  // Use memoized markers with unique IDs to prevent duplicates
+  const uniqueMarkers = useMemo(() => {
+    const seen = new Map();
+    return markers.filter(marker => {
+      if (seen.has(marker.id)) {
+        return false;
       }
-      return unique;
-    }, []);
+      seen.set(marker.id, true);
+      return true;
+    });
   }, [markers]);
   
   return (
     <MarkersList
-      markers={memoizedMarkers}
+      markers={uniqueMarkers}
       tempMarker={tempMarker}
       markerName={markerName}
       markerType={markerType}

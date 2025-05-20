@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -136,8 +137,7 @@ export function useMapState(selectedLocation?: Location) {
     // Reset marker name
     setMarkerName('');
     
-    // Update the markers state with the new marker
-    // Ensure we're using the latest markers by calling getSavedMarkers again
+    // Update the markers state with the latest from storage
     setMarkers(getSavedMarkers());
     
     toast.success("Location saved successfully");
