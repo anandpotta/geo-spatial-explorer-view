@@ -33,16 +33,21 @@ const MapViews: React.FC<MapViewsProps> = ({
 }) => {
   console.log("MapViews rendering with stayAtCurrentPosition:", stayAtCurrentPosition);
   
-  // Generate truly unique IDs for each view type using our utility function
-  const [uniqueLeafletKey] = useState<string>(createUniqueMapId());
-  const [uniqueCesiumKey] = useState<string>(createUniqueMapId());
+  // Generate truly unique IDs for each view type that change with the mapKey
+  // This ensures no container ID conflicts between renders
+  const [uniqueLeafletKey] = useState<string>(`leaflet-${mapKey}-${createUniqueMapId()}`);
+  const [uniqueCesiumKey] = useState<string>(`cesium-${mapKey}-${createUniqueMapId()}`);
   const currentViewRef = useRef<string>(currentView);
+  const previousViewRef = useRef<string | null>(null);
   
   // Track view changes to handle transitions properly
   useEffect(() => {
     // When the view changes, mark previous map containers as inactive
     if (currentView !== currentViewRef.current) {
       console.log(`View changing from ${currentViewRef.current} to ${currentView}`);
+      
+      // Store the previous view before updating the current view reference
+      previousViewRef.current = currentViewRef.current;
       
       // Set a timeout to perform cleanup after the new view has mounted
       setTimeout(() => {
@@ -52,6 +57,7 @@ const MapViews: React.FC<MapViewsProps> = ({
           if (currentView !== 'leaflet') {
             el.setAttribute('data-active', 'false');
             el.setAttribute('data-inactive', 'true');
+            el.setAttribute('data-removed-at', Date.now().toString());
           }
         });
       }, 100);
@@ -71,9 +77,15 @@ const MapViews: React.FC<MapViewsProps> = ({
       el.setAttribute('data-stale', 'true');
     });
     
+    // Clean up all containers when the component unmounts
     return () => {
       // Only run cleanup on unmount, not during initial render
       setTimeout(() => {
+        // Dispatch a cleanup event that other components can listen for
+        window.dispatchEvent(new CustomEvent('mapViewCleanup', {
+          detail: { previousView: previousViewRef.current }
+        }));
+        
         // Clean up any orphaned markers when view changes
         document.querySelectorAll('.leaflet-marker-icon[data-stale="true"]').forEach(el => {
           el.remove();
@@ -89,7 +101,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   return (
     <>
       {currentView === 'cesium' && (
-        <div key={uniqueCesiumKey} className="w-full h-full">
+        <div key={uniqueCesiumKey} className="w-full h-full" data-view-type="cesium" data-container-id={uniqueCesiumKey}>
           <ThreeGlobeMap
             selectedLocation={selectedLocation}
             onViewerReady={handleCesiumViewerRef}
@@ -100,7 +112,7 @@ const MapViews: React.FC<MapViewsProps> = ({
       )}
       
       {currentView === 'leaflet' && (
-        <div key={uniqueLeafletKey} className="w-full h-full" data-view-type="leaflet">
+        <div key={uniqueLeafletKey} className="w-full h-full" data-view-type="leaflet" data-container-id={uniqueLeafletKey}>
           <LeafletMap 
             selectedLocation={selectedLocation}
             onMapReady={handleLeafletMapRef}

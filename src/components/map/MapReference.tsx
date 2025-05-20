@@ -23,6 +23,7 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
   const hasCalledOnReady = useRef(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const [isStable, setIsStable] = useState(false);
+  const instanceIdRef = useRef(`map-ref-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   
   // Clear all timeouts when unmounting
   useEffect(() => {
@@ -32,6 +33,7 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
         const container = map.getContainer();
         if (container) {
           container.setAttribute('data-map-key', mapKey);
+          container.setAttribute('data-map-instance', instanceIdRef.current);
           // Set a unique timestamp to ensure uniqueness
           container.setAttribute('data-map-init-time', Date.now().toString());
           
@@ -39,6 +41,9 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
           document.querySelectorAll('div[data-container-type="leaflet-map"]:not([data-map-key="' + mapKey + '"])').forEach(el => {
             el.setAttribute('data-inactive', 'true');
           });
+          
+          // Mark this container as active
+          container.setAttribute('data-active', 'true');
         }
       }
     } catch (err) {
@@ -62,6 +67,11 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
         document.querySelectorAll(`div[data-map-key="${mapKey}"]`).forEach(el => {
           el.setAttribute('data-active', 'false');
         });
+        
+        // Dispatch an event to signal map reference cleanup
+        window.dispatchEvent(new CustomEvent('mapReferenceCleanup', {
+          detail: { mapKey, instanceId: instanceIdRef.current }
+        }));
       } catch (err) {
         console.warn('Error cleaning up map markers:', err);
       }
@@ -89,14 +99,18 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
           
           // Check if container has already been marked as used by another instance
           if (container.getAttribute('data-in-use') === 'true') {
-            console.error(`Map container is being reused by another instance with key ${container.getAttribute('data-map-key')}`);
-            window.dispatchEvent(new Event('mapError'));
-            return;
+            const usedByMapId = container.getAttribute('data-used-by-map-id') || '';
+            if (usedByMapId !== mapKey) {
+              console.error(`Map container is being reused by another instance with key ${usedByMapId}`);
+              window.dispatchEvent(new Event('mapError'));
+              return;
+            }
           }
           
-          // Mark this container as being used
+          // Mark this container as being used with the current map instance
           container.setAttribute('data-in-use', 'true');
           container.setAttribute('data-used-by-map-id', mapKey);
+          container.setAttribute('data-instance-id', instanceIdRef.current);
           
           // Check if map container still exists and is attached to DOM
           if (map && map.getContainer() && document.body.contains(map.getContainer())) {
@@ -131,7 +145,7 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
             
             // Just one additional invalidation after a reasonable delay
             const additionalTimeout = setTimeout(() => {
-              if (map && !map.remove['_leaflet_id']) {
+              if (map && !map._leaflet_id) { // Check if map still exists and isn't removed
                 try {
                   map.invalidateSize(true);
                   console.log(`Final map ${mapKey} invalidation completed`);

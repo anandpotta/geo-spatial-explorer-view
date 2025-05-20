@@ -16,6 +16,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
   const containerRef = useRef<HTMLDivElement>(null);
   const isUnmountingRef = useRef(false);
   const uniqueIdRef = useRef(`map-${mapKey}-${uuidv4()}`);
+  const mountTimeRef = useRef(Date.now());
 
   // This ensures we provide a new container for each map instance
   useEffect(() => {
@@ -24,6 +25,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       if (containerRef.current) {
         // First mark this container as unmounted
         containerRef.current.dataset.unmounted = 'true';
+        containerRef.current.dataset.unmountTime = Date.now().toString();
         
         // Find and remove any orphaned leaflet elements
         const mapId = containerRef.current.id || '';
@@ -39,6 +41,12 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         });
       }
     };
+    
+    // Register container
+    if (containerRef.current) {
+      containerRef.current.setAttribute('data-map-key', mapKey);
+      containerRef.current.setAttribute('data-mount-time', mountTimeRef.current.toString());
+    }
     
     // Handle clearAllMarkers event
     const handleClearAllMarkers = () => {
@@ -65,14 +73,23 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         }
       }
     };
+
+    // Listen for map view cleanup events
+    const handleMapViewCleanup = (event: CustomEvent) => {
+      const detail = event.detail || {};
+      console.log(`Map view cleanup event detected, previous view: ${detail.previousView}`);
+      cleanupMapElements();
+    };
     
     window.addEventListener('clearAllMarkers', handleClearAllMarkers);
+    window.addEventListener('mapViewCleanup', handleMapViewCleanup as EventListener);
     
     return () => {
       // Set unmounting flag before cleanup
       isUnmountingRef.current = true;
       // Clean up any global references to the map we might have
       window.removeEventListener('clearAllMarkers', handleClearAllMarkers);
+      window.removeEventListener('mapViewCleanup', handleMapViewCleanup as EventListener);
       cleanupMapElements();
     };
   }, [mapKey]);
@@ -85,6 +102,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       data-map-key={mapKey}
       data-created-at={Date.now()}
       data-container-type="leaflet-map"
+      data-active="false"
     >
       <LeafletMapContainer 
         key={uniqueIdRef.current} // Ensure a new instance is created when key changes
@@ -96,13 +114,17 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenReady={() => {
-          // Mark container with map instance ID using closure instead of event parameter
+        whenReady={(e) => {
+          // Mark container with map instance ID using e.target
           if (containerRef.current) {
             // Set a timestamp as instance ID since we can't access the internal _leaflet_id safely
             containerRef.current.setAttribute('data-map-instance-id', Date.now().toString());
             // Mark this as the active container
             containerRef.current.setAttribute('data-active', 'true');
+            containerRef.current.setAttribute('data-initialized', 'true');
+            if (e.target && e.target._container) {
+              e.target._container.setAttribute('data-leaflet-container', uniqueIdRef.current);
+            }
           }
         }}
       >
