@@ -88,6 +88,39 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
           pointer-events: auto !important;
         }
         
+        /* Improve polygon vertex visibility */
+        .leaflet-draw-tooltip {
+          background: #333;
+          color: #fff;
+          border: 1px solid #000;
+          border-radius: 4px;
+          padding: 4px 8px;
+          pointer-events: none;
+          opacity: 1;
+          font-weight: bold;
+          white-space: nowrap;
+          box-shadow: 0 1px 7px rgba(0,0,0,0.4);
+          z-index: 9999 !important;
+        }
+        
+        /* Make drawing guides more visible */
+        .leaflet-draw-guide-dash {
+          opacity: 1 !important;
+          stroke-width: 2px !important;
+          stroke: #33C3F0 !important;
+        }
+        
+        /* Make draw markers more visible */
+        .leaflet-marker-icon.leaflet-div-icon.leaflet-editing-icon {
+          border: 2px solid #33C3F0;
+          background-color: white;
+          border-radius: 50%;
+          width: 10px !important;
+          height: 10px !important;
+          margin-left: -5px !important;
+          margin-top: -5px !important;
+        }
+        
         .image-controls-wrapper {
           opacity: 1 !important;
           transition: opacity 0.2s ease-in-out;

@@ -83,6 +83,44 @@ export const setupEditHandlers = (): () => void => {
 export const configureDrawingTools = (): () => void => {
   const cleanups: Array<() => void> = [];
   
+  // Override polygon drawing to ensure vertex markers are visible
+  if ((L.Draw as any).Polygon && (L.Draw as any).Polygon.prototype) {
+    const originalAddVertex = (L.Draw as any).Polygon.prototype._addVertex;
+    if (originalAddVertex) {
+      (L.Draw as any).Polygon.prototype._addVertex = function(latlng: L.LatLng) {
+        // Call original method
+        const result = originalAddVertex.call(this, latlng);
+        
+        // Make sure markers are visible
+        if (this._markers && this._markers.length > 0) {
+          const lastMarker = this._markers[this._markers.length - 1];
+          if (lastMarker) {
+            // Force the marker to be more visible
+            lastMarker.setStyle({
+              radius: 6,
+              weight: 2,
+              color: '#33C3F0',
+              fillColor: '#ffffff',
+              fillOpacity: 1,
+              opacity: 1
+            });
+            
+            // Force a reflow to ensure styles are applied
+            if (lastMarker._icon) {
+              lastMarker._icon.getBoundingClientRect();
+            }
+          }
+        }
+        
+        return result;
+      };
+      
+      cleanups.push(() => {
+        (L.Draw as any).Polygon.prototype._addVertex = originalAddVertex;
+      });
+    }
+  }
+  
   // Force SVG renderer for Circle
   if ((L.Draw as any).Circle) {
     const originalInitialize = (L.Draw as any).Circle.prototype.initialize;
@@ -98,13 +136,25 @@ export const configureDrawingTools = (): () => void => {
     });
   }
 
-  // Force SVG renderer for Polygon
+  // Force SVG renderer for Polygon and improve visibility
   if ((L.Draw as any).Polygon) {
     const originalInitialize = (L.Draw as any).Polygon.prototype.initialize;
     (L.Draw as any).Polygon.prototype.initialize = function() {
       originalInitialize.apply(this, arguments);
       if (this.options && this.options.shapeOptions) {
-        this.options.shapeOptions.renderer = L.svg();
+        this.options.shapeOptions.renderer = L.svg(); // Force SVG renderer for polygons
+      }
+      
+      // Enhance marker visibility for polygon drawing
+      if (this.options) {
+        // Ensure guide line is clearly visible
+        if (this.options.guidelineDistance === undefined) {
+          this.options.guidelineDistance = 10;
+        }
+        if (this.options.shapeOptions) {
+          this.options.shapeOptions.weight = 4;
+          this.options.shapeOptions.opacity = 1;
+        }
       }
     };
     

@@ -21,7 +21,7 @@ export const getDrawOptions = () => {
       }
     },
     polygon: {
-      allowIntersection: false,
+      allowIntersection: false, // Restrict to simple polygons
       drawError: {
         color: '#e1e100',
         message: '<strong>Cannot draw that shape!</strong>'
@@ -36,9 +36,18 @@ export const getDrawOptions = () => {
         lineJoin: 'round',
         renderer: L.svg() // Force SVG renderer for polygons
       },
-      showArea: false,
-      metric: true,
-      smoothFactor: 1 // Lower value for less smoothing (more accurate paths)
+      showArea: true, // Show area measurement while drawing
+      metric: true,  // Use metric units
+      smoothFactor: 1, // Lower value for less smoothing (more accurate paths)
+      // Enhance guide line
+      guideLayers: true,
+      guidelineDistance: 10,
+      guidelineOptions: {
+        color: '#33C3F0',
+        weight: 2,
+        opacity: 1,
+        dashArray: '5, 5'
+      }
     },
     circle: {
       shapeOptions: {
