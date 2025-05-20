@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapTransition } from './hooks/useMapTransition';
 import { getCesiumStyles, getLeafletStyles } from './utils/transitionStylesHelper';
@@ -39,10 +39,10 @@ const MapViews: React.FC<MapViewsProps> = ({
     currentView
   });
   
-  const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
+  const [lastSelectedLocation, setLastSelectedLocation] = React.useState<Location | undefined>(undefined);
   
   // Track location changes to prevent duplicate transitions
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedLocation && 
         (!lastSelectedLocation || 
          selectedLocation.id !== lastSelectedLocation.id)) {
@@ -50,9 +50,6 @@ const MapViews: React.FC<MapViewsProps> = ({
       setLastSelectedLocation(selectedLocation);
     }
   }, [selectedLocation, lastSelectedLocation]);
-  
-  // Add fade-in effect when a view becomes active
-  const fadeInClass = fadeIn ? 'animate-fade-in' : '';
   
   // Get styles for each view
   const cesiumStyles = getCesiumStyles(currentView, transitioning);
@@ -65,10 +62,7 @@ const MapViews: React.FC<MapViewsProps> = ({
         onMapReady={onMapReady}
         onFlyComplete={onFlyComplete}
         onViewerReady={handleCesiumViewerRef}
-        style={{
-          ...cesiumStyles,
-          className: currentView === 'cesium' ? fadeInClass : ''
-        }}
+        style={cesiumStyles}
         mapKey={mapKey}
       />
       
@@ -77,14 +71,15 @@ const MapViews: React.FC<MapViewsProps> = ({
         onMapReady={handleLeafletMapRef}
         activeTool={activeTool}
         onClearAll={handleClearAll}
-        style={{
-          ...leafletStyles,
-          className: currentView === 'leaflet' ? fadeInClass : ''
-        }}
+        style={leafletStyles}
         mapKey={mapKey}
       />
       
       <TransitionOverlay show={transitioning} />
+      
+      {fadeIn && (
+        <div className="animate-fade-in absolute inset-0 pointer-events-none z-5" />
+      )}
     </>
   );
 };
