@@ -4,5 +4,5 @@ export * from './svg-renderer';
 export * from './geometry-utils';
 export * from './rectangle-utils';
 export * from './path-preservation';
-export * from './polygon-utils';
+export * from './polygon/index';
 export * from './feature-group-utils';
