@@ -39,14 +39,23 @@ export const getDrawOptions = () => {
       showArea: true, // Show area measurement while drawing
       metric: true,  // Use metric units
       smoothFactor: 1, // Lower value for less smoothing (more accurate paths)
-      // Enhance guide line
+      // Enhance guide line visibility
       guideLayers: true,
       guidelineDistance: 10,
       guidelineOptions: {
-        color: '#33C3F0',
+        color: '#33C3F0', 
         weight: 2,
         opacity: 1,
         dashArray: '5, 5'
+      },
+      // Fix for vertex markers
+      markerOptions: {
+        icon: L.icon({
+          iconUrl: 'path/to/marker-icon.png',
+          iconSize: [10, 10],
+          iconAnchor: [5, 5]
+        }),
+        zIndexOffset: 2000 // Make sure these are on top
       }
     },
     circle: {
@@ -59,8 +68,9 @@ export const getDrawOptions = () => {
         renderer: L.svg() // Force SVG renderer for circles
       }
     },
+    // Disable marker tool to avoid confusion with polygon vertices
     circlemarker: false,
-    marker: true,
+    marker: false,
     polyline: false
   };
 };

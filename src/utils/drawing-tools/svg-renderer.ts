@@ -45,45 +45,46 @@ export const configureSvgRenderer = (): () => void => {
     }
   };
   
-  // Ensure marker vertices are visible during polygon drawing
-  // Fix: Use type assertion to avoid TypeScript errors with initialize property
+  // Fix for CircleMarker initialization to make vertices more visible during polygon drawing
   try {
-    // Store the original constructor/initializer
-    const originalCircleMarker = (L.CircleMarker as any).prototype.initialize;
+    // Store the original prototype method
+    const originalCircleMarkerInitialize = (L.CircleMarker as any).prototype.initialize;
     
-    if (originalCircleMarker) {
-      // Override the initializer with a type-safe way
+    // Only proceed if the initialize method exists
+    if (originalCircleMarkerInitialize) {
+      // Override the initialize method with proper type assertion
       (L.CircleMarker as any).prototype.initialize = function(...args: any[]) {
-        // Call original initializer
-        const result = originalCircleMarker.apply(this, args);
+        // Call the original initialize method
+        const result = originalCircleMarkerInitialize.apply(this, args);
         
-        // Make vertex markers more visible
+        // Make vertex markers more visible when part of a drawing
         if (this.options && this.options.className && 
             this.options.className.includes('leaflet-draw-marker')) {
-          this.options.radius = 6; // Larger radius
+          this.options.radius = 6; // Larger radius for better visibility
           this.options.weight = 2; // Thicker border
           this.options.opacity = 1; // Full opacity
-          this.options.color = '#33C3F0'; // Match the drawing color
+          this.options.color = '#33C3F0'; // Match drawing color
           this.options.fillColor = '#fff'; // White fill
-          this.options.fillOpacity = 1; // Full opacity for fill
+          this.options.fillOpacity = 1; // Full fill opacity
         }
         
-        return this;
+        return result;
       };
     }
   } catch (err) {
     console.error('Error configuring circle marker:', err);
   }
 
-  // Return a cleanup function
+  // Return a cleanup function to restore original methods when component unmounts
   return () => {
-    // Restore original methods when component unmounts
+    // Restore original _updateStyle method
     (L.SVG.prototype as any)._updateStyle = originalUpdateStyle;
     
+    // Restore original CircleMarker initialize method
     try {
-      const originalCircleMarker = (L.CircleMarker as any).prototype.initialize;
-      if (originalCircleMarker) {
-        (L.CircleMarker as any).prototype.initialize = originalCircleMarker;
+      const originalCircleMarkerInitialize = (L.CircleMarker as any).prototype.initialize;
+      if (originalCircleMarkerInitialize) {
+        (L.CircleMarker as any).prototype.initialize = originalCircleMarkerInitialize;
       }
     } catch (err) {
       console.error('Error restoring circle marker:', err);

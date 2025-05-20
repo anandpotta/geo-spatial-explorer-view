@@ -85,6 +85,44 @@ export const configureDrawingTools = (): () => void => {
   
   // Fix polygon drawing to improve marker visibility and connection line rendering
   if ((L.Draw as any).Polygon && (L.Draw as any).Polygon.prototype) {
+    // Store original method so it can be restored later
+    const originalVertexMarker = (L.Draw as any).Polygon.prototype._createMarker;
+    
+    // Override vertex marker creation to ensure it's created correctly
+    if (originalVertexMarker) {
+      (L.Draw as any).Polygon.prototype._createMarker = function(latlng: L.LatLng, index?: number) {
+        // Create visible markers for each polygon vertex
+        const marker = originalVertexMarker.call(this, latlng, index);
+        
+        if (marker) {
+          // Make the marker more visible
+          if (marker.options) {
+            marker.options.radius = 6;
+            marker.options.weight = 2;
+            marker.options.color = '#33C3F0';
+            marker.options.fillColor = '#fff';
+            marker.options.fillOpacity = 1;
+            marker.options.opacity = 1;
+          }
+          
+          // Ensure the marker is interactive and visible
+          if (marker._icon) {
+            marker._icon.style.pointerEvents = 'auto';
+            marker._icon.style.cursor = 'pointer';
+            marker._icon.style.zIndex = '1000';
+            // Force a reflow to ensure styles are applied
+            marker._icon.getBoundingClientRect();
+          }
+        }
+        
+        return marker;
+      };
+      
+      cleanups.push(() => {
+        (L.Draw as any).Polygon.prototype._createMarker = originalVertexMarker;
+      });
+    }
+    
     // Override _addVertex to ensure vertex markers display correctly
     const originalAddVertex = (L.Draw as any).Polygon.prototype._addVertex;
     
@@ -156,6 +194,32 @@ export const configureDrawingTools = (): () => void => {
       
       cleanups.push(() => {
         (L.Draw as any).Polygon.prototype._updateFinishHandler = originalUpdateFinishHandler;
+      });
+    }
+    
+    // Fix the _onMouseDown handler to ensure markers are created when clicking
+    const originalOnMouseDown = (L.Draw as any).Polygon.prototype._onMouseDown;
+    
+    if (originalOnMouseDown) {
+      (L.Draw as any).Polygon.prototype._onMouseDown = function(e: any) {
+        // Prevent the default behavior to avoid creating markers instead of vertices
+        if (e && e.originalEvent) {
+          e.originalEvent._simulated = false;
+        }
+        
+        // Call the original handler
+        const result = originalOnMouseDown.call(this, e);
+        
+        // Force update the vertices
+        if (this._poly && this._markers && this._markers.length > 0) {
+          this._updateTooltip(e);
+        }
+        
+        return result;
+      };
+      
+      cleanups.push(() => {
+        (L.Draw as any).Polygon.prototype._onMouseDown = originalOnMouseDown;
       });
     }
   }

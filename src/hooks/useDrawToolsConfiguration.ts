@@ -53,7 +53,7 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     if (mapContainer) {
       mapContainer.classList.add('optimize-svg-rendering');
       
-      // Add a style element with our anti-flicker CSS
+      // Add a style element with our anti-flicker and improved polygon drawing CSS
       const styleEl = document.createElement('style');
       styleEl.innerHTML = `
         .optimize-svg-rendering .leaflet-overlay-pane svg {
@@ -149,6 +149,34 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
           stroke-opacity: 1 !important;
         }
         
+        /* Make polygon vertices more visible */
+        .leaflet-draw-actions a {
+          background-color: #333 !important;
+          color: #fff !important;
+        }
+        
+        /* Fix for polygon vertex markers */
+        .leaflet-vertex-icon {
+          border: 2px solid #33C3F0 !important;
+          background-color: white !important;
+          border-radius: 50% !important;
+          width: 10px !important;
+          height: 10px !important;
+        }
+        
+        /* Make interactive markers easier to click */
+        .leaflet-marker-pane {
+          z-index: 1000 !important;
+          pointer-events: auto !important;
+        }
+        
+        /* Fix polygon markers specifically */
+        .leaflet-marker-pane .leaflet-marker-icon {
+          z-index: 1000 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
+        }
+        
         .image-controls-wrapper {
           opacity: 1 !important;
           transition: opacity 0.2s ease-in-out;
@@ -180,6 +208,11 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
       
       // Force the browser to acknowledge these changes
       mapContainer.getBoundingClientRect();
+      
+      // Force a reflow to ensure styles are applied
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
     }
     
     // Cleanup function
