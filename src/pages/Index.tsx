@@ -64,7 +64,7 @@ const Index = () => {
     const handleDrawingStart = () => {
       isDrawingOrMarkingRef.current = true;
       setStayAtCurrentPosition(true);
-      console.log("Drawing/marking/uploading started, will stay at current position");
+      console.log("Drawing/marking started, will stay at current position");
     };
     
     const handleDrawingEnd = () => {
@@ -72,11 +72,11 @@ const Index = () => {
       // Don't immediately reset stayAtCurrentPosition to prevent flickering
       setTimeout(() => {
         if (!isDrawingOrMarkingRef.current) {
-          console.log("Drawing/marking/uploading ended, resetting stayAtCurrentPosition");
+          console.log("Drawing/marking ended, resetting stayAtCurrentPosition");
           setStayAtCurrentPosition(false);
         }
-      }, 1500); // Increased delay to ensure position stability
-      console.log("Drawing/marking/uploading ended");
+      }, 1000);
+      console.log("Drawing/marking ended");
     };
     
     const handleMarkerPlaced = () => {
@@ -93,39 +93,20 @@ const Index = () => {
           console.log("Marker saved, resetting stayAtCurrentPosition");
           setStayAtCurrentPosition(false);
         }
-      }, 1500); // Increased delay for stability
+      }, 1000);
       console.log("Marker saved");
-    };
-    
-    // Add specific listener for floorPlanUpdated
-    const handleFloorPlanUpdated = (event: CustomEvent) => {
-      if (event.detail?.freshlyUploaded) {
-        console.log("Floor plan freshly uploaded, maintaining position");
-        isDrawingOrMarkingRef.current = true;
-        setStayAtCurrentPosition(true);
-        
-        // Keep position stable for a while after upload
-        setTimeout(() => {
-          if (!isDrawingOrMarkingRef.current) {
-            console.log("Floor plan stabilized, allowing position changes");
-            setStayAtCurrentPosition(false);
-          }
-        }, 2000);
-      }
     };
     
     window.addEventListener('drawingStart', handleDrawingStart);
     window.addEventListener('drawingEnd', handleDrawingEnd);
     window.addEventListener('markerPlaced', handleMarkerPlaced);
     window.addEventListener('markerSaved', handleMarkerSaved);
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     
     return () => {
       window.removeEventListener('drawingStart', handleDrawingStart);
       window.removeEventListener('drawingEnd', handleDrawingEnd);
       window.removeEventListener('markerPlaced', handleMarkerPlaced);
       window.removeEventListener('markerSaved', handleMarkerSaved);
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     };
   }, []);
 

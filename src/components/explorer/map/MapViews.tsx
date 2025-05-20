@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../map/LeafletMap';
 import CesiumView from '../../map/CesiumMapLoading';
@@ -30,10 +30,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   handleClearAll,
   stayAtCurrentPosition = false
 }) => {
-  // Add effect to log stayAtCurrentPosition changes
-  useEffect(() => {
-    console.log("MapViews stayAtCurrentPosition changed:", stayAtCurrentPosition);
-  }, [stayAtCurrentPosition]);
+  console.log("MapViews rendering with stayAtCurrentPosition:", stayAtCurrentPosition);
   
   return (
     <>

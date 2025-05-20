@@ -47,13 +47,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
 
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
-  
-  // Create proper edit options object instead of passing true
-  const editOptions = {
-    featureGroup,
-    remove: true,
-    edit: true
-  };
 
   return (
     <EditControl
@@ -61,7 +54,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       position="topright"
       onCreated={handleCreated}
       draw={drawOptions}
-      edit={editOptions} // Pass the object directly
+      edit={{
+        featureGroup,
+        remove: true,
+        edit: true
+      }}
       featureGroup={featureGroup}
     />
   );

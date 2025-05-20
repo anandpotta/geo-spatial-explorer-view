@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { saveFloorPlan } from '@/utils/floor-plan-utils';
 import { getCurrentUser } from '@/services/auth-service';
@@ -9,13 +10,9 @@ export function useDrawingFileUpload() {
   const handleUploadToDrawing = (drawingId: string, file: File) => {
     console.log(`Processing upload for drawing ${drawingId}, file: ${file.name}`);
     
-    // Dispatch event to signal that drawing operation is starting - prevent map navigation
-    window.dispatchEvent(new CustomEvent('drawingStart'));
-    
     const currentUser = getCurrentUser();
     if (!currentUser) {
       toast.error('Please log in to upload files');
-      window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
       return;
     }
     
@@ -25,13 +22,11 @@ export function useDrawingFileUpload() {
     // Check file type and size
     if (!fileType.startsWith('image/') && fileType !== 'application/pdf') {
       toast.error('Please upload an image or PDF file');
-      window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
       return;
     }
     
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
       toast.error('File size should be less than 10MB');
-      window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
       return;
     }
     
@@ -76,14 +71,6 @@ export function useDrawingFileUpload() {
                   // Force redraw
                   setTimeout(() => {
                     window.dispatchEvent(new Event('resize'));
-                    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-                      detail: { drawingId: drawingId, userId: currentUser.id, freshlyUploaded: true } 
-                    }));
-                    
-                    // Keep a delay before releasing the "drawing in progress" state
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent('drawingEnd'));
-                    }, 1000); 
                   }, 50);
                 } else if (attempts < maxAttempts) {
                   attempts++;
@@ -92,7 +79,6 @@ export function useDrawingFileUpload() {
                 } else {
                   console.error('Could not apply image to drawing after multiple attempts');
                   toast.error('Could not apply image to drawing');
-                  window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
                 }
               } else if (attempts < maxAttempts) {
                 attempts++;
@@ -101,7 +87,6 @@ export function useDrawingFileUpload() {
               } else {
                 console.error('Path element not found for ID after multiple attempts:', drawingId);
                 toast.error('Could not find the drawing on the map');
-                window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
               }
             } catch (err) {
               console.error('Error applying image to path:', err);
@@ -110,15 +95,12 @@ export function useDrawingFileUpload() {
                 setTimeout(tryApplyMask, 300 * attempts);
               } else {
                 toast.error('Failed to apply image to drawing');
-                window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
               }
             }
           };
           
           // Start the retry process
           setTimeout(tryApplyMask, 100);
-        } else {
-          window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock in case of failure
         }
       }
     };
@@ -126,7 +108,6 @@ export function useDrawingFileUpload() {
     reader.onerror = () => {
       console.error('Error reading file');
       toast.error('Failed to read the file');
-      window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
     };
     
     reader.readAsDataURL(file);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
@@ -45,12 +46,8 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    // Add event dispatch to prevent navigation during upload
-    window.dispatchEvent(new CustomEvent('drawingStart'));
-    
     if (!file.type.startsWith('image/') && !file.type.includes('pdf')) {
       toast.error('Please upload an image or PDF file');
-      window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
       return;
     }
     
@@ -97,15 +94,9 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
               detail: { drawingId: drawing.id }
             }));
-            
-            // Keep a delay before releasing the "drawing in progress" state
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('drawingEnd'));
-            }, 1000);
           } else {
             // Error toast is handled in saveFloorPlan function
             console.log('Failed to save floor plan due to storage constraints');
-            window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
           }
         }
         setIsUploading(false);
@@ -114,7 +105,6 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       reader.onerror = () => {
         toast.error('Failed to read uploaded file');
         setIsUploading(false);
-        window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
       };
       
       reader.readAsDataURL(file);
@@ -122,7 +112,6 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       console.error('Error processing file:', err);
       toast.error('Failed to process upload');
       setIsUploading(false);
-      window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
     }
   };
 
