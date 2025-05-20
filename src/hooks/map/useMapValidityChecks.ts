@@ -20,7 +20,7 @@ export function useMapValidityChecks(
     }
     
     const checkMapValidity = () => {
-      if (!mapRef.current) return;
+      if (!mapRef.current) return false;
       
       try {
         // Use utility function for map validation
@@ -32,6 +32,13 @@ export function useMapValidityChecks(
         // If map is valid but not marked as ready
         if (isValid && !isMapReady && mapAttachedRef.current) {
           console.log('Map is now valid, marking as ready');
+          
+          // Try an immediate invalidateSize to ensure proper sizing
+          try {
+            mapRef.current.invalidateSize(true);
+          } catch (err) {
+            console.warn('Error during validation invalidateSize:', err);
+          }
           
           // Clear interval once map is valid
           if (validityCheckIntervalRef.current) {
@@ -67,6 +74,9 @@ export function useMapValidityChecks(
       
       return false;
     };
+    
+    // Initial check on mount with a delay to ensure DOM is ready
+    setTimeout(checkMapValidity, 500);
     
     // Check validity less frequently (10 seconds) and only when needed
     validityCheckIntervalRef.current = setInterval(() => {

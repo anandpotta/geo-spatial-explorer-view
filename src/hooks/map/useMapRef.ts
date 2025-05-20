@@ -38,33 +38,41 @@ export function useMapRef(
         validityChecksRef.current = 0;
         recoveryAttemptRef.current = 0;
         
-        // Single invalidation to ensure the map is properly sized
+        // Wait for the map to be properly attached before attempting to fly to location
         setTimeout(() => {
           if (mapRef.current) {
             try {
-              mapRef.current.invalidateSize(true);
+              // Do an initial size invalidation to ensure proper rendering
+              mapRef.current.invalidateSize(false);
               console.log('Initial map invalidation completed');
-              setIsMapReady(true);
               
-              // Handle initial location navigation once the map is ready
+              // Handle initial location navigation with delay for proper map readiness
               if (selectedLocation && !initialFlyComplete.current) {
-                initialFlyComplete.current = true;
-                try {
-                  console.log('Flying to initial location after ensuring map stability');
-                  mapRef.current.flyTo(
-                    [selectedLocation.y, selectedLocation.x], 
-                    18, 
-                    { animate: true, duration: 1.5 }
-                  );
-                } catch (flyErr) {
-                  console.error('Error in initial fly operation:', flyErr);
-                }
+                // Delay the initial fly a bit more to ensure the map is fully initialized
+                setTimeout(() => {
+                  if (mapRef.current && document.body.contains(mapRef.current.getContainer())) {
+                    try {
+                      console.log(`Flying to initial location: ${selectedLocation.y}, ${selectedLocation.x}`);
+                      mapRef.current.flyTo(
+                        [selectedLocation.y, selectedLocation.x], 
+                        18, 
+                        { animate: true, duration: 1.5 }
+                      );
+                      initialFlyComplete.current = true;
+                    } catch (flyErr) {
+                      console.error('Error in initial fly operation:', flyErr);
+                    }
+                  }
+                }, 500); // Additional delay for map stability
               }
+              
+              // Mark map as ready after we've set up the initial location
+              setIsMapReady(true);
             } catch (err) {
               console.warn(`Error during invalidation:`, err);
             }
           }
-        }, 500);
+        }, 250);
       } else {
         console.warn('Map container not verified, skipping reference assignment');
       }
