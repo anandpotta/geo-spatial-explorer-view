@@ -17,11 +17,13 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [renderKey, setRenderKey] = useState(Date.now());
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recoveryAttemptsRef = useRef(0);
   
   // Add a component mount effect to debug
   useEffect(() => {
@@ -41,6 +43,9 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
       if (initializedTimeoutRef.current) {
         clearTimeout(initializedTimeoutRef.current);
+      }
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
       }
       viewerInitializedRef.current = false;
       lastLocationRef.current = null;
@@ -68,6 +73,11 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       if (isLoading) {
         console.log("Forcing loading state to end after timeout");
         setIsLoading(false);
+        
+        if (!viewerInitializedRef.current && onMapReady) {
+          viewerInitializedRef.current = true;
+          onMapReady(globeInstanceRef.current);
+        }
       }
     }, 5000); // 5 seconds timeout
     
@@ -76,7 +86,22 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         clearTimeout(loadingTimeoutRef.current);
       }
     };
-  }, [isLoading]);
+  }, [isLoading, onMapReady]);
+  
+  // Recovery mechanism for initialization failures
+  useEffect(() => {
+    if (mapError && recoveryAttemptsRef.current < 2) {
+      const timer = setTimeout(() => {
+        console.log(`Attempting globe recovery (${recoveryAttemptsRef.current + 1}/2)`);
+        recoveryAttemptsRef.current += 1;
+        setMapError(null);
+        setRenderKey(Date.now()); // Force re-render of ThreeGlobe component
+        setIsLoading(true);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [mapError]);
   
   // Handle map ready state with more reliable initialization
   const handleMapReady = (viewer?: any) => {
@@ -148,8 +173,9 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         </div>
       )}
       
-      {/* ThreeJS Globe */}
+      {/* ThreeJS Globe with key for forced re-rendering */}
       <ThreeGlobe 
+        key={renderKey}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
         onFlyComplete={onFlyComplete}

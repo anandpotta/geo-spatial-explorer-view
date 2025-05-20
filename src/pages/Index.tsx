@@ -15,6 +15,7 @@ const Index = () => {
   const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
   const previousLocationRef = useRef<string | null>(null);
   const initialRenderRef = useRef(true);
+  const appFullyLoadedRef = useRef(false);
 
   // Ensure cesium view on initial render
   useEffect(() => {
@@ -23,6 +24,18 @@ const Index = () => {
       // Force cesium view on initial render
       setCurrentView('cesium');
       console.log("Index: Initializing with 3D Globe view");
+      
+      // After a short delay, mark the app as fully loaded
+      const timer = setTimeout(() => {
+        appFullyLoadedRef.current = true;
+        toast({
+          title: "3D Globe View",
+          description: "Exploring the world in 3D. You can switch to Map view using the toggle.",
+          duration: 3000,
+        });
+      }, 1500);
+      
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -62,7 +75,7 @@ const Index = () => {
     setFlyCompleted(true);
     
     // If we should switch to leaflet after fly completes, do it now
-    if (shouldSwitchToLeaflet && currentView === 'cesium') {
+    if (shouldSwitchToLeaflet && currentView === 'cesium' && appFullyLoadedRef.current) {
       console.log("Switching to leaflet view after fly completion");
       setTimeout(() => {
         setCurrentView('leaflet');
