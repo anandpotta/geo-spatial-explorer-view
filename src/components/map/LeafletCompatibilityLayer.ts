@@ -51,12 +51,7 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     };
   }
   
-  // Create the element with React.createElement to properly pass the ref
-  return React.createElement(OriginalEditControl, {
-    ...otherProps,
-    edit: editOptions,
-    ref: ref
-  });
+  return <OriginalEditControl {...otherProps} edit={editOptions} ref={ref} />;
 });
 
 EditControl.displayName = "EditControl";
