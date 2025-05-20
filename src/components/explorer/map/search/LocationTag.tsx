@@ -1,7 +1,45 @@
 
 import React from 'react';
-import { X, Tag } from 'lucide-react';
 import { Location } from '@/utils/geo-utils';
+import { createPortal } from 'react-dom';
+
+interface LocationTagPortalProps {
+  location: Location | null;
+  markerPos: { x: number; y: number } | null;
+  mapContainerRef: React.RefObject<HTMLDivElement | null>;
+  mapLoaded: boolean;
+  onClose: () => void;
+}
+
+const LocationTagPortal: React.FC<LocationTagPortalProps> = ({ 
+  location, 
+  markerPos, 
+  mapContainerRef, 
+  mapLoaded,
+  onClose 
+}) => {
+  if (!location || !markerPos || !mapContainerRef.current || !mapLoaded) {
+    return null;
+  }
+
+  return createPortal(
+    <div 
+      style={{
+        position: 'absolute',
+        left: `${markerPos.x}px`,
+        top: `${markerPos.y}px`,
+        pointerEvents: 'auto',
+      }}
+    >
+      {/* Use the existing LocationTag component from the other file */}
+      <LocationTag location={location} onClose={onClose} />
+    </div>,
+    mapContainerRef.current
+  );
+};
+
+// We're importing and reusing the existing LocationTag component
+import { X, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -45,4 +83,4 @@ const LocationTag: React.FC<LocationTagProps> = ({ location, onClose, style }) =
   );
 };
 
-export default LocationTag;
+export { LocationTagPortal };
