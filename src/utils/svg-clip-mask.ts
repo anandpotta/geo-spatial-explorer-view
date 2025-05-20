@@ -6,11 +6,12 @@ import { findSvgPathByDrawingId, debugSvgElement } from './svg-path-finder';
 import { toast } from 'sonner';
 import { applyImageClipMask as coreApplyImageClipMask } from './clip-mask/clip-mask-apply';
 import { hasClipMaskApplied } from './clip-mask/clip-mask-checker';
+import { removeClipMask as coreRemoveClipMask } from './clip-mask/clip-mask-remove';
 
 /**
  * Exports for other modules
  */
-export { findSvgPathByDrawingId, debugSvgElement, hasClipMaskApplied };
+export { findSvgPathByDrawingId, debugSvgElement, hasClipMaskApplied, coreRemoveClipMask as removeClipMask };
 
 /**
  * Apply an image clip mask to an SVG path element

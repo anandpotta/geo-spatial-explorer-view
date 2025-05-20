@@ -3,7 +3,8 @@ import React from 'react';
 import { Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import ControlButton from './ControlButton';
-import { findSvgPathByDrawingId, removeClipMask } from '@/utils/svg-clip-mask';
+import { findSvgPathByDrawingId } from '@/utils/svg-path-finder';
+import { removeClipMask } from '@/utils/clip-mask/clip-mask-remove';
 
 interface RemoveControlProps {
   drawingId: string;

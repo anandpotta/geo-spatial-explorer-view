@@ -1,65 +1,165 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
+import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
+import { hasFloorPlan as checkFloorPlan } from '@/utils/floor-plan-utils';
 
 /**
- * Prepare layer options for a drawing
+ * Prepares options for drawing layers
  */
-export const prepareLayerOptions = async (drawing: DrawingData) => {
-  const color = drawing.properties?.color || '#3388ff';
-  const fillColor = drawing.properties?.fillColor || color;
-  const opacity = drawing.properties?.opacity !== undefined ? drawing.properties.opacity : 0.8;
-  const fillOpacity = drawing.properties?.fillOpacity !== undefined ? drawing.properties.fillOpacity : 0.2;
+export const prepareLayerOptions = async (drawing: DrawingData): Promise<L.PathOptions> => {
+  // Check if this drawing has a floor plan
+  const hasFloorPlanApplied = await checkFloorPlan(drawing.id);
   
-  return {
-    style: {
-      color,
-      weight: 3,
-      opacity,
-      fillColor,
-      fillOpacity,
-      className: `drawing-layer drawing-${drawing.id}`
-    }
-  };
+  // Use either provided properties or default values
+  const color = drawing.properties?.color || '#33C3F0';
+  const fillColor = drawing.properties?.color || '#33C3F0';
+  const opacity = 1; // Always use full opacity for stroke
+  const fillOpacity = hasFloorPlanApplied ? 1 : 0.2;
+  
+  const options = getDefaultDrawingOptions(color);
+  
+  if (hasFloorPlanApplied) {
+    options.fillColor = '#3b82f6';
+    options.fillOpacity = 1; // Always use full opacity for images
+    options.color = '#33C3F0';
+  } else {
+    options.fillColor = fillColor;
+    options.fillOpacity = fillOpacity;
+    options.opacity = opacity;
+  }
+  
+  // Add custom option to store drawing ID that will be used by Leaflet internals
+  (options as any).drawingId = drawing.id;
+  
+  return options;
 };
 
 /**
- * Create a GeoJSON layer from drawing data
+ * Get default drawing options for layers
  */
-export const createGeoJSONLayer = (drawing: DrawingData, options: any): L.GeoJSON | null => {
-  if (!drawing.geoJSON) return null;
-  
+export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
+  color: color || '#33C3F0', // Using sky blue color by default
+  weight: 4, // Increase stroke width for better visibility
+  opacity: 1, // Use full opacity for the stroke
+  fillOpacity: 0.3,
+  renderer: L.svg(), // Force SVG renderer
+  className: 'leaflet-interactive-drawing', // Add a custom class for easier selection
+  stroke: true, // Ensure stroke is enabled
+  lineCap: 'round', // Round line caps
+  lineJoin: 'round' // Round line joins
+});
+
+/**
+ * Creates a drawing layer from GeoJSON and applies options
+ */
+export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions): L.GeoJSON | null => {
   try {
-    return L.geoJSON(drawing.geoJSON, options);
-  } catch (err) {
-    console.error(`Failed to create GeoJSON layer for drawing ${drawing.id}:`, err);
+    // Create a copy of options without renderer for GeoJSON
+    const geoJSONOptions = { ...options };
+    // Remove renderer from GeoJSON options as it's not a valid property
+    if ('renderer' in geoJSONOptions) {
+      delete geoJSONOptions.renderer;
+    }
+    
+    // Create layer with corrected options
+    const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
+    
+    // After creation, apply SVG renderer to each layer
+    layer.eachLayer((l: any) => {
+      if (l && l.options) {
+        // Apply SVG renderer to the layer options
+        l.options.renderer = L.svg();
+        
+        // Ensure stroke is set to true for this layer
+        l.options.stroke = true;
+        l.options.weight = options.weight || 4;
+        l.options.opacity = 1;
+      }
+      
+      // Store SVG path data if available
+      if (drawing.svgPath && l._path) {
+        try {
+          console.log(`Setting SVG path data for drawing ${drawing.id}`);
+          l._path.setAttribute('d', drawing.svgPath);
+          
+          // Store the path data as a backup
+          l._path.setAttribute('data-original-path', drawing.svgPath);
+          
+          // Force the browser to acknowledge the path by triggering a reflow
+          l._path.getBoundingClientRect();
+        } catch (err) {
+          console.error('Error setting path data:', err);
+        }
+      }
+    });
+    
+    return layer;
+  } catch (error) {
+    console.error('Error creating drawing layer:', error);
     return null;
   }
 };
 
 /**
- * Add drawing attributes to a layer's DOM elements
+ * Adds drawing ID attributes to SVG paths in a layer
  */
-export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string) => {
+export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
+  if (!layer) return;
+
   try {
-    // For path layers, we can add attributes to the SVG path element
-    if (layer instanceof L.Path) {
-      const pathElement = layer.getElement();
-      if (pathElement) {
-        // Set multiple attributes for more reliable selection later
-        pathElement.setAttribute('data-drawing-id', drawingId);
-        pathElement.setAttribute('data-id', drawingId);
-        pathElement.id = `path-${drawingId}`;
-        pathElement.classList.add(`drawing-${drawingId}`);
-        
-        // Store the drawing ID on the DOM element for debugging
-        (pathElement as any).drawingId = drawingId;
+    // Check for SVG path element in the layer
+    if ((layer as any)._path) {
+      const path = (layer as any)._path;
+      console.log(`Setting data-drawing-id=${drawingId} on path element`);
+      
+      // Add multiple ways to identify this path
+      path.setAttribute('data-drawing-id', drawingId);
+      path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+      path.id = `drawing-path-${drawingId}`;
+      
+      // Add class for visible stroke
+      path.classList.add('visible-path-stroke');
+      
+      // Force browser to recognize the attribute by triggering a reflow
+      path.getBoundingClientRect();
+      
+      // Make sure we also add ID on the parent element if it exists
+      if (path.parentElement) {
+        path.parentElement.setAttribute('data-drawing-container', drawingId);
+        path.parentElement.id = `drawing-container-${drawingId}`;
       }
     }
-    
-    // Store drawing ID on the layer itself
-    (layer as any).drawingId = drawingId;
+
+    // If it's a feature group, process each layer
+    if (typeof (layer as any).eachLayer === 'function') {
+      (layer as any).eachLayer((subLayer: L.Layer) => {
+        if ((subLayer as any)._path) {
+          const path = (subLayer as any)._path;
+          console.log(`Setting data-drawing-id=${drawingId} on sub-path element`);
+          
+          // Add multiple ways to identify this path
+          path.setAttribute('data-drawing-id', drawingId);
+          path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+          path.id = `drawing-path-${drawingId}`;
+          path.classList.add('visible-path-stroke');
+          
+          path.getBoundingClientRect();
+          
+          // Make sure we also add ID on the parent element if it exists
+          if (path.parentElement) {
+            path.parentElement.setAttribute('data-drawing-container', drawingId);
+            path.parentElement.id = `drawing-container-${drawingId}`;
+          }
+        }
+      });
+    }
   } catch (err) {
-    console.error(`Error adding attributes to layer for drawing ${drawingId}:`, err);
+    console.error('Error adding drawing attributes to layer:', err);
   }
 };
+
+/**
+ * Checks if a drawing has a floor plan
+ */
+export const hasFloorPlan = checkFloorPlan;
