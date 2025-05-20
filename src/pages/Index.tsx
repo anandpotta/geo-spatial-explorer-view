@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import MapContent from '@/components/explorer/MapContent';
 import ExplorerSidebar from '@/components/explorer/ExplorerSidebar';
@@ -18,8 +17,13 @@ const Index = () => {
 
   const handleLocationSelect = (location: Location) => {
     // If user is actively drawing or marking, don't navigate away
-    if (isDrawingOrMarkingRef.current) {
-      console.log("User is currently drawing/marking, skipping location change");
+    if (isDrawingOrMarkingRef.current || stayAtCurrentPosition) {
+      console.log("User is currently drawing/marking or stayAtCurrentPosition is true, skipping location change");
+      toast({
+        title: "Action in progress",
+        description: "Please complete your current action before navigating",
+        duration: 3000,
+      });
       return;
     }
     
@@ -65,19 +69,44 @@ const Index = () => {
     
     const handleDrawingEnd = () => {
       isDrawingOrMarkingRef.current = false;
+      // Don't immediately reset stayAtCurrentPosition to prevent flickering
+      setTimeout(() => {
+        if (!isDrawingOrMarkingRef.current) {
+          console.log("Drawing/marking ended, resetting stayAtCurrentPosition");
+          setStayAtCurrentPosition(false);
+        }
+      }, 1000);
       console.log("Drawing/marking ended");
+    };
+    
+    const handleMarkerPlaced = () => {
+      isDrawingOrMarkingRef.current = true;
+      setStayAtCurrentPosition(true);
+      console.log("Marker placed, will stay at current position");
+    };
+    
+    const handleMarkerSaved = () => {
+      isDrawingOrMarkingRef.current = false;
+      // Keep the position for a bit longer after marker is saved
+      setTimeout(() => {
+        if (!isDrawingOrMarkingRef.current) {
+          console.log("Marker saved, resetting stayAtCurrentPosition");
+          setStayAtCurrentPosition(false);
+        }
+      }, 1000);
+      console.log("Marker saved");
     };
     
     window.addEventListener('drawingStart', handleDrawingStart);
     window.addEventListener('drawingEnd', handleDrawingEnd);
-    window.addEventListener('markerPlaced', handleDrawingStart);
-    window.addEventListener('markerSaved', handleDrawingEnd);
+    window.addEventListener('markerPlaced', handleMarkerPlaced);
+    window.addEventListener('markerSaved', handleMarkerSaved);
     
     return () => {
       window.removeEventListener('drawingStart', handleDrawingStart);
       window.removeEventListener('drawingEnd', handleDrawingEnd);
-      window.removeEventListener('markerPlaced', handleDrawingStart);
-      window.removeEventListener('markerSaved', handleDrawingEnd);
+      window.removeEventListener('markerPlaced', handleMarkerPlaced);
+      window.removeEventListener('markerSaved', handleMarkerSaved);
     };
   }, []);
 

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -31,6 +30,7 @@ const LeafletMap = ({
   stayAtCurrentPosition = false
 }: LeafletMapProps) => {
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
+  const [isMarkerActive, setIsMarkerActive] = useState(false);
   
   // Initialize Leaflet icons
   useEffect(() => {
@@ -48,10 +48,50 @@ const LeafletMap = ({
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
 
-  // Sync the stayAtCurrentPosition state with our component props
+  // Sync the stayAtCurrentPosition state with our component props and handle marker events
   useEffect(() => {
-    mapState.setStayAtCurrentPosition(stayAtCurrentPosition);
-  }, [stayAtCurrentPosition]);
+    mapState.setStayAtCurrentPosition(stayAtCurrentPosition || isMarkerActive);
+    
+    const handleMarkerPlaced = () => {
+      console.log("Marker placed event detected");
+      setIsMarkerActive(true);
+      mapState.setStayAtCurrentPosition(true);
+    };
+    
+    const handleMarkerSaved = () => {
+      console.log("Marker saved event detected");
+      // Keep the flag active for a short while to prevent jumping
+      setTimeout(() => {
+        setIsMarkerActive(false);
+      }, 500);
+    };
+    
+    const handleDrawingStart = () => {
+      console.log("Drawing start event detected");
+      setIsMarkerActive(true);
+      mapState.setStayAtCurrentPosition(true);
+    };
+    
+    const handleDrawingEnd = () => {
+      console.log("Drawing end event detected");
+      // Keep the flag active for a short while to prevent jumping
+      setTimeout(() => {
+        setIsMarkerActive(false);
+      }, 500);
+    };
+    
+    window.addEventListener('markerPlaced', handleMarkerPlaced);
+    window.addEventListener('markerSaved', handleMarkerSaved);
+    window.addEventListener('drawingStart', handleDrawingStart);
+    window.addEventListener('drawingEnd', handleDrawingEnd);
+    
+    return () => {
+      window.removeEventListener('markerPlaced', handleMarkerPlaced);
+      window.removeEventListener('markerSaved', handleMarkerSaved);
+      window.removeEventListener('drawingStart', handleDrawingStart);
+      window.removeEventListener('drawingEnd', handleDrawingEnd);
+    };
+  }, [stayAtCurrentPosition, mapState]);
 
   // Handle markers updates
   useEffect(() => {
@@ -69,11 +109,12 @@ const LeafletMap = ({
     };
   }, []);
 
-  // Handle selected location changes
+  // Handle selected location changes with improved position check
   useEffect(() => {
     if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
       // Only fly to the selected location if not staying at current position
-      if (!mapState.stayAtCurrentPosition) {
+      // and not currently placing a marker or drawing
+      if (!mapState.stayAtCurrentPosition && !isMarkerActive) {
         try {
           const container = mapRef.current.getContainer();
           if (container && document.body.contains(container)) {
@@ -90,7 +131,7 @@ const LeafletMap = ({
         console.log('Staying at current position, not flying to selected location');
       }
     }
-  }, [selectedLocation, isMapReady, isMapReferenceSet, mapState.stayAtCurrentPosition]);
+  }, [selectedLocation, isMapReady, isMapReferenceSet, mapState.stayAtCurrentPosition, isMarkerActive]);
 
   // Custom map reference handler that sets our local state
   const handleMapRefWrapper = (map: L.Map) => {

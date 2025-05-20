@@ -30,6 +30,8 @@ const MapViews: React.FC<MapViewsProps> = ({
   handleClearAll,
   stayAtCurrentPosition = false
 }) => {
+  console.log("MapViews rendering with stayAtCurrentPosition:", stayAtCurrentPosition);
+  
   return (
     <>
       {currentView === 'cesium' && (

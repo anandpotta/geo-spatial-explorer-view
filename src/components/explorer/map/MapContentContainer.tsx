@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import DrawingTools from '../../DrawingTools';
@@ -33,6 +32,11 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const previousViewRef = useRef<string | null>(null);
+  
+  // Log the stayAtCurrentPosition value for debugging
+  useEffect(() => {
+    console.log("MapContentContainer stayAtCurrentPosition:", stayAtCurrentPosition);
+  }, [stayAtCurrentPosition]);
   
   // Reset map instance when view changes
   useEffect(() => {

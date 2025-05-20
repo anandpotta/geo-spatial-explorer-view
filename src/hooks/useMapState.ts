@@ -145,6 +145,9 @@ export function useMapState(selectedLocation?: Location) {
     // Set this flag to prevent navigation back to initial position
     setStayAtCurrentPosition(true);
     
+    // Dispatch marker saved event
+    window.dispatchEvent(new CustomEvent('markerSaved'));
+    
     toast.success("Location saved successfully");
     
     // Ensure drawings remain visible by dispatching a custom event

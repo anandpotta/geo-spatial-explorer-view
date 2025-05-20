@@ -17,6 +17,9 @@ export function useMarkerHandlers(mapState: any) {
       const defaultName = mapState.selectedLocation?.label || 'New Building';
       mapState.setMarkerName(defaultName);
       
+      // Dispatch marker placed event
+      window.dispatchEvent(new CustomEvent('markerPlaced'));
+      
       // Prevent automatic navigation by setting stayAtCurrentPosition flag
       mapState.setStayAtCurrentPosition(true);
       
@@ -33,6 +36,9 @@ export function useMarkerHandlers(mapState: any) {
   const handleShapeCreated = (shape: any) => {
     // Set the flag to prevent automatic navigation
     mapState.setStayAtCurrentPosition(true);
+    
+    // Dispatch drawing start event
+    window.dispatchEvent(new CustomEvent('drawingStart'));
     
     if (shape.type === 'marker') {
       // Ensure position exists and is valid before accessing it
