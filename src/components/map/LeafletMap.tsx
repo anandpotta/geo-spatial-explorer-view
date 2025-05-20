@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, FeatureGroup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -18,7 +19,6 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import { toast } from 'sonner';
 import FloorPlanView from './FloorPlanView';
 import LayerManager from './drawing/LayerManager';
-import ExportButton from './ExportButton';
 
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
@@ -291,9 +291,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             <MapEventsComponent />
             <CoordinateTracker />
           </MapContainer>
-          
-          {/* Add Export Button */}
-          <ExportButton drawings={drawings} markers={markers} />
         </div>
       )}
     </div>
