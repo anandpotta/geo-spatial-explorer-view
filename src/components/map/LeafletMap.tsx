@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, FeatureGroup, useMapEvents, AttributionControl } from 'react-leaflet';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, FeatureGroup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import { DrawingData } from '@/utils/drawing-utils';
@@ -24,7 +25,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface LeafletMapProps {
-  selectedLocation?: { x: number, y: number };
+  selectedLocation?: { x: number, y: number, label?: string };
   onMapReady: (map: any) => void;
   activeTool: string | null;
   onClearAll?: () => void;
@@ -79,13 +80,16 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   }, []);
   
   // Event handlers using leaflet hook
-  useMapEvents({
-    click: (e) => {
-      if (isMarkerActive && tempMarker === null) {
-        handleMapClick(e);
+  const MapEventsComponent = () => {
+    useMapEvents({
+      click: (e) => {
+        if (isMarkerActive && tempMarker === null) {
+          handleMapClick(e);
+        }
       }
-    }
-  });
+    });
+    return null;
+  };
   
   // Function to handle marker creation
   const handleCreateMarker = () => {
@@ -188,9 +192,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   }, [mapRef.current]);
   
-  // Update the fly to logic in the LeafletMap.tsx component
-  // Look for the useEffect block that handles location changes and add the stayAtCurrentPosition check:
-  
   // Update the useEffect block that watches for selectedLocation changes:
   useEffect(() => {
     if (
@@ -200,7 +201,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       !isMarkerActive && 
       !stayAtCurrentPosition // Don't navigate when stayAtCurrentPosition is true
     ) {
-      console.log(`Flying to selected location: ${selectedLocation.label}`);
+      // Use optional chaining to safely access the label property
+      console.log(`Flying to selected location: ${selectedLocation.label || 'Unknown location'}`);
       try {
         mapRef.current.flyTo(
           [selectedLocation.y, selectedLocation.x],
@@ -213,6 +215,22 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   }, [selectedLocation, tempMarker, isMarkerActive, stayAtCurrentPosition]);
   
+  // Building coordinates display
+  const [currentCoords, setCurrentCoords] = useState<{ lat: number, lng: number } | null>(null);
+  
+  // Map events for coordinate display
+  const CoordinateTracker = () => {
+    useMapEvents({
+      mousemove: (e) => {
+        setCurrentCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+      },
+      mouseout: () => {
+        setCurrentCoords(null);
+      }
+    });
+    return null;
+  };
+  
   return (
     <div className="w-full h-full relative">
       {showFloorPlanView && selectedDrawing ? (
@@ -223,16 +241,32 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       ) : (
         <div className="w-full h-full">
           <MapContainer
-            position={selectedLocation ? [selectedLocation.y, selectedLocation.x] : [0, 0]}
+            center={selectedLocation ? [selectedLocation.y, selectedLocation.x] : [0, 0]}
             zoom={2}
-            mapKey={mapInstanceKey.toString()}
+            key={mapInstanceKey.toString()}
+            ref={handleSetMapRef}
+            style={{ width: '100%', height: '100%' }}
           >
+            {/* Coordinate display */}
+            {currentCoords && (
+              <div className="absolute bottom-8 left-8 bg-white/80 backdrop-blur-sm p-2 rounded-md shadow-md z-50">
+                <p className="text-sm font-mono">
+                  {`Lat: ${currentCoords.lat.toFixed(6)} | Lng: ${currentCoords.lng.toFixed(6)}`}
+                </p>
+              </div>
+            )}
+            
             <div className="leaflet-top leaflet-left">
               <div className="leaflet-control-zoom leaflet-bar">
                 <a className="leaflet-control-zoom-in" href="#" title="Zoom in" role="button" aria-label="Zoom in">+</a>
                 <a className="leaflet-control-zoom-out" href="#" title="Zoom out" role="button" aria-label="Zoom out">−</a>
               </div>
             </div>
+            
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
             
             <LayerManager
               featureGroup={featureGroupRef.current!}
@@ -253,6 +287,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               setMarkerName={setMarkerName}
               setMarkerType={setMarkerType}
             />
+            
+            <MapEventsComponent />
+            <CoordinateTracker />
           </MapContainer>
         </div>
       )}
