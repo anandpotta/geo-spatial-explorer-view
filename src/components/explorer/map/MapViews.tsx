@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../map/LeafletMap';
 import CesiumView from '../../map/CesiumMapLoading';
@@ -32,10 +32,14 @@ const MapViews: React.FC<MapViewsProps> = ({
 }) => {
   console.log("MapViews rendering with stayAtCurrentPosition:", stayAtCurrentPosition);
   
+  // Create unique IDs for each view type to ensure we don't reuse containers
+  const leafletKeyRef = useRef<string>(`leaflet-${mapKey}-${Date.now()}`);
+  const cesiumKeyRef = useRef<string>(`cesium-${mapKey}-${Date.now()}`);
+  
   return (
     <>
       {currentView === 'cesium' && (
-        <div key={`cesium-${mapKey}`} className="w-full h-full">
+        <div key={cesiumKeyRef.current} className="w-full h-full">
           <ThreeGlobeMap
             selectedLocation={selectedLocation}
             onViewerReady={handleCesiumViewerRef}
@@ -46,7 +50,7 @@ const MapViews: React.FC<MapViewsProps> = ({
       )}
       
       {currentView === 'leaflet' && (
-        <div key={`leaflet-${mapKey}`} className="w-full h-full">
+        <div key={leafletKeyRef.current} className="w-full h-full">
           <LeafletMap 
             selectedLocation={selectedLocation}
             onMapReady={handleLeafletMapRef}

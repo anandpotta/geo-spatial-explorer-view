@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
@@ -15,6 +14,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const recoveryAttemptRef = useRef(0);
   const initialFlyComplete = useRef(false);
   const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mapContainerIdRef = useRef<string>(`map-container-${Date.now()}`);
   
   useEffect(() => {
     setupLeafletIcons();
@@ -35,7 +35,11 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     // Reset map ready state when key changes
     setIsMapReady(false);
     
+    // Generate a new container ID when the key changes
+    mapContainerIdRef.current = `map-container-${Date.now()}`;
+    
     return () => {
+      // Clean up the map reference thoroughly when unmounting
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
         
@@ -45,6 +49,19 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
               const container = mapRef.current.getContainer();
               if (container && document.body.contains(container)) {
                 console.log('Map container exists and is attached - removing map instance');
+                
+                // Remove all layers first to prevent memory leaks
+                mapRef.current.eachLayer(layer => {
+                  if (layer) {
+                    try {
+                      mapRef.current?.removeLayer(layer);
+                    } catch (e) {
+                      console.warn('Error removing layer:', e);
+                    }
+                  }
+                });
+                
+                // Now remove the map
                 mapRef.current.remove();
               }
             } catch (e) {
@@ -55,6 +72,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
           console.error('Error cleaning up map:', err);
         }
         
+        // Set mapRef to null to ensure it's fully cleaned up
         mapRef.current = null;
         mapAttachedRef.current = false;
         setIsMapReady(false);
@@ -137,8 +155,21 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     console.log('Map reference provided');
     
     if (mapRef.current) {
-      console.log('Map reference already exists, skipping assignment');
-      return;
+      console.log('Map reference already exists, checking if it is the same instance');
+      
+      // Check if this is the same map instance - if so, we can just keep it
+      if (mapRef.current === map) {
+        console.log('Same map instance, keeping existing reference');
+        return;
+      }
+      
+      // If it's a different instance, clean up the old one first
+      console.log('Different map instance, cleaning up old one first');
+      try {
+        mapRef.current.remove();
+      } catch (e) {
+        console.warn('Error removing old map instance:', e);
+      }
     }
     
     try {
@@ -187,6 +218,26 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     }
   };
 
+  // Add a function to force reset the map when needed
+  const resetMap = () => {
+    console.log('Forcing map reset');
+    
+    // Clean up existing map instance
+    if (mapRef.current) {
+      try {
+        mapRef.current.remove();
+      } catch (e) {
+        console.warn('Error removing map during reset:', e);
+      }
+      mapRef.current = null;
+    }
+    
+    // Generate new key to force remount
+    setMapInstanceKey(Date.now());
+    setIsMapReady(false);
+    mapAttachedRef.current = false;
+  };
+
   return {
     mapRef,
     mapInstanceKey,
@@ -194,5 +245,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady,
     setMapInstanceKey,
     handleSetMapRef,
+    resetMap,
+    mapContainerId: mapContainerIdRef.current,
   };
 }

@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { useMapState } from '@/hooks/useMapState';
@@ -46,10 +46,17 @@ const LeafletMap = ({
     mapRef, 
     mapInstanceKey, 
     isMapReady, 
-    handleSetMapRef 
+    handleSetMapRef,
+    resetMap 
   } = useMapInitialization(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
+
+  // Handle map errors and force reset if needed
+  const handleMapError = useCallback(() => {
+    console.log('Map error detected, forcing reset');
+    resetMap();
+  }, [resetMap]);
 
   // Sync the stayAtCurrentPosition state with our component props and handle marker events
   useEffect(() => {
@@ -88,6 +95,9 @@ const LeafletMap = ({
     window.addEventListener('drawingStart', handleDrawingStart);
     window.addEventListener('drawingEnd', handleDrawingEnd);
     
+    // Listen for map error events
+    window.addEventListener('mapError', handleMapError);
+    
     // Listen for clear all events
     const handleClearAllEvent = () => {
       console.log("Clear all event detected");
@@ -106,9 +116,10 @@ const LeafletMap = ({
       window.removeEventListener('markerSaved', handleMarkerSaved);
       window.removeEventListener('drawingStart', handleDrawingStart);
       window.removeEventListener('drawingEnd', handleDrawingEnd);
+      window.removeEventListener('mapError', handleMapError);
       window.removeEventListener('clearAllDrawings', handleClearAllEvent);
     };
-  }, [stayAtCurrentPosition, mapState]);
+  }, [stayAtCurrentPosition, mapState, handleMapError, resetMap]);
 
   // Handle markers updates
   useEffect(() => {
@@ -145,6 +156,8 @@ const LeafletMap = ({
           }
         } catch (err) {
           console.error('Error flying to location:', err);
+          // If there's an error with the map, reset it
+          window.dispatchEvent(new Event('mapError'));
         }
       } else {
         console.log('Staying at current position, not flying to selected location');
@@ -232,9 +245,11 @@ const LeafletMap = ({
 
 export default LeafletMap;
 
-// Add feature group to global window object
+// Add feature group to window object and map error handling ability
 declare global {
   interface Window {
     featureGroup?: L.FeatureGroup;
+    tempMarkerPositionUpdate?: (position: [number, number]) => void;
+    mapError?: Event;
   }
 }

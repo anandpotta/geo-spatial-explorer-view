@@ -56,7 +56,9 @@ const MapView = ({
   onClearAll,
   isMapReady = false
 }: MapViewProps) => {
-  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
+  // Generate a unique map key each time this component renders
+  const uniqueMapId = useRef<string>(`map-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+  const [mapKey, setMapKey] = useState<string>(uniqueMapId.current);
   const drawingControlsRef = useRef(null);
   const {
     showFloorPlan,

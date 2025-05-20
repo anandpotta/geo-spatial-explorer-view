@@ -39,6 +39,14 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
       // Wait until the map is fully initialized before calling onMapReady
       const timeout = setTimeout(() => {
         try {
+          // Map error handling - check if map container is valid
+          if (!map || !map.getContainer || !map.getContainer()) {
+            console.error('Map or container is invalid');
+            // Dispatch error event for parent components to handle
+            window.dispatchEvent(new Event('mapError'));
+            return;
+          }
+          
           // Check if map container still exists and is attached to DOM
           if (map && map.getContainer() && document.body.contains(map.getContainer())) {
             // Mark as called immediately to prevent duplicate calls
@@ -92,9 +100,13 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
                     hasCalledOnReady.current = true;
                     onMapReady(map);
                     map.invalidateSize(true);
+                  } else {
+                    // Map container still not valid after retry
+                    window.dispatchEvent(new Event('mapError'));
                   }
                 } catch (e) {
-                  console.warn('Failed to initialize map on retry');
+                  console.warn('Failed to initialize map on retry:', e);
+                  window.dispatchEvent(new Event('mapError'));
                 }
               }
             }, 1000);
@@ -103,6 +115,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         } catch (err) {
           console.error('Error in map initialization:', err);
           toast.error("Map initialization issue. Please refresh the page.");
+          window.dispatchEvent(new Event('mapError'));
         }
       }, 250);
       
