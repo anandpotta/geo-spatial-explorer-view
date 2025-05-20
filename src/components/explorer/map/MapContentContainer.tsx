@@ -1,15 +1,15 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import DrawingTools from '../../DrawingTools';
-import LocationSearch from '../../LocationSearch';
-import { zoomIn, zoomOut, resetCamera } from '@/utils/threejs-camera';
 import MapViews from './MapViews';
 import MapTools from './MapTools';
 import DrawingToolHandler from './DrawingToolHandler';
-import { toast } from '@/components/ui/use-toast';
-import L from 'leaflet';
-import { ExtendedLayer, LeafletMapInternal } from '@/utils/leaflet-type-utils';
+import LocationSearchContainer from './LocationSearchContainer';
+import { useMapReferences } from '@/hooks/useMapReferences';
+import { useMapViewTransition } from '@/hooks/useMapViewTransition';
+import { useMapTools } from '@/hooks/useMapTools';
+import { useDrawingToolState } from '@/hooks/useDrawingToolState';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -28,165 +28,16 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   onLocationSelect,
   stayAtCurrentPosition = false
 }) => {
-  const cesiumViewerRef = useRef<any>(null);
-  const leafletMapRef = useRef<LeafletMapInternal>(null);
-  const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [mapKey, setMapKey] = useState<number>(Date.now());
-  const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
-  const previousViewRef = useRef<string | null>(null);
+  // Use custom hooks to organize functionality
+  const { cesiumViewerRef, leafletMapRef, handleCesiumViewerRef, handleLeafletMapRef } = useMapReferences();
+  const { mapKey, handleMapReady } = useMapViewTransition(currentView);
+  const { handleZoomIn, handleZoomOut, handleResetView } = useMapTools(currentView, cesiumViewerRef, leafletMapRef);
+  const { activeTool, setActiveTool, handleToolSelect, handleClearAll } = useDrawingToolState();
   
   // Log the stayAtCurrentPosition value for debugging
-  useEffect(() => {
+  React.useEffect(() => {
     console.log("MapContentContainer stayAtCurrentPosition:", stayAtCurrentPosition);
   }, [stayAtCurrentPosition]);
-  
-  // Reset map instance when view changes
-  useEffect(() => {
-    // Only regenerate key when view type actually changes
-    if (previousViewRef.current !== currentView) {
-      console.log(`View changed from ${previousViewRef.current} to ${currentView}, regenerating map key`);
-      setMapKey(Date.now());
-      previousViewRef.current = currentView;
-      
-      // Set transition flag
-      setViewTransitionInProgress(true);
-      const timer = setTimeout(() => {
-        setViewTransitionInProgress(false);
-        setMapReady(false);
-      }, 1000); // Allow time for transition to complete
-      
-      return () => clearTimeout(timer);
-    }
-  }, [currentView]);
-
-  // Dispatch drawing/marking events
-  useEffect(() => {
-    if (activeTool) {
-      console.log("Drawing tool activated:", activeTool);
-      window.dispatchEvent(new CustomEvent('drawingStart'));
-    } else {
-      window.dispatchEvent(new CustomEvent('drawingEnd'));
-    }
-  }, [activeTool]);
-
-  const handleCesiumViewerRef = (viewer: any) => {
-    // Only update if not already set or explicitly changing views
-    if (!cesiumViewerRef.current || previousViewRef.current !== 'cesium') {
-      console.log('Setting Cesium viewer reference');
-      cesiumViewerRef.current = viewer;
-      
-      if (currentView === 'cesium') {
-        setTimeout(() => {
-          setMapReady(true);
-          
-          // When 3D globe is ready after transition, notify user
-          toast({
-            title: "3D Globe Ready",
-            description: "Interactive 3D globe view has been loaded.",
-            variant: "default",
-          });
-        }, 500);
-      }
-    }
-  };
-
-  const handleLeafletMapRef = (map: any) => {
-    // Only update if not already set or explicitly changing views
-    if (!leafletMapRef.current || previousViewRef.current !== 'leaflet') {
-      console.log('Setting Leaflet map reference');
-      leafletMapRef.current = map;
-      
-      // When Leaflet map is ready after transition, notify user
-      if (currentView === 'leaflet' && !viewTransitionInProgress) {
-        setTimeout(() => {
-          setMapReady(true);
-          
-          toast({
-            title: "Map View Ready",
-            description: "Tiled map view has been loaded successfully.",
-            variant: "default",
-          });
-        }, 500);
-      }
-    }
-  };
-
-  const handleMapReadyInternal = () => {
-    setMapReady(true);
-    onMapReady();
-  };
-
-  const handleZoomIn = () => {
-    if (currentView === 'cesium' && cesiumViewerRef.current) {
-      zoomIn(cesiumViewerRef.current);
-    } else if (currentView === 'leaflet' && leafletMapRef.current) {
-      try {
-        leafletMapRef.current.setZoom(leafletMapRef.current.getZoom() + 1);
-      } catch (err) {
-        console.error('Error zooming in on leaflet map:', err);
-      }
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (currentView === 'cesium' && cesiumViewerRef.current) {
-      zoomOut(cesiumViewerRef.current);
-    } else if (currentView === 'leaflet' && leafletMapRef.current) {
-      try {
-        leafletMapRef.current.setZoom(leafletMapRef.current.getZoom() - 1);
-      } catch (err) {
-        console.error('Error zooming out on leaflet map:', err);
-      }
-    }
-  };
-
-  const handleResetView = () => {
-    if (currentView === 'cesium' && cesiumViewerRef.current) {
-      resetCamera(cesiumViewerRef.current);
-    } else if (currentView === 'leaflet' && leafletMapRef.current) {
-      try {
-        leafletMapRef.current.setView([0, 0], 2);
-      } catch (err) {
-        console.error('Error resetting leaflet map view:', err);
-      }
-    }
-  };
-
-  const handleToolSelect = (tool: string) => {
-    console.log(`Tool selected: ${tool}`);
-    
-    // Dispatch appropriate events based on tool selection
-    if (tool && tool !== activeTool) {
-      window.dispatchEvent(new CustomEvent('drawingStart'));
-    } else if (!tool && activeTool) {
-      window.dispatchEvent(new CustomEvent('drawingEnd'));
-    }
-    
-    setActiveTool(tool === activeTool ? null : tool);
-  };
-
-  const handleClearAll = () => {
-    if (currentView === 'leaflet' && leafletMapRef.current) {
-      try {
-        const layers = leafletMapRef.current._layers;
-        if (layers) {
-          Object.keys(layers).forEach(layerId => {
-            const layer = layers[layerId] as L.Layer;
-            // Type check before using extended properties
-            if (layer && 'options' in layer) {
-              const extLayer = layer as unknown as ExtendedLayer;
-              if (extLayer.options && (extLayer.options.isDrawn || extLayer.options.id)) {
-                leafletMapRef.current.removeLayer(layer);
-              }
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Error during clear all operation:', err);
-      }
-    }
-  };
 
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
@@ -195,12 +46,12 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           currentView={currentView}
           mapKey={mapKey}
           selectedLocation={selectedLocation}
-          onMapReady={handleMapReadyInternal}
+          onMapReady={() => handleMapReady(onMapReady)}
           onFlyComplete={onFlyComplete}
           handleCesiumViewerRef={handleCesiumViewerRef}
           handleLeafletMapRef={handleLeafletMapRef}
           activeTool={activeTool}
-          handleClearAll={handleClearAll}
+          handleClearAll={() => handleClearAll(leafletMapRef)}
           stayAtCurrentPosition={stayAtCurrentPosition}
         />
         
@@ -209,7 +60,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
-          onClearAll={handleClearAll}
+          onClearAll={() => handleClearAll(leafletMapRef)}
         />
         
         <DrawingToolHandler
@@ -230,14 +81,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         />
       </div>
       
-      <div 
-        className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
-        style={{ 
-          maxWidth: '400px',
-        }}
-      >
-        <LocationSearch onLocationSelect={onLocationSelect} />
-      </div>
+      <LocationSearchContainer onLocationSelect={onLocationSelect} />
     </div>
   );
 };
