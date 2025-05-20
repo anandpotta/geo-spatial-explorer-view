@@ -34,10 +34,10 @@ export function useThreeRenderer(
       }
       
       // If we already have a canvas in the container, remove it
-      if (canvasElementRef.current && canvasElementRef.current.parentNode) {
-        canvasElementRef.current.parentNode.removeChild(canvasElementRef.current);
-        canvasElementRef.current = null;
-      }
+      const existingCanvases = containerRef.current.querySelectorAll('canvas');
+      existingCanvases.forEach(existingCanvas => {
+        existingCanvas.parentNode?.removeChild(existingCanvas);
+      });
       
       // Create renderer with enhanced settings for better quality
       const renderer = new THREE.WebGLRenderer({
@@ -57,20 +57,12 @@ export function useThreeRenderer(
       // Set size with valid dimensions
       renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
-      renderer.outputEncoding = THREE.sRGBEncoding;
       
       console.log(`Renderer created with dimensions: ${width}x${height}`);
       
       // Get the canvas element from the renderer
       const canvas = renderer.domElement;
-      
-      // Clear any existing canvas elements from the container
-      const existingCanvases = containerRef.current.querySelectorAll('canvas');
-      existingCanvases.forEach(existingCanvas => {
-        if (existingCanvas !== canvas) {
-          existingCanvas.parentNode?.removeChild(existingCanvas);
-        }
-      });
+      canvasElementRef.current = canvas;
       
       // Append renderer to container
       try {
@@ -80,9 +72,7 @@ export function useThreeRenderer(
         console.error("Error appending canvas to container:", err);
       }
       
-      canvasElementRef.current = canvas;
       rendererRef.current = renderer;
-      
       return renderer;
     } catch (error) {
       console.error("Failed to initialize WebGL renderer:", error);

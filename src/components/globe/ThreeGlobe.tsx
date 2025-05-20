@@ -22,11 +22,13 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const [hasError, setHasError] = useState(false);
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
+  const onReadyCalledRef = useRef(false);
   
   // Initialize globe with proper error handling
   const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized && !initializationAttemptedRef.current) {
+    if (!isInitialized && !initializationAttemptedRef.current && !onReadyCalledRef.current) {
       initializationAttemptedRef.current = true;
+      onReadyCalledRef.current = true;
       setIsInitialized(true);
       console.log("ThreeGlobe: Globe initialized successfully");
       
@@ -44,16 +46,16 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   // Notify on initialization failure
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (!isInitialized && containerRef.current) {
+      if (!isInitialized && containerRef.current && !onReadyCalledRef.current) {
         console.warn("ThreeGlobe: Globe initialization timed out, forcing ready state");
         setIsInitialized(true);
+        onReadyCalledRef.current = true;
         
-        if (onMapReady && !initializationAttemptedRef.current) {
-          initializationAttemptedRef.current = true;
+        if (onMapReady) {
           onMapReady(globeAPI);
         }
       }
-    }, 5000); // 5 second timeout
+    }, 3000); // 3 second timeout
     
     return () => clearTimeout(timeout);
   }, [isInitialized, onMapReady, globeAPI]);
@@ -63,10 +65,11 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     if (!globeAPI || !selectedLocation) return;
     
     // Force initialization if needed when location is selected
-    if (!isInitialized && selectedLocation && !initializationAttemptedRef.current) {
+    if (!isInitialized && selectedLocation && !initializationAttemptedRef.current && !onReadyCalledRef.current) {
       console.log("ThreeGlobe: Forcing initialization for location selection");
       setIsInitialized(true);
       initializationAttemptedRef.current = true;
+      onReadyCalledRef.current = true;
       
       if (onMapReady) {
         onMapReady(globeAPI);
@@ -131,6 +134,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     return () => {
       lastFlyLocationRef.current = null;
       initializationAttemptedRef.current = false;
+      onReadyCalledRef.current = false;
     };
   }, []);
   

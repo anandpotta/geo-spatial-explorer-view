@@ -103,7 +103,12 @@ export function useThreeScene(
     
     // Make sure the canvas element is added to the container
     if (canvasElementRef.current && !containerRef.current.contains(canvasElementRef.current)) {
-      containerRef.current.appendChild(canvasElementRef.current);
+      try {
+        containerRef.current.appendChild(canvasElementRef.current);
+        console.log("Canvas element added to container");
+      } catch (err) {
+        console.error("Error appending canvas to container:", err);
+      }
     }
     
     // Create controls only if we have both camera and canvas
@@ -119,6 +124,7 @@ export function useThreeScene(
     // Initial render to make sure something is visible
     if (renderer && camera && scene) {
       renderer.render(scene, camera);
+      console.log("Initial render completed");
     }
     
     console.log("Three.js scene initialized with natural colors settings");

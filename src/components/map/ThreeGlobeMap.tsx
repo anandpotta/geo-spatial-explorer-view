@@ -24,6 +24,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recoveryAttemptsRef = useRef(0);
+  const onMapReadyCalledRef = useRef(false);
   
   // Add a component mount effect to debug
   useEffect(() => {
@@ -31,11 +32,15 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     
     // Force initialization if it doesn't happen naturally
     initializedTimeoutRef.current = setTimeout(() => {
-      if (!viewerInitializedRef.current && onMapReady) {
+      if (!viewerInitializedRef.current && !onMapReadyCalledRef.current) {
         console.log("Forcing globe initialization after timeout");
         viewerInitializedRef.current = true;
+        onMapReadyCalledRef.current = true;
         setIsLoading(false);
-        onMapReady(globeInstanceRef.current);
+        
+        if (onMapReady) {
+          onMapReady(globeInstanceRef.current);
+        }
       }
     }, 3000);
     
@@ -48,6 +53,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         clearTimeout(loadingTimeoutRef.current);
       }
       viewerInitializedRef.current = false;
+      onMapReadyCalledRef.current = false;
       lastLocationRef.current = null;
       globeInstanceRef.current = null;
     };
@@ -74,9 +80,13 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         console.log("Forcing loading state to end after timeout");
         setIsLoading(false);
         
-        if (!viewerInitializedRef.current && onMapReady) {
+        if (!viewerInitializedRef.current && !onMapReadyCalledRef.current) {
           viewerInitializedRef.current = true;
-          onMapReady(globeInstanceRef.current);
+          onMapReadyCalledRef.current = true;
+          
+          if (onMapReady) {
+            onMapReady(globeInstanceRef.current);
+          }
         }
       }
     }, 5000); // 5 seconds timeout
@@ -105,13 +115,14 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   
   // Handle map ready state with more reliable initialization
   const handleMapReady = (viewer?: any) => {
-    if (viewerInitializedRef.current) {
+    if (viewerInitializedRef.current || onMapReadyCalledRef.current) {
       console.log('Globe is already initialized, skipping duplicate ready event');
       return;
     }
     
     console.log("ThreeGlobeMap: Globe is ready");
     viewerInitializedRef.current = true;
+    onMapReadyCalledRef.current = true;
     setIsLoading(false);
     
     if (viewer) {
@@ -141,6 +152,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     console.error("Globe error:", error);
     setMapError(error.message || "Failed to initialize 3D globe");
     setIsLoading(false); // End loading state on error
+    
     toast({
       title: "Globe Error",
       description: "Failed to initialize 3D globe. Trying to recover...",
