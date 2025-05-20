@@ -64,15 +64,22 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
     }
 
     // Get the map instance from the featureGroup
-    if (featureGroup && featureGroup.getLayer && !mapRef.current) {
+    if (featureGroup && !mapRef.current) {
       try {
+        // Use type assertion to safely access protected properties
         const firstLayer = featureGroup.getLayers()[0];
-        if (firstLayer && firstLayer.getMap) {
-          mapRef.current = firstLayer.getMap();
-        } else {
-          // Try to find map from the feature group itself
-          if (featureGroup._map) {
-            mapRef.current = featureGroup._map;
+        
+        // Access protected _map property through type assertion
+        const anyFeatureGroup = featureGroup as any;
+        if (anyFeatureGroup._map) {
+          mapRef.current = anyFeatureGroup._map;
+          console.log("Map found for draw tools via feature group");
+        } else if (firstLayer) {
+          // Try to get map from first layer if available
+          const anyFirstLayer = firstLayer as any;
+          if (anyFirstLayer._map) {
+            mapRef.current = anyFirstLayer._map;
+            console.log("Map found for draw tools via first layer");
           }
         }
 
@@ -129,7 +136,17 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
   }, [isClearDialogOpen]);
 
   // Check if the map is ready before rendering EditControl
-  const isMapReady = mapRef.current && mapRef.current._container && document.body.contains(mapRef.current._container);
+  const isMapReady = (() => {
+    if (!mapRef.current) return false;
+    
+    // Use getContainer method instead of _container
+    try {
+      const container = mapRef.current.getContainer();
+      return container && document.body.contains(container);
+    } catch (e) {
+      return false;
+    }
+  })();
 
   return (
     <>

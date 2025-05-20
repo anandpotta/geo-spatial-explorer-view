@@ -27,8 +27,9 @@ const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
       const checkFeatureGroup = () => {
         if (!isMountedRef.current) return;
         
-        // Check if the feature group has a map
-        if (!featureGroup._map) {
+        // Check if the feature group has a map using type assertion to access protected property
+        const featureGroupAny = featureGroup as any;
+        if (!featureGroupAny._map) {
           console.warn("Feature group does not have a map attached");
         } else {
           console.log("Feature group has a valid map attached");

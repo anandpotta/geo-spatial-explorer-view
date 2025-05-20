@@ -20,8 +20,8 @@ export interface LeafletMapInternal extends L.Map {
   };
 }
 
-// Define interface for extended layer properties
-export interface ExtendedLayer extends L.Layer {
+// Define type for extended layer properties instead of extending the Layer interface
+export type ExtendedLayer = L.Layer & {
   options?: {
     isDrawn?: boolean;
     id?: string;
@@ -30,7 +30,7 @@ export interface ExtendedLayer extends L.Layer {
   _path?: SVGPathElement;
   _map?: L.Map;
   _leaflet_id?: number;
-}
+};
 
 /**
  * Checks if a map object is valid and ready for use
@@ -42,16 +42,16 @@ export function isMapValid(map: any): boolean {
   
   try {
     // Check if map has essential properties
-    if (!map._container || !map._leaflet_id) return false;
+    if (!map.getContainer || typeof map.getContainer !== 'function') return false;
     
-    // Check if container is in DOM
-    if (map._container && !document.body.contains(map._container)) return false;
+    const container = map.getContainer();
+    if (!container || !document.body.contains(container)) return false;
     
     // Check if map has been loaded
-    if (typeof map._loaded !== 'undefined' && map._loaded === false) return false;
+    const internalMap = map as LeafletMapInternal;
+    if (typeof internalMap._loaded !== 'undefined' && internalMap._loaded === false) return false;
     
     // Check if critical panes exist
-    const internalMap = map as LeafletMapInternal;
     if (!internalMap._panes || !internalMap._panes.mapPane) return false;
     
     return true;
@@ -70,17 +70,23 @@ export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
   if (!layer) return null;
   
   try {
+    // Cast to any to access protected properties safely
+    const extendedLayer = layer as any;
+    
     // Try to access map directly
-    const extendedLayer = layer as ExtendedLayer;
-    if (extendedLayer._map) return extendedLayer._map;
+    if (extendedLayer._map) {
+      return extendedLayer._map;
+    }
     
     // If it's a feature group, try to get map from first layer
     if ('getLayers' in layer) {
       const featureGroup = layer as L.FeatureGroup;
       const layers = featureGroup.getLayers();
       if (layers.length > 0) {
-        const firstLayer = layers[0] as ExtendedLayer;
-        if (firstLayer._map) return firstLayer._map;
+        const firstLayer = layers[0] as any;
+        if (firstLayer._map) {
+          return firstLayer._map;
+        }
       }
     }
     
