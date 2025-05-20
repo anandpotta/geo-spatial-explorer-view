@@ -114,7 +114,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenReady={(e) => {
+        whenReady={(map: any) => {
           // Mark container with map instance ID using e.target
           if (containerRef.current) {
             // Set a timestamp as instance ID since we can't access the internal _leaflet_id safely
@@ -122,8 +122,8 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
             // Mark this as the active container
             containerRef.current.setAttribute('data-active', 'true');
             containerRef.current.setAttribute('data-initialized', 'true');
-            if (e.target && e.target._container) {
-              e.target._container.setAttribute('data-leaflet-container', uniqueIdRef.current);
+            if (map.target && map.target._container) {
+              map.target._container.setAttribute('data-leaflet-container', uniqueIdRef.current);
             }
           }
         }}

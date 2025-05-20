@@ -3,23 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { toast } from 'sonner';
+import { LeafletMapInternal } from '@/utils/leaflet-type-utils';
 
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
   mapKey?: string;
 }
 
-// Define interface for internal map properties not exposed in TypeScript definitions
-interface LeafletMapInternal extends L.Map {
-  _panes?: {
-    mapPane?: {
-      _leaflet_pos?: any;
-    };
-  };
-}
-
 const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => {
-  const map = useMap();
+  const map = useMap() as LeafletMapInternal; // Cast to internal type to access private properties
   const hasCalledOnReady = useRef(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const [isStable, setIsStable] = useState(false);
@@ -100,6 +92,9 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
           // Check if container has already been marked as used by another instance
           if (container.getAttribute('data-in-use') === 'true') {
             const usedByMapId = container.getAttribute('data-used-by-map-id') || '';
+            // Cast map to internal type to safely access _leaflet_id
+            const mapId = (map as LeafletMapInternal)._leaflet_id?.toString() || '';
+            
             if (usedByMapId !== mapKey) {
               console.error(`Map container is being reused by another instance with key ${usedByMapId}`);
               window.dispatchEvent(new Event('mapError'));
@@ -145,7 +140,7 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
             
             // Just one additional invalidation after a reasonable delay
             const additionalTimeout = setTimeout(() => {
-              if (map && !map._leaflet_id) { // Check if map still exists and isn't removed
+              if (map && !(map as LeafletMapInternal)._leaflet_id) { // Check if map still exists and isn't removed
                 try {
                   map.invalidateSize(true);
                   console.log(`Final map ${mapKey} invalidation completed`);
