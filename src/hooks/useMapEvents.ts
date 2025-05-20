@@ -53,6 +53,14 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
         return;
       }
       
+      // Check if map is still valid
+      if (!map || !map._loaded) {
+        console.warn('Map is no longer valid or not fully loaded, retrying...');
+        navigationAttemptsRef.current++;
+        setTimeout(attemptNavigation, 1000);
+        return;
+      }
+      
       navigationAttemptsRef.current++;
       console.log(`Navigation attempt ${navigationAttemptsRef.current} for location: ${newPosition[0]}, ${newPosition[1]}`);
       

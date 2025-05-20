@@ -14,6 +14,11 @@ export function forceMapRefresh() {
   setTimeout(() => {
     window.dispatchEvent(new Event('resize'));
   }, 100);
+
+  // Force additional resize events for better reliability
+  setTimeout(() => {
+    window.dispatchEvent(new Event('resize'));
+  }, 500);
 }
 
 /**
@@ -32,6 +37,12 @@ export function navigateToLocation(map: any, lat: number, lng: number, zoom: num
     // Ensure the map is properly initialized before navigating
     if (typeof map.invalidateSize === 'function') {
       map.invalidateSize(true);
+    }
+    
+    // Check if map is valid and has necessary methods
+    if (!map._loaded) {
+      console.warn('Map not fully loaded yet, delaying navigation');
+      return false;
     }
     
     // Use flyTo for smoother navigation with animation

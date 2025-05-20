@@ -38,7 +38,12 @@ const MapContainer: React.FC<MapContainerProps> = ({
   }, [mapKey]);
   
   // Handle map initialization
-  const handleMapInit = (map: L.Map) => {
+  const handleMapInit = (map: L.Map | null) => {
+    if (!map) {
+      console.warn("Map initialization failed - map object is null");
+      return;
+    }
+    
     console.log("Map initialized with zoom:", map.getZoom());
     mapRef.current = map;
     

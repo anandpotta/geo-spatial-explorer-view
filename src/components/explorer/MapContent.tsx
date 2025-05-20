@@ -23,7 +23,15 @@ const MapContent = (props: MapContentProps) => {
       // Small delay to ensure the map is ready before attempting to navigate
       setTimeout(() => {
         forceMapRefresh();
-      }, 300);
+        
+        // Emit a custom event to signal that a location has been selected
+        window.dispatchEvent(new CustomEvent('locationSelected', {
+          detail: {
+            location: selectedLocation,
+            view: currentView
+          }
+        }));
+      }, 500); // Increased delay for better stability
     }
   }, [selectedLocation, currentView]);
 
