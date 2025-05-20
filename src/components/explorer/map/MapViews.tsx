@@ -15,6 +15,8 @@ interface MapViewsProps {
   handleLeafletMapRef: (map: any) => void;
   activeTool: string | null;
   handleClearAll: () => void;
+  fadeIn?: boolean;
+  viewTransitionInProgress?: boolean;
 }
 
 const MapViews: React.FC<MapViewsProps> = ({
@@ -26,14 +28,20 @@ const MapViews: React.FC<MapViewsProps> = ({
   handleCesiumViewerRef,
   handleLeafletMapRef,
   activeTool,
-  handleClearAll
+  handleClearAll,
+  fadeIn = false,
+  viewTransitionInProgress = false
 }) => {
   // Add transition state to handle smoother view changes
-  const [transitioning, setTransitioning] = useState(false);
+  const [transitioning, setTransitioning] = useState(viewTransitionInProgress);
   const [previousView, setPreviousView] = useState<'cesium' | 'leaflet' | null>(null);
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
   const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
-  const [fadeIn, setFadeIn] = useState(false);
+  
+  // Update transitioning state when prop changes
+  useEffect(() => {
+    setTransitioning(viewTransitionInProgress);
+  }, [viewTransitionInProgress]);
   
   // Track location changes to prevent duplicate transitions
   useEffect(() => {
@@ -56,18 +64,7 @@ const MapViews: React.FC<MapViewsProps> = ({
       const timer = setTimeout(() => {
         setTransitioning(false);
         setViewChangeStarted(null);
-        
-        // Trigger fade in for new view
-        setFadeIn(true);
-        setTimeout(() => setFadeIn(false), 500);
       }, 800); // Slightly longer to ensure render completes
-      
-      // Notify user about view change
-      toast({
-        title: `Switching to ${currentView === 'cesium' ? '3D Globe' : 'Map'} View`,
-        description: "Please wait while the view changes...",
-        duration: 2000,
-      });
       
       return () => clearTimeout(timer);
     }
