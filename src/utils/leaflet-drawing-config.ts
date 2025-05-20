@@ -39,8 +39,10 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
           }
           
           // Add draggable class to icon element when available
-          if (l._icon) {
-            l._icon.classList.add('leaflet-marker-draggable');
+          // Use type assertion to access internal properties safely
+          const markerAny = l as any;
+          if (markerAny._icon) {
+            markerAny._icon.classList.add('leaflet-marker-draggable');
           }
         }
       }
@@ -92,7 +94,15 @@ export const getMarkerOptions = (): L.MarkerOptions => ({
   draggable: true,
   autoPan: true,
   zIndexOffset: 1000,
-  className: 'leaflet-marker-draggable'
+  // Use icon property to set className indirectly
+  icon: L.icon({
+    iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAApCAYAAADAk4LOAAAGmklEQVRYw7VXeUyTZxjvNnfELFuyIzOabermMZEeQC/OclkO49CpOHXOLJl/CAURuYbQi3KLgEhbrhZ1aDwmaoGqKII6odATmH/scDFbdC7LvFqOCc+e95s2VG50X/LLm/f4/Z7neV/zCGcZcv6wLcePHj82DmMGw8CcZzBsYBjd8BTUVtligVW3x+Yy8WRzvq6aX+qgKbraJFXQicLnkHPOcaXVMo5NRSR0XbFJz5rv0SYKFFbUotVOgRTIuWcY1pPDarXVe40jeJA9iJKS1nRDk7fDdLhZuqpfzS0o5QOCJT5SMpYbqNTd7jew5isnSNEyX02f1pvYCx2Mh34MGMwWaftILH5TQHBtGdadaRUvQnP3K/WzCkLMAR7EandxiCd0AsHTH6ULmw0wHwh7FiFot/EAfOS90ESHMvPsb4no7mWP3dsnUVlQQ3y6ZC6J1AVRAcHkc9roPYC0/vCtgSBxkM+2FahWRW+tGDAtCCuX0wVBWb0Als5QxnZoUhXeUO7mXp9Kx4ISJ0QKN41y9HJXRKfqdSwn4tWMgmx6NjAJx8roRB+BsGSSWWeXHTPAs0MxA5AIfkc6JFSX+XNXtDCVnCYEndxbwknQCEmxiPMIn+DX8FR+SJj8WKrVIgmIH29fMrRgM2aixKQbSBEwGKu+dHEV+WWtgrLfKH0',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+    className: 'leaflet-marker-draggable' // This will now be applied through the icon
+  })
 });
 
 export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {
