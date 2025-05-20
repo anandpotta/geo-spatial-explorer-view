@@ -23,6 +23,10 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   // Track if this marker has been initialized to prevent double creation
   const hasInitialized = useRef(false);
+  const markerInstanceRef = useRef<L.Marker | null>(null);
+  
+  // Create a unique ID for this temporary marker based on position
+  const tempMarkerId = `temp-marker-${position[0]}-${position[1]}`;
   
   // Create a custom marker with higher z-index to ensure it's on top
   const markerOptions = {
@@ -62,13 +66,34 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   };
   
+  // Clean up marker when component unmounts
+  useEffect(() => {
+    return () => {
+      if (markerInstanceRef.current) {
+        try {
+          markerInstanceRef.current.remove();
+        } catch (error) {
+          console.error('Error removing temp marker:', error);
+        }
+        markerInstanceRef.current = null;
+      }
+    };
+  }, []);
+  
   // Reset the initialization flag when position changes
   useEffect(() => {
     hasInitialized.current = false;
   }, [position]);
   
   return (
-    <Marker position={position} {...markerOptions}>
+    <Marker 
+      position={position} 
+      {...markerOptions}
+      key={tempMarkerId}
+      ref={(ref) => {
+        if (ref) markerInstanceRef.current = ref.leafletElement;
+      }}
+    >
       <NewMarkerForm
         markerName={markerName}
         setMarkerName={setMarkerName}

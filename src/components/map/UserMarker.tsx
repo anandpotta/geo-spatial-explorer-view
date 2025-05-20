@@ -12,6 +12,7 @@ interface UserMarkerProps {
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
+  const markerId = `marker-${marker.id}`;
   
   // Cleanup marker when component unmounts
   useEffect(() => {
@@ -54,7 +55,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   return (
     <Marker 
       position={marker.position} 
-      key={`marker-${marker.id}`}
+      key={markerId}
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd

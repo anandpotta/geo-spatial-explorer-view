@@ -3,7 +3,7 @@ import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Fix Leaflet icon issues
+// Create the default icon only once
 const DefaultIcon = L.icon({
   iconUrl: icon,
   shadowUrl: iconShadow,
@@ -11,7 +11,15 @@ const DefaultIcon = L.icon({
   iconAnchor: [12, 41]
 });
 
+// Track if we've already initialized icons to prevent duplicates
+let iconsInitialized = false;
+
 export const setupLeafletIcons = () => {
+  // Only initialize icons once
+  if (iconsInitialized) {
+    return;
+  }
+  
   // Set default marker icon
   L.Marker.prototype.options.icon = DefaultIcon;
   
@@ -33,8 +41,15 @@ export const setupLeafletIcons = () => {
         .leaflet-draw-toolbar .leaflet-draw-edit-edit.leaflet-disabled { background-position: -212px -2px; }
         .leaflet-draw-toolbar .leaflet-draw-edit-remove.leaflet-disabled { background-position: -242px -2px; }
       `;
-      document.head.appendChild(elementStyles);
+      
+      // Only add the style element if it doesn't exist already
+      if (!document.querySelector('style[data-leaflet-draw-styles]')) {
+        elementStyles.setAttribute('data-leaflet-draw-styles', 'true');
+        document.head.appendChild(elementStyles);
+      }
     }
   }
+  
+  // Mark as initialized
+  iconsInitialized = true;
 };
-
