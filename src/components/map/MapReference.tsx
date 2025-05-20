@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -9,88 +9,100 @@ interface MapReferenceProps {
 
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
+  const mapInitializedRef = useRef(false);
   
   useEffect(() => {
     if (!map) return;
-    
-    // Ensure the map is properly attached to the DOM before doing operations
-    const container = map.getContainer();
-    if (!container || !document.body.contains(container)) {
-      console.warn('Map container is not in DOM yet, delaying initialization');
+
+    // Ensure we don't try to initialize the same map multiple times
+    if (mapInitializedRef.current) {
+      console.log('Map already initialized, skipping duplicate initialization');
       return;
     }
     
-    try {
-      // Ensure the map is properly sized with a safer approach
-      setTimeout(() => {
-        if (map && (map as any)._loaded) {
-          try {
-            map.invalidateSize(true);
-          } catch (err) {
-            console.warn('Error during invalidateSize:', err);
-          }
+    // Need to wait a bit to ensure the DOM is fully rendered
+    const initMapWhenReady = () => {
+      try {
+        // Check that the map container is properly attached to the DOM
+        const container = map.getContainer();
+        if (!container || !document.body.contains(container)) {
+          console.log('Map container not ready yet, will retry');
+          setTimeout(initMapWhenReady, 100);
+          return;
         }
-      }, 300);
-      
-      // Store map instance globally for marker positioning
-      (window as any).leafletMapInstance = map;
-      
-      // Create a custom event for map movement
-      const createMapMoveEvent = () => {
-        window.dispatchEvent(new CustomEvent('mapMove'));
-      };
-      
-      // Listen to map events only after the map is properly initialized
-      setTimeout(() => {
-        if (map && (map as any)._loaded) {
-          // Add event listeners
-          map.on('move', createMapMoveEvent);
-          map.on('zoom', createMapMoveEvent);
-          map.on('viewreset', createMapMoveEvent);
-          map.on('resize', () => {
-            console.log('Map resized, invalidating size');
-            try {
+        
+        // Ensure the map panes are created
+        if (!(map as any)._loaded || !(map as any)._panes || !(map as any)._panes.mapPane) {
+          console.log('Map not fully loaded yet, will retry');
+          setTimeout(initMapWhenReady, 100);
+          return;
+        }
+
+        console.log('Map container verified, proceeding with initialization');
+        mapInitializedRef.current = true;
+        
+        // Safe invalidateSize with error handling
+        const safeInvalidateSize = () => {
+          try {
+            if (map && (map as any)._loaded && 
+                (map as any)._panes && 
+                (map as any)._panes.mapPane && 
+                (map as any)._panes.mapPane._leaflet_pos) {
               map.invalidateSize(true);
-              createMapMoveEvent();
-            } catch (err) {
-              console.warn('Error during resize invalidation:', err);
             }
-          });
-          
-          // Call the parent's onMapReady callback
-          onMapReady(map);
-          console.log('Map reference provided to parent component');
-          
-          // Force another invalidateSize after a bit more time
-          // to ensure the map is fully rendered
-          setTimeout(() => {
-            try {
-              if (map && (map as any)._loaded && document.body.contains(map.getContainer())) {
-                map.invalidateSize(true);
-              }
-            } catch (err) {
-              console.warn('Error during delayed invalidation:', err);
-            }
-          }, 500);
-        }
-      }, 300);
-      
-      // Cleanup event listeners when component unmounts
-      return () => {
-        if (map && (map as any)._loaded) {
-          try {
-            map.off('move', createMapMoveEvent);
-            map.off('zoom', createMapMoveEvent);
-            map.off('viewreset', createMapMoveEvent);
-            map.off('resize');
           } catch (err) {
-            console.warn('Error removing map event listeners:', err);
+            console.warn('Skipping invalidateSize due to map not being fully ready');
           }
+        };
+
+        // Store map instance globally for marker positioning
+        (window as any).leafletMapInstance = map;
+        
+        // Create a custom event for map movement
+        const createMapMoveEvent = () => {
+          window.dispatchEvent(new CustomEvent('mapMove'));
+        };
+        
+        // Add event listeners after validation
+        map.on('move', createMapMoveEvent);
+        map.on('zoom', createMapMoveEvent);
+        map.on('viewreset', createMapMoveEvent);
+        map.on('resize', () => {
+          console.log('Map resized, invalidating size');
+          safeInvalidateSize();
+          createMapMoveEvent();
+        });
+        
+        // Call the parent's onMapReady callback
+        onMapReady(map);
+        console.log('Map reference provided to parent component');
+        
+        // Do a safe invalidateSize after a delay
+        setTimeout(safeInvalidateSize, 300);
+        setTimeout(safeInvalidateSize, 1000); // Second attempt for extra safety
+      } catch (err) {
+        console.error('Error during map initialization:', err);
+        // Retry initialization after a delay
+        setTimeout(initMapWhenReady, 200);
+      }
+    };
+    
+    // Start the initialization process
+    setTimeout(initMapWhenReady, 100);
+    
+    // Cleanup event listeners when component unmounts
+    return () => {
+      if (map && (map as any)._loaded) {
+        try {
+          map.off('move');
+          map.off('zoom');
+          map.off('viewreset');
+          map.off('resize');
+        } catch (err) {
+          console.warn('Error removing map event listeners:', err);
         }
-      };
-    } catch (err) {
-      console.error('Error in MapReference setup:', err);
-    }
+      }
+    };
   }, [map, onMapReady]);
   
   return null;

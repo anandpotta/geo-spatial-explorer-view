@@ -25,8 +25,38 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
     };
     
     cleanup();
-    return cleanup;
+    
+    // Create a global leaflet map availability check
+    (window as any).isLeafletMapAvailable = false;
+    
+    return () => {
+      cleanup();
+      (window as any).isLeafletMapAvailable = false;
+    };
   }, [mapKey]);
+  
+  const handleMapLoad = (event: any) => {
+    // Mark the map as available
+    (window as any).isLeafletMapAvailable = true;
+    
+    // Access the map instance through the global variable
+    const leafletMap = document.querySelector(`.leaflet-container[data-map-key="${mapKey}"]`);
+    if (leafletMap) {
+      leafletMap.setAttribute('data-instance-id', mapKey);
+    }
+    
+    // Force a resize on load
+    const map = event.target;
+    if (map && typeof map.invalidateSize === 'function') {
+      setTimeout(() => {
+        try {
+          map.invalidateSize(true);
+        } catch (err) {
+          console.warn('Error resizing map on load:', err);
+        }
+      }, 100);
+    }
+  };
   
   return (
     <LeafletMapContainer 
@@ -39,13 +69,14 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       fadeAnimation={true}
       markerZoomAnimation={true}
       preferCanvas={true}
-      whenReady={() => {
-        // Access the map instance through the global variable
-        const leafletMap = document.querySelector(`.leaflet-container[data-map-key="${mapKey}"]`);
-        if (leafletMap) {
-          leafletMap.setAttribute('data-instance-id', mapKey);
+      whenCreated={(map) => {
+        // Mark the container for easy identification
+        const container = map.getContainer();
+        if (container) {
+          container.dataset.mapKey = mapKey;
         }
       }}
+      whenReady={handleMapLoad}
     >
       <TileLayer 
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
