@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { applyImageClipMask, findSvgPathByDrawingId } from '@/utils/svg-clip-mask';
@@ -29,6 +28,9 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
       
       console.log(`File selected: ${file.name} (${file.type}, ${file.size} bytes) for drawing ${selectedDrawingId} by user ${currentUser.id}`);
       
+      // Dispatch event to signal drawing operation is starting - prevent map navigation
+      window.dispatchEvent(new CustomEvent('drawingStart'));
+      
       // Skip if currently processing this drawing ID
       if (processingRef.current.has(selectedDrawingId)) {
         console.log(`Already processing drawing ${selectedDrawingId}, skipping duplicate request`);
@@ -40,6 +42,7 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
       if (!file.type.startsWith('image/')) {
         toast.error('Please select an image file');
         e.target.value = ''; // Reset file input
+        window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
         return;
       }
       
@@ -53,7 +56,7 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
       const imageUrl = URL.createObjectURL(file);
       console.log(`Created URL for uploaded file: ${imageUrl}`);
       
-      // Store the image URL for future use, with user ID association
+      // Store the image URL in localStorage for future use, now with user ID association
       storeImageUrl(selectedDrawingId, imageUrl, file.name);
       
       // Also save as a floor plan for consistent storage
@@ -74,6 +77,7 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
         processingRef.current.delete(selectedDrawingId);
         toast.error('Could not find the drawing on the map', { id: `uploading-${selectedDrawingId}` });
         e.target.value = ''; // Reset file input
+        window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
         return;
       }
       
@@ -111,6 +115,12 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
                 window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
                   detail: { drawingId: selectedDrawingId, userId: currentUser.id, freshlyUploaded: true } 
                 }));
+                
+                // Keep a delay before releasing the "drawing in progress" state
+                // to prevent immediate navigation after upload completes
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('drawingEnd'));
+                }, 1000);
               }, 200);
             } else {
               console.error('Failed to apply image as clip mask');
@@ -123,6 +133,7 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
               } else {
                 processingRef.current.delete(selectedDrawingId);
                 toast.error('Could not apply image to drawing', { id: `uploading-${selectedDrawingId}` });
+                window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
               }
             }
           } else {
@@ -136,6 +147,7 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
             } else {
               processingRef.current.delete(selectedDrawingId);
               toast.error('Could not find the drawing on the map', { id: `uploading-${selectedDrawingId}` });
+              window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
             }
           }
         } catch (err) {
@@ -148,6 +160,7 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
           } else {
             processingRef.current.delete(selectedDrawingId);
             toast.error('Error processing the uploaded file', { id: `uploading-${selectedDrawingId}` });
+            window.dispatchEvent(new CustomEvent('drawingEnd')); // Release navigation lock
           }
         }
       };

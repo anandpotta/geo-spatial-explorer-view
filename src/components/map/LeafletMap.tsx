@@ -1,240 +1,263 @@
-
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MapContainer, TileLayer, FeatureGroup, useMapEvents, AttributionControl } from 'react-leaflet';
 import L from 'leaflet';
-import { Location } from '@/utils/geo-utils';
-import { useMapState } from '@/hooks/useMapState';
+import { EditControl } from "./LeafletCompatibilityLayer";
+import { DrawingData } from '@/utils/drawing-utils';
+import { useDrawingTools } from '@/hooks/useDrawingTools';
+import { useLayerUpdates } from '@/hooks/useLayerUpdates';
+import { useLayerReferences } from '@/hooks/useLayerReferences';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
-import { useLocationSelection } from '@/hooks/useLocationSelection';
-import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
+import { useMarkers } from '@/hooks/useMarkers';
+import MarkersContainer from './marker/MarkersContainer';
+import { LocationMarker } from '@/utils/marker-utils';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { useDrawingFileUpload } from '@/hooks/useDrawingFileUpload';
+import { ExtendedLayer, LeafletMapInternal } from '@/utils/leaflet-type-utils';
+import { getSavedDrawings } from '@/services/drawing-service';
 import { getSavedMarkers } from '@/utils/marker-utils';
-import MapView from './MapView';
+import { toast } from 'sonner';
 import FloorPlanView from './FloorPlanView';
-import { setupLeafletIcons } from './LeafletMapIcons';
-import { isMapValid, LeafletMapInternal } from '@/utils/leaflet-type-utils';
+import LayerManager from './drawing/LayerManager';
+
+// Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface LeafletMapProps {
-  selectedLocation?: Location;
-  onMapReady?: (map: L.Map) => void;
-  activeTool?: string | null;
-  onLocationSelect?: (location: Location) => void;
+  selectedLocation?: { x: number, y: number };
+  onMapReady: (map: any) => void;
+  activeTool: string | null;
   onClearAll?: () => void;
   stayAtCurrentPosition?: boolean;
 }
 
-const LeafletMap = ({ 
-  selectedLocation, 
-  onMapReady, 
-  activeTool, 
-  onLocationSelect, 
+const LeafletMap: React.FC<LeafletMapProps> = ({
+  selectedLocation,
+  onMapReady,
+  activeTool,
   onClearAll,
   stayAtCurrentPosition = false
-}: LeafletMapProps) => {
-  // Initialize state variables that were missing
-  const [isMarkerActive, setIsMarkerActive] = useState(false);
-  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
+}) => {
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
+  const [drawings, setDrawings] = useState<DrawingData[]>([]);
+  const [markers, setMarkers] = useState<LocationMarker[]>([]);
+  const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
+  const [markerName, setMarkerName] = useState<string>('');
+  const [isMarkerActive, setIsMarkerActive] = useState<boolean>(false);
+  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('pin');
+  const [showFloorPlanView, setShowFloorPlanView] = useState<boolean>(false);
+  const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   
-  // Initialize Leaflet icons
-  useEffect(() => {
-    setupLeafletIcons();
-  }, []);
-  
-  // Custom hooks
-  const mapState = useMapState(selectedLocation);
-  const { 
-    mapRef, 
-    mapInstanceKey, 
-    isMapReady, 
-    handleSetMapRef 
+  // Initialize the map and its state using custom hook
+  const {
+    mapRef,
+    mapInstanceKey,
+    isMapReady,
+    setIsMapReady,
+    setMapInstanceKey,
+    handleSetMapRef,
   } = useMapInitialization(selectedLocation);
-  const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
-  const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
-
-  // Sync the stayAtCurrentPosition state with our component props and handle marker events
+  
+  // Use custom hook for handling file uploads
+  const { handleUploadToDrawing } = useDrawingFileUpload();
+  
+  // Use custom hook for managing markers
+  const {
+    handleMapClick,
+    handleMarkerDragEnd,
+    handleSaveMarker,
+    handleDeleteMarker
+  } = useMarkers(mapRef, setMarkers, setTempMarker, setIsMarkerActive, setMapInstanceKey);
+  
+  // Load drawings and markers from localStorage
   useEffect(() => {
-    mapState.setStayAtCurrentPosition(stayAtCurrentPosition || isMarkerActive);
+    const savedDrawings = getSavedDrawings();
+    setDrawings(savedDrawings);
     
-    const handleMarkerPlaced = () => {
-      console.log("Marker placed event detected");
-      setIsMarkerActive(true);
-      mapState.setStayAtCurrentPosition(true);
-    };
-    
-    const handleMarkerSaved = () => {
-      console.log("Marker saved event detected");
-      // Keep the flag active for a short while to prevent jumping
-      setTimeout(() => {
-        setIsMarkerActive(false);
-      }, 500);
-    };
-    
-    const handleDrawingStart = () => {
-      console.log("Drawing start event detected");
-      setIsMarkerActive(true);
-      mapState.setStayAtCurrentPosition(true);
-    };
-    
-    const handleDrawingEnd = () => {
-      console.log("Drawing end event detected");
-      // Keep the flag active for a short while to prevent jumping
-      setTimeout(() => {
-        setIsMarkerActive(false);
-      }, 500);
-    };
-    
-    window.addEventListener('markerPlaced', handleMarkerPlaced);
-    window.addEventListener('markerSaved', handleMarkerSaved);
-    window.addEventListener('drawingStart', handleDrawingStart);
-    window.addEventListener('drawingEnd', handleDrawingEnd);
-    
-    // Listen for clear all events
-    const handleClearAllEvent = () => {
-      console.log("Clear all event detected");
-      mapState.setTempMarker(null);
-      mapState.setMarkerName('');
-      mapState.setMarkerType('building');
-      mapState.setCurrentDrawing(null);
-      mapState.setShowFloorPlan(false);
-      mapState.setSelectedDrawing(null);
-    };
-    
-    window.addEventListener('clearAllDrawings', handleClearAllEvent);
-    
-    return () => {
-      window.removeEventListener('markerPlaced', handleMarkerPlaced);
-      window.removeEventListener('markerSaved', handleMarkerSaved);
-      window.removeEventListener('drawingStart', handleDrawingStart);
-      window.removeEventListener('drawingEnd', handleDrawingEnd);
-      window.removeEventListener('clearAllDrawings', handleClearAllEvent);
-    };
-  }, [stayAtCurrentPosition, mapState]);
-
-  // Handle markers updates
-  useEffect(() => {
-    const handleMarkersUpdated = () => {
-      const savedMarkers = getSavedMarkers();
-      mapState.setMarkers(savedMarkers);
-    };
-    
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
-    window.addEventListener('storage', handleMarkersUpdated);
-    window.addEventListener('clearAllDrawings', handleMarkersUpdated);
-    
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
-      window.removeEventListener('storage', handleMarkersUpdated);
-      window.removeEventListener('clearAllDrawings', handleMarkersUpdated);
-    };
+    const savedMarkers = getSavedMarkers();
+    setMarkers(savedMarkers);
   }, []);
-
-  // Handle selected location changes with improved position check
-  useEffect(() => {
-    if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
-      // Only fly to the selected location if not staying at current position
-      // and not currently placing a marker or drawing
-      if (!mapState.stayAtCurrentPosition && !isMarkerActive) {
-        try {
-          const container = mapRef.current.getContainer();
-          if (container && document.body.contains(container)) {
-            console.log('Flying to selected location:', selectedLocation);
-            mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-              animate: true,
-              duration: 1.5
-            });
-          }
-        } catch (err) {
-          console.error('Error flying to location:', err);
-        }
-      } else {
-        console.log('Staying at current position, not flying to selected location');
+  
+  // Event handlers using leaflet hook
+  useMapEvents({
+    click: (e) => {
+      if (isMarkerActive && tempMarker === null) {
+        handleMapClick(e);
       }
     }
-  }, [selectedLocation, isMapReady, isMapReferenceSet, mapState.stayAtCurrentPosition, isMarkerActive]);
-
-  // Custom map reference handler that sets our local state
-  const handleMapRefWrapper = (map: L.Map) => {
-    handleSetMapRef(map);
-    setIsMapReferenceSet(true);
-    
-    // Store the feature group reference globally
-    if (map) {
-      // Find feature group in the map
-      const internalMap = map as LeafletMapInternal;
-      if (internalMap._layers) {
-        Object.values(internalMap._layers).forEach(layer => {
-          if (layer instanceof L.FeatureGroup) {
-            window.featureGroup = layer;
-          }
-        });
-      }
-    }
-    
-    // Only call parent onMapReady once when the map is first ready
-    if (onMapReady && !isMapReferenceSet) {
-      onMapReady(map);
+  });
+  
+  // Function to handle marker creation
+  const handleCreateMarker = () => {
+    setIsMarkerActive(true);
+    window.dispatchEvent(new CustomEvent('markerPlaced'));
+  };
+  
+  // Function to handle marker save
+  const handleMarkerSaved = () => {
+    if (tempMarker) {
+      handleSaveMarker(tempMarker, markerName, markerType);
+      setIsMarkerActive(false);
+      setTempMarker(null);
+      setMarkerName('');
+      setMarkerType('pin');
+      window.dispatchEvent(new CustomEvent('markerSaved'));
     }
   };
-
-  // Clear all layers and reset state
-  const handleClearAllWrapper = () => {
-    mapState.setTempMarker(null);
-    mapState.setMarkerName('');
-    mapState.setMarkerType('building');
-    mapState.setCurrentDrawing(null);
-    mapState.setShowFloorPlan(false);
-    mapState.setSelectedDrawing(null);
+  
+  // Function to handle marker delete
+  const handleDeleteExistingMarker = (id: string) => {
+    handleDeleteMarker(id);
+  };
+  
+  // Handler for drawing creation
+  const handleCreated = (e: any) => {
+    const layer = e.layer;
+    const drawingId = Date.now().toString();
+    layer.options.id = drawingId;
+    layer.options.isDrawn = true;
     
+    // Extract geoJSON data
+    const geoJSON = layer.toGeoJSON();
+    geoJSON.properties = {
+      name: 'New Drawing',
+      description: '',
+      style: {
+        color: '#ff0000'
+      }
+    };
+    
+    // Add the new drawing to the state
+    setDrawings(prevDrawings => {
+      const newDrawings = [
+        ...prevDrawings,
+        {
+          id: drawingId,
+          geoJSON: geoJSON,
+          properties: geoJSON.properties,
+          type: geoJSON.geometry.type,
+          coordinates: geoJSON.geometry.coordinates,
+          userId: 'test-user'
+        }
+      ];
+      
+      localStorage.setItem('drawings', JSON.stringify(newDrawings));
+      return newDrawings;
+    });
+  };
+  
+  // Handler for region click
+  const handleRegionClick = (drawing: DrawingData) => {
+    console.log(`Region clicked: ${drawing.id}`);
+    setSelectedDrawing(drawing);
+    setShowFloorPlanView(true);
+  };
+  
+  // Handler for remove shape
+  const handleRemoveShape = (drawingId: string) => {
+    setDrawings(prevDrawings => {
+      const updatedDrawings = prevDrawings.filter(drawing => drawing.id !== drawingId);
+      localStorage.setItem('drawings', JSON.stringify(updatedDrawings));
+      return updatedDrawings;
+    });
+  };
+  
+  // Handler for upload request
+  const handleUploadRequest = (drawingId: string) => {
+    console.log(`Upload requested for drawing ID: ${drawingId}`);
+  };
+  
+  // Handler for clear all
+  const handleClearAll = () => {
+    if (featureGroupRef.current) {
+      featureGroupRef.current.clearLayers();
+    }
+    setDrawings([]);
+    localStorage.removeItem('drawings');
     if (onClearAll) {
       onClearAll();
     }
-    
-    // Dispatch a clear all event
-    window.dispatchEvent(new Event('clearAllDrawings'));
-    window.dispatchEvent(new Event('clearAllSvgPaths'));
-    
-    handleClearAll();
   };
-
-  if (mapState.showFloorPlan) {
-    return (
-      <FloorPlanView 
-        onBack={() => mapState.setShowFloorPlan(false)} 
-        drawing={mapState.selectedDrawing}
-      />
-    );
-  }
-
+  
+  // Set up the feature group
+  useEffect(() => {
+    if (mapRef.current) {
+      // Initialize FeatureGroup
+      featureGroupRef.current = new L.FeatureGroup();
+      featureGroupRef.current.addTo(mapRef.current);
+    }
+  }, [mapRef.current]);
+  
+  // Update the fly to logic in the LeafletMap.tsx component
+  // Look for the useEffect block that handles location changes and add the stayAtCurrentPosition check:
+  
+  // Update the useEffect block that watches for selectedLocation changes:
+  useEffect(() => {
+    if (
+      mapRef.current && 
+      selectedLocation && 
+      !tempMarker && 
+      !isMarkerActive && 
+      !stayAtCurrentPosition // Don't navigate when stayAtCurrentPosition is true
+    ) {
+      console.log(`Flying to selected location: ${selectedLocation.label}`);
+      try {
+        mapRef.current.flyTo(
+          [selectedLocation.y, selectedLocation.x],
+          18,
+          { animate: true, duration: 1.5 }
+        );
+      } catch (err) {
+        console.error('Error during map flyTo operation:', err);
+      }
+    }
+  }, [selectedLocation, tempMarker, isMarkerActive, stayAtCurrentPosition]);
+  
   return (
-    <MapView
-      key={`map-view-${mapInstanceKey}`}
-      position={mapState.position}
-      zoom={mapState.zoom}
-      markers={mapState.markers}
-      tempMarker={mapState.tempMarker}
-      markerName={mapState.markerName}
-      markerType={mapState.markerType}
-      onMapReady={handleMapRefWrapper}
-      onLocationSelect={handleLocationSelect}
-      onMapClick={handleMapClick}
-      onDeleteMarker={mapState.handleDeleteMarker}
-      onSaveMarker={mapState.handleSaveMarker}
-      setMarkerName={mapState.setMarkerName}
-      setMarkerType={mapState.setMarkerType}
-      onShapeCreated={handleShapeCreated}
-      activeTool={activeTool || mapState.activeTool}
-      onRegionClick={mapState.handleRegionClick}
-      onClearAll={handleClearAllWrapper}
-      isMapReady={isMapReady}
-    />
+    <div className="w-full h-full relative">
+      {showFloorPlanView && selectedDrawing ? (
+        <FloorPlanView
+          onBack={() => setShowFloorPlanView(false)}
+          drawing={selectedDrawing}
+        />
+      ) : (
+        <div className="w-full h-full">
+          <MapContainer
+            position={selectedLocation ? [selectedLocation.y, selectedLocation.x] : [0, 0]}
+            zoom={2}
+            mapKey={mapInstanceKey.toString()}
+          >
+            <div className="leaflet-top leaflet-left">
+              <div className="leaflet-control-zoom leaflet-bar">
+                <a className="leaflet-control-zoom-in" href="#" title="Zoom in" role="button" aria-label="Zoom in">+</a>
+                <a className="leaflet-control-zoom-out" href="#" title="Zoom out" role="button" aria-label="Zoom out">−</a>
+              </div>
+            </div>
+            
+            <LayerManager
+              featureGroup={featureGroupRef.current!}
+              savedDrawings={drawings}
+              activeTool={activeTool}
+              onRegionClick={handleRegionClick}
+              onRemoveShape={handleRemoveShape}
+              onUploadRequest={handleUploadRequest}
+            />
+            
+            <MarkersContainer
+              markers={markers}
+              tempMarker={tempMarker}
+              markerName={markerName}
+              markerType={markerType}
+              onDeleteMarker={handleDeleteExistingMarker}
+              onSaveMarker={handleMarkerSaved}
+              setMarkerName={setMarkerName}
+              setMarkerType={setMarkerType}
+            />
+          </MapContainer>
+        </div>
+      )}
+    </div>
   );
 };
 
 export default LeafletMap;
-
-// Add feature group to global window object
-declare global {
-  interface Window {
-    featureGroup?: L.FeatureGroup;
-  }
-}
