@@ -54,6 +54,21 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     window.dispatchEvent(new CustomEvent('markersUpdated'));
   }, [marker.id]);
   
+  // Use a ref function to attach the tooltip when the marker is created
+  const setMarkerRef = (element: L.Marker | null) => {
+    if (element) {
+      markerRef.current = element;
+      
+      // Add tooltip to marker programmatically
+      element.bindTooltip(marker.name, {
+        permanent: true,
+        direction: 'top',
+        className: 'custom-leaflet-tooltip',
+        offset: [0, -10]
+      });
+    }
+  };
+  
   return (
     <Marker 
       position={marker.position} 
@@ -62,18 +77,8 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       eventHandlers={{
         dragend: handleDragEnd
       }}
-      ref={markerRef}
+      ref={setMarkerRef}
     >
-      {/* Add permanent tooltip to the marker */}
-      <L.Tooltip 
-        permanent={true} 
-        direction="top" 
-        className="custom-leaflet-tooltip" 
-        offset={[0, -10]}
-      >
-        <div className="font-medium text-sm">{marker.name}</div>
-      </L.Tooltip>
-      
       <MarkerPopup marker={marker} onDelete={onDelete} />
     </Marker>
   );
