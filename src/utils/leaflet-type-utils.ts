@@ -48,6 +48,24 @@ export function isMapValid(map: any): boolean {
     try {
       const container = map.getContainer();
       if (!container || !document.body.contains(container)) return false;
+      
+      // Check if the container is marked as inactive
+      if (container.getAttribute('data-inactive') === 'true') {
+        console.warn('Map container is marked as inactive');
+        return false;
+      }
+      
+      // Check if container is being reused
+      if (container.getAttribute('data-in-use') === 'true') {
+        const mapId = map._leaflet_id || '';
+        const usedByMapId = container.getAttribute('data-used-by-map-id') || '';
+        
+        // If container is used by a different map instance, it's invalid
+        if (usedByMapId && usedByMapId !== String(mapId)) {
+          console.warn(`Container is being used by map ${usedByMapId}, not ${mapId}`);
+          return false;
+        }
+      }
     } catch (err) {
       return false;
     }
@@ -117,15 +135,19 @@ export function createUniqueMapId(): string {
  * @returns boolean indicating if container is already in use
  */
 export function isContainerInUse(container: HTMLElement, currentMapId: string): boolean {
-  const containerId = container.id;
-  const mapKey = container.getAttribute('data-map-key');
-  
   // Check if this container is already marked as in use
   if (container.getAttribute('data-in-use') === 'true') {
     const usedByMapId = container.getAttribute('data-used-by-map-id');
     if (usedByMapId && usedByMapId !== currentMapId) {
+      console.warn(`Container is being used by map ${usedByMapId}, not ${currentMapId}`);
       return true;
     }
+  }
+  
+  // Check if container is marked as inactive
+  if (container.getAttribute('data-inactive') === 'true') {
+    console.warn('Container is marked as inactive');
+    return true;
   }
   
   return false;

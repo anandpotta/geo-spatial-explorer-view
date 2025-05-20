@@ -36,6 +36,29 @@ const MapViews: React.FC<MapViewsProps> = ({
   // Generate truly unique IDs for each view type using our utility function
   const [uniqueLeafletKey] = useState<string>(createUniqueMapId());
   const [uniqueCesiumKey] = useState<string>(createUniqueMapId());
+  const currentViewRef = useRef<string>(currentView);
+  
+  // Track view changes to handle transitions properly
+  useEffect(() => {
+    // When the view changes, mark previous map containers as inactive
+    if (currentView !== currentViewRef.current) {
+      console.log(`View changing from ${currentViewRef.current} to ${currentView}`);
+      
+      // Set a timeout to perform cleanup after the new view has mounted
+      setTimeout(() => {
+        // Find and mark containers from the previous view as inactive
+        document.querySelectorAll(`div[data-active="true"][data-container-type="leaflet-map"]`).forEach(el => {
+          // Only mark as inactive if it's not from the current view
+          if (currentView !== 'leaflet') {
+            el.setAttribute('data-active', 'false');
+            el.setAttribute('data-inactive', 'true');
+          }
+        });
+      }, 100);
+      
+      currentViewRef.current = currentView;
+    }
+  }, [currentView]);
   
   // Clean up any orphaned Leaflet elements when view changes or component unmounts
   useEffect(() => {
@@ -77,7 +100,7 @@ const MapViews: React.FC<MapViewsProps> = ({
       )}
       
       {currentView === 'leaflet' && (
-        <div key={uniqueLeafletKey} className="w-full h-full">
+        <div key={uniqueLeafletKey} className="w-full h-full" data-view-type="leaflet">
           <LeafletMap 
             selectedLocation={selectedLocation}
             onMapReady={handleLeafletMapRef}

@@ -34,6 +34,11 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
           container.setAttribute('data-map-key', mapKey);
           // Set a unique timestamp to ensure uniqueness
           container.setAttribute('data-map-init-time', Date.now().toString());
+          
+          // Important: Mark containers to track which are active
+          document.querySelectorAll('div[data-container-type="leaflet-map"]:not([data-map-key="' + mapKey + '"])').forEach(el => {
+            el.setAttribute('data-inactive', 'true');
+          });
         }
       }
     } catch (err) {
@@ -51,6 +56,11 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
               el.classList.contains('leaflet-marker-shadow')) {
             el.remove();
           }
+        });
+        
+        // Mark this container as no longer active
+        document.querySelectorAll(`div[data-map-key="${mapKey}"]`).forEach(el => {
+          el.setAttribute('data-active', 'false');
         });
       } catch (err) {
         console.warn('Error cleaning up map markers:', err);
@@ -79,13 +89,14 @@ const MapReference = ({ onMapReady, mapKey = 'default' }: MapReferenceProps) => 
           
           // Check if container has already been marked as used by another instance
           if (container.getAttribute('data-in-use') === 'true') {
-            console.error(`Map container is already in use by another instance`);
+            console.error(`Map container is being reused by another instance with key ${container.getAttribute('data-map-key')}`);
             window.dispatchEvent(new Event('mapError'));
             return;
           }
           
           // Mark this container as being used
           container.setAttribute('data-in-use', 'true');
+          container.setAttribute('data-used-by-map-id', mapKey);
           
           // Check if map container still exists and is attached to DOM
           if (map && map.getContainer() && document.body.contains(map.getContainer())) {

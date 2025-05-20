@@ -84,6 +84,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       id={uniqueIdRef.current}
       data-map-key={mapKey}
       data-created-at={Date.now()}
+      data-container-type="leaflet-map"
     >
       <LeafletMapContainer 
         key={uniqueIdRef.current} // Ensure a new instance is created when key changes
@@ -100,6 +101,8 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
           if (containerRef.current) {
             // Set a timestamp as instance ID since we can't access the internal _leaflet_id safely
             containerRef.current.setAttribute('data-map-instance-id', Date.now().toString());
+            // Mark this as the active container
+            containerRef.current.setAttribute('data-active', 'true');
           }
         }}
       >
