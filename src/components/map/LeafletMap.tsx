@@ -41,8 +41,7 @@ const LeafletMap = ({
     mapRef, 
     mapInstanceKey, 
     isMapReady, 
-    handleSetMapRef,
-    isValidLocation 
+    handleSetMapRef 
   } = useMapInitialization(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
@@ -67,19 +66,13 @@ const LeafletMap = ({
   useEffect(() => {
     if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
       try {
-        // First check if map container is still in DOM
         const container = mapRef.current.getContainer();
         if (container && document.body.contains(container)) {
-          // Validate location coordinates before attempting to fly
-          if (isValidLocation(selectedLocation)) {
-            console.log('Flying to selected location:', selectedLocation);
-            mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-              animate: true,
-              duration: 1.5
-            });
-          } else {
-            console.error('Invalid location coordinates:', selectedLocation);
-          }
+          console.log('Flying to selected location:', selectedLocation);
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+            animate: true,
+            duration: 1.5
+          });
         }
       } catch (err) {
         console.error('Error flying to location:', err);

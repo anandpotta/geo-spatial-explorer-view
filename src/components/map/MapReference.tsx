@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -16,56 +17,19 @@ interface LeafletMapInternal extends L.Map {
   };
 }
 
-// Keep track of map instances globally
-declare global {
-  interface Window {
-    _leafletMapInstances?: L.Map[];
-  }
-}
-
-// Initialize the global tracking array if it doesn't exist
-if (typeof window !== 'undefined' && !window._leafletMapInstances) {
-  window._leafletMapInstances = [];
-}
-
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
   const hasCalledOnReady = useRef(false);
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const [isStable, setIsStable] = useState(false);
-  const mapInstanceId = useRef(`map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   
   // Clear all timeouts when unmounting
   useEffect(() => {
-    // Add this map instance to our global tracking
-    if (typeof window !== 'undefined' && map) {
-      // Give the map a unique identifier for debugging
-      (map as any)._instanceId = mapInstanceId.current;
-      console.log(`Registering map instance: ${mapInstanceId.current}`);
-      
-      if (!window._leafletMapInstances) {
-        window._leafletMapInstances = [];
-      }
-      window._leafletMapInstances.push(map);
-    }
-
     return () => {
-      // Clear timeouts
       timeoutRefs.current.forEach(clearTimeout);
       timeoutRefs.current = [];
-
-      // Remove this instance from global tracking
-      if (typeof window !== 'undefined' && window._leafletMapInstances) {
-        console.log(`Removing map instance: ${mapInstanceId.current}`);
-        window._leafletMapInstances = window._leafletMapInstances.filter(
-          m => (m as any)._instanceId !== mapInstanceId.current
-        );
-      }
-      
-      // Help GC by removing references
-      hasCalledOnReady.current = false;
     };
-  }, [map]);
+  }, []);
   
   useEffect(() => {
     // Only call onMapReady once per instance
@@ -82,8 +46,18 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             
             // Check if map is valid before trying to invalidate size
             try {
-              // Force a size recalculation
-              map.invalidateSize(true);
+              // Cast to internal map type to access private properties
+              const internalMap = map as LeafletMapInternal;
+              
+              // Only invalidate size if map is properly initialized
+              if (internalMap && 
+                  internalMap._panes && 
+                  internalMap._panes.mapPane) {
+                console.log('Map panes initialized, calling invalidateSize');
+                map.invalidateSize(true);
+              } else {
+                console.log('Map panes not fully initialized yet, skipping invalidateSize');
+              }
             } catch (err) {
               console.log('Skipping invalidateSize due to initialization state');
             }
@@ -95,8 +69,36 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             setTimeout(() => {
               setIsStable(true);
             }, 500);
+            
+            // Just one additional invalidation after a reasonable delay
+            const additionalTimeout = setTimeout(() => {
+              if (map && !map.remove['_leaflet_id']) {
+                try {
+                  map.invalidateSize(true);
+                  console.log('Final map invalidation completed');
+                } catch (err) {
+                  // Ignore errors during additional invalidations
+                }
+              }
+            }, 1500);
+            timeoutRefs.current.push(additionalTimeout);
           } else {
             console.log('Map container not ready or not attached to DOM');
+            // Retry in case the map container wasn't ready yet
+            const retryTimeout = setTimeout(() => {
+              if (map && !hasCalledOnReady.current) {
+                try {
+                  if (map.getContainer() && document.body.contains(map.getContainer())) {
+                    hasCalledOnReady.current = true;
+                    onMapReady(map);
+                    map.invalidateSize(true);
+                  }
+                } catch (e) {
+                  console.warn('Failed to initialize map on retry');
+                }
+              }
+            }, 1000);
+            timeoutRefs.current.push(retryTimeout);
           }
         } catch (err) {
           console.error('Error in map initialization:', err);

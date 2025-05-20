@@ -15,17 +15,8 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const recoveryAttemptRef = useRef(0);
   const initialFlyComplete = useRef(false);
   const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const uniqueComponentId = useRef<string>(`map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
-  
-  // Helper function to validate coordinates
-  const isValidLocation = (location?: { x: number, y: number }) => {
-    return location && 
-           typeof location.x === 'number' && !isNaN(location.x) && 
-           typeof location.y === 'number' && !isNaN(location.y);
-  };
   
   useEffect(() => {
-    console.log(`[${uniqueComponentId.current}] Initializing map instance with key: ${mapInstanceKey}`);
     setupLeafletIcons();
     mapAttachedRef.current = false;
     validityChecksRef.current = 0;
@@ -45,27 +36,25 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady(false);
     
     return () => {
-      console.log(`[${uniqueComponentId.current}] Cleaning up map instance with key: ${mapInstanceKey}`);
       if (mapRef.current) {
-        console.log(`[${uniqueComponentId.current}] Cleaning up Leaflet map instance`);
+        console.log('Cleaning up Leaflet map instance');
         
         try {
-          // Check if the map instance is still valid before attempting removal
-          if (mapRef.current && typeof mapRef.current.remove === 'function') {
-            const mapContainer = mapRef.current.getContainer();
-            // Only try to remove if the container exists and is still in the DOM
-            if (mapContainer && document.body.contains(mapContainer)) {
-              console.log(`[${uniqueComponentId.current}] Map container exists and is attached - removing map instance`);
-              mapRef.current.remove();
-            } else {
-              console.log(`[${uniqueComponentId.current}] Map container already detached or removed`);
+          if (mapRef.current && mapRef.current.remove) {
+            try {
+              const container = mapRef.current.getContainer();
+              if (container && document.body.contains(container)) {
+                console.log('Map container exists and is attached - removing map instance');
+                mapRef.current.remove();
+              }
+            } catch (e) {
+              console.log('Map container already detached or removed');
             }
           }
         } catch (err) {
-          console.error(`[${uniqueComponentId.current}] Error cleaning up map:`, err);
+          console.error('Error cleaning up map:', err);
         }
         
-        // Always clear our reference
         mapRef.current = null;
         mapAttachedRef.current = false;
         setIsMapReady(false);
@@ -99,7 +88,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         
         // If map is valid but not marked as ready
         if (isValid && !isMapReady && mapAttachedRef.current) {
-          console.log(`[${uniqueComponentId.current}] Map is now valid, marking as ready`);
+          console.log('Map is now valid, marking as ready');
           setIsMapReady(true);
           
           // Clear interval once map is valid
@@ -110,7 +99,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         }
         // If map becomes invalid after being ready
         else if (!isValid && isMapReady) {
-          console.warn(`[${uniqueComponentId.current}] Map is no longer valid, attempting recovery`);
+          console.warn('Map is no longer valid, attempting recovery');
           
           // Try recovery but limit attempts
           if (recoveryAttemptRef.current < 2) {
@@ -121,7 +110,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
                 try {
                   mapRef.current.invalidateSize(true);
                 } catch (err) {
-                  console.error(`[${uniqueComponentId.current}] Map recovery failed:`, err);
+                  console.error("Map recovery failed:", err);
                 }
               }
             }, 1000);
@@ -129,7 +118,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         }
       } catch (err) {
         // Only log errors, don't change state unnecessarily
-        console.warn(`[${uniqueComponentId.current}] Map validation error:`, err.message);
+        console.warn("Map validation error:", err.message);
       }
     };
     
@@ -145,24 +134,17 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   }, [isMapReady]);
 
   const handleSetMapRef = (map: L.Map) => {
-    console.log(`[${uniqueComponentId.current}] Map reference provided`);
+    console.log('Map reference provided');
     
-    // Don't set the ref if we already have one - this prevents double initialization
     if (mapRef.current) {
-      console.log(`[${uniqueComponentId.current}] Map reference already exists, skipping assignment`);
+      console.log('Map reference already exists, skipping assignment');
       return;
     }
     
     try {
-      // Only assign the ref if the map container is actually in the DOM
       const container = map.getContainer();
       if (container && document.body.contains(container)) {
-        console.log(`[${uniqueComponentId.current}] Map container verified, storing reference`);
-        
-        // Assign a unique ID to this map instance for debugging
-        (map as any)._instanceId = `${uniqueComponentId.current}-${Date.now()}`;
-        
-        // Store the reference
+        console.log('Map container verified, storing reference');
         mapRef.current = map;
         mapAttachedRef.current = true;
         
@@ -175,33 +157,33 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
           if (mapRef.current) {
             try {
               mapRef.current.invalidateSize(true);
-              console.log(`[${uniqueComponentId.current}] Initial map invalidation completed`);
+              console.log('Initial map invalidation completed');
               setIsMapReady(true);
               
               // Handle initial location navigation once the map is ready
-              if (isValidLocation(selectedLocation) && !initialFlyComplete.current) {
+              if (selectedLocation && !initialFlyComplete.current) {
                 initialFlyComplete.current = true;
                 try {
-                  console.log(`[${uniqueComponentId.current}] Flying to initial location after ensuring map stability`);
+                  console.log('Flying to initial location after ensuring map stability');
                   mapRef.current.flyTo(
-                    [selectedLocation!.y, selectedLocation!.x], 
+                    [selectedLocation.y, selectedLocation.x], 
                     18, 
                     { animate: true, duration: 1.5 }
                   );
                 } catch (flyErr) {
-                  console.error(`[${uniqueComponentId.current}] Error in initial fly operation:`, flyErr);
+                  console.error('Error in initial fly operation:', flyErr);
                 }
               }
             } catch (err) {
-              console.warn(`[${uniqueComponentId.current}] Error during invalidation:`, err);
+              console.warn(`Error during invalidation:`, err);
             }
           }
         }, 500);
       } else {
-        console.warn(`[${uniqueComponentId.current}] Map container not verified, skipping reference assignment`);
+        console.warn('Map container not verified, skipping reference assignment');
       }
     } catch (err) {
-      console.error(`[${uniqueComponentId.current}] Error setting map reference:`, err);
+      console.error('Error setting map reference:', err);
     }
   };
 
@@ -212,6 +194,5 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady,
     setMapInstanceKey,
     handleSetMapRef,
-    isValidLocation,
   };
 }

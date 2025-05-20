@@ -30,20 +30,8 @@ export function useEnhancedFlyToLocation(
     globeRadius
   );
   
-  // Helper to validate coordinates
-  const isValidCoordinate = (value: number): boolean => {
-    return typeof value === 'number' && !isNaN(value) && isFinite(value);
-  };
-  
   // Wrap the flyToLocation to handle auto-rotation and flying state
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
-    // Validate coordinates before attempting to fly
-    if (!isValidCoordinate(longitude) || !isValidCoordinate(latitude)) {
-      console.error(`Invalid coordinates: longitude=${longitude}, latitude=${latitude}`);
-      if (onComplete) onComplete();
-      return;
-    }
-    
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
     

@@ -34,17 +34,6 @@ const MapViews: React.FC<MapViewsProps> = ({
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
   const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
   const [fadeIn, setFadeIn] = useState(false);
-  const [leafletKey, setLeafletKey] = useState<number>(Date.now());
-  const [cesiumKey, setCesiumKey] = useState<number>(Date.now());
-  
-  // When view changes, generate a new key for the entering view to ensure fresh instance
-  useEffect(() => {
-    if (currentView === 'leaflet') {
-      setLeafletKey(Date.now());
-    } else {
-      setCesiumKey(Date.now());
-    }
-  }, [currentView]);
   
   // Track location changes to prevent duplicate transitions
   useEffect(() => {
@@ -109,7 +98,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   // Get styles for current view
   const getCesiumStyles = (): React.CSSProperties => {
     const isCurrent = currentView === 'cesium';
-    const styles = getTransitionStyles(!isCurrent);
+    const styles = getTransitionStyles(isCurrent);
     
     return {
       position: 'absolute' as 'absolute',
@@ -119,12 +108,11 @@ const MapViews: React.FC<MapViewsProps> = ({
       bottom: 0,
       width: '100%',
       height: '100%',
-      visibility: isCurrent ? 'visible' : 'hidden',
-      opacity: isCurrent ? 1 : 0,
-      transform: isCurrent ? 'scale(1)' : 'scale(0.95)',
-      zIndex: isCurrent ? 10 : (transitioning ? 5 : 0),
-      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out',
-      display: isCurrent || transitioning ? 'block' : 'none' // Only render when needed
+      visibility: styles.visibility,
+      opacity: styles.opacity,
+      transform: styles.transform,
+      zIndex: styles.zIndex,
+      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out'
     };
   };
   
@@ -140,12 +128,11 @@ const MapViews: React.FC<MapViewsProps> = ({
       bottom: 0,
       width: '100%',
       height: '100%',
-      visibility: isCurrent ? 'visible' : 'hidden',
-      opacity: isCurrent ? 1 : 0,
+      visibility: isCurrent || transitioning ? 'visible' : 'hidden',
+      opacity: 1 - (styles.opacity as number),
       transform: isCurrent ? 'scale(1)' : 'scale(0.95)',
       zIndex: isCurrent ? 10 : (transitioning ? 5 : 0),
-      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out',
-      display: isCurrent || transitioning ? 'block' : 'none' // Only render when needed
+      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out'
     };
   };
   
@@ -159,16 +146,14 @@ const MapViews: React.FC<MapViewsProps> = ({
         style={getCesiumStyles()}
         data-map-type="cesium"
       >
-        {(currentView === 'cesium' || transitioning) && (
-          <CesiumMap 
-            selectedLocation={selectedLocation}
-            onMapReady={onMapReady}
-            onFlyComplete={onFlyComplete}
-            cinematicFlight={true}
-            key={`cesium-${cesiumKey}`}
-            onViewerReady={handleCesiumViewerRef}
-          />
-        )}
+        <CesiumMap 
+          selectedLocation={selectedLocation}
+          onMapReady={onMapReady}
+          onFlyComplete={onFlyComplete}
+          cinematicFlight={true}
+          key={`cesium-${mapKey}`}
+          onViewerReady={handleCesiumViewerRef}
+        />
       </div>
       
       <div 
@@ -176,15 +161,13 @@ const MapViews: React.FC<MapViewsProps> = ({
         style={getLeafletStyles()}
         data-map-type="leaflet"
       >
-        {(currentView === 'leaflet' || transitioning) && (
-          <LeafletMap 
-            selectedLocation={selectedLocation} 
-            onMapReady={handleLeafletMapRef}
-            activeTool={activeTool}
-            key={`leaflet-${leafletKey}`}
-            onClearAll={handleClearAll}
-          />
-        )}
+        <LeafletMap 
+          selectedLocation={selectedLocation} 
+          onMapReady={handleLeafletMapRef}
+          activeTool={activeTool}
+          key={`leaflet-${mapKey}`}
+          onClearAll={handleClearAll}
+        />
       </div>
       
       {/* Add transition overlay */}

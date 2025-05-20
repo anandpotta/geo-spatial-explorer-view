@@ -17,26 +17,8 @@ export type { DrawingData } from './drawings/types';
 export { saveDrawing, getSavedDrawings, deleteDrawing } from './drawings/storage';
 export { createDrawing } from './drawings/factory';
 
-// Validate if coordinates are valid numbers
-export function isValidCoordinate(value: number): boolean {
-  return typeof value === 'number' && !isNaN(value) && isFinite(value);
-}
-
-// Validate a location object
-export function isValidLocation(location?: Location): boolean {
-  return Boolean(
-    location && 
-    isValidCoordinate(location.x) && 
-    isValidCoordinate(location.y)
-  );
-}
-
 // Utility functions for coordinates
 export function formatCoordinates(latitude: number, longitude: number): string {
-  if (!isValidCoordinate(latitude) || !isValidCoordinate(longitude)) {
-    return "Invalid coordinates";
-  }
-  
   const latDir = latitude >= 0 ? "N" : "S";
   const lonDir = longitude >= 0 ? "E" : "W";
   return `${Math.abs(latitude).toFixed(4)}° ${latDir}, ${Math.abs(longitude).toFixed(4)}° ${lonDir}`;
@@ -44,11 +26,6 @@ export function formatCoordinates(latitude: number, longitude: number): string {
 
 // Calculate distance between points
 export function distanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  if (!isValidCoordinate(lat1) || !isValidCoordinate(lon1) || 
-      !isValidCoordinate(lat2) || !isValidCoordinate(lon2)) {
-    return 0;
-  }
-  
   const R = 6371; // Radius of the earth in km
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
