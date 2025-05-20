@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -122,4 +123,24 @@
 .leaflet-tooltip-top.custom-leaflet-tooltip.active {
   background-color: rgba(59, 130, 246, 0.1);
   border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Ensure proper isolation of Leaflet map containers */
+.leaflet-container-wrapper {
+  isolation: isolate;
+  position: relative;
+}
+
+.leaflet-container {
+  z-index: 0;
+  isolation: isolate;
+}
+
+/* Fix for map container reuse errors */
+.leaflet-container:not(.leaflet-container--active) {
+  display: none;
+}
+
+.leaflet-container--active {
+  display: block;
 }
