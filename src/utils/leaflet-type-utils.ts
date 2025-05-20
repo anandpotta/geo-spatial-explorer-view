@@ -25,7 +25,7 @@ export interface ExtendedLayerOptions extends L.LayerOptions {
  * Extended interface for Leaflet Layer with customized options
  */
 export interface ExtendedLayer extends L.Layer {
-  options?: ExtendedLayerOptions;
+  options: ExtendedLayerOptions;  // Changed from optional to required
 }
 
 /**

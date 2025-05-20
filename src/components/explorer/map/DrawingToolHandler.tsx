@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { isMapValid } from '@/utils/leaflet-type-utils';
+import { isMapValid, LeafletMapInternal, ExtendedLayer } from '@/utils/leaflet-type-utils';
 import L from 'leaflet';
 
 interface DrawingToolHandlerProps {
@@ -10,11 +10,6 @@ interface DrawingToolHandlerProps {
   activeTool: string | null;
   setActiveTool: (tool: string | null) => void;
   onToolSelect: (tool: string) => void;
-}
-
-// Define interface for internal map properties not exposed in TypeScript definitions
-interface LeafletMapInternal extends L.Map {
-  _layers?: Record<string, L.Layer>;
 }
 
 const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
@@ -134,9 +129,13 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
             const layers = internalMap._layers;
             if (layers) {
               Object.keys(layers).forEach(layerId => {
-                const layer = layers[layerId];
-                if (layer && (layer as any).options && ((layer as any).options.isDrawn || (layer as any).options.id)) {
-                  leafletMapRef.current.removeLayer(layer);
+                const layer = layers[layerId] as L.Layer;
+                // Type check before using extended properties
+                if (layer && 'options' in layer) {
+                  const extLayer = layer as unknown as ExtendedLayer;
+                  if (extLayer.options && (extLayer.options.isDrawn || extLayer.options.id)) {
+                    leafletMapRef.current.removeLayer(layer);
+                  }
                 }
               });
               toast.info('All shapes cleared');

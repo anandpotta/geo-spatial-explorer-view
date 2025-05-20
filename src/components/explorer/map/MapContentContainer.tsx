@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import DrawingTools from '../../DrawingTools';
@@ -171,9 +172,13 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         const layers = leafletMapRef.current._layers;
         if (layers) {
           Object.keys(layers).forEach(layerId => {
-            const layer = layers[layerId] as ExtendedLayer;
-            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-              leafletMapRef.current.removeLayer(layer);
+            const layer = layers[layerId] as L.Layer;
+            // Type check before using extended properties
+            if (layer && 'options' in layer) {
+              const extLayer = layer as unknown as ExtendedLayer;
+              if (extLayer.options && (extLayer.options.isDrawn || extLayer.options.id)) {
+                leafletMapRef.current.removeLayer(layer);
+              }
             }
           });
         }
