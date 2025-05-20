@@ -17,6 +17,13 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const uniqueComponentId = useRef<string>(`map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   
+  // Helper function to validate coordinates
+  const isValidLocation = (location?: { x: number, y: number }) => {
+    return location && 
+           typeof location.x === 'number' && !isNaN(location.x) && 
+           typeof location.y === 'number' && !isNaN(location.y);
+  };
+  
   useEffect(() => {
     console.log(`[${uniqueComponentId.current}] Initializing map instance with key: ${mapInstanceKey}`);
     setupLeafletIcons();
@@ -172,12 +179,12 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
               setIsMapReady(true);
               
               // Handle initial location navigation once the map is ready
-              if (selectedLocation && !initialFlyComplete.current) {
+              if (isValidLocation(selectedLocation) && !initialFlyComplete.current) {
                 initialFlyComplete.current = true;
                 try {
                   console.log(`[${uniqueComponentId.current}] Flying to initial location after ensuring map stability`);
                   mapRef.current.flyTo(
-                    [selectedLocation.y, selectedLocation.x], 
+                    [selectedLocation!.y, selectedLocation!.x], 
                     18, 
                     { animate: true, duration: 1.5 }
                   );
@@ -205,5 +212,6 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady,
     setMapInstanceKey,
     handleSetMapRef,
+    isValidLocation,
   };
 }

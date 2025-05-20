@@ -16,6 +16,11 @@ export function useFlyToLocation(
   controlsRef: React.MutableRefObject<OrbitControls | null>,
   globeRadius: number
 ) {
+  // Helper function to validate coordinates
+  const isValidCoordinate = (value: number): boolean => {
+    return typeof value === 'number' && !isNaN(value) && isFinite(value);
+  };
+  
   // Method to fly to a specific location on the globe
   const flyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
     if (!cameraRef.current || !controlsRef.current) {
@@ -25,7 +30,7 @@ export function useFlyToLocation(
     }
     
     // Validate inputs to avoid NaN errors
-    if (isNaN(longitude) || isNaN(latitude)) {
+    if (!isValidCoordinate(longitude) || !isValidCoordinate(latitude)) {
       console.error(`Invalid coordinates: longitude=${longitude}, latitude=${latitude}`);
       if (onComplete) onComplete();
       return;
