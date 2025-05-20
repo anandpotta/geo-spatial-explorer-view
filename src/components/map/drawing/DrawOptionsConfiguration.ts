@@ -6,6 +6,20 @@ import L from 'leaflet';
  */
 export const getDrawOptions = () => {
   return {
+    polyline: {
+      shapeOptions: {
+        color: '#33C3F0',
+        weight: 4,
+        opacity: 1,
+        fillOpacity: 0.3,
+        stroke: true,
+        renderer: L.svg(), // Force SVG renderer
+        lineCap: 'round',
+        lineJoin: 'round',
+        metric: true,
+        showLength: true,
+      }
+    },
     rectangle: {
       shapeOptions: {
         color: '#33C3F0',
@@ -47,15 +61,6 @@ export const getDrawOptions = () => {
         weight: 2,
         opacity: 1,
         dashArray: '5, 5'
-      },
-      // Fix for vertex markers
-      markerOptions: {
-        icon: L.icon({
-          iconUrl: 'path/to/marker-icon.png',
-          iconSize: [10, 10],
-          iconAnchor: [5, 5]
-        }),
-        zIndexOffset: 2000 // Make sure these are on top
       }
     },
     circle: {
@@ -66,11 +71,20 @@ export const getDrawOptions = () => {
         fillOpacity: 0.3,
         stroke: true,
         renderer: L.svg() // Force SVG renderer for circles
-      }
+      },
+      showRadius: true,
+      metric: true
     },
-    // Disable marker tool to avoid confusion with polygon vertices
-    circlemarker: false,
-    marker: false,
-    polyline: false
+    marker: {
+      icon: new L.Icon.Default(),
+      repeatMode: false,
+      zIndexOffset: 2000
+    },
+    // CircleMarker uses a fixed-pixel radius regardless of zoom level
+    circlemarker: {
+      color: '#33C3F0',
+      radius: 10,
+      fillOpacity: 0.3
+    }
   };
 };

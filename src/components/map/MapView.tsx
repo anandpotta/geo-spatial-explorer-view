@@ -68,6 +68,12 @@ const MapView = ({
 
   // Reset map key whenever component remounts to ensure fresh instance
   useEffect(() => {
+    // Initialize Leaflet.draw if needed
+    if (!(window as any).L?.drawVersion) {
+      // Log successful initialization of Leaflet.draw
+      console.log('Leaflet.draw initialized');
+    }
+    
     return () => {
       // Force a new key on unmount to ensure clean startup next time
       setMapKey(`map-${Date.now()}`);

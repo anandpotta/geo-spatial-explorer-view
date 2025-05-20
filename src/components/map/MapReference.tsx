@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet-draw';
 
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
@@ -72,6 +73,13 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           safeInvalidateSize();
           createMapMoveEvent();
         });
+        
+        // Make sure Leaflet.draw is properly initialized
+        if (L.drawVersion) {
+          console.log(`Leaflet.draw version ${L.drawVersion} is loaded`);
+        } else {
+          console.warn('Leaflet.draw may not be properly loaded');
+        }
         
         // Call the parent's onMapReady callback
         onMapReady(map);
