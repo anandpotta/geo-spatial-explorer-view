@@ -40,6 +40,28 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         icon.appendChild(tooltip);
       }
     }
+    
+    // When a user marker is created, we should clean up any search markers
+    // that might be at almost the same location to avoid duplicate markers
+    if (markerRef.current && markerRef.current._map) {
+      const map = markerRef.current._map;
+      const userPos = markerRef.current.getLatLng();
+      
+      // Find and remove search result markers near this position
+      map.eachLayer(layer => {
+        if (layer instanceof L.Marker && 
+            layer.getElement()?.getAttribute('data-search-marker') === 'true') {
+          
+          const searchPos = layer.getLatLng();
+          
+          // If the search marker is very close to this user marker, remove it
+          if (Math.abs(searchPos.lat - userPos.lat) < 0.0001 && 
+              Math.abs(searchPos.lng - userPos.lng) < 0.0001) {
+            map.removeLayer(layer);
+          }
+        }
+      });
+    }
   }, [marker.id, marker.name]);
   
   // Cleanup marker when component unmounts

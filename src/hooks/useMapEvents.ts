@@ -79,7 +79,30 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
                 
                 // If no marker exists, add one
                 if (!markerExists && map) {
-                  const marker = L.marker(newPosition).addTo(map);
+                  // Create a custom red icon for the search marker
+                  const redIcon = L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                  });
+                  
+                  // Create marker with red icon
+                  const marker = L.marker(newPosition, { 
+                    icon: redIcon,
+                    // Make this non-draggable to distinguish from user-created markers
+                    draggable: false 
+                  }).addTo(map);
+                  
+                  // Add data attribute to identify this as a search result marker
+                  const iconElement = marker.getIcon().createIcon();
+                  if (iconElement) {
+                    iconElement.setAttribute('data-search-marker', 'true');
+                  }
+                  
+                  // Add a popup to the marker with location information
                   marker.bindPopup(`<b>Selected Location</b><br>${selectedLocation.x.toFixed(6)}, ${selectedLocation.y.toFixed(6)}`).openPopup();
                 }
                 
