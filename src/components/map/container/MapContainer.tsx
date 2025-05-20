@@ -39,25 +39,30 @@ const MapContainer: React.FC<MapContainerProps> = ({
   
   // Handle map initialization
   const handleMapInit = (map: L.Map | null) => {
+    // Safely handle null map scenario
     if (!map) {
       console.warn("Map initialization failed - map object is null");
       return;
     }
     
-    console.log("Map initialized with zoom:", map.getZoom());
-    mapRef.current = map;
-    
-    // Give the map time to fully render before calling onMapReady
-    setTimeout(() => {
-      if (onMapReady && map) {
-        console.log("Calling onMapReady callback");
-        onMapReady(map);
-      }
-    }, 200);
-    
-    // Add a custom attribute to help identify this map instance
-    const container = map.getContainer();
-    container.setAttribute('data-instance-id', mapKey);
+    try {
+      console.log("Map initialized with zoom:", map.getZoom());
+      mapRef.current = map;
+      
+      // Give the map time to fully render before calling onMapReady
+      setTimeout(() => {
+        if (onMapReady && map) {
+          console.log("Calling onMapReady callback");
+          onMapReady(map);
+        }
+      }, 200);
+      
+      // Add a custom attribute to help identify this map instance
+      const container = map.getContainer();
+      container.setAttribute('data-instance-id', mapKey);
+    } catch (err) {
+      console.error("Error during map initialization:", err);
+    }
   };
   
   return (
@@ -76,7 +81,11 @@ const MapContainer: React.FC<MapContainerProps> = ({
         console.log("Map is ready");
         // Additional initialization can happen here
         if (mapRef.current) {
-          mapRef.current.invalidateSize(true);
+          try {
+            mapRef.current.invalidateSize(true);
+          } catch (error) {
+            console.error("Error invalidating map size:", error);
+          }
         }
       }}
     >
