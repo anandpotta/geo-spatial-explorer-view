@@ -1,9 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
 
 export function useClearConfirmation(featureGroup: L.FeatureGroup | null, onClearAll?: () => void) {
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   
   useEffect(() => {
     // Find and override the click handler for the "Clear all layers" option
@@ -13,6 +14,9 @@ export function useClearConfirmation(featureGroup: L.FeatureGroup | null, onClea
         const clearAllButton = document.querySelector('.leaflet-draw-actions li a[title="Clear all layers"]');
         
         if (clearAllButton) {
+          // Store reference to the button for focus management
+          buttonRef.current = clearAllButton as HTMLButtonElement;
+          
           // Remove existing listeners
           const oldButton = clearAllButton.cloneNode(true);
           if (clearAllButton.parentNode) {
@@ -64,6 +68,20 @@ export function useClearConfirmation(featureGroup: L.FeatureGroup | null, onClea
       observer.disconnect();
     };
   }, []);
+
+  // Handle dialog closing to return focus to the button that opened it
+  useEffect(() => {
+    if (!isClearDialogOpen && buttonRef.current) {
+      try {
+        // Return focus to the button that opened the dialog when it closes
+        setTimeout(() => {
+          buttonRef.current?.focus();
+        }, 50);
+      } catch (e) {
+        console.error('Failed to return focus:', e);
+      }
+    }
+  }, [isClearDialogOpen]);
 
   const handleConfirmClear = () => {
     if (featureGroup) {

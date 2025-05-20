@@ -39,6 +39,7 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
 ) => {
   // Use our own internal ref
   const editControlRef = useRef<any>(null);
+  const dialogCancelRef = useRef<HTMLButtonElement>(null);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
@@ -70,7 +71,7 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
       if (typeof forwardedRef === 'function') {
         // If it's a function ref, call it with the current value
         forwardedRef(editControlRef.current);
-      } else if (forwardedRef && typeof forwardedRef === 'object' && forwardedRef.hasOwnProperty('current')) {
+      } else if (forwardedRef && typeof forwardedRef === 'object' && 'current' in forwardedRef) {
         // Only set current if it's a proper ref object with a current property
         forwardedRef.current = editControlRef.current;
       }
@@ -94,6 +95,16 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
     remove: true
   };
 
+  // Ensure proper focus management when the dialog opens
+  useEffect(() => {
+    if (isClearDialogOpen && dialogCancelRef.current) {
+      // Focus the cancel button when dialog opens
+      setTimeout(() => {
+        dialogCancelRef.current?.focus();
+      }, 50);
+    }
+  }, [isClearDialogOpen]);
+
   return (
     <>
       <EditControl
@@ -105,8 +116,11 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
         featureGroup={featureGroup}
       />
       
-      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
-        <AlertDialogContent>
+      <AlertDialog 
+        open={isClearDialogOpen} 
+        onOpenChange={setIsClearDialogOpen}
+      >
+        <AlertDialogContent onEscapeKeyDown={() => setIsClearDialogOpen(false)}>
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
             <AlertDialogDescription>
@@ -114,7 +128,7 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel ref={dialogCancelRef}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmClear}>
               Clear All
             </AlertDialogAction>

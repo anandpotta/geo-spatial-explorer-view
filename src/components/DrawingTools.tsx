@@ -40,6 +40,8 @@ const DrawingTools = ({
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dialogCancelRef = useRef<HTMLButtonElement>(null);
+  const clearButtonRef = useRef<HTMLButtonElement>(null);
   
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -65,6 +67,20 @@ const DrawingTools = ({
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging, dragOffset]);
+
+  useEffect(() => {
+    if (isClearDialogOpen && dialogCancelRef.current) {
+      // Focus the cancel button when dialog opens
+      setTimeout(() => {
+        dialogCancelRef.current?.focus();
+      }, 50);
+    } else if (!isClearDialogOpen && clearButtonRef.current) {
+      // Return focus to the clear button when dialog closes
+      setTimeout(() => {
+        clearButtonRef.current?.focus();
+      }, 50);
+    }
+  }, [isClearDialogOpen]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
@@ -181,6 +197,7 @@ const DrawingTools = ({
         </button>
         
         <button
+          ref={clearButtonRef}
           className="w-full p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"
           onClick={() => handleToolClick('clear')}
           aria-label="Clear all layers"
@@ -191,7 +208,7 @@ const DrawingTools = ({
       </div>
 
       <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent onEscapeKeyDown={() => setIsClearDialogOpen(false)}>
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
             <AlertDialogDescription>
@@ -199,7 +216,7 @@ const DrawingTools = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel ref={dialogCancelRef}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={processClientClearAll}>Clear All</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
