@@ -20,10 +20,16 @@ const CesiumView: React.FC<CesiumViewProps> = ({
   style,
   mapKey
 }) => {
+  // Create a new style object that guarantees high z-index
+  const enhancedStyle = {
+    ...style,
+    zIndex: 20, // Force higher z-index for 3D globe view
+  };
+
   return (
     <div 
       className="absolute inset-0 transition-all duration-500 ease-in-out"
-      style={style}
+      style={enhancedStyle}
       data-map-type="cesium"
     >
       <CesiumMap 

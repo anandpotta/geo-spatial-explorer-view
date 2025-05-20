@@ -17,7 +17,7 @@ const Index = () => {
   const initialRenderRef = useRef(true);
   const appFullyLoadedRef = useRef(false);
 
-  // Ensure cesium view on initial render
+  // Ensure cesium view on initial render with stronger enforcement
   useEffect(() => {
     if (initialRenderRef.current) {
       initialRenderRef.current = false;
@@ -35,9 +35,28 @@ const Index = () => {
         });
       }, 1500);
       
-      return () => clearTimeout(timer);
+      // Additional enforcement to maintain cesium view
+      const enforceCesiumView = setTimeout(() => {
+        if (currentView !== 'cesium') {
+          console.log("Enforcing 3D Globe view");
+          setCurrentView('cesium');
+        }
+      }, 500);
+      
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(enforceCesiumView);
+      };
     }
   }, []);
+
+  // Additional effect to ensure we stay in cesium view during initial load
+  useEffect(() => {
+    // Make sure we're in cesium view by default
+    if (currentView !== 'cesium' && !viewTransitionInProgressRef.current) {
+      setCurrentView('cesium');
+    }
+  }, [currentView]);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections

@@ -40,7 +40,7 @@ export function getCesiumStyles(currentView: 'cesium' | 'leaflet', transitioning
     visibility: styles.visibility,
     opacity: styles.opacity,
     transform: styles.transform,
-    zIndex: styles.zIndex,
+    zIndex: isCurrent ? 20 : styles.zIndex, // Increased z-index for Cesium to ensure it's on top initially
     transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out'
   };
 }

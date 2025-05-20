@@ -169,7 +169,8 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       style={{ 
         position: 'relative', 
         overflow: 'hidden',
-        backgroundColor: 'black'
+        backgroundColor: 'black',
+        zIndex: 20 // Ensure high z-index to be on top
       }}
     >
       {hasError && (

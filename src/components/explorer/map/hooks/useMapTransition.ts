@@ -22,7 +22,12 @@ export function useMapTransition({ viewTransitionInProgress, currentView }: UseM
     if (previousView === null) {
       console.log(`Initial view set to ${currentView}`);
       setPreviousView(currentView);
-      return;
+      
+      // If the currentView is cesium, we don't need to transition
+      if (currentView === 'cesium') {
+        setTransitioning(false);
+        return;
+      }
     }
     
     if (previousView !== currentView) {
