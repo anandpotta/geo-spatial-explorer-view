@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Location } from '@/utils/geo-utils';
-import MapContentContainer from '../explorer/map/MapContentContainer';
+import MapContentContainer from './map/MapContentContainer';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
