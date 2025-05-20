@@ -3,12 +3,17 @@ import { toast } from 'sonner';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRef } from 'react';
 
 export function useMarkerHandlers(mapState: any) {
   const { currentUser } = useAuth();
+  const isAddingMarkerRef = useRef(false);
   
   const handleMapClick = (latlng: L.LatLng) => {
-    if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
+    if ((mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) && !isAddingMarkerRef.current) {
+      // Set flag to prevent multiple markers being added simultaneously
+      isAddingMarkerRef.current = true;
+      
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       console.log("Setting marker at position:", exactPosition);
       mapState.setTempMarker(exactPosition);
@@ -29,11 +34,20 @@ export function useMarkerHandlers(mapState: any) {
         if (inputField) {
           (inputField as HTMLElement).focus();
         }
+        
+        // Reset the flag after a delay
+        setTimeout(() => {
+          isAddingMarkerRef.current = false;
+        }, 300);
       }, 100);
     }
   };
 
   const handleShapeCreated = (shape: any) => {
+    // Prevent duplicate processing
+    if (isAddingMarkerRef.current) return;
+    isAddingMarkerRef.current = true;
+    
     // Set the flag to prevent automatic navigation
     mapState.setStayAtCurrentPosition(true);
     
@@ -75,6 +89,7 @@ export function useMarkerHandlers(mapState: any) {
       } else {
         console.error('Invalid marker position data:', shape);
         toast.error('Could not create marker: invalid position data');
+        isAddingMarkerRef.current = false;
         return;
       }
     } else {
@@ -110,6 +125,11 @@ export function useMarkerHandlers(mapState: any) {
       
       toast.success(`${shape.type} created - Click to tag this building or upload a file`);
     }
+    
+    // Reset the flag after a delay to prevent duplicate processing
+    setTimeout(() => {
+      isAddingMarkerRef.current = false;
+    }, 500);
   };
 
   return {

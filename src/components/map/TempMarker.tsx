@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Marker } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
@@ -21,6 +21,9 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   setMarkerType,
   onSave
 }) => {
+  // Track if this marker has been initialized to prevent double creation
+  const hasInitialized = useRef(false);
+  
   // Create a custom marker with higher z-index to ensure it's on top
   const markerOptions = {
     draggable: true,
@@ -40,6 +43,10 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         }
       },
       add: () => {
+        // Only process the initialization once to prevent duplicates
+        if (hasInitialized.current) return;
+        hasInitialized.current = true;
+        
         // Force popup to open when marker is added to the map
         setTimeout(() => {
           const markerElement = document.querySelector('.leaflet-marker-draggable');
@@ -54,6 +61,11 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
     }
   };
+  
+  // Reset the initialization flag when position changes
+  useEffect(() => {
+    hasInitialized.current = false;
+  }, [position]);
   
   return (
     <Marker position={position} {...markerOptions}>
