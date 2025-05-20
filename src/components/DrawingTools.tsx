@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Trash2, Pencil } from 'lucide-react';
 import MapControls from './drawing/MapControls';
@@ -192,7 +191,7 @@ const DrawingTools = ({
       </div>
 
       <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
-        <AlertDialogContent className="z-[9999]">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
             <AlertDialogDescription>

@@ -56,7 +56,7 @@ const DeleteLocationDialog = ({
       open={isOpen} 
       onOpenChange={onOpenChange}
     >
-      <AlertDialogContent className="z-[9999]">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Location</AlertDialogTitle>
           <AlertDialogDescription>
