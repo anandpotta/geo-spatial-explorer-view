@@ -1,0 +1,48 @@
+
+/* Override for Leaflet Draw toolbar visibility */
+.leaflet-draw.leaflet-control {
+  display: block !important;
+  visibility: visible !important;
+}
+
+.leaflet-draw-toolbar {
+  display: block !important;
+  visibility: visible !important;
+}
+
+.leaflet-draw-toolbar a {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* Make editing controls more visible */
+.leaflet-editing-icon {
+  width: 10px !important;
+  height: 10px !important;
+  margin-left: -5px !important;
+  margin-top: -5px !important;
+  border: 2px solid #33C3F0 !important;
+  background-color: white !important;
+}
+
+/* Make remove buttons and controls more visible */
+.remove-button-container {
+  z-index: 1000 !important;
+  pointer-events: auto !important;
+}
+
+.upload-button-container {
+  z-index: 1000 !important;
+  pointer-events: auto !important;
+}
+
+/* Make sure delete buttons are clickable */
+.leaflet-marker-icon.remove-button-container,
+.leaflet-marker-icon.upload-button-container {
+  pointer-events: auto !important;
+}
+
+/* Make marker handles visible */
+.leaflet-marker-draggable {
+  cursor: move !important;
+}

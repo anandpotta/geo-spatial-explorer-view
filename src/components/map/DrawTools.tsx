@@ -86,6 +86,7 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
         // If we found a map, store it
         if (mapRef.current) {
           console.log("Map found for draw tools");
+          controlsAddedRef.current = true; // Mark that we can add controls
         }
       } catch (err) {
         console.warn("Could not retrieve map from feature group:", err);
@@ -148,9 +149,34 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
     }
   })();
 
+  // Force redraw of controls - add this to fix missing controls
+  useEffect(() => {
+    if (isMapReady && featureGroup) {
+      // Force a redraw after a short delay
+      const timer = setTimeout(() => {
+        const map = (featureGroup as any)._map;
+        if (map) {
+          map.invalidateSize(true);
+          console.log("Map invalidated to show controls");
+          
+          // Force refresh of edit control if it exists
+          if (editControlRef.current) {
+            const editDiv = document.querySelector('.leaflet-draw.leaflet-control');
+            if (editDiv) {
+              editDiv.classList.add('leaflet-draw-toolbar-shown');
+              console.log("Forcing edit control visibility");
+            }
+          }
+        }
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMapReady, featureGroup]);
+
   return (
     <>
-      {isMapReady && !controlsAddedRef.current && (
+      {isMapReady && (
         <EditControl
           ref={editControlRef}
           position="topright"

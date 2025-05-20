@@ -4,6 +4,7 @@ import { MapContainer as LeafletMapContainer, TileLayer, AttributionControl } fr
 import { v4 as uuidv4 } from 'uuid';
 // Import CSS directly from node_modules
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css'; // Ensure draw CSS is imported
 
 interface MapContainerProps {
   position: [number, number];

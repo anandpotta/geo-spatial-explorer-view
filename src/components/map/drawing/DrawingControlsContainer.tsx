@@ -1,7 +1,7 @@
 
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 import { useSvgPathManagement } from '@/hooks/useSvgPathManagement';
 import { useDrawingFileUpload } from '@/hooks/useDrawingFileUpload';
@@ -24,6 +24,26 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   const drawingControlsRef = useRef<DrawingControlsRef>(null);
   const { svgPaths, setSvgPaths } = useSvgPathManagement();
   const { handleUploadToDrawing } = useDrawingFileUpload();
+  const controlsInitializedRef = useRef(false);
+  
+  // Force re-initialization if controls aren't showing
+  useEffect(() => {
+    const checkControlsVisibility = () => {
+      // Check if the drawing controls are visible
+      const drawControls = document.querySelector('.leaflet-draw.leaflet-control');
+      if (!drawControls && controlsInitializedRef.current) {
+        console.log("Drawing controls not visible, forcing refresh");
+        window.dispatchEvent(new Event('resize'));
+      } else if (drawControls) {
+        controlsInitializedRef.current = true;
+      }
+    };
+    
+    // Check after a delay to ensure the map has initialized
+    const timer = setTimeout(checkControlsVisibility, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => {

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';
@@ -14,6 +13,8 @@ import L from 'leaflet';
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+// Import custom override styles
+import '@/styles/leaflet-overrides.css';
 
 interface MapViewProps {
   position: [number, number];
