@@ -54,8 +54,18 @@ export const useMapEvents = (map: L.Map | null, selectedLocation?: { x: number; 
       }
       
       // Check if map is still valid
-      if (!map || !map._loaded) {
-        console.warn('Map is no longer valid or not fully loaded, retrying...');
+      if (!map) {
+        console.warn('Map is no longer valid, retrying...');
+        navigationAttemptsRef.current++;
+        setTimeout(attemptNavigation, 1000);
+        return;
+      }
+
+      // Check if map is fully initialized
+      // Using type assertion to access internal properties safely
+      const mapInstance = map as any;
+      if (!mapInstance || !mapInstance._loaded) {
+        console.warn('Map not fully loaded yet, retrying...');
         navigationAttemptsRef.current++;
         setTimeout(attemptNavigation, 1000);
         return;

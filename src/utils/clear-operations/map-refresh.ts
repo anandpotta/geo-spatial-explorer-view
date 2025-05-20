@@ -40,6 +40,7 @@ export function navigateToLocation(map: any, lat: number, lng: number, zoom: num
     }
     
     // Check if map is valid and has necessary methods
+    // Using type casting to safely check internal properties
     if (!map._loaded) {
       console.warn('Map not fully loaded yet, delaying navigation');
       return false;
