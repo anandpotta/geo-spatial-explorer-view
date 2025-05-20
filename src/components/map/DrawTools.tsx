@@ -1,10 +1,9 @@
-
 import { useRef, forwardRef, useImperativeHandle } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { usePathElements } from '@/hooks/usePathElements';
 import { useShapeCreation } from '@/hooks/useShapeCreation';
-import { useDrawToolsConfiguration } from '@/hooks/useDrawToolsConfiguration';
+import { useDrawingToolsConfiguration } from '@/hooks/useDrawToolsConfiguration';
 import { useDrawToolsEventHandlers } from '@/hooks/useDrawToolsEventHandlers';
 import { useSavedPathsRestoration } from '@/hooks/useSavedPathsRestoration';
 import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
@@ -29,7 +28,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const { handleCreated } = useShapeCreation(onCreated);
   
   // Initialize configuration and event handlers using custom hooks
-  useDrawToolsConfiguration(featureGroup);
+  useDrawingToolsConfiguration(featureGroup);
   useDrawToolsEventHandlers(getPathElements);
   useSavedPathsRestoration(featureGroup);
   usePathElementsCleaner(clearPathElements);
