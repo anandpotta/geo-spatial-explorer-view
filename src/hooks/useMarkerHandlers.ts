@@ -10,6 +10,7 @@ export function useMarkerHandlers(mapState: any) {
   const handleMapClick = (latlng: L.LatLng) => {
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
+      console.log("Setting marker at position:", exactPosition);
       mapState.setTempMarker(exactPosition);
       
       // Always set a default name to make it easier to save
@@ -34,6 +35,7 @@ export function useMarkerHandlers(mapState: any) {
           shape.position[0],
           shape.position[1]
         ];
+        console.log("Setting marker from shape at position:", exactPosition);
         mapState.setTempMarker(exactPosition);
         mapState.setMarkerName('New Marker');
         
@@ -47,6 +49,7 @@ export function useMarkerHandlers(mapState: any) {
       } else if (shape.layer && shape.layer.getLatLng) {
         // Alternative: try to get position from the layer if available
         const latLng = shape.layer.getLatLng();
+        console.log("Setting marker from layer at position:", [latLng.lat, latLng.lng]);
         mapState.setTempMarker([latLng.lat, latLng.lng]);
         mapState.setMarkerName('New Marker');
         
