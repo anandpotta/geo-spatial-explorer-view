@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';
 import { useFloorPlanState } from '@/hooks/useFloorPlanState';
@@ -62,12 +62,32 @@ const MapView = ({
   const uniqueMapId = useRef<string>(`map-${mapKey}-${Math.random().toString(36).substring(2, 9)}`);
   const [instanceKey] = useState<string>(uniqueMapId.current);
   const drawingControlsRef = useRef(null);
+  const mapInitializedRef = useRef(false);
+  const [mapReadyForControls, setMapReadyForControls] = useState(false);
+  
   const {
     showFloorPlan,
     setShowFloorPlan,
     selectedDrawing,
     handleRegionClick
   } = useFloorPlanState();
+
+  // Track when the map is fully initialized and ready for UI components
+  useEffect(() => {
+    if (isMapReady && !mapInitializedRef.current) {
+      mapInitializedRef.current = true;
+      
+      // Wait a moment to ensure the map is rendered properly before adding controls
+      const timer = setTimeout(() => {
+        if (mapInitializedRef.current) {
+          setMapReadyForControls(true);
+          console.log("Map is now ready for drawing controls");
+        }
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMapReady]);
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
@@ -99,13 +119,15 @@ const MapView = ({
       >
         <MapReference onMapReady={onMapReady} mapKey={instanceKey} />
         
-        <DrawingControlsContainer
-          ref={drawingControlsRef}
-          onShapeCreated={onShapeCreated}
-          activeTool={activeTool}
-          onRegionClick={handleRegionClick}
-          onClearAll={onClearAll}
-        />
+        {mapReadyForControls && (
+          <DrawingControlsContainer
+            ref={drawingControlsRef}
+            onShapeCreated={onShapeCreated}
+            activeTool={activeTool}
+            onRegionClick={handleRegionClick}
+            onClearAll={onClearAll}
+          />
+        )}
         
         <MarkersContainer
           markers={markers}

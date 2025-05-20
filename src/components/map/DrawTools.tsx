@@ -40,6 +40,8 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
   // Use our own internal ref
   const editControlRef = useRef<any>(null);
   const dialogCancelRef = useRef<HTMLButtonElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const controlsAddedRef = useRef<boolean>(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
@@ -60,10 +62,31 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
     if (featureGroup && !window.featureGroup) {
       window.featureGroup = featureGroup;
     }
+
+    // Get the map instance from the featureGroup
+    if (featureGroup && featureGroup.getLayer && !mapRef.current) {
+      try {
+        const firstLayer = featureGroup.getLayers()[0];
+        if (firstLayer && firstLayer.getMap) {
+          mapRef.current = firstLayer.getMap();
+        } else {
+          // Try to find map from the feature group itself
+          if (featureGroup._map) {
+            mapRef.current = featureGroup._map;
+          }
+        }
+
+        // If we found a map, store it
+        if (mapRef.current) {
+          console.log("Map found for draw tools");
+        }
+      } catch (err) {
+        console.warn("Could not retrieve map from feature group:", err);
+      }
+    }
   }, [featureGroup]);
 
   // Handle the forwarded ref (if provided)
-  // Make this safer by checking the type and structure of forwardedRef
   useEffect(() => {
     if (!forwardedRef) return;
     
@@ -105,16 +128,21 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
     }
   }, [isClearDialogOpen]);
 
+  // Check if the map is ready before rendering EditControl
+  const isMapReady = mapRef.current && mapRef.current._container && document.body.contains(mapRef.current._container);
+
   return (
     <>
-      <EditControl
-        ref={editControlRef}
-        position="topright"
-        onCreated={handleCreated}
-        draw={drawOptions}
-        edit={editOptions}
-        featureGroup={featureGroup}
-      />
+      {isMapReady && !controlsAddedRef.current && (
+        <EditControl
+          ref={editControlRef}
+          position="topright"
+          onCreated={handleCreated}
+          draw={drawOptions}
+          edit={editOptions}
+          featureGroup={featureGroup}
+        />
+      )}
       
       <AlertDialog 
         open={isClearDialogOpen} 

@@ -1,51 +1,86 @@
 
 import L from 'leaflet';
 
-/**
- * Interface for internal Leaflet Map properties not exposed in TypeScript definitions
- */
+// Define interface for internal map properties not exposed in TypeScript definitions
 export interface LeafletMapInternal extends L.Map {
-  _layers?: Record<string, L.Layer>;
+  _layers?: { [key: string]: L.Layer };
+  _leaflet_id?: number;
+  _loaded?: boolean;
+  _container?: HTMLElement;
   _panes?: {
     mapPane?: {
       _leaflet_pos?: any;
     };
+    tilePane?: HTMLElement;
+    shadowPane?: HTMLElement;
+    markerPane?: HTMLElement;
+    tooltipPane?: HTMLElement;
+    popupPane?: HTMLElement;
+    overlayPane?: HTMLElement;
   };
 }
 
-/**
- * Extended interface for Leaflet LayerOptions with custom properties
- */
-export interface ExtendedLayerOptions extends L.LayerOptions {
-  isDrawn?: boolean;
-  id?: string;
-}
-
-/**
- * Extended interface for Leaflet Layer with customized options
- */
+// Define interface for extended layer properties
 export interface ExtendedLayer extends L.Layer {
-  options: ExtendedLayerOptions;  // Changed from optional to required
+  options?: {
+    isDrawn?: boolean;
+    id?: string;
+    data?: any;
+  } & L.PathOptions;
+  _path?: SVGPathElement;
+  _map?: L.Map;
+  _leaflet_id?: number;
 }
 
 /**
- * Safely gets the map from a Leaflet layer
+ * Checks if a map object is valid and ready for use
+ * @param map The map instance to check
+ * @returns boolean indicating if map is valid
  */
-export const getMapFromLayer = (layer: L.Layer): L.Map | null => {
+export function isMapValid(map: any): boolean {
+  if (!map) return false;
+  
+  try {
+    // Check if map has essential properties
+    if (!map._container || !map._leaflet_id) return false;
+    
+    // Check if container is in DOM
+    if (map._container && !document.body.contains(map._container)) return false;
+    
+    // Check if map has been loaded
+    if (typeof map._loaded !== 'undefined' && map._loaded === false) return false;
+    
+    // Check if critical panes exist
+    const internalMap = map as LeafletMapInternal;
+    if (!internalMap._panes || !internalMap._panes.mapPane) return false;
+    
+    return true;
+  } catch (err) {
+    console.error('Error checking map validity:', err);
+    return false;
+  }
+}
+
+/**
+ * Gets the map a layer is attached to
+ * @param layer The layer to get the map from
+ * @returns The map instance or null
+ */
+export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
   if (!layer) return null;
   
   try {
-    // Type assertion to access _map property
-    const map = (layer as any)._map;
-    if (map) return map;
+    // Try to access map directly
+    const extendedLayer = layer as ExtendedLayer;
+    if (extendedLayer._map) return extendedLayer._map;
     
-    // Alternative approach for FeatureGroup
-    if (typeof (layer as any).getLayer === 'function') {
-      const firstLayer = (layer as any).getLayer(
-        Object.keys((layer as any)._layers)[0]
-      );
-      if (firstLayer && firstLayer._map) {
-        return firstLayer._map;
+    // If it's a feature group, try to get map from first layer
+    if ('getLayers' in layer) {
+      const featureGroup = layer as L.FeatureGroup;
+      const layers = featureGroup.getLayers();
+      if (layers.length > 0) {
+        const firstLayer = layers[0] as ExtendedLayer;
+        if (firstLayer._map) return firstLayer._map;
       }
     }
     
@@ -54,61 +89,6 @@ export const getMapFromLayer = (layer: L.Layer): L.Map | null => {
     console.error('Error getting map from layer:', err);
     return null;
   }
-};
+}
 
-/**
- * Checks if a map instance is valid and fully initialized
- */
-export const isMapValid = (map: L.Map | null | undefined): boolean => {
-  if (!map) return false;
-  
-  try {
-    // Check if container exists and is in the DOM
-    const container = map.getContainer();
-    if (!container || !document.body.contains(container)) {
-      return false;
-    }
-    
-    // Check if map panes are initialized
-    const internalMap = map as LeafletMapInternal;
-    if (!internalMap._panes || !internalMap._panes.mapPane) {
-      return false;
-    }
-    
-    // Check if position info is available
-    if (!internalMap._panes.mapPane._leaflet_pos) {
-      return false;
-    }
-    
-    // Additional check: verify that the map actually has dimensions
-    const size = map.getSize();
-    if (!size || size.x === 0 || size.y === 0) {
-      return false;
-    }
-    
-    // If we pass all checks, the map should be valid
-    return true;
-  } catch (err) {
-    console.error('Error validating map:', err);
-    return false;
-  }
-};
-
-/**
- * Safely execute a map operation with validation
- */
-export const safeMapOperation = <T>(
-  map: L.Map | null | undefined, 
-  operation: (map: L.Map) => T,
-  fallback: T
-): T => {
-  if (isMapValid(map)) {
-    try {
-      return operation(map as L.Map);
-    } catch (err) {
-      console.error('Map operation failed:', err);
-      return fallback;
-    }
-  }
-  return fallback;
-};
+export default { isMapValid, getMapFromLayer };

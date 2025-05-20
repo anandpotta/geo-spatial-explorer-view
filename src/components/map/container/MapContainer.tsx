@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, AttributionControl } from 'react-leaflet';
+import { v4 as uuidv4 } from 'uuid';
 // Import CSS directly from node_modules
 import 'leaflet/dist/leaflet.css';
 
@@ -14,6 +15,7 @@ interface MapContainerProps {
 const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, children }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isUnmountingRef = useRef(false);
+  const uniqueIdRef = useRef(`map-${mapKey}-${uuidv4()}`);
 
   // This ensures we provide a new container for each map instance
   useEffect(() => {
@@ -79,11 +81,11 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
     <div 
       ref={containerRef} 
       className="w-full h-full"
-      id={`map-container-${mapKey}`}
+      id={uniqueIdRef.current}
       data-map-key={mapKey}
     >
       <LeafletMapContainer 
-        key={mapKey} // Ensure a new instance is created when key changes
+        key={uniqueIdRef.current} // Ensure a new instance is created when key changes
         className="w-full h-full"
         attributionControl={false}
         center={position}
