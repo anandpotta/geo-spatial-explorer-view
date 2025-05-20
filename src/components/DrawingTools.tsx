@@ -192,7 +192,7 @@ const DrawingTools = ({
       </div>
 
       <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[9999]">
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
             <AlertDialogDescription>
