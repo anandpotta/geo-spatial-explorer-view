@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';
 import { useFloorPlanState } from '@/hooks/useFloorPlanState';
@@ -56,7 +56,6 @@ const MapView = ({
   onClearAll,
   isMapReady = false
 }: MapViewProps) => {
-  // Generate a stable but unique key
   const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
   const drawingControlsRef = useRef(null);
   const {
@@ -65,20 +64,6 @@ const MapView = ({
     selectedDrawing,
     handleRegionClick
   } = useFloorPlanState();
-
-  // Reset map key whenever component remounts to ensure fresh instance
-  useEffect(() => {
-    // Initialize Leaflet.draw if needed
-    if (!(window as any).L?.drawVersion) {
-      // Log successful initialization of Leaflet.draw
-      console.log('Leaflet.draw initialized');
-    }
-    
-    return () => {
-      // Force a new key on unmount to ensure clean startup next time
-      setMapKey(`map-${Date.now()}`);
-    };
-  }, []);
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
@@ -103,36 +88,34 @@ const MapView = ({
         isMapReady={isMapReady} 
       />
       
-      <div className="w-full h-full" id={`map-container-${mapKey}`}>
-        <MapContainer
-          position={position}
-          zoom={zoom}
-          mapKey={mapKey}
-        >
-          <MapReference onMapReady={onMapReady} />
-          
-          <DrawingControlsContainer
-            ref={drawingControlsRef}
-            onShapeCreated={onShapeCreated}
-            activeTool={activeTool}
-            onRegionClick={handleRegionClick}
-            onClearAll={onClearAll}
-          />
-          
-          <MarkersContainer
-            markers={markers}
-            tempMarker={tempMarker}
-            markerName={markerName}
-            markerType={markerType}
-            onDeleteMarker={onDeleteMarker}
-            onSaveMarker={onSaveMarker}
-            setMarkerName={setMarkerName}
-            setMarkerType={setMarkerType}
-          />
-          
-          <MapEvents onMapClick={onMapClick} />
-        </MapContainer>
-      </div>
+      <MapContainer
+        position={position}
+        zoom={zoom}
+        mapKey={mapKey}
+      >
+        <MapReference onMapReady={onMapReady} />
+        
+        <DrawingControlsContainer
+          ref={drawingControlsRef}
+          onShapeCreated={onShapeCreated}
+          activeTool={activeTool}
+          onRegionClick={handleRegionClick}
+          onClearAll={onClearAll}
+        />
+        
+        <MarkersContainer
+          markers={markers}
+          tempMarker={tempMarker}
+          markerName={markerName}
+          markerType={markerType}
+          onDeleteMarker={onDeleteMarker}
+          onSaveMarker={onSaveMarker}
+          setMarkerName={setMarkerName}
+          setMarkerType={setMarkerType}
+        />
+        
+        <MapEvents onMapClick={onMapClick} />
+      </MapContainer>
     </div>
   );
 };

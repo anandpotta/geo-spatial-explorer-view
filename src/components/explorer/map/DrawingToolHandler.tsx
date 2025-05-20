@@ -31,43 +31,9 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         disableEditMode();
       }
       
-      // For drawing tools, we need to access the draw control
-      if (activeTool === 'polygon' || activeTool === 'rectangle' || activeTool === 'circle') {
-        triggerDrawingTool(activeTool);
-      }
-      
       setPreviousTool(activeTool);
     }
   }, [activeTool, currentView]);
-
-  // Trigger the appropriate drawing tool
-  const triggerDrawingTool = (tool: string) => {
-    if (!leafletMapRef.current || !isMapValid(leafletMapRef.current)) return;
-    
-    try {
-      const map = leafletMapRef.current;
-      
-      // Get the draw control if available
-      const drawControls = document.querySelector('.leaflet-draw');
-      if (!drawControls) {
-        console.warn('Draw controls not found');
-        return;
-      }
-      
-      // Try to trigger the correct draw button
-      const toolButtonSelector = `.leaflet-draw-draw-${tool}`;
-      const toolButton = drawControls.querySelector(toolButtonSelector) as HTMLElement;
-      
-      if (toolButton) {
-        toolButton.click();
-        console.log(`Triggered ${tool} drawing tool`);
-      } else {
-        console.warn(`Draw control button for ${tool} not found`);
-      }
-    } catch (err) {
-      console.error(`Error triggering ${tool} drawing tool:`, err);
-    }
-  };
 
   // Enable edit mode on all drawable layers
   const enableEditMode = () => {
@@ -80,6 +46,7 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
       if (!layers) return;
       
       // Get the DrawFeatureGroup if it exists in the global window object
+      // This helps with accessing the drawing feature group directly
       const featureGroup = (window as any).featureGroup || null;
       let foundDrawableLayers = false;
       
@@ -137,12 +104,6 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
       } else {
         toast.info('No editable shapes found. Try drawing something first.');
       }
-      
-      // Try to trigger the Edit button in Leaflet.draw if available
-      const editButton = document.querySelector('.leaflet-draw-edit-edit') as HTMLElement;
-      if (editButton) {
-        editButton.click();
-      }
     } catch (err) {
       console.error('Error enabling edit mode:', err);
       toast.error('Failed to enable edit mode');
@@ -170,12 +131,6 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
           editableLayer.editing.disable();
         }
       });
-      
-      // Click the disable edit button if it exists
-      const editDisableButton = document.querySelector('.leaflet-draw-actions a[title="Cancel editing, discards all changes"]') as HTMLElement;
-      if (editDisableButton) {
-        editDisableButton.click();
-      }
       
       toast.info('Edit mode disabled');
     } catch (err) {

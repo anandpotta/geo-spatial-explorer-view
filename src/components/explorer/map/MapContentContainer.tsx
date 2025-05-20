@@ -15,7 +15,6 @@ interface MapContentContainerProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
-  flyCompleted?: boolean;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -23,8 +22,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   selectedLocation, 
   onMapReady, 
   onFlyComplete,
-  onLocationSelect,
-  flyCompleted = true
+  onLocationSelect 
 }) => {
   // Map references and state management
   const {
@@ -110,7 +108,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         />
       </div>
       
-      <MapSearchOverlay onLocationSelect={onLocationSelect} flyCompleted={flyCompleted} />
+      <MapSearchOverlay onLocationSelect={onLocationSelect} />
     </div>
   );
 };

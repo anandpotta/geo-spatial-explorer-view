@@ -14,8 +14,7 @@ import FileUploadHandler from './drawing/FileUploadHandler';
 import DrawingControlsEffects from './drawing/DrawingControlsEffects';
 import LayerManagerWrapper from './drawing/LayerManagerWrapper';
 import DrawToolsWrapper from './drawing/DrawToolsWrapper';
-import { makeFeatureGroupGlobal } from '@/utils/drawing-tools/feature-group-utils';
-import ConfirmationDialog from './drawing/ConfirmationDialog';
+import { makeFeatureGroupGlobal } from '@/utils/draw-tools-utils';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -65,12 +64,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, onPathsUpdated, svgPaths);
   
   // Handle clear all operation with authentication check
-  const { 
-    handleClearAllWrapper, 
-    isConfirmDialogOpen, 
-    confirmClearAll, 
-    cancelClearAll 
-  } = useClearAllOperation(onClearAll);
+  const { handleClearAllWrapper } = useClearAllOperation(onClearAll);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
@@ -156,19 +150,10 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
           ref={drawToolsRef}
           onCreated={handleCreatedWrapper} 
           activeTool={activeTool} 
-          onClearAll={confirmClearAll}
+          onClearAll={handleClearAllWrapper}
           featureGroup={featureGroupRef.current}
         />
       </FeatureGroup>
-      
-      {/* Confirmation Dialog for Clear All */}
-      <ConfirmationDialog
-        isOpen={isConfirmDialogOpen}
-        title="Clear All Drawings"
-        description="Are you sure you want to clear all drawings and markers from the map? This action cannot be undone."
-        onConfirm={handleClearAllWrapper}
-        onCancel={cancelClearAll}
-      />
     </>
   );
 });

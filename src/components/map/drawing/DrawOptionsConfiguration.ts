@@ -6,20 +6,6 @@ import L from 'leaflet';
  */
 export const getDrawOptions = () => {
   return {
-    polyline: {
-      shapeOptions: {
-        color: '#33C3F0',
-        weight: 4,
-        opacity: 1,
-        fillOpacity: 0.3,
-        stroke: true,
-        renderer: L.svg(), // Force SVG renderer
-        lineCap: 'round',
-        lineJoin: 'round',
-        metric: true,
-        showLength: true,
-      }
-    },
     rectangle: {
       shapeOptions: {
         color: '#33C3F0',
@@ -35,7 +21,7 @@ export const getDrawOptions = () => {
       }
     },
     polygon: {
-      allowIntersection: false, // Restrict to simple polygons
+      allowIntersection: false,
       drawError: {
         color: '#e1e100',
         message: '<strong>Cannot draw that shape!</strong>'
@@ -50,18 +36,9 @@ export const getDrawOptions = () => {
         lineJoin: 'round',
         renderer: L.svg() // Force SVG renderer for polygons
       },
-      showArea: true, // Show area measurement while drawing
-      metric: true,  // Use metric units
-      smoothFactor: 1, // Lower value for less smoothing (more accurate paths)
-      // Enhance guide line visibility
-      guideLayers: true,
-      guidelineDistance: 10,
-      guidelineOptions: {
-        color: '#33C3F0', 
-        weight: 2,
-        opacity: 1,
-        dashArray: '5, 5'
-      }
+      showArea: false,
+      metric: true,
+      smoothFactor: 1 // Lower value for less smoothing (more accurate paths)
     },
     circle: {
       shapeOptions: {
@@ -71,20 +48,10 @@ export const getDrawOptions = () => {
         fillOpacity: 0.3,
         stroke: true,
         renderer: L.svg() // Force SVG renderer for circles
-      },
-      showRadius: true,
-      metric: true
+      }
     },
-    marker: {
-      icon: new L.Icon.Default(),
-      repeatMode: false,
-      zIndexOffset: 2000
-    },
-    // CircleMarker uses a fixed-pixel radius regardless of zoom level
-    circlemarker: {
-      color: '#33C3F0',
-      radius: 10,
-      fillOpacity: 0.3
-    }
+    circlemarker: false,
+    marker: true,
+    polyline: false
   };
 };

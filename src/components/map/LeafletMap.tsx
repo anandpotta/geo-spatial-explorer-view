@@ -1,173 +1,143 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
+import { useMapState } from '@/hooks/useMapState';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
+import { useLocationSelection } from '@/hooks/useLocationSelection';
+import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
+import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
-import { getSavedMarkers, LocationMarker, createMarker } from '@/utils/marker-utils';
-import { toast } from '@/components/ui/use-toast';
-import { useMapEvents } from '@/hooks/useMapEvents';
+import FloorPlanView from './FloorPlanView';
+import { setupLeafletIcons } from './LeafletMapIcons';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
-  onMapReady: (map: any) => void;
+  onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
+  onLocationSelect?: (location: Location) => void;
   onClearAll?: () => void;
 }
 
 const LeafletMap = ({ 
   selectedLocation, 
-  onMapReady,
-  activeTool,
-  onClearAll
+  onMapReady, 
+  activeTool, 
+  onLocationSelect, 
+  onClearAll 
 }: LeafletMapProps) => {
-  const { 
-    mapRef,
-    mapInstanceKey,
-    isMapReady,
-    handleSetMapRef
-  } = useMapInitialization(selectedLocation);
+  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
   
-  const [position, setPosition] = useState<[number, number]>([0, 0]);
-  const [zoom, setZoom] = useState<number>(2);
-  const [markers, setMarkers] = useState<LocationMarker[]>([]);
-  const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
-  const [markerName, setMarkerName] = useState<string>("");
-  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('pin');
-  const lastLocationIdRef = useRef<string | null>(null);
-  
-  // Load saved markers on component mount
+  // Initialize Leaflet icons
   useEffect(() => {
-    const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
+    setupLeafletIcons();
   }, []);
   
-  // Use the map events hook to handle location changes
-  useMapEvents(isMapReady ? mapRef.current : null, selectedLocation);
-  
-  // When the map is ready, notify the parent component
+  // Custom hooks
+  const mapState = useMapState(selectedLocation);
+  const { 
+    mapRef, 
+    mapInstanceKey, 
+    isMapReady, 
+    handleSetMapRef 
+  } = useMapInitialization(selectedLocation);
+  const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
+  const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
+
+  // Handle markers updates
   useEffect(() => {
-    if (isMapReady && mapRef.current) {
-      // Save map instance to window for positioning calculations
-      (window as any).leafletMapInstance = mapRef.current;
-      
-      // Call the parent's onMapReady callback
-      if (onMapReady) {
-        onMapReady(mapRef.current);
-      }
-      
-      // Dispatch a custom event to notify that the Leaflet map is ready
-      const mapReadyEvent = new Event('leafletMapReady');
-      window.dispatchEvent(mapReadyEvent);
-      
-      // Notify user once the map is ready
-      toast({
-        title: "Map Ready",
-        description: "The map view is now loaded and ready to use",
-        duration: 3000,
-      });
-      
-      // Initial position update if we have a selected location
-      if (selectedLocation) {
-        setPosition([selectedLocation.y, selectedLocation.x]);
-        setZoom(14);
-      }
-    }
-  }, [isMapReady, mapRef, onMapReady, selectedLocation]);
-  
-  // Handle location selection from parent
+    const handleMarkersUpdated = () => {
+      const savedMarkers = getSavedMarkers();
+      mapState.setMarkers(savedMarkers);
+    };
+    
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+    };
+  }, []);
+
+  // Handle selected location changes
   useEffect(() => {
-    if (selectedLocation) {
-      const locationId = `${selectedLocation.id || selectedLocation.y + '-' + selectedLocation.x}`;
-      
-      // Skip if it's the same location we're already at
-      if (locationId === lastLocationIdRef.current) {
-        return;
+    if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
+      try {
+        const container = mapRef.current.getContainer();
+        if (container && document.body.contains(container)) {
+          console.log('Flying to selected location:', selectedLocation);
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+            animate: true,
+            duration: 1.5
+          });
+        }
+      } catch (err) {
+        console.error('Error flying to location:', err);
       }
-      
-      lastLocationIdRef.current = locationId;
-      
-      // Update position and zoom for the selected location
-      const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
-      setPosition(newPosition);
-      setZoom(14); // Zoom level for location view
-      
-      // No need to fly here - useMapEvents will handle that
     }
-  }, [selectedLocation]);
+  }, [selectedLocation, isMapReady, isMapReferenceSet]);
 
-  const handleMapClick = (latlng: any) => {
-    setTempMarker([latlng.lat, latlng.lng]);
-  };
-
-  const handleLocationSelect = (position: [number, number]) => {
-    if (mapRef.current) {
-      mapRef.current.flyTo(position, 14, {
-        animate: true, 
-        duration: 1
-      });
+  // Custom map reference handler that sets our local state
+  const handleMapRefWrapper = (map: L.Map) => {
+    handleSetMapRef(map);
+    setIsMapReferenceSet(true);
+    
+    // Only call parent onMapReady once when the map is first ready
+    if (onMapReady && !isMapReferenceSet) {
+      onMapReady(map);
     }
   };
 
-  const handleDeleteMarker = (id: string) => {
-    setMarkers(markers.filter(marker => marker.id !== id));
+  // Clear all layers and reset state
+  const handleClearAllWrapper = () => {
+    mapState.setTempMarker(null);
+    mapState.setMarkerName('');
+    mapState.setMarkerType('building');
+    mapState.setCurrentDrawing(null);
+    mapState.setShowFloorPlan(false);
+    mapState.setSelectedDrawing(null);
+    
+    if (onClearAll) {
+      onClearAll();
+    }
+    
+    handleClearAll();
   };
 
-  const handleSaveMarker = () => {
-    if (!tempMarker) return;
-    
-    // Use the createMarker utility function instead of manually constructing the object
-    // This ensures all required properties are included
-    const newMarker = createMarker({
-      id: `marker-${Date.now()}`,
-      position: tempMarker,
-      name: markerName || 'Unnamed Location',
-      type: markerType
-    });
-    
-    const updatedMarkers = [...markers, newMarker];
-    setMarkers(updatedMarkers);
-    
-    // Store markers in localStorage
-    localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
-    
-    // Reset temporary marker state
-    setTempMarker(null);
-    setMarkerName('');
-  };
-
-  const handleShapeCreated = (shape: any) => {
-    console.log('Shape created:', shape);
-    // Handle shape creation logic
-  };
-
-  const handleRegionClick = (drawing: any) => {
-    console.log('Region clicked:', drawing);
-    // Handle region click logic
-  };
+  if (mapState.showFloorPlan) {
+    return (
+      <FloorPlanView 
+        onBack={() => mapState.setShowFloorPlan(false)} 
+        drawing={mapState.selectedDrawing}
+      />
+    );
+  }
 
   return (
-    <div className="w-full h-full">
-      <MapView 
-        position={position}
-        zoom={zoom}
-        markers={markers}
-        tempMarker={tempMarker}
-        markerName={markerName}
-        markerType={markerType}
-        onMapReady={handleSetMapRef}
-        onLocationSelect={handleLocationSelect}
-        onMapClick={handleMapClick}
-        onDeleteMarker={handleDeleteMarker}
-        onSaveMarker={handleSaveMarker}
-        setMarkerName={setMarkerName}
-        setMarkerType={setMarkerType}
-        onShapeCreated={handleShapeCreated}
-        activeTool={activeTool}
-        onRegionClick={handleRegionClick}
-        onClearAll={onClearAll}
-        isMapReady={isMapReady}
-      />
-    </div>
+    <MapView
+      key={`map-view-${mapInstanceKey}`}
+      position={mapState.position}
+      zoom={mapState.zoom}
+      markers={mapState.markers}
+      tempMarker={mapState.tempMarker}
+      markerName={mapState.markerName}
+      markerType={mapState.markerType}
+      onMapReady={handleMapRefWrapper}
+      onLocationSelect={handleLocationSelect}
+      onMapClick={handleMapClick}
+      onDeleteMarker={mapState.handleDeleteMarker}
+      onSaveMarker={mapState.handleSaveMarker}
+      setMarkerName={mapState.setMarkerName}
+      setMarkerType={mapState.setMarkerType}
+      onShapeCreated={handleShapeCreated}
+      activeTool={activeTool || mapState.activeTool}
+      onRegionClick={mapState.handleRegionClick}
+      onClearAll={handleClearAllWrapper}
+      isMapReady={isMapReady}
+    />
   );
 };
 

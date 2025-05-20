@@ -1,9 +1,8 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import DrawingTools from '@/components/DrawingTools';
 import DrawingToolHandler from './DrawingToolHandler';
 import MapTools from './MapTools';
-import ConfirmationDialog from '@/components/map/drawing/ConfirmationDialog';
 
 interface MapControlsLayoutProps {
   currentView: 'cesium' | 'leaflet';
@@ -30,21 +29,6 @@ const MapControlsLayout: React.FC<MapControlsLayoutProps> = ({
   handleResetView,
   handleClearAll
 }) => {
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-
-  const handleClearRequest = () => {
-    setIsConfirmDialogOpen(true);
-  };
-
-  const handleConfirmClear = () => {
-    setIsConfirmDialogOpen(false);
-    handleClearAll();
-  };
-
-  const handleCancelClear = () => {
-    setIsConfirmDialogOpen(false);
-  };
-  
   return (
     <>
       <DrawingTools 
@@ -52,7 +36,7 @@ const MapControlsLayout: React.FC<MapControlsLayoutProps> = ({
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onReset={handleResetView}
-        onClearAll={handleClearRequest}
+        onClearAll={handleClearAll}
       />
       
       <DrawingToolHandler
@@ -70,14 +54,6 @@ const MapControlsLayout: React.FC<MapControlsLayoutProps> = ({
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
-      />
-      
-      <ConfirmationDialog
-        isOpen={isConfirmDialogOpen}
-        title="Clear All Map Data"
-        description="Are you sure you want to clear all drawings and markers from the map? This action cannot be undone."
-        onConfirm={handleConfirmClear}
-        onCancel={handleCancelClear}
       />
     </>
   );
