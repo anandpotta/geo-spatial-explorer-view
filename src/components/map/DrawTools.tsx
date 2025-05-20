@@ -37,7 +37,7 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
   { onCreated, activeTool, onClearAll, featureGroup },
   forwardedRef
 ) => {
-  // Use the forwarded ref if provided, otherwise create a new one
+  // Use our own internal ref
   const editControlRef = useRef<any>(null);
   
   // Use hooks for separated functionality
@@ -62,13 +62,20 @@ const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
   }, [featureGroup]);
 
   // Handle the forwarded ref (if provided)
+  // Make this safer by checking the type and structure of forwardedRef
   useEffect(() => {
-    if (forwardedRef) {
+    if (!forwardedRef) return;
+    
+    try {
       if (typeof forwardedRef === 'function') {
+        // If it's a function ref, call it with the current value
         forwardedRef(editControlRef.current);
-      } else {
+      } else if (forwardedRef && typeof forwardedRef === 'object' && forwardedRef.hasOwnProperty('current')) {
+        // Only set current if it's a proper ref object with a current property
         forwardedRef.current = editControlRef.current;
       }
+    } catch (error) {
+      console.error('Error setting forwarded ref:', error);
     }
   }, [forwardedRef, editControlRef.current]);
   
