@@ -9,40 +9,52 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
   
-  // Format the edit options properly based on what was passed
-  let editOptions;
+  // Process the edit options to ensure they're in the correct format
+  let processedEditOptions;
   
-  // Handle different types of edit parameters
-  if (edit === true) {
-    // If edit is boolean true, create a proper object structure
-    editOptions = { 
+  if (edit === null || edit === false) {
+    // If edit is null or false, we should pass null
+    processedEditOptions = null;
+  } else if (edit === true) {
+    // If edit is true, create a proper options object
+    processedEditOptions = {
       featureGroup: featureGroup,
       selectedPathOptions: {
         maintainColor: true,
         opacity: 0.7
       }
     };
-  } else if (edit === false) {
-    // If edit is boolean false, we need to use null instead
-    // react-leaflet-draw expects null or an object, not boolean false
-    editOptions = null;
-  } else if (edit && typeof edit === 'object') {
-    // If edit is an object, merge with featureGroup but don't overwrite featureGroup
-    editOptions = {
+  } else if (typeof edit === 'object') {
+    // If edit is an object, ensure it has the correct structure
+    processedEditOptions = {
       ...edit,
       featureGroup: featureGroup
     };
     
-    // Ensure selectedPathOptions is properly defined if not already
-    if (!editOptions.selectedPathOptions) {
-      editOptions.selectedPathOptions = {
+    // Handle the nested edit property if it exists and is a boolean
+    if (processedEditOptions.edit === true) {
+      // Replace boolean true with proper options
+      processedEditOptions.edit = {
+        selectedPathOptions: {
+          maintainColor: true,
+          opacity: 0.7
+        }
+      };
+    } else if (processedEditOptions.edit === false) {
+      // Replace boolean false with null
+      processedEditOptions.edit = null;
+    }
+    
+    // Ensure selectedPathOptions is defined
+    if (!processedEditOptions.selectedPathOptions) {
+      processedEditOptions.selectedPathOptions = {
         maintainColor: true,
         opacity: 0.7
       };
     }
   } else {
-    // Default case if edit is undefined or null
-    editOptions = {
+    // Default case - create standard edit options
+    processedEditOptions = {
       featureGroup: featureGroup,
       selectedPathOptions: {
         maintainColor: true,
@@ -54,7 +66,8 @@ export const EditControl = forwardRef((props: any, ref: any) => {
   // Create the element with React.createElement to properly pass the ref
   return React.createElement(OriginalEditControl, {
     ...otherProps,
-    edit: editOptions,
+    edit: processedEditOptions,
+    featureGroup: featureGroup,
     ref: ref
   });
 });
