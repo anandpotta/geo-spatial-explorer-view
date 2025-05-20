@@ -19,6 +19,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
@@ -31,6 +32,23 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       lastLocationRef.current = locationId;
     }
   }, [selectedLocation]);
+  
+  // Force loading state to end after timeout (fallback)
+  useEffect(() => {
+    // Set a timeout to end loading state after a reasonable time
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (isLoading) {
+        console.log("Forcing loading state to end after timeout");
+        setIsLoading(false);
+      }
+    }, 5000); // 5 seconds timeout
+    
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [isLoading]);
   
   // Handle map ready state
   const handleMapReady = (viewer?: any) => {
@@ -64,6 +82,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const handleError = (error: Error) => {
     console.error("Globe error:", error);
     setMapError(error.message || "Failed to initialize 3D globe");
+    setIsLoading(false); // End loading state on error
   };
   
   return (

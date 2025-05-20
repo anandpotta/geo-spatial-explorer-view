@@ -15,13 +15,15 @@ const TransitionOverlay: React.FC<TransitionOverlayProps> = ({ show }) => {
         animation: 'fadeInOut 500ms ease-in-out forwards'
       }}
     >
-      <style>{`
-        @keyframes fadeInOut {
-          0% { opacity: 0; }
-          50% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-      `}</style>
+      <style>
+        {`
+          @keyframes fadeInOut {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+          }
+        `}
+      </style>
     </div>
   );
 };

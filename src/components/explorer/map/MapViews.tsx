@@ -40,6 +40,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   });
   
   const [lastSelectedLocation, setLastSelectedLocation] = React.useState<Location | undefined>(undefined);
+  const cesiumReadyRef = React.useRef(false);
   
   // Track location changes to prevent duplicate transitions
   React.useEffect(() => {
@@ -51,6 +52,15 @@ const MapViews: React.FC<MapViewsProps> = ({
     }
   }, [selectedLocation, lastSelectedLocation]);
   
+  // Handle Cesium map ready
+  const handleCesiumReady = () => {
+    if (!cesiumReadyRef.current) {
+      cesiumReadyRef.current = true;
+      console.log("Cesium view is ready");
+      onMapReady();
+    }
+  };
+  
   // Get styles for each view
   const cesiumStyles = getCesiumStyles(currentView, transitioning);
   const leafletStyles = getLeafletStyles(currentView, transitioning);
@@ -59,7 +69,7 @@ const MapViews: React.FC<MapViewsProps> = ({
     <>
       <CesiumView
         selectedLocation={selectedLocation}
-        onMapReady={onMapReady}
+        onMapReady={handleCesiumReady}
         onFlyComplete={onFlyComplete}
         onViewerReady={handleCesiumViewerRef}
         style={cesiumStyles}
@@ -78,7 +88,17 @@ const MapViews: React.FC<MapViewsProps> = ({
       <TransitionOverlay show={transitioning} />
       
       {fadeIn && (
-        <div className="animate-fade-in absolute inset-0 pointer-events-none z-5" />
+        <div className="absolute inset-0 pointer-events-none z-5 bg-black bg-opacity-20" 
+             style={{ animation: 'fadeIn 300ms ease-out forwards' }}>
+          <style>
+            {`
+              @keyframes fadeIn {
+                from { opacity: 1; }
+                to { opacity: 0; }
+              }
+            `}
+          </style>
+        </div>
       )}
     </>
   );

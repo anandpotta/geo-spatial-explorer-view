@@ -21,19 +21,22 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
   
-  // Initialize globe only once
+  // Initialize globe only once with proper callback handling
   const globeAPI = useThreeGlobe(containerRef, () => {
     if (!isInitialized && !initializationAttemptedRef.current) {
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
       console.log("ThreeGlobe: Globe initialized");
-      if (onMapReady) onMapReady(globeAPI);
+      if (onMapReady) {
+        console.log("ThreeGlobe: Calling onMapReady callback");
+        onMapReady(globeAPI);
+      }
     }
   });
   
-  // Handle location changes
+  // Handle location changes with better error handling
   useEffect(() => {
-    if (!globeAPI.isInitialized || !selectedLocation) return;
+    if (!globeAPI || !globeAPI.isInitialized || !selectedLocation) return;
     
     // Prevent duplicate fly operations for the same location
     const locationId = selectedLocation.id;
@@ -54,26 +57,32 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     // Calculate marker position
     const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
     
-    // Fly to the location - ensure coordinates are valid numbers
-    if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
-      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
-        setIsFlying(false);
-        if (onFlyComplete) {
-          console.log("ThreeGlobe: Fly complete");
-          onFlyComplete();
+    // Fly to the location with better error handling
+    try {
+      if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
+        globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
+          setIsFlying(false);
+          if (onFlyComplete) {
+            console.log("ThreeGlobe: Fly complete");
+            onFlyComplete();
+          }
+        });
+        
+        // Add marker at the location with null check
+        if (globeAPI.addMarker) {
+          globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
         }
-      });
-      
-      // Add marker at the location with null check
-      if (globeAPI.addMarker) {
-        globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+      } else {
+        console.error("Invalid coordinates:", selectedLocation);
+        setIsFlying(false);
+        if (onFlyComplete) onFlyComplete();
       }
-    } else {
-      console.error("Invalid coordinates:", selectedLocation);
+    } catch (error) {
+      console.error("Error during fly operation:", error);
       setIsFlying(false);
       if (onFlyComplete) onFlyComplete();
     }
-  }, [selectedLocation, globeAPI, onFlyComplete, isFlying, globeAPI.isInitialized]);
+  }, [selectedLocation, globeAPI, onFlyComplete, isFlying]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -92,9 +101,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         overflow: 'hidden',
         backgroundColor: 'black'
       }}
-    >
-      {/* Canvas will be added here by Three.js */}
-    </div>
+    />
   );
 };
 
