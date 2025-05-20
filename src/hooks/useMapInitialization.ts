@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
@@ -5,7 +6,7 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 
-export function useMapInitialization(selectedLocation?: { x: number, y: number }) {
+export function useMapInitialization(selectedLocation?: { x: number, y: number }, externalMapKey?: string) {
   const mapRef = useRef<L.Map | null>(null);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
   const [isMapReady, setIsMapReady] = useState(false);
@@ -14,7 +15,8 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const recoveryAttemptRef = useRef(0);
   const initialFlyComplete = useRef(false);
   const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const mapContainerIdRef = useRef<string>(`map-container-${Date.now()}`);
+  const mapContainerIdRef = useRef<string>(externalMapKey || `map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+  const cleanupAttemptedRef = useRef(false);
   
   useEffect(() => {
     setupLeafletIcons();
@@ -22,6 +24,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     validityChecksRef.current = 0;
     recoveryAttemptRef.current = 0;
     initialFlyComplete.current = false;
+    cleanupAttemptedRef.current = false;
     
     if (!document.querySelector('link[href*="leaflet.css"]')) {
       const link = document.createElement('link');
@@ -36,12 +39,16 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady(false);
     
     // Generate a new container ID when the key changes
-    mapContainerIdRef.current = `map-container-${Date.now()}`;
+    if (!externalMapKey) {
+      mapContainerIdRef.current = `map-container-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    }
     
     return () => {
       // Clean up the map reference thoroughly when unmounting
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
+        
+        cleanupAttemptedRef.current = true;
         
         try {
           if (mapRef.current && mapRef.current.remove) {
@@ -49,6 +56,9 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
               const container = mapRef.current.getContainer();
               if (container && document.body.contains(container)) {
                 console.log('Map container exists and is attached - removing map instance');
+                
+                // Mark this container as being removed
+                container.setAttribute('data-being-removed', 'true');
                 
                 // Remove all layers first to prevent memory leaks
                 mapRef.current.eachLayer(layer => {
@@ -61,21 +71,35 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
                   }
                 });
                 
+                // Remove map markers specifically tagged with our ID
+                const mapId = externalMapKey || mapContainerIdRef.current;
+                document.querySelectorAll(`[data-map-key="${mapId}"]`).forEach(el => {
+                  if (el.classList.contains('leaflet-marker-icon') || 
+                      el.classList.contains('leaflet-marker-shadow')) {
+                    el.remove();
+                  }
+                });
+                
                 // Now remove the map
                 mapRef.current.remove();
+              } else {
+                console.log('Map container already detached or removed');
               }
             } catch (e) {
-              console.log('Map container already detached or removed');
+              console.log('Map container already detached or removed during cleanup');
             }
           }
         } catch (err) {
           console.error('Error cleaning up map:', err);
         }
         
-        // Set mapRef to null to ensure it's fully cleaned up
-        mapRef.current = null;
-        mapAttachedRef.current = false;
-        setIsMapReady(false);
+        // Delay setting mapRef to null to prevent race conditions
+        setTimeout(() => {
+          // Set mapRef to null to ensure it's fully cleaned up
+          mapRef.current = null;
+          mapAttachedRef.current = false;
+          setIsMapReady(false);
+        }, 0);
       }
       
       // Clear validity check interval
@@ -84,7 +108,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         validityCheckIntervalRef.current = null;
       }
     };
-  }, [mapInstanceKey]);
+  }, [mapInstanceKey, externalMapKey]);
 
   // Set up an interval to check map validity less frequently
   useEffect(() => {
@@ -166,22 +190,45 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       // If it's a different instance, clean up the old one first
       console.log('Different map instance, cleaning up old one first');
       try {
-        mapRef.current.remove();
+        // If cleanup hasn't been attempted yet, do it now
+        if (!cleanupAttemptedRef.current) {
+          cleanupAttemptedRef.current = true;
+          
+          // Check if the old map's container is being reused
+          const oldContainer = mapRef.current.getContainer();
+          const newContainer = map.getContainer();
+          
+          if (oldContainer && newContainer && oldContainer.id === newContainer.id) {
+            console.error('Map container is being reused by another instance');
+            // This is the error we're trying to fix!
+            throw new Error('Map container is being reused by another instance');
+          }
+          
+          mapRef.current.remove();
+        }
       } catch (e) {
         console.warn('Error removing old map instance:', e);
+        // Reset the map instance key to force a complete remount
+        resetMap();
+        return;
       }
     }
     
     try {
       const container = map.getContainer();
       if (container && document.body.contains(container)) {
-        console.log('Map container verified, storing reference');
+        // Set a data attribute to identify this map instance
+        const mapId = externalMapKey || mapContainerIdRef.current;
+        container.setAttribute('data-map-key', mapId);
+        
+        console.log('Map container verified, storing reference with ID:', mapId);
         mapRef.current = map;
         mapAttachedRef.current = true;
         
         // Reset counters when we get a valid map
         validityChecksRef.current = 0;
         recoveryAttemptRef.current = 0;
+        cleanupAttemptedRef.current = false;
         
         // Single invalidation to ensure the map is properly sized
         setTimeout(() => {
@@ -236,6 +283,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setMapInstanceKey(Date.now());
     setIsMapReady(false);
     mapAttachedRef.current = false;
+    cleanupAttemptedRef.current = false;
   };
 
   return {

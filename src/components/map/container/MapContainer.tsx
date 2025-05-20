@@ -13,6 +13,7 @@ interface MapContainerProps {
 
 const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, children }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isUnmountingRef = useRef(false);
 
   // This ensures we provide a new container for each map instance
   useEffect(() => {
@@ -27,12 +28,28 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         document.querySelectorAll(`.leaflet-marker-icon[data-container-id="${mapId}"]`).forEach(el => {
           el.remove();
         });
+        
+        // Explicitly remove all markers when unmounting
+        document.querySelectorAll('.leaflet-marker-icon, .leaflet-marker-shadow').forEach(el => {
+          if (el.getAttribute('data-map-key') === mapKey) {
+            el.remove();
+          }
+        });
       }
     };
     
     // Handle clearAllMarkers event
     const handleClearAllMarkers = () => {
       if (containerRef.current) {
+        // Target elements with our specific map key
+        document.querySelectorAll(`.leaflet-marker-icon[data-map-key="${mapKey}"]`).forEach(el => {
+          el.remove();
+        });
+        document.querySelectorAll(`.leaflet-marker-shadow[data-map-key="${mapKey}"]`).forEach(el => {
+          el.remove();
+        });
+        
+        // Also check the marker pane inside this container
         const markerPaneSelector = '.leaflet-marker-pane';
         const markerPane = containerRef.current.querySelector(markerPaneSelector);
         if (markerPane) {
@@ -50,6 +67,8 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
     window.addEventListener('clearAllMarkers', handleClearAllMarkers);
     
     return () => {
+      // Set unmounting flag before cleanup
+      isUnmountingRef.current = true;
       // Clean up any global references to the map we might have
       window.removeEventListener('clearAllMarkers', handleClearAllMarkers);
       cleanupMapElements();

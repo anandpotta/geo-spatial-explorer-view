@@ -21,6 +21,7 @@ interface LeafletMapProps {
   onLocationSelect?: (location: Location) => void;
   onClearAll?: () => void;
   stayAtCurrentPosition?: boolean;
+  mapInstanceKey?: string;
 }
 
 const LeafletMap = ({ 
@@ -29,7 +30,8 @@ const LeafletMap = ({
   activeTool, 
   onLocationSelect, 
   onClearAll,
-  stayAtCurrentPosition = false
+  stayAtCurrentPosition = false,
+  mapInstanceKey = Date.now().toString()
 }: LeafletMapProps) => {
   // Initialize state variables that were missing
   const [isMarkerActive, setIsMarkerActive] = useState(false);
@@ -44,11 +46,13 @@ const LeafletMap = ({
   const mapState = useMapState(selectedLocation);
   const { 
     mapRef, 
-    mapInstanceKey, 
+    mapInstanceKey: internalMapKey, 
     isMapReady, 
     handleSetMapRef,
     resetMap 
-  } = useMapInitialization(selectedLocation);
+  } = useMapInitialization(selectedLocation, mapInstanceKey);
+  
+  // Override map instance key with external key if provided
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
 
@@ -167,6 +171,18 @@ const LeafletMap = ({
 
   // Custom map reference handler that sets our local state
   const handleMapRefWrapper = (map: L.Map) => {
+    // Add consistent unique ID to map objects
+    if (map && map.getContainer) {
+      try {
+        const container = map.getContainer();
+        if (container) {
+          container.setAttribute('data-unique-map-id', mapInstanceKey);
+        }
+      } catch (err) {
+        console.warn('Could not set unique ID on map container', err);
+      }
+    }
+    
     handleSetMapRef(map);
     setIsMapReferenceSet(true);
     
@@ -205,6 +221,7 @@ const LeafletMap = ({
     // Dispatch a clear all event
     window.dispatchEvent(new Event('clearAllDrawings'));
     window.dispatchEvent(new Event('clearAllSvgPaths'));
+    window.dispatchEvent(new Event('clearAllMarkers'));
     
     handleClearAll();
   };
@@ -239,6 +256,7 @@ const LeafletMap = ({
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAllWrapper}
       isMapReady={isMapReady}
+      mapKey={mapInstanceKey} // Pass forward the unique key
     />
   );
 };

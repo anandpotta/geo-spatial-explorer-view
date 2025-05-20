@@ -34,6 +34,7 @@ interface MapViewProps {
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
   isMapReady?: boolean;
+  mapKey?: string;
 }
 
 const MapView = ({
@@ -54,11 +55,12 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
-  isMapReady = false
+  isMapReady = false,
+  mapKey = Date.now().toString()
 }: MapViewProps) => {
-  // Generate a unique map key each time this component renders
-  const uniqueMapId = useRef<string>(`map-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
-  const [mapKey, setMapKey] = useState<string>(uniqueMapId.current);
+  // Generate a unique map key using the provided key or create a new one
+  const uniqueMapId = useRef<string>(`map-${mapKey}-${Math.random().toString(36).substring(2, 9)}`);
+  const [instanceKey] = useState<string>(uniqueMapId.current);
   const drawingControlsRef = useRef(null);
   const {
     showFloorPlan,
@@ -93,9 +95,9 @@ const MapView = ({
       <MapContainer
         position={position}
         zoom={zoom}
-        mapKey={mapKey}
+        mapKey={instanceKey}
       >
-        <MapReference onMapReady={onMapReady} />
+        <MapReference onMapReady={onMapReady} mapKey={instanceKey} />
         
         <DrawingControlsContainer
           ref={drawingControlsRef}
@@ -114,6 +116,7 @@ const MapView = ({
           onSaveMarker={onSaveMarker}
           setMarkerName={setMarkerName}
           setMarkerType={setMarkerType}
+          mapKey={instanceKey}
         />
         
         <MapEvents onMapClick={onMapClick} />

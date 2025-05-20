@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../map/LeafletMap';
 import CesiumView from '../../map/CesiumMapLoading';
@@ -33,11 +33,20 @@ const MapViews: React.FC<MapViewsProps> = ({
   console.log("MapViews rendering with stayAtCurrentPosition:", stayAtCurrentPosition);
   
   // Create unique IDs for each view type to ensure we don't reuse containers
-  const leafletKeyRef = useRef<string>(`leaflet-${mapKey}-${Date.now()}`);
-  const cesiumKeyRef = useRef<string>(`cesium-${mapKey}-${Date.now()}`);
+  const [uniqueLeafletKey] = useState<string>(`leaflet-${mapKey}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+  const [uniqueCesiumKey] = useState<string>(`cesium-${mapKey}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   
   // Clean up any orphaned Leaflet elements when view changes or component unmounts
   useEffect(() => {
+    // Mark any existing markers as stale
+    document.querySelectorAll('.leaflet-marker-icon:not([data-stale="true"])').forEach(el => {
+      el.setAttribute('data-stale', 'true');
+    });
+    
+    document.querySelectorAll('.leaflet-marker-shadow:not([data-stale="true"])').forEach(el => {
+      el.setAttribute('data-stale', 'true');
+    });
+    
     return () => {
       // Only run cleanup on unmount, not during initial render
       setTimeout(() => {
@@ -56,7 +65,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   return (
     <>
       {currentView === 'cesium' && (
-        <div key={cesiumKeyRef.current} className="w-full h-full">
+        <div key={uniqueCesiumKey} className="w-full h-full">
           <ThreeGlobeMap
             selectedLocation={selectedLocation}
             onViewerReady={handleCesiumViewerRef}
@@ -67,13 +76,14 @@ const MapViews: React.FC<MapViewsProps> = ({
       )}
       
       {currentView === 'leaflet' && (
-        <div key={leafletKeyRef.current} className="w-full h-full">
+        <div key={uniqueLeafletKey} className="w-full h-full">
           <LeafletMap 
             selectedLocation={selectedLocation}
             onMapReady={handleLeafletMapRef}
             activeTool={activeTool}
             onClearAll={handleClearAll}
             stayAtCurrentPosition={stayAtCurrentPosition}
+            mapInstanceKey={uniqueLeafletKey} // Pass unique key to prevent reuse
           />
         </div>
       )}
