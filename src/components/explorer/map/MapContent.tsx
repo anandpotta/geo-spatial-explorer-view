@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
-import MapContentContainer from './map/MapContentContainer';
+import MapContentContainer from './MapContentContainer';
 import { forceMapRefresh } from '@/utils/clear-operations/map-refresh';
 
 interface MapContentProps {
