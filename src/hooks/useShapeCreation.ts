@@ -1,6 +1,7 @@
 
 import { useRef } from 'react';
 import { createShapeCreationHandler } from '@/components/map/drawing/ShapeCreationHandler';
+import L from 'leaflet';
 
 export const useShapeCreation = (onCreated: (shape: any) => void) => {
   // Track whether a marker is currently being processed
