@@ -48,17 +48,25 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
 
+  // Explicitly structure the edit object in a way the library expects
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      selectedPathOptions: {
+        maintainColor: true,
+        opacity: 0.7
+      }
+    },
+    remove: true
+  };
+
   return (
     <EditControl
       ref={editControlRef}
       position="topright"
       onCreated={handleCreated}
       draw={drawOptions}
-      edit={{
-        featureGroup,
-        remove: true,
-        edit: true
-      }}
+      edit={editOptions}
       featureGroup={featureGroup}
     />
   );
