@@ -95,11 +95,11 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenReady={(e) => {
-          // Mark container with map instance ID
-          if (containerRef.current && e.target) {
-            containerRef.current.setAttribute('data-map-instance-id', 
-              (e.target as any)._leaflet_id || Date.now().toString());
+        whenReady={() => {
+          // Mark container with map instance ID using closure instead of event parameter
+          if (containerRef.current) {
+            // Set a timestamp as instance ID since we can't access the internal _leaflet_id safely
+            containerRef.current.setAttribute('data-map-instance-id', Date.now().toString());
           }
         }}
       >

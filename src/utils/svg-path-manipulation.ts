@@ -29,30 +29,36 @@ export const simplifyPath = (pathData: string, tolerance: number = 1): string =>
  */
 export const extractPointsFromPath = (pathData: string): [number, number][] => {
   const points: [number, number][] = [];
+  // Use optional chaining to handle potential null/undefined
   const commands = pathData.match(/[MLHVCSQTAZmlhvcsqtaz][^MLHVCSQTAZmlhvcsqtaz]*/g) || [];
   
   let currentX = 0, currentY = 0;
   
   commands.forEach(cmd => {
-    const type = cmd[0];
-    const values = cmd.slice(1).trim().split(/[\s,]+/).map(parseFloat);
-    
-    switch (type) {
-      case 'M': // Move to (absolute)
-        for (let i = 0; i < values.length; i += 2) {
-          currentX = values[i];
-          currentY = values[i + 1];
-          points.push([currentX, currentY]);
-        }
-        break;
-      case 'L': // Line to (absolute)
-        for (let i = 0; i < values.length; i += 2) {
-          currentX = values[i];
-          currentY = values[i + 1];
-          points.push([currentX, currentY]);
-        }
-        break;
-      // Add other path commands as needed
+    // Make sure cmd is defined and has at least one character
+    if (cmd && cmd.length > 0) {
+      const type = cmd[0];
+      // Use substring instead of slice for better type safety
+      const valueString = cmd.substring(1).trim();
+      const values = valueString.split(/[\s,]+/).map(parseFloat);
+      
+      switch (type) {
+        case 'M': // Move to (absolute)
+          for (let i = 0; i < values.length; i += 2) {
+            currentX = values[i];
+            currentY = values[i + 1];
+            points.push([currentX, currentY]);
+          }
+          break;
+        case 'L': // Line to (absolute)
+          for (let i = 0; i < values.length; i += 2) {
+            currentX = values[i];
+            currentY = values[i + 1];
+            points.push([currentX, currentY]);
+          }
+          break;
+        // Add other path commands as needed
+      }
     }
   });
   
