@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, forwardRef, ForwardRefRenderFunction } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { usePathElements } from '@/hooks/usePathElements';
@@ -32,7 +32,12 @@ interface DrawToolsProps {
   featureGroup: L.FeatureGroup;
 }
 
-const DrawTools = ({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps) => {
+// Change to a ForwardRefRenderFunction to properly handle the forwarded ref
+const DrawTools: ForwardRefRenderFunction<any, DrawToolsProps> = (
+  { onCreated, activeTool, onClearAll, featureGroup },
+  forwardedRef
+) => {
+  // Use the forwarded ref if provided, otherwise create a new one
   const editControlRef = useRef<any>(null);
   
   // Use hooks for separated functionality
@@ -55,6 +60,17 @@ const DrawTools = ({ onCreated, activeTool, onClearAll, featureGroup }: DrawTool
       window.featureGroup = featureGroup;
     }
   }, [featureGroup]);
+
+  // Handle the forwarded ref (if provided)
+  useEffect(() => {
+    if (forwardedRef) {
+      if (typeof forwardedRef === 'function') {
+        forwardedRef(editControlRef.current);
+      } else {
+        forwardedRef.current = editControlRef.current;
+      }
+    }
+  }, [forwardedRef, editControlRef.current]);
   
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
@@ -102,4 +118,5 @@ const DrawTools = ({ onCreated, activeTool, onClearAll, featureGroup }: DrawTool
   );
 };
 
-export default DrawTools;
+// Export using forwardRef to properly handle the ref passing
+export default forwardRef(DrawTools);
