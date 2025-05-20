@@ -8,6 +8,7 @@ import MapViews from '../explorer/map/MapViews';
 import MapTools from '../explorer/map/MapTools';
 import DrawingToolHandler from '../explorer/map/DrawingToolHandler';
 import { toast } from '@/components/ui/use-toast';
+import ConfirmationDialog from './drawing/ConfirmationDialog';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -29,6 +30,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   
   // Reset map instance when view changes
   useEffect(() => {
@@ -100,6 +102,10 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
     setActiveTool(tool === activeTool ? null : tool);
   };
 
+  const requestClearAll = () => {
+    setIsClearDialogOpen(true);
+  };
+
   const handleClearAll = () => {
     if (currentView === 'leaflet' && leafletMapRef.current) {
       try {
@@ -112,10 +118,34 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
             }
           });
         }
+        
+        // Clear any SVG paths
+        window.dispatchEvent(new CustomEvent('clearAllSvgPaths'));
+        
+        // Clear any markers from storage
+        localStorage.removeItem('savedMarkers');
+        localStorage.removeItem('savedDrawings');
+        localStorage.removeItem('svgPaths');
+        
+        // Notify components
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('markersUpdated'));
+        window.dispatchEvent(new Event('drawingsUpdated'));
+        
+        toast({
+          title: "Map Cleared",
+          description: "All drawings and markers have been removed from the map.",
+        });
       } catch (err) {
         console.error('Error during clear all operation:', err);
       }
+      
+      setIsClearDialogOpen(false);
     }
+  };
+
+  const handleCancelClear = () => {
+    setIsClearDialogOpen(false);
   };
 
   return (
@@ -138,7 +168,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
-          onClearAll={handleClearAll}
+          onClearAll={requestClearAll}
         />
         
         <DrawingToolHandler
@@ -167,6 +197,14 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
       >
         <LocationSearch onLocationSelect={onLocationSelect} />
       </div>
+      
+      <ConfirmationDialog
+        isOpen={isClearDialogOpen}
+        title="Clear All Map Data"
+        description="Are you sure you want to clear all drawings and markers from the map? This action cannot be undone."
+        onConfirm={handleClearAll}
+        onCancel={handleCancelClear}
+      />
     </div>
   );
 };

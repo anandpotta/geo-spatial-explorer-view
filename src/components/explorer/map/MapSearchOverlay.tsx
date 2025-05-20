@@ -1,22 +1,49 @@
 
-import React from 'react';
-import LocationSearch from '@/components/LocationSearch';
+import React, { useState } from 'react';
 import { Location } from '@/utils/geo-utils';
+import SearchBox from './search/SearchBox';
+import { LocationTagPortal } from './search/LocationTag';
+import { useMarkerPosition } from './search/useMarkerPosition';
+import { useMapContainer } from './search/useMapContainer';
 
 interface MapSearchOverlayProps {
   onLocationSelect: (location: Location) => void;
+  flyCompleted?: boolean;
 }
 
-const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ onLocationSelect }) => {
+const MapSearchOverlay: React.FC<MapSearchOverlayProps> = ({ 
+  onLocationSelect, 
+  flyCompleted = true 
+}) => {
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const { mapContainerRef, mapLoaded } = useMapContainer();
+  const { markerPos } = useMarkerPosition({ 
+    selectedLocation, 
+    mapContainerRef, 
+    flyCompleted 
+  });
+  
+  const handleLocationSelect = (location: Location) => {
+    setSelectedLocation(location);
+    onLocationSelect(location);
+  };
+
+  const handleCloseTag = () => {
+    setSelectedLocation(null);
+  };
+
   return (
-    <div 
-      className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
-      style={{ 
-        maxWidth: '400px',
-      }}
-    >
-      <LocationSearch onLocationSelect={onLocationSelect} />
-    </div>
+    <>
+      <SearchBox onLocationSelect={handleLocationSelect} />
+      
+      <LocationTagPortal
+        location={selectedLocation}
+        markerPos={markerPos}
+        mapContainerRef={mapContainerRef}
+        mapLoaded={mapLoaded}
+        onClose={handleCloseTag}
+      />
+    </>
   );
 };
 

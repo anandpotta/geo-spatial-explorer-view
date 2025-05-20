@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
@@ -189,15 +188,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           </ul>
         )}
       </form>
-      
-      {selectedLocation && (
-        <div className="mt-3 p-3 bg-accent rounded-md">
-          <h3 className="font-medium">{selectedLocation.label}</h3>
-          <p className="text-sm text-muted-foreground">
-            Lat: {selectedLocation.y.toFixed(6)}, Lng: {selectedLocation.x.toFixed(6)}
-          </p>
-        </div>
-      )}
     </div>
   );
 };
