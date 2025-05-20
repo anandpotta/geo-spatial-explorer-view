@@ -13,6 +13,7 @@ interface MarkersListProps {
   onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
+  mapKey?: string; // Added mapKey property
 }
 
 const MarkersList = ({
@@ -23,7 +24,8 @@ const MarkersList = ({
   onDeleteMarker,
   onSaveMarker,
   setMarkerName,
-  setMarkerType
+  setMarkerType,
+  mapKey = 'global' // Default value
 }: MarkersListProps) => {
   return (
     <>
@@ -31,7 +33,8 @@ const MarkersList = ({
         <UserMarker 
           key={`marker-${marker.id}`} 
           marker={marker} 
-          onDelete={onDeleteMarker} 
+          onDelete={onDeleteMarker}
+          mapKey={mapKey}  // Pass mapKey to UserMarker
         />
       ))}
       
@@ -43,6 +46,7 @@ const MarkersList = ({
           markerType={markerType}
           setMarkerType={setMarkerType}
           onSave={onSaveMarker}
+          mapKey={mapKey}  // Pass mapKey to TempMarker
         />
       )}
     </>

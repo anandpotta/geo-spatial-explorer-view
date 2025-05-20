@@ -12,6 +12,7 @@ interface MarkersContainerProps {
   onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
+  mapKey?: string; // Added mapKey prop
 }
 
 const MarkersContainer = memo(({
@@ -22,7 +23,8 @@ const MarkersContainer = memo(({
   onDeleteMarker,
   onSaveMarker,
   setMarkerName,
-  setMarkerType
+  setMarkerType,
+  mapKey = 'global' // Default value for mapKey
 }: MarkersContainerProps) => {
   // Use memoized markers to prevent unnecessary re-renders
   const memoizedMarkers = useMemo(() => {
@@ -45,6 +47,7 @@ const MarkersContainer = memo(({
       onSaveMarker={onSaveMarker}
       setMarkerName={setMarkerName}
       setMarkerType={setMarkerType}
+      mapKey={mapKey} // Pass mapKey to MarkersList
     />
   );
 });
