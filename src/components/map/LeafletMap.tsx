@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
@@ -171,54 +172,3 @@ const LeafletMap = ({
 };
 
 export default LeafletMap;
-
-// Include these function implementations from the original file
-const handleMapClick = (latlng: any) => {
-  setTempMarker([latlng.lat, latlng.lng]);
-};
-
-const handleLocationSelect = (position: [number, number]) => {
-  if (mapRef.current) {
-    mapRef.current.flyTo(position, 14, {
-      animate: true, 
-      duration: 1
-    });
-  }
-};
-
-const handleDeleteMarker = (id: string) => {
-  setMarkers(markers.filter(marker => marker.id !== id));
-};
-
-const handleSaveMarker = () => {
-  if (!tempMarker) return;
-  
-  // Use the createMarker utility function instead of manually constructing the object
-  // This ensures all required properties are included
-  const newMarker = createMarker({
-    id: `marker-${Date.now()}`,
-    position: tempMarker,
-    name: markerName || 'Unnamed Location',
-    type: markerType
-  });
-  
-  const updatedMarkers = [...markers, newMarker];
-  setMarkers(updatedMarkers);
-  
-  // Store markers in localStorage
-  localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
-  
-  // Reset temporary marker state
-  setTempMarker(null);
-  setMarkerName('');
-};
-
-const handleShapeCreated = (shape: any) => {
-  console.log('Shape created:', shape);
-  // Handle shape creation logic
-};
-
-const handleRegionClick = (drawing: any) => {
-  console.log('Region clicked:', drawing);
-  // Handle region click logic
-};
