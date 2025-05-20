@@ -47,6 +47,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     return () => {
       if (markerRef.current) {
         const leafletElement = markerRef.current;
+        // Ensure marker is properly removed from the map
         if (leafletElement && leafletElement.remove) {
           try {
             leafletElement.remove();
@@ -63,6 +64,16 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
           tooltip.parentNode.removeChild(tooltip);
         }
       });
+      
+      // Clean up any orphaned marker icons with this ID
+      setTimeout(() => {
+        const orphanedIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${marker.id}"]`);
+        orphanedIcons.forEach(icon => {
+          if (icon.parentNode) {
+            icon.parentNode.removeChild(icon);
+          }
+        });
+      }, 0);
     };
   }, [marker.id]);
   
