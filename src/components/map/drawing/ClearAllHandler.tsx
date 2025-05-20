@@ -12,6 +12,25 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     // Clear all visible layers from the map
     featureGroup.clearLayers();
     
+    // Explicitly clear SVG elements in the overlay pane
+    const mapContainer = (featureGroup as any)._map?.getContainer();
+    if (mapContainer) {
+      const overlayPane = mapContainer.querySelector('.leaflet-overlay-pane');
+      if (overlayPane) {
+        // Find all SVG paths and clear them
+        const svgElements = overlayPane.querySelectorAll('svg');
+        svgElements.forEach(svg => {
+          // Remove all path elements
+          const paths = svg.querySelectorAll('path');
+          paths.forEach(path => {
+            path.remove();
+          });
+        });
+        
+        console.log('Cleared all SVG paths from overlay pane');
+      }
+    }
+    
     // Force SVG paths to be removed by triggering all relevant events
     window.dispatchEvent(new Event('clearAllSvgPaths'));
     window.dispatchEvent(new Event('clearAllDrawings'));
