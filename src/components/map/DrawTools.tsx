@@ -9,9 +9,6 @@ import { useDrawToolsEventHandlers } from '@/hooks/useDrawToolsEventHandlers';
 import { useSavedPathsRestoration } from '@/hooks/useSavedPathsRestoration';
 import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
 import { getDrawOptions } from './drawing/DrawOptionsConfiguration';
-import RemoveDrawingDialog from './drawing/RemoveDrawingDialog';
-import { useRemoveDrawingDialog } from '@/hooks/useRemoveDrawingDialog';
-import { useOverrideRemoveButton } from '@/hooks/useOverrideRemoveButton';
 
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
@@ -36,18 +33,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useDrawToolsEventHandlers(getPathElements);
   useSavedPathsRestoration(featureGroup);
   usePathElementsCleaner(clearPathElements);
-  
-  // Use the custom removal dialog hook
-  const { 
-    isRemoveDialogOpen, 
-    setIsRemoveDialogOpen, 
-    handleConfirmRemove, 
-    handleCancelRemove,
-    handleRemoveButtonClick 
-  } = useRemoveDrawingDialog(featureGroup);
-  
-  // Override the default remove button behavior
-  useOverrideRemoveButton(featureGroup, handleRemoveButtonClick);
   
   // Store featureGroup in window for global access
   if (featureGroup && !window.featureGroup) {
@@ -76,23 +61,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   };
 
   return (
-    <>
-      <EditControl
-        ref={editControlRef}
-        position="topright"
-        onCreated={handleCreated}
-        draw={drawOptions}
-        edit={editOptions}
-        featureGroup={featureGroup}
-      />
-      
-      <RemoveDrawingDialog 
-        isOpen={isRemoveDialogOpen}
-        onOpenChange={setIsRemoveDialogOpen}
-        onConfirmRemove={handleConfirmRemove}
-        onCancel={handleCancelRemove}
-      />
-    </>
+    <EditControl
+      ref={editControlRef}
+      position="topright"
+      onCreated={handleCreated}
+      draw={drawOptions}
+      edit={editOptions}
+      featureGroup={featureGroup}
+    />
   );
 });
 

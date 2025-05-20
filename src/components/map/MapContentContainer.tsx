@@ -1,15 +1,15 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
-import DrawingTools from '../../DrawingTools';
-import LocationSearch from '../../LocationSearch';
+import DrawingTools from '@/components/DrawingTools';
+import LocationSearch from '@/components/LocationSearch';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/threejs-camera';
-import MapViews from './MapViews';
-import MapTools from './MapTools';
-import DrawingToolHandler from './DrawingToolHandler';
+import MapViews from '../explorer/map/MapViews';
+import MapTools from '../explorer/map/MapTools';
+import DrawingToolHandler from '../explorer/map/DrawingToolHandler';
 import { toast } from '@/components/ui/use-toast';
-import L from 'leaflet';
 import { ExtendedLayer, LeafletMapInternal } from '@/utils/leaflet-type-utils';
+import L from 'leaflet';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -17,7 +17,6 @@ interface MapContentContainerProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
-  stayAtCurrentPosition?: boolean;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -25,96 +24,41 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   selectedLocation, 
   onMapReady, 
   onFlyComplete,
-  onLocationSelect,
-  stayAtCurrentPosition = false
+  onLocationSelect 
 }) => {
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<LeafletMapInternal>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
-  const previousViewRef = useRef<string | null>(null);
-  
-  // Log the stayAtCurrentPosition value for debugging
-  useEffect(() => {
-    console.log("MapContentContainer stayAtCurrentPosition:", stayAtCurrentPosition);
-  }, [stayAtCurrentPosition]);
   
   // Reset map instance when view changes
   useEffect(() => {
-    // Only regenerate key when view type actually changes
-    if (previousViewRef.current !== currentView) {
-      console.log(`View changed from ${previousViewRef.current} to ${currentView}, regenerating map key`);
-      setMapKey(Date.now());
-      previousViewRef.current = currentView;
-      
-      // Set transition flag
-      setViewTransitionInProgress(true);
-      const timer = setTimeout(() => {
-        setViewTransitionInProgress(false);
-        setMapReady(false);
-      }, 1000); // Allow time for transition to complete
-      
-      return () => clearTimeout(timer);
-    }
+    setMapKey(Date.now());
+    
+    // Set transition flag
+    setViewTransitionInProgress(true);
+    const timer = setTimeout(() => {
+      setViewTransitionInProgress(false);
+    }, 1000); // Allow time for transition to complete
+    
+    return () => clearTimeout(timer);
   }, [currentView]);
 
-  // Dispatch drawing/marking events
-  useEffect(() => {
-    if (activeTool) {
-      console.log("Drawing tool activated:", activeTool);
-      window.dispatchEvent(new CustomEvent('drawingStart'));
-    } else {
-      window.dispatchEvent(new CustomEvent('drawingEnd'));
-    }
-  }, [activeTool]);
-
   const handleCesiumViewerRef = (viewer: any) => {
-    // Only update if not already set or explicitly changing views
-    if (!cesiumViewerRef.current || previousViewRef.current !== 'cesium') {
-      console.log('Setting Cesium viewer reference');
-      cesiumViewerRef.current = viewer;
-      
-      if (currentView === 'cesium') {
-        setTimeout(() => {
-          setMapReady(true);
-          
-          // When 3D globe is ready after transition, notify user
-          toast({
-            title: "3D Globe Ready",
-            description: "Interactive 3D globe view has been loaded.",
-            variant: "default",
-          });
-        }, 500);
-      }
-    }
+    cesiumViewerRef.current = viewer;
   };
 
   const handleLeafletMapRef = (map: any) => {
-    // Only update if not already set or explicitly changing views
-    if (!leafletMapRef.current || previousViewRef.current !== 'leaflet') {
-      console.log('Setting Leaflet map reference');
-      leafletMapRef.current = map;
-      
-      // When Leaflet map is ready after transition, notify user
-      if (currentView === 'leaflet' && !viewTransitionInProgress) {
-        setTimeout(() => {
-          setMapReady(true);
-          
-          toast({
-            title: "Map View Ready",
-            description: "Tiled map view has been loaded successfully.",
-            variant: "default",
-          });
-        }, 500);
-      }
+    leafletMapRef.current = map;
+    // When Leaflet map is ready after transition, notify user
+    if (currentView === 'leaflet' && !viewTransitionInProgress) {
+      toast({
+        title: "Map View Ready",
+        description: "Tiled map view has been loaded successfully.",
+        variant: "default",
+      });
     }
-  };
-
-  const handleMapReadyInternal = () => {
-    setMapReady(true);
-    onMapReady();
   };
 
   const handleZoomIn = () => {
@@ -155,14 +99,6 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
 
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
-    
-    // Dispatch appropriate events based on tool selection
-    if (tool && tool !== activeTool) {
-      window.dispatchEvent(new CustomEvent('drawingStart'));
-    } else if (!tool && activeTool) {
-      window.dispatchEvent(new CustomEvent('drawingEnd'));
-    }
-    
     setActiveTool(tool === activeTool ? null : tool);
   };
 
@@ -195,13 +131,12 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           currentView={currentView}
           mapKey={mapKey}
           selectedLocation={selectedLocation}
-          onMapReady={handleMapReadyInternal}
+          onMapReady={onMapReady}
           onFlyComplete={onFlyComplete}
           handleCesiumViewerRef={handleCesiumViewerRef}
           handleLeafletMapRef={handleLeafletMapRef}
           activeTool={activeTool}
           handleClearAll={handleClearAll}
-          stayAtCurrentPosition={stayAtCurrentPosition}
         />
         
         <DrawingTools 
