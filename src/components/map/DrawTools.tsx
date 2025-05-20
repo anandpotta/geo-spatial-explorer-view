@@ -1,5 +1,5 @@
 
-import { useRef, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useEffect } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
 import { usePathElements } from '@/hooks/usePathElements';
@@ -9,6 +9,17 @@ import { useDrawToolsEventHandlers } from '@/hooks/useDrawToolsEventHandlers';
 import { useSavedPathsRestoration } from '@/hooks/useSavedPathsRestoration';
 import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
 import { getDrawOptions } from './drawing/DrawOptionsConfiguration';
+import { useClearConfirmation } from '@/hooks/useClearConfirmation';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
@@ -21,7 +32,7 @@ interface DrawToolsProps {
   featureGroup: L.FeatureGroup;
 }
 
-const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
+const DrawTools = ({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps) => {
   const editControlRef = useRef<any>(null);
   
   // Use hooks for separated functionality
@@ -34,17 +45,17 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useSavedPathsRestoration(featureGroup);
   usePathElementsCleaner(clearPathElements);
   
-  // Store featureGroup in window for global access
-  if (featureGroup && !window.featureGroup) {
-    window.featureGroup = featureGroup;
-  }
+  // Clear confirmation dialog
+  const { isClearDialogOpen, setIsClearDialogOpen, handleConfirmClear } = 
+    useClearConfirmation(featureGroup, onClearAll);
   
-  useImperativeHandle(ref, () => ({
-    getPathElements,
-    getSVGPathData,
-    clearPathElements
-  }));
-
+  // Store featureGroup in window for global access
+  useEffect(() => {
+    if (featureGroup && !window.featureGroup) {
+      window.featureGroup = featureGroup;
+    }
+  }, [featureGroup]);
+  
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
 
@@ -61,17 +72,34 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   };
 
   return (
-    <EditControl
-      ref={editControlRef}
-      position="topright"
-      onCreated={handleCreated}
-      draw={drawOptions}
-      edit={editOptions}
-      featureGroup={featureGroup}
-    />
+    <>
+      <EditControl
+        ref={editControlRef}
+        position="topright"
+        onCreated={handleCreated}
+        draw={drawOptions}
+        edit={editOptions}
+        featureGroup={featureGroup}
+      />
+      
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear all drawings and markers? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClear}>
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
-});
-
-DrawTools.displayName = 'DrawTools';
+};
 
 export default DrawTools;
