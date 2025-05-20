@@ -10,12 +10,12 @@ const TransitionOverlay: React.FC<TransitionOverlayProps> = ({ show }) => {
   
   return (
     <div 
-      className="absolute inset-0 bg-black bg-opacity-30 z-20 pointer-events-none animate-fade-in"
+      className="absolute inset-0 bg-black bg-opacity-30 z-20 pointer-events-none"
       style={{
         animation: 'fadeInOut 500ms ease-in-out forwards'
       }}
     >
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInOut {
           0% { opacity: 0; }
           50% { opacity: 1; }
