@@ -11,6 +11,7 @@ interface TempMarkerProps {
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
   onSave: () => void;
+  mapKey?: string; // Added mapKey property
 }
 
 const TempMarker: React.FC<TempMarkerProps> = ({
@@ -19,14 +20,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   setMarkerName,
   markerType,
   setMarkerType,
-  onSave
+  onSave,
+  mapKey = 'global' // Default value
 }) => {
   // Track if this marker has been initialized to prevent double creation
   const hasInitialized = useRef(false);
   const markerRef = useRef<L.Marker | null>(null);
   
-  // Create a unique ID for this temporary marker based on position
-  const tempMarkerId = `temp-marker-${position[0]}-${position[1]}`;
+  // Create a unique ID for this temporary marker based on position and mapKey
+  const tempMarkerId = `temp-marker-${position[0]}-${position[1]}-${mapKey}`;
   
   // Create a custom marker with higher z-index to ensure it's on top
   const markerOptions = {
