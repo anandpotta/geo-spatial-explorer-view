@@ -15,6 +15,7 @@ interface MapContentContainerProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
+  stayAtCurrentPosition?: boolean;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -22,7 +23,8 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   selectedLocation, 
   onMapReady, 
   onFlyComplete,
-  onLocationSelect 
+  onLocationSelect,
+  stayAtCurrentPosition = false
 }) => {
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<any>(null);
@@ -50,6 +52,16 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
       return () => clearTimeout(timer);
     }
   }, [currentView]);
+
+  // Dispatch drawing/marking events
+  useEffect(() => {
+    if (activeTool) {
+      console.log("Drawing tool activated:", activeTool);
+      window.dispatchEvent(new CustomEvent('drawingStart'));
+    } else {
+      window.dispatchEvent(new CustomEvent('drawingEnd'));
+    }
+  }, [activeTool]);
 
   const handleCesiumViewerRef = (viewer: any) => {
     // Only update if not already set or explicitly changing views
@@ -136,6 +148,14 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
 
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
+    
+    // Dispatch appropriate events based on tool selection
+    if (tool && tool !== activeTool) {
+      window.dispatchEvent(new CustomEvent('drawingStart'));
+    } else if (!tool && activeTool) {
+      window.dispatchEvent(new CustomEvent('drawingEnd'));
+    }
+    
     setActiveTool(tool === activeTool ? null : tool);
   };
 
@@ -170,6 +190,7 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           handleLeafletMapRef={handleLeafletMapRef}
           activeTool={activeTool}
           handleClearAll={handleClearAll}
+          stayAtCurrentPosition={stayAtCurrentPosition}
         />
         
         <DrawingTools 

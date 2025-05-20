@@ -19,6 +19,7 @@ interface LeafletMapProps {
   activeTool?: string | null;
   onLocationSelect?: (location: Location) => void;
   onClearAll?: () => void;
+  stayAtCurrentPosition?: boolean;
 }
 
 const LeafletMap = ({ 
@@ -26,7 +27,8 @@ const LeafletMap = ({
   onMapReady, 
   activeTool, 
   onLocationSelect, 
-  onClearAll 
+  onClearAll,
+  stayAtCurrentPosition = false
 }: LeafletMapProps) => {
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
   
@@ -45,6 +47,11 @@ const LeafletMap = ({
   } = useMapInitialization(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
+
+  // Sync the stayAtCurrentPosition state with our component props
+  useEffect(() => {
+    mapState.setStayAtCurrentPosition(stayAtCurrentPosition);
+  }, [stayAtCurrentPosition]);
 
   // Handle markers updates
   useEffect(() => {
@@ -65,20 +72,25 @@ const LeafletMap = ({
   // Handle selected location changes
   useEffect(() => {
     if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
-      try {
-        const container = mapRef.current.getContainer();
-        if (container && document.body.contains(container)) {
-          console.log('Flying to selected location:', selectedLocation);
-          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-            animate: true,
-            duration: 1.5
-          });
+      // Only fly to the selected location if not staying at current position
+      if (!mapState.stayAtCurrentPosition) {
+        try {
+          const container = mapRef.current.getContainer();
+          if (container && document.body.contains(container)) {
+            console.log('Flying to selected location:', selectedLocation);
+            mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
+              animate: true,
+              duration: 1.5
+            });
+          }
+        } catch (err) {
+          console.error('Error flying to location:', err);
         }
-      } catch (err) {
-        console.error('Error flying to location:', err);
+      } else {
+        console.log('Staying at current position, not flying to selected location');
       }
     }
-  }, [selectedLocation, isMapReady, isMapReferenceSet]);
+  }, [selectedLocation, isMapReady, isMapReferenceSet, mapState.stayAtCurrentPosition]);
 
   // Custom map reference handler that sets our local state
   const handleMapRefWrapper = (map: L.Map) => {

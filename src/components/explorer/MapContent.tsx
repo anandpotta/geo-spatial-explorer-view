@@ -9,6 +9,7 @@ interface MapContentProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
+  stayAtCurrentPosition?: boolean;
 }
 
 const MapContent = (props: MapContentProps) => {

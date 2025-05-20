@@ -22,6 +22,7 @@ export function useMapState(selectedLocation?: Location) {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [stayAtCurrentPosition, setStayAtCurrentPosition] = useState(false);
 
   // Load existing markers and drawings when user changes or auth state changes
   useEffect(() => {
@@ -140,6 +141,9 @@ export function useMapState(selectedLocation?: Location) {
     
     // Reset marker name
     setMarkerName('');
+
+    // Set this flag to prevent navigation back to initial position
+    setStayAtCurrentPosition(true);
     
     toast.success("Location saved successfully");
     
@@ -187,6 +191,8 @@ export function useMapState(selectedLocation?: Location) {
     setSelectedDrawing,
     activeTool,
     setActiveTool,
+    stayAtCurrentPosition,
+    setStayAtCurrentPosition,
     handleSaveMarker,
     handleDeleteMarker,
     handleRegionClick

@@ -17,6 +17,9 @@ export function useMarkerHandlers(mapState: any) {
       const defaultName = mapState.selectedLocation?.label || 'New Building';
       mapState.setMarkerName(defaultName);
       
+      // Prevent automatic navigation by setting stayAtCurrentPosition flag
+      mapState.setStayAtCurrentPosition(true);
+      
       // Make sure to focus on the marker name input field after a short delay
       setTimeout(() => {
         const inputField = document.querySelector('.leaflet-popup input');
@@ -28,6 +31,9 @@ export function useMarkerHandlers(mapState: any) {
   };
 
   const handleShapeCreated = (shape: any) => {
+    // Set the flag to prevent automatic navigation
+    mapState.setStayAtCurrentPosition(true);
+    
     if (shape.type === 'marker') {
       // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
