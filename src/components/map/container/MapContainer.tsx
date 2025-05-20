@@ -35,7 +35,8 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
     };
   }, [mapKey]);
   
-  const handleMapLoad = (event: any) => {
+  // Define and store the map handler function for whenReady event
+  const handleMapLoad = React.useCallback(() => {
     // Mark the map as available
     (window as any).isLeafletMapAvailable = true;
     
@@ -45,18 +46,9 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       leafletMap.setAttribute('data-instance-id', mapKey);
     }
     
-    // Force a resize on load
-    const map = event.target;
-    if (map && typeof map.invalidateSize === 'function') {
-      setTimeout(() => {
-        try {
-          map.invalidateSize(true);
-        } catch (err) {
-          console.warn('Error resizing map on load:', err);
-        }
-      }, 100);
-    }
-  };
+    // Get the map instance directly from the event callback context
+    // We'll need to use whenCreated for resizing since whenReady doesn't provide the event
+  }, [mapKey]);
   
   return (
     <LeafletMapContainer 
@@ -75,6 +67,18 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         if (container) {
           container.dataset.mapKey = mapKey;
         }
+        
+        // Force a resize on load with setTimeout for better reliability
+        setTimeout(() => {
+          try {
+            if (map && typeof map.invalidateSize === 'function') {
+              map.invalidateSize(true);
+              console.log('Map size invalidated on creation');
+            }
+          } catch (err) {
+            console.warn('Error resizing map on load:', err);
+          }
+        }, 100);
       }}
       whenReady={handleMapLoad}
     >
