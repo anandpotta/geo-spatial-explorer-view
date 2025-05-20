@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 // Import CSS directly from node_modules
 import 'leaflet/dist/leaflet.css';
@@ -9,9 +9,18 @@ interface MapContainerProps {
   zoom: number;
   mapKey: string;
   children: React.ReactNode;
+  onMapReady?: (map: L.Map) => void;
 }
 
-const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, children }) => {
+const MapContainer: React.FC<MapContainerProps> = ({ 
+  position, 
+  zoom, 
+  mapKey, 
+  children,
+  onMapReady 
+}) => {
+  const mapRef = useRef<L.Map | null>(null);
+  
   // Clear any existing map instances from the DOM before mounting
   useEffect(() => {
     // Find and remove any orphaned Leaflet container classes
@@ -28,6 +37,24 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
     return cleanup;
   }, [mapKey]);
   
+  // Handle map initialization
+  const handleMapInit = (map: L.Map) => {
+    console.log("Map initialized with zoom:", map.getZoom());
+    mapRef.current = map;
+    
+    // Give the map time to fully render before calling onMapReady
+    setTimeout(() => {
+      if (onMapReady && map) {
+        console.log("Calling onMapReady callback");
+        onMapReady(map);
+      }
+    }, 200);
+    
+    // Add a custom attribute to help identify this map instance
+    const container = map.getContainer();
+    container.setAttribute('data-instance-id', mapKey);
+  };
+  
   return (
     <LeafletMapContainer 
       key={mapKey}
@@ -39,11 +66,12 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       fadeAnimation={true}
       markerZoomAnimation={true}
       preferCanvas={true}
+      ref={handleMapInit}
       whenReady={() => {
-        // Access the map instance through the global variable
-        const leafletMap = document.querySelector(`.leaflet-container[data-map-key="${mapKey}"]`);
-        if (leafletMap) {
-          leafletMap.setAttribute('data-instance-id', mapKey);
+        console.log("Map is ready");
+        // Additional initialization can happen here
+        if (mapRef.current) {
+          mapRef.current.invalidateSize(true);
         }
       }}
     >
