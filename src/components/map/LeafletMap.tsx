@@ -85,11 +85,25 @@ const LeafletMap = ({
     window.addEventListener('drawingStart', handleDrawingStart);
     window.addEventListener('drawingEnd', handleDrawingEnd);
     
+    // Listen for clear all events
+    const handleClearAllEvent = () => {
+      console.log("Clear all event detected");
+      mapState.setTempMarker(null);
+      mapState.setMarkerName('');
+      mapState.setMarkerType('building');
+      mapState.setCurrentDrawing(null);
+      mapState.setShowFloorPlan(false);
+      mapState.setSelectedDrawing(null);
+    };
+    
+    window.addEventListener('clearAllDrawings', handleClearAllEvent);
+    
     return () => {
       window.removeEventListener('markerPlaced', handleMarkerPlaced);
       window.removeEventListener('markerSaved', handleMarkerSaved);
       window.removeEventListener('drawingStart', handleDrawingStart);
       window.removeEventListener('drawingEnd', handleDrawingEnd);
+      window.removeEventListener('clearAllDrawings', handleClearAllEvent);
     };
   }, [stayAtCurrentPosition, mapState]);
 
@@ -102,10 +116,12 @@ const LeafletMap = ({
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     window.addEventListener('storage', handleMarkersUpdated);
+    window.addEventListener('clearAllDrawings', handleMarkersUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('storage', handleMarkersUpdated);
+      window.removeEventListener('clearAllDrawings', handleMarkersUpdated);
     };
   }, []);
 
@@ -138,6 +154,16 @@ const LeafletMap = ({
     handleSetMapRef(map);
     setIsMapReferenceSet(true);
     
+    // Store the feature group reference globally
+    if (map) {
+      // Find feature group in the map
+      Object.values(map._layers || {}).forEach(layer => {
+        if (layer instanceof L.FeatureGroup) {
+          window.featureGroup = layer;
+        }
+      });
+    }
+    
     // Only call parent onMapReady once when the map is first ready
     if (onMapReady && !isMapReferenceSet) {
       onMapReady(map);
@@ -156,6 +182,10 @@ const LeafletMap = ({
     if (onClearAll) {
       onClearAll();
     }
+    
+    // Dispatch a clear all event
+    window.dispatchEvent(new Event('clearAllDrawings'));
+    window.dispatchEvent(new Event('clearAllSvgPaths'));
     
     handleClearAll();
   };
@@ -195,3 +225,10 @@ const LeafletMap = ({
 };
 
 export default LeafletMap;
+
+// Add feature group to global window object
+declare global {
+  interface Window {
+    featureGroup?: L.FeatureGroup;
+  }
+}

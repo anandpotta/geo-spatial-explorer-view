@@ -34,6 +34,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useSavedPathsRestoration(featureGroup);
   usePathElementsCleaner(clearPathElements);
   
+  // Store featureGroup in window for global access
+  if (featureGroup && !window.featureGroup) {
+    window.featureGroup = featureGroup;
+  }
+  
   useImperativeHandle(ref, () => ({
     getPathElements,
     getSVGPathData,
@@ -49,7 +54,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       position="topright"
       onCreated={handleCreated}
       draw={drawOptions}
-      edit={false}
+      edit={{
+        featureGroup,
+        remove: true,
+        edit: true
+      }}
       featureGroup={featureGroup}
     />
   );

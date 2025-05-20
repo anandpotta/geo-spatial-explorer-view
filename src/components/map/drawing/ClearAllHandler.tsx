@@ -14,6 +14,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     
     // Force SVG paths to be removed by triggering all relevant events
     window.dispatchEvent(new Event('clearAllSvgPaths'));
+    window.dispatchEvent(new Event('clearAllDrawings'));
     
     // Clear all markers from storage
     const markers = getSavedMarkers();

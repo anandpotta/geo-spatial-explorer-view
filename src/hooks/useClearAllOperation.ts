@@ -13,7 +13,9 @@ export function useClearAllOperation(onClearAll?: () => void) {
       return;
     }
     
+    // Get the global feature group instance
     const featureGroup = window.featureGroup;
+    
     if (featureGroup) {
       handleClearAll({
         featureGroup,
@@ -31,6 +33,8 @@ export function useClearAllOperation(onClearAll?: () => void) {
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));
       window.dispatchEvent(new Event('drawingsUpdated'));
+      window.dispatchEvent(new Event('clearAllSvgPaths'));
+      window.dispatchEvent(new Event('clearAllDrawings'));
       
       if (onClearAll) {
         onClearAll();
