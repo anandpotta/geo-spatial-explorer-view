@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../map/LeafletMap';
 import CesiumView from '../../map/CesiumMapLoading';
@@ -35,6 +35,23 @@ const MapViews: React.FC<MapViewsProps> = ({
   // Create unique IDs for each view type to ensure we don't reuse containers
   const leafletKeyRef = useRef<string>(`leaflet-${mapKey}-${Date.now()}`);
   const cesiumKeyRef = useRef<string>(`cesium-${mapKey}-${Date.now()}`);
+  
+  // Clean up any orphaned Leaflet elements when view changes or component unmounts
+  useEffect(() => {
+    return () => {
+      // Only run cleanup on unmount, not during initial render
+      setTimeout(() => {
+        // Clean up any orphaned markers when view changes
+        document.querySelectorAll('.leaflet-marker-icon[data-stale="true"]').forEach(el => {
+          el.remove();
+        });
+        
+        document.querySelectorAll('.leaflet-marker-shadow[data-stale="true"]').forEach(el => {
+          el.remove();
+        });
+      }, 300);
+    };
+  }, [currentView]);
   
   return (
     <>

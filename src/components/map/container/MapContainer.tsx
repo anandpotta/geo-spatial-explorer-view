@@ -16,17 +16,53 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
 
   // This ensures we provide a new container for each map instance
   useEffect(() => {
+    const cleanupMapElements = () => {
+      // Clean up any map-related DOM elements that might be left behind
+      if (containerRef.current) {
+        // First mark this container as unmounted
+        containerRef.current.dataset.unmounted = 'true';
+        
+        // Find and remove any orphaned leaflet elements
+        const mapId = containerRef.current.id || '';
+        document.querySelectorAll(`.leaflet-marker-icon[data-container-id="${mapId}"]`).forEach(el => {
+          el.remove();
+        });
+      }
+    };
+    
+    // Handle clearAllMarkers event
+    const handleClearAllMarkers = () => {
+      if (containerRef.current) {
+        const markerPaneSelector = '.leaflet-marker-pane';
+        const markerPane = containerRef.current.querySelector(markerPaneSelector);
+        if (markerPane) {
+          const markers = markerPane.querySelectorAll('.leaflet-marker-icon');
+          markers.forEach(marker => marker.remove());
+          
+          const shadows = document.querySelector('.leaflet-shadow-pane')?.querySelectorAll('.leaflet-marker-shadow');
+          shadows?.forEach(shadow => shadow.remove());
+          
+          console.log('Removed all marker elements from DOM');
+        }
+      }
+    };
+    
+    window.addEventListener('clearAllMarkers', handleClearAllMarkers);
+    
     return () => {
       // Clean up any global references to the map we might have
-      if (containerRef.current) {
-        // Add a data attribute to mark this container as unmounted
-        containerRef.current.dataset.unmounted = 'true';
-      }
+      window.removeEventListener('clearAllMarkers', handleClearAllMarkers);
+      cleanupMapElements();
     };
   }, [mapKey]);
 
   return (
-    <div ref={containerRef} className="w-full h-full">
+    <div 
+      ref={containerRef} 
+      className="w-full h-full"
+      id={`map-container-${mapKey}`}
+      data-map-key={mapKey}
+    >
       <LeafletMapContainer 
         key={mapKey} // Ensure a new instance is created when key changes
         className="w-full h-full"

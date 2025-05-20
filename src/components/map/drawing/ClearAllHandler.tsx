@@ -15,12 +15,11 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     // Explicitly clear SVG elements in the overlay pane
     const mapContainer = (featureGroup as any)._map?.getContainer();
     if (mapContainer) {
+      // Clear overlay pane SVG elements
       const overlayPane = mapContainer.querySelector('.leaflet-overlay-pane');
       if (overlayPane) {
-        // Find all SVG paths and clear them
         const svgElements = overlayPane.querySelectorAll('svg');
         svgElements.forEach(svg => {
-          // Remove all path elements
           const paths = svg.querySelectorAll('path');
           paths.forEach(path => {
             path.remove();
@@ -29,11 +28,32 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         
         console.log('Cleared all SVG paths from overlay pane');
       }
+      
+      // Clear marker icons from marker pane
+      const markerPane = mapContainer.querySelector('.leaflet-marker-pane');
+      if (markerPane) {
+        const markerIcons = markerPane.querySelectorAll('.leaflet-marker-icon');
+        markerIcons.forEach(icon => {
+          icon.remove();
+        });
+        
+        console.log('Cleared all marker icons from marker pane');
+        
+        // Also clear marker shadows if they exist
+        const markerShadows = mapContainer.querySelector('.leaflet-shadow-pane')?.querySelectorAll('.leaflet-marker-shadow');
+        if (markerShadows) {
+          markerShadows.forEach(shadow => {
+            shadow.remove();
+          });
+          console.log('Cleared all marker shadows from shadow pane');
+        }
+      }
     }
     
-    // Force SVG paths to be removed by triggering all relevant events
+    // Force SVG paths and markers to be removed by triggering all relevant events
     window.dispatchEvent(new Event('clearAllSvgPaths'));
     window.dispatchEvent(new Event('clearAllDrawings'));
+    window.dispatchEvent(new Event('clearAllMarkers'));
     
     // Clear all markers from storage
     const markers = getSavedMarkers();

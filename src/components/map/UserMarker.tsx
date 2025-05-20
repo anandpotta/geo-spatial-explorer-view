@@ -16,7 +16,22 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   
   // Cleanup marker when component unmounts
   useEffect(() => {
+    const handleClearAllMarkers = () => {
+      if (markerRef.current) {
+        try {
+          markerRef.current.remove();
+        } catch (error) {
+          console.error('Error removing marker during clear all:', error);
+        }
+      }
+    };
+    
+    // Listen for clear all markers event
+    window.addEventListener('clearAllMarkers', handleClearAllMarkers);
+    
     return () => {
+      window.removeEventListener('clearAllMarkers', handleClearAllMarkers);
+      
       if (markerRef.current) {
         const leafletElement = markerRef.current;
         if (leafletElement && leafletElement.remove) {
@@ -60,7 +75,12 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       eventHandlers={{
         dragend: handleDragEnd
       }}
-      ref={markerRef}
+      ref={(ref) => {
+        // In react-leaflet v4, we access the leaflet instance directly
+        if (ref) {
+          markerRef.current = ref;
+        }
+      }}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
     </Marker>

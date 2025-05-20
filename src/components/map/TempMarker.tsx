@@ -66,9 +66,24 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   };
   
-  // Clean up marker when component unmounts
+  // Listen for clear all markers event
   useEffect(() => {
+    const handleClearAllMarkers = () => {
+      if (markerRef.current) {
+        try {
+          markerRef.current.remove();
+        } catch (error) {
+          console.error('Error removing temp marker during clear all:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('clearAllMarkers', handleClearAllMarkers);
+    
+    // Clean up marker when component unmounts
     return () => {
+      window.removeEventListener('clearAllMarkers', handleClearAllMarkers);
+      
       if (markerRef.current) {
         try {
           markerRef.current.remove();
