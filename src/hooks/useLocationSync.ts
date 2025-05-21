@@ -2,6 +2,7 @@
 import { useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { toast } from '@/components/ui/use-toast';
+import L from 'leaflet';
 
 export function useLocationSync(
   map: L.Map | null,
