@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { toast } from '@/components/ui/use-toast';
 import L from 'leaflet';
@@ -11,6 +11,18 @@ export function useLocationSync(
 ) {
   const processedLocationRef = useRef<string | null>(null);
   const flyInProgressRef = useRef(false);
+  const timeoutRefsRef = useRef<number[]>([]);
+  const [hasInitialPositioning, setHasInitialPositioning] = useState(false);
+
+  // Clear all timeouts on unmount or when dependencies change
+  useEffect(() => {
+    return () => {
+      // Clear any pending timeouts to prevent memory leaks and stale updates
+      timeoutRefsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      timeoutRefsRef.current = [];
+      flyInProgressRef.current = false;
+    };
+  }, [map]);
 
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
@@ -19,21 +31,27 @@ export function useLocationSync(
     const locationId = `${selectedLocation.id}:${selectedLocation.y}:${selectedLocation.x}`;
 
     // Skip if it's the same location we're already at
-    if (locationId === processedLocationRef.current) {
+    if (locationId === processedLocationRef.current && hasInitialPositioning) {
       console.log('Leaflet map: Skipping duplicate location selection', locationId);
       return;
     }
 
     // Skip if fly is already in progress
     if (flyInProgressRef.current) {
-      console.log('Leaflet map: Fly already in progress, queuing');
+      console.log('Leaflet map: Fly already in progress, will try again later');
       
       // Queue the operation by setting a timeout
       const timer = setTimeout(() => {
+        if (locationId === processedLocationRef.current) {
+          console.log('Leaflet map: Skipping deferred update - location already processed');
+          return;
+        }
         processLocationChange();
-      }, 1000);
+      }, 1200);
       
-      return () => clearTimeout(timer);
+      // Store timeout ID for cleanup
+      timeoutRefsRef.current.push(timer);
+      return;
     }
 
     processLocationChange();
@@ -46,10 +64,11 @@ export function useLocationSync(
 
       try {
         // Force map invalidation to ensure proper rendering
-        setTimeout(() => {
+        const invalidateTimer = setTimeout(() => {
           if (!map) return;
           map.invalidateSize(true);
         }, 100);
+        timeoutRefsRef.current.push(invalidateTimer);
         
         // Position the map at the selected location
         const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
@@ -58,8 +77,12 @@ export function useLocationSync(
         map.setView(newPosition, 14, { animate: false });
         
         // Then use flyTo for smoother animation
-        setTimeout(() => {
-          if (!map) return;
+        const flyTimer = setTimeout(() => {
+          if (!map) {
+            flyInProgressRef.current = false;
+            return;
+          }
+          
           map.flyTo(newPosition, 14, {
             animate: true,
             duration: 1.5,
@@ -67,7 +90,12 @@ export function useLocationSync(
           });
           
           // Add a marker after a short delay
-          setTimeout(() => {
+          const markerTimer = setTimeout(() => {
+            if (!map) {
+              flyInProgressRef.current = false;
+              return;
+            }
+
             try {
               // Clear existing markers to prevent cluttering
               map.eachLayer((layer) => {
@@ -85,6 +113,7 @@ export function useLocationSync(
               
               // Reset the fly progress flag
               flyInProgressRef.current = false;
+              setHasInitialPositioning(true);
               
               toast({
                 title: "Location Found",
@@ -96,7 +125,9 @@ export function useLocationSync(
               flyInProgressRef.current = false;
             }
           }, 500);
+          timeoutRefsRef.current.push(markerTimer);
         }, 300);
+        timeoutRefsRef.current.push(flyTimer);
       } catch (error) {
         console.error('Error flying to location in Leaflet:', error);
         flyInProgressRef.current = false;
@@ -108,13 +139,5 @@ export function useLocationSync(
         });
       }
     }
-
-    // Cleanup function
-    return () => {
-      // Reset fly in progress if component unmounts during fly
-      if (flyInProgressRef.current) {
-        flyInProgressRef.current = false;
-      }
-    };
-  }, [selectedLocation, map, isMapReady]);
+  }, [selectedLocation, map, isMapReady, hasInitialPositioning]);
 }

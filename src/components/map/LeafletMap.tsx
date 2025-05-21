@@ -59,10 +59,23 @@ const LeafletMap = ({
         setPosition([selectedLocation.y, selectedLocation.x]);
         setZoom(14); // Set a good default zoom level
         lastLocationRef.current = locationId;
-        initialPositionSetRef.current = true;
+        
+        // Immediate positioning for better UX
+        if (mapRef.current && isMapReady) {
+          // First set view without animation for immediate positioning
+          mapRef.current.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
+          initialPositionSetRef.current = true;
+          
+          // Force invalidate size to ensure proper rendering
+          setTimeout(() => {
+            if (mapRef.current) {
+              mapRef.current.invalidateSize(true);
+            }
+          }, 250);
+        }
       }
     }
-  }, [selectedLocation]);
+  }, [selectedLocation, isMapReady]);
   
   // When the map is ready, notify the parent component
   useEffect(() => {
@@ -101,6 +114,29 @@ const LeafletMap = ({
           if (mapRef.current && selectedLocation) {
             mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 14);
             initialPositionSetRef.current = true;
+            
+            // Add a marker
+            setTimeout(() => {
+              try {
+                if (mapRef.current) {
+                  // Clear existing markers
+                  mapRef.current.eachLayer((layer: any) => {
+                    if (layer instanceof L.Marker) {
+                      mapRef.current?.removeLayer(layer);
+                    }
+                  });
+                  
+                  // Create a marker at the location
+                  const marker = L.marker([selectedLocation.y, selectedLocation.x]).addTo(mapRef.current);
+                  marker.bindPopup(
+                    `<b>${selectedLocation.label || 'Selected Location'}</b><br>` +
+                    `${selectedLocation.y.toFixed(6)}, ${selectedLocation.x.toFixed(6)}`
+                  ).openPopup();
+                }
+              } catch (err) {
+                console.error('Error adding initial marker:', err);
+              }
+            }, 500);
           }
         }, 300);
       }

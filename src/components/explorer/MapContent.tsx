@@ -10,6 +10,8 @@ interface MapContentProps {
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
   flyCompleted?: boolean;
+  handleCesiumViewerRef?: (viewer: any) => void;
+  handleLeafletMapRef?: (map: any) => void;
 }
 
 const MapContent = (props: MapContentProps) => {
