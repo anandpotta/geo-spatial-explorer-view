@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import MapContent from '@/components/explorer/MapContent';
 import ExplorerSidebar from '@/components/explorer/ExplorerSidebar';
@@ -18,6 +17,8 @@ const Index = () => {
   const pendingViewChangeTimerRef = useRef<number | null>(null);
   const cesiumViewerRef = useRef<any>(null);
   const leafletMapRef = useRef<any>(null);
+  const viewChangeInProgressRef = useRef(false);
+  const preventRapidChangeTimerRef = useRef<number | null>(null);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
@@ -37,6 +38,13 @@ const Index = () => {
     
     locationSelectionTimeRef.current = now;
     console.log("Main: Location selected:", location.label, "at coordinates:", location.y, location.x);
+    
+    // Stop any pending view changes
+    if (pendingViewChangeTimerRef.current) {
+      window.clearTimeout(pendingViewChangeTimerRef.current);
+      pendingViewChangeTimerRef.current = null;
+    }
+    
     setSelectedLocation(location);
     setFlyCompleted(false);
     
@@ -47,6 +55,17 @@ const Index = () => {
     if (currentView === 'leaflet') {
       console.log("Auto-switching to 3D view for better location experience");
       setCurrentView('cesium');
+      viewChangeInProgressRef.current = true;
+      
+      // Create a timer to reset the view change flag
+      if (preventRapidChangeTimerRef.current) {
+        window.clearTimeout(preventRapidChangeTimerRef.current);
+      }
+      
+      preventRapidChangeTimerRef.current = window.setTimeout(() => {
+        viewChangeInProgressRef.current = false;
+        preventRapidChangeTimerRef.current = null;
+      }, 1500);
     }
   };
 
@@ -55,28 +74,36 @@ const Index = () => {
     setFlyCompleted(true);
     
     // After fly completes in cesium, switch to leaflet if needed
-    if (currentView === 'cesium' && selectedLocation) {
+    if (currentView === 'cesium' && selectedLocation && !viewChangeInProgressRef.current) {
       console.log("Scheduling switch to leaflet view after fly completion with location", selectedLocation.label);
+      
+      // Set the view change flag to prevent rapid toggling
+      viewChangeInProgressRef.current = true;
       
       // Clear any existing pending view change
       if (pendingViewChangeTimerRef.current) {
-        clearTimeout(pendingViewChangeTimerRef.current);
+        window.clearTimeout(pendingViewChangeTimerRef.current);
       }
       
       // Set a short timeout to allow for state updates
       pendingViewChangeTimerRef.current = window.setTimeout(() => {
         console.log("Executing scheduled view change to leaflet");
         pendingViewChangeTimerRef.current = null;
-        setCurrentView('leaflet');
         
         // Force map refresh to ensure proper positioning
         setMapKey(Date.now());
+        setCurrentView('leaflet');
         
         // Add a small delay then trigger a Leaflet refresh
-        setTimeout(() => {
+        window.setTimeout(() => {
           setLeafletRefreshTrigger(prev => prev + 1);
+          
+          // Reset the view change flag after transition completes
+          window.setTimeout(() => {
+            viewChangeInProgressRef.current = false;
+          }, 1000);
         }, 700);
-      }, 1000); // Use a longer delay for smoother transition
+      }, 1200); // Use a longer delay for smoother transition
     }
     
     // Reset location selection timer
@@ -103,7 +130,7 @@ const Index = () => {
     }
     
     // Prevent rapid view changes
-    if (viewTransitionInProgressRef.current) {
+    if (viewTransitionInProgressRef.current || viewChangeInProgressRef.current) {
       toast({
         title: "Please wait",
         description: "View transition already in progress",
@@ -123,6 +150,12 @@ const Index = () => {
     }
     
     console.log(`Changing view to ${view}`);
+    
+    // Set transition flags
+    viewTransitionInProgressRef.current = true;
+    viewChangeInProgressRef.current = true;
+    
+    // Make the view change
     setCurrentView(view);
     
     // Force map refresh when switching to leaflet with location
@@ -135,10 +168,14 @@ const Index = () => {
       }, 700);
     }
     
-    // Set transition flag
-    viewTransitionInProgressRef.current = true;
+    // Reset transition flags after a delay
     setTimeout(() => {
       viewTransitionInProgressRef.current = false;
+      
+      // Add a longer delay before allowing another transition
+      setTimeout(() => {
+        viewChangeInProgressRef.current = false;
+      }, 1000);
     }, 1500);
   };
 
@@ -165,8 +202,13 @@ const Index = () => {
   useEffect(() => {
     return () => {
       if (pendingViewChangeTimerRef.current) {
-        clearTimeout(pendingViewChangeTimerRef.current);
+        window.clearTimeout(pendingViewChangeTimerRef.current);
         pendingViewChangeTimerRef.current = null;
+      }
+      
+      if (preventRapidChangeTimerRef.current) {
+        window.clearTimeout(preventRapidChangeTimerRef.current);
+        preventRapidChangeTimerRef.current = null;
       }
     };
   }, []);

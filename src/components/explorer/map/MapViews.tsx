@@ -34,6 +34,7 @@ const MapViews: React.FC<MapViewsProps> = ({
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
   const lastSelectedLocationRef = useRef<Location | undefined>(undefined);
   const [fadeIn, setFadeIn] = useState(false);
+  const viewChangeTimeout = useRef<number | null>(null);
   
   // Track location changes to prevent duplicate transitions
   useEffect(() => {
@@ -46,18 +47,25 @@ const MapViews: React.FC<MapViewsProps> = ({
   // Handle view transitions
   useEffect(() => {
     if (previousView && previousView !== currentView) {
+      // Clear any existing timeout
+      if (viewChangeTimeout.current) {
+        window.clearTimeout(viewChangeTimeout.current);
+      }
+      
       // Start transition effect
       setTransitioning(true);
       setViewChangeStarted(Date.now());
       
       // End transition after animation completes
-      const timer = setTimeout(() => {
+      viewChangeTimeout.current = window.setTimeout(() => {
         setTransitioning(false);
         setViewChangeStarted(null);
         
         // Trigger fade in for new view
         setFadeIn(true);
-        setTimeout(() => setFadeIn(false), 500);
+        const fadeTimeout = window.setTimeout(() => setFadeIn(false), 500);
+        
+        return () => window.clearTimeout(fadeTimeout);
       }, 800); // Slightly longer to ensure render completes
       
       // Notify user about view change
@@ -67,7 +75,12 @@ const MapViews: React.FC<MapViewsProps> = ({
         duration: 2000,
       });
       
-      return () => clearTimeout(timer);
+      return () => {
+        if (viewChangeTimeout.current) {
+          window.clearTimeout(viewChangeTimeout.current);
+          viewChangeTimeout.current = null;
+        }
+      };
     }
     
     setPreviousView(currentView);
@@ -80,6 +93,7 @@ const MapViews: React.FC<MapViewsProps> = ({
         opacity: isCurrentView ? 1 : 0,
         transform: isCurrentView ? 'scale(1)' : 'scale(0.95)',
         zIndex: isCurrentView ? 10 : 0,
+        pointerEvents: isCurrentView ? 'auto' : 'none',
         visibility: isCurrentView ? 'visible' : 'hidden'
       };
     }
@@ -89,6 +103,7 @@ const MapViews: React.FC<MapViewsProps> = ({
       opacity: isCurrentView ? 0.3 : 0.7, // Fading out current view, fading in new view
       transform: isCurrentView ? 'scale(0.95)' : 'scale(0.98)', // Zoom effect
       zIndex: isCurrentView ? 5 : 10, // New view on top during transition
+      pointerEvents: 'none', // Disable interactions during transition
       visibility: 'visible' // Both visible during transition
     };
   };
@@ -110,7 +125,8 @@ const MapViews: React.FC<MapViewsProps> = ({
       opacity: styles.opacity,
       transform: styles.transform,
       zIndex: styles.zIndex,
-      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out'
+      pointerEvents: styles.pointerEvents as 'auto' | 'none',
+      transition: 'opacity 800ms ease-in-out, transform 800ms ease-in-out'
     };
   };
   
@@ -130,7 +146,8 @@ const MapViews: React.FC<MapViewsProps> = ({
       opacity: 1 - (styles.opacity as number),
       transform: isCurrent ? 'scale(1)' : 'scale(0.95)',
       zIndex: isCurrent ? 10 : (transitioning ? 5 : 0),
-      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out'
+      pointerEvents: isCurrent && !transitioning ? 'auto' : 'none',
+      transition: 'opacity 800ms ease-in-out, transform 800ms ease-in-out'
     };
   };
   
@@ -171,9 +188,9 @@ const MapViews: React.FC<MapViewsProps> = ({
       {/* Add transition overlay */}
       {transitioning && (
         <div 
-          className="absolute inset-0 bg-black bg-opacity-30 z-20 pointer-events-none transition-opacity duration-300"
+          className="absolute inset-0 bg-black bg-opacity-20 z-20 pointer-events-none"
           style={{
-            animation: 'fadeInOut 500ms ease-in-out forwards'
+            animation: 'fadeInOut 800ms ease-in-out forwards'
           }}
         />
       )}

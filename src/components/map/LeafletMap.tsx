@@ -29,10 +29,11 @@ const LeafletMap = ({
   
   // Track last processed location
   const lastLocationRef = useRef<string | null>(null);
-  const initialPositionSetRef = useRef(false);
+  const viewStabilizationTimerRef = useRef<number | null>(null);
+  const [viewStable, setViewStable] = useState(false);
   
   // Use our enhanced useLocationSync hook to handle location changes
-  useLocationSync(mapRef.current, selectedLocation, isMapReady);
+  useLocationSync(mapRef.current, selectedLocation, isMapReady && viewStable);
   
   const [position, setPosition] = useState<[number, number]>([0, 0]);
   const [zoom, setZoom] = useState<number>(2);
@@ -60,26 +61,31 @@ const LeafletMap = ({
         setZoom(14); // Set a good default zoom level
         lastLocationRef.current = locationId;
         
-        // Immediate positioning for better UX
-        if (mapRef.current && isMapReady) {
-          // First set view without animation for immediate positioning
-          mapRef.current.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
-          initialPositionSetRef.current = true;
-          
-          // Force invalidate size to ensure proper rendering
-          setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.invalidateSize(true);
-            }
-          }, 250);
-        }
+        // Reset view stability
+        setViewStable(false);
       }
     }
-  }, [selectedLocation, isMapReady]);
+  }, [selectedLocation]);
   
-  // When the map is ready, notify the parent component
+  // When the map is ready, handle stabilization and notify the parent
   useEffect(() => {
     if (isMapReady && mapRef.current) {
+      // Set stability after a short delay to ensure proper rendering
+      if (viewStabilizationTimerRef.current) {
+        window.clearTimeout(viewStabilizationTimerRef.current);
+      }
+      
+      viewStabilizationTimerRef.current = window.setTimeout(() => {
+        setViewStable(true);
+        
+        // Force the map to update its size
+        if (mapRef.current) {
+          mapRef.current.invalidateSize(true);
+        }
+        
+        console.log('LeafletMap: View stabilized, ready for location sync');
+      }, 400);
+      
       // Save map instance to window for positioning calculations
       (window as any).leafletMapInstance = mapRef.current;
       
@@ -89,59 +95,21 @@ const LeafletMap = ({
       }
       
       // Dispatch a custom event to notify that the Leaflet map is ready
-      const mapReadyEvent = new Event('leafletMapReady');
+      const mapReadyEvent = new CustomEvent('leafletMapReady');
       window.dispatchEvent(mapReadyEvent);
-      
-      // Notify user once the map is ready
-      toast({
-        title: "Map Ready",
-        description: "The map view is now loaded and ready to use",
-        duration: 3000,
-      });
       
       // Force the map to update its size
       mapRef.current.invalidateSize(true);
-      
-      // Update position if we have a selected location
-      if (selectedLocation && !initialPositionSetRef.current) {
-        console.log(`LeafletMap: Initial positioning to [${selectedLocation.y}, ${selectedLocation.x}]`);
-        
-        // First set view without animation
-        mapRef.current.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
-        
-        // Then after a short delay, fly to ensure proper positioning
-        setTimeout(() => {
-          if (mapRef.current && selectedLocation) {
-            mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 14);
-            initialPositionSetRef.current = true;
-            
-            // Add a marker
-            setTimeout(() => {
-              try {
-                if (mapRef.current) {
-                  // Clear existing markers
-                  mapRef.current.eachLayer((layer: any) => {
-                    if (layer instanceof L.Marker) {
-                      mapRef.current?.removeLayer(layer);
-                    }
-                  });
-                  
-                  // Create a marker at the location
-                  const marker = L.marker([selectedLocation.y, selectedLocation.x]).addTo(mapRef.current);
-                  marker.bindPopup(
-                    `<b>${selectedLocation.label || 'Selected Location'}</b><br>` +
-                    `${selectedLocation.y.toFixed(6)}, ${selectedLocation.x.toFixed(6)}`
-                  ).openPopup();
-                }
-              } catch (err) {
-                console.error('Error adding initial marker:', err);
-              }
-            }, 500);
-          }
-        }, 300);
-      }
     }
-  }, [isMapReady, mapRef, onMapReady, selectedLocation]);
+    
+    // Cleanup
+    return () => {
+      if (viewStabilizationTimerRef.current) {
+        window.clearTimeout(viewStabilizationTimerRef.current);
+        viewStabilizationTimerRef.current = null;
+      }
+    };
+  }, [isMapReady, mapRef, onMapReady]);
 
   const handleMapClick = (latlng: any) => {
     setTempMarker([latlng.lat, latlng.lng]);

@@ -13,6 +13,7 @@ export function useLocationSync(
   const flyInProgressRef = useRef(false);
   const timeoutRefsRef = useRef<number[]>([]);
   const [hasInitialPositioning, setHasInitialPositioning] = useState(false);
+  const transitionInProgressRef = useRef(false);
 
   // Clear all timeouts on unmount or when dependencies change
   useEffect(() => {
@@ -21,11 +22,18 @@ export function useLocationSync(
       timeoutRefsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
       timeoutRefsRef.current = [];
       flyInProgressRef.current = false;
+      transitionInProgressRef.current = false;
     };
   }, [map]);
 
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
+
+    // Prevent operations during active transitions
+    if (transitionInProgressRef.current) {
+      console.log('Leaflet map: View transition in progress, skipping location update');
+      return;
+    }
 
     // Create a location identifier to track changes
     const locationId = `${selectedLocation.id}:${selectedLocation.y}:${selectedLocation.x}`;
@@ -57,6 +65,9 @@ export function useLocationSync(
     processLocationChange();
 
     function processLocationChange() {
+      // Set transition state
+      transitionInProgressRef.current = true;
+      
       // Update location reference and set fly in progress
       console.log(`Leaflet map: Flying to location ${selectedLocation.label || 'Unnamed'} at [${selectedLocation.y}, ${selectedLocation.x}]`);
       processedLocationRef.current = locationId;
@@ -80,12 +91,13 @@ export function useLocationSync(
         const flyTimer = window.setTimeout(() => {
           if (!map) {
             flyInProgressRef.current = false;
+            transitionInProgressRef.current = false;
             return;
           }
           
           map.flyTo(newPosition, 14, {
             animate: true,
-            duration: 1.5,
+            duration: 1.0, // Reduced for quicker transitions
             easeLinearity: 0.5
           });
           
@@ -93,6 +105,7 @@ export function useLocationSync(
           const markerTimer = window.setTimeout(() => {
             if (!map) {
               flyInProgressRef.current = false;
+              transitionInProgressRef.current = false;
               return;
             }
 
@@ -111,9 +124,13 @@ export function useLocationSync(
                 `${selectedLocation.y.toFixed(6)}, ${selectedLocation.x.toFixed(6)}`
               ).openPopup();
               
-              // Reset the fly progress flag
-              flyInProgressRef.current = false;
-              setHasInitialPositioning(true);
+              // Reset the transition flags
+              const resetTimer = window.setTimeout(() => {
+                flyInProgressRef.current = false;
+                transitionInProgressRef.current = false;
+                setHasInitialPositioning(true);
+              }, 300);
+              timeoutRefsRef.current.push(resetTimer);
               
               toast({
                 title: "Location Found",
@@ -123,6 +140,7 @@ export function useLocationSync(
             } catch (err) {
               console.error('Error adding location marker:', err);
               flyInProgressRef.current = false;
+              transitionInProgressRef.current = false;
             }
           }, 500);
           timeoutRefsRef.current.push(markerTimer);
@@ -131,6 +149,7 @@ export function useLocationSync(
       } catch (error) {
         console.error('Error flying to location in Leaflet:', error);
         flyInProgressRef.current = false;
+        transitionInProgressRef.current = false;
         toast({
           title: "Navigation Error",
           description: "Could not navigate to the selected location",
