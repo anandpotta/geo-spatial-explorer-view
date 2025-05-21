@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
+import L from 'leaflet';
 
 interface MarkerPositionHookProps {
   selectedLocation: Location | null;
@@ -66,16 +67,17 @@ export const useMarkerPosition = ({
             try {
               // Check if marker already exists with this ID and remove it
               leafletMapInstance.eachLayer((layer: any) => {
-                if (layer.options && layer.options.id === 'search-result-marker') {
+                if (layer.options && layer.options._searchResultMarkerId === 'search-result-marker') {
                   leafletMapInstance.removeLayer(layer);
                 }
               });
               
-              // Add new marker
+              // Add new marker - use a property that's allowed in MarkerOptions
               const marker = L.marker([selectedLocation.y, selectedLocation.x], {
                 ...markerOptions,
-                id: 'search-result-marker'
-              }).addTo(leafletMapInstance);
+                // Use custom data attribute to store our identifier
+                _searchResultMarkerId: 'search-result-marker'
+              } as L.MarkerOptions & { _searchResultMarkerId: string }).addTo(leafletMapInstance);
               
               // Add tooltip with location name
               marker.bindTooltip(selectedLocation.label, {
