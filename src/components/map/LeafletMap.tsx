@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
 import MapView from './MapView';
 import { getSavedMarkers, LocationMarker, createMarker } from '@/utils/marker-utils';
 import { toast } from '@/components/ui/use-toast';
-import { useMapEvents } from '@/hooks/useMapEvents';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -33,16 +32,12 @@ const LeafletMap = ({
   const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
   const [markerName, setMarkerName] = useState<string>("");
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('pin');
-  const lastLocationIdRef = useRef<string | null>(null);
   
   // Load saved markers on component mount
   useEffect(() => {
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
   }, []);
-  
-  // Use the map events hook to handle location changes
-  useMapEvents(isMapReady ? mapRef.current : null, selectedLocation);
   
   // When the map is ready, notify the parent component
   useEffect(() => {
@@ -66,34 +61,39 @@ const LeafletMap = ({
         duration: 3000,
       });
       
-      // Initial position update if we have a selected location
+      // Position map if we have a selected location
       if (selectedLocation) {
-        setPosition([selectedLocation.y, selectedLocation.x]);
-        setZoom(14);
+        try {
+          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 14, {
+            animate: true,
+            duration: 1.5
+          });
+        } catch (err) {
+          console.error('Error positioning map:', err);
+        }
       }
     }
   }, [isMapReady, mapRef, onMapReady, selectedLocation]);
   
   // Handle location selection from parent
   useEffect(() => {
-    if (selectedLocation) {
-      const locationId = `${selectedLocation.id || selectedLocation.y + '-' + selectedLocation.x}`;
-      
-      // Skip if it's the same location we're already at
-      if (locationId === lastLocationIdRef.current) {
-        return;
+    if (selectedLocation && mapRef.current && isMapReady) {
+      try {
+        // Update position and zoom for the selected location
+        const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
+        setPosition(newPosition);
+        setZoom(14); // Zoom level for location view
+        
+        // Fly to the location
+        mapRef.current.flyTo(newPosition, 14, {
+          animate: true,
+          duration: 1.5
+        });
+      } catch (err) {
+        console.error('Error handling selected location:', err);
       }
-      
-      lastLocationIdRef.current = locationId;
-      
-      // Update position and zoom for the selected location
-      const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
-      setPosition(newPosition);
-      setZoom(14); // Zoom level for location view
-      
-      // No need to fly here - useMapEvents will handle that
     }
-  }, [selectedLocation]);
+  }, [selectedLocation, isMapReady]);
 
   const handleMapClick = (latlng: any) => {
     setTempMarker([latlng.lat, latlng.lng]);

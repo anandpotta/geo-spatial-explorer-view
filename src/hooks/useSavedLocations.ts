@@ -55,17 +55,8 @@ export const useSavedLocations = () => {
 
   const confirmDelete = () => {
     if (markerToDelete) {
-      const markerId = markerToDelete.id;
-      
-      // Clean up any orphaned marker elements before deletion
-      const markerIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"]`);
-      markerIcons.forEach(icon => {
-        if (icon.parentNode) icon.parentNode.removeChild(icon);
-      });
-      
-      deleteMarker(markerId);
+      deleteMarker(markerToDelete.id);
       loadMarkers(); // Reload markers immediately after deletion
-      
       setIsDeleteDialogOpen(false);
       setMarkerToDelete(null);
       toast.success("Location removed");
@@ -86,14 +77,6 @@ export const useSavedLocations = () => {
           document.body.focus();
         } finally {
           returnFocusRef.current = null;
-          
-          // Final cleanup of any orphaned markers after React updates
-          setTimeout(() => {
-            const orphanedMarkers = document.querySelectorAll(`.leaflet-marker-icon:not([data-marker-id])`);
-            orphanedMarkers.forEach(marker => {
-              if (marker.parentNode) marker.parentNode.removeChild(marker);
-            });
-          }, 100);
         }
       });
     }
