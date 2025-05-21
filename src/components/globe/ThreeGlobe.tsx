@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useThreeGlobe } from '@/hooks/useThreeGlobe';
 import { createMarkerPosition } from '@/utils/globe-utils';
@@ -20,16 +20,28 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const [isFlying, setIsFlying] = useState(false);
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
+  const isUnmountedRef = useRef(false);
   
   // Initialize globe only once
   const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized && !initializationAttemptedRef.current) {
+    if (!isInitialized && !initializationAttemptedRef.current && !isUnmountedRef.current) {
       initializationAttemptedRef.current = true;
       setIsInitialized(true);
       console.log("ThreeGlobe: Globe initialized");
       if (onMapReady) onMapReady(globeAPI);
     }
   });
+  
+  // Safe fly completion handler that checks component mount state
+  const handleFlyComplete = useCallback(() => {
+    if (isUnmountedRef.current) return;
+    
+    setIsFlying(false);
+    if (onFlyComplete) {
+      console.log("ThreeGlobe: Fly complete");
+      onFlyComplete();
+    }
+  }, [onFlyComplete]);
   
   // Handle location changes
   useEffect(() => {
@@ -56,13 +68,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     
     // Fly to the location - ensure coordinates are valid numbers
     if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
-      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
-        setIsFlying(false);
-        if (onFlyComplete) {
-          console.log("ThreeGlobe: Fly complete");
-          onFlyComplete();
-        }
-      });
+      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, handleFlyComplete);
       
       // Add marker at the location with null check
       if (globeAPI.addMarker) {
@@ -73,15 +79,28 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       setIsFlying(false);
       if (onFlyComplete) onFlyComplete();
     }
-  }, [selectedLocation, globeAPI, onFlyComplete, isFlying, globeAPI.isInitialized]);
+    
+    // Cleanup function - cancel flights if component unmounts during flight
+    return () => {
+      if (isFlying && globeAPI.cancelFlight) {
+        globeAPI.cancelFlight();
+      }
+    };
+  }, [selectedLocation, globeAPI, handleFlyComplete, isFlying, globeAPI.isInitialized]);
   
   // Clean up on unmount
   useEffect(() => {
     return () => {
+      isUnmountedRef.current = true;
       lastFlyLocationRef.current = null;
       initializationAttemptedRef.current = false;
+      
+      // Ensure any ongoing flights are canceled
+      if (globeAPI.cancelFlight) {
+        globeAPI.cancelFlight();
+      }
     };
-  }, []);
+  }, [globeAPI]);
   
   return (
     <div 

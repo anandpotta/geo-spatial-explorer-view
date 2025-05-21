@@ -14,10 +14,14 @@ export function useLocationSync(
   const timeoutRefsRef = useRef<number[]>([]);
   const [hasInitialPositioning, setHasInitialPositioning] = useState(false);
   const transitionInProgressRef = useRef(false);
+  const isUnmountedRef = useRef(false);
 
   // Clear all timeouts on unmount or when dependencies change
   useEffect(() => {
     return () => {
+      // Mark component as unmounted
+      isUnmountedRef.current = true;
+      
       // Clear any pending timeouts to prevent memory leaks and stale updates
       timeoutRefsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
       timeoutRefsRef.current = [];
@@ -25,6 +29,17 @@ export function useLocationSync(
       transitionInProgressRef.current = false;
     };
   }, [map]);
+
+  // Add a safe setTimeout function that tracks timeouts for cleanup
+  const safeSetTimeout = (callback: () => void, delay: number): number => {
+    const timeoutId = window.setTimeout(() => {
+      if (!isUnmountedRef.current) {
+        callback();
+      }
+    }, delay);
+    timeoutRefsRef.current.push(timeoutId);
+    return timeoutId;
+  };
 
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
@@ -49,22 +64,26 @@ export function useLocationSync(
       console.log('Leaflet map: Fly already in progress, will try again later');
       
       // Queue the operation by setting a timeout
-      const timer = window.setTimeout(() => {
+      const timer = safeSetTimeout(() => {
         if (locationId === processedLocationRef.current) {
           console.log('Leaflet map: Skipping deferred update - location already processed');
           return;
         }
-        processLocationChange();
+        
+        // Only process if component is still mounted
+        if (!isUnmountedRef.current) {
+          processLocationChange();
+        }
       }, 1200);
       
-      // Store timeout ID for cleanup
-      timeoutRefsRef.current.push(timer);
       return;
     }
 
     processLocationChange();
 
     function processLocationChange() {
+      if (isUnmountedRef.current || !map) return;
+      
       // Set transition state
       transitionInProgressRef.current = true;
       
@@ -75,11 +94,10 @@ export function useLocationSync(
 
       try {
         // Force map invalidation to ensure proper rendering
-        const invalidateTimer = window.setTimeout(() => {
-          if (!map) return;
+        safeSetTimeout(() => {
+          if (!map || isUnmountedRef.current) return;
           map.invalidateSize(true);
         }, 100);
-        timeoutRefsRef.current.push(invalidateTimer);
         
         // Position the map at the selected location
         const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
@@ -88,8 +106,8 @@ export function useLocationSync(
         map.setView(newPosition, 14, { animate: false });
         
         // Then use flyTo for smoother animation
-        const flyTimer = window.setTimeout(() => {
-          if (!map) {
+        safeSetTimeout(() => {
+          if (!map || isUnmountedRef.current) {
             flyInProgressRef.current = false;
             transitionInProgressRef.current = false;
             return;
@@ -102,8 +120,8 @@ export function useLocationSync(
           });
           
           // Add a marker after a short delay
-          const markerTimer = window.setTimeout(() => {
-            if (!map) {
+          safeSetTimeout(() => {
+            if (!map || isUnmountedRef.current) {
               flyInProgressRef.current = false;
               transitionInProgressRef.current = false;
               return;
@@ -125,37 +143,41 @@ export function useLocationSync(
               ).openPopup();
               
               // Reset the transition flags
-              const resetTimer = window.setTimeout(() => {
+              safeSetTimeout(() => {
                 flyInProgressRef.current = false;
                 transitionInProgressRef.current = false;
-                setHasInitialPositioning(true);
+                if (!isUnmountedRef.current) {
+                  setHasInitialPositioning(true);
+                }
               }, 300);
-              timeoutRefsRef.current.push(resetTimer);
               
-              toast({
-                title: "Location Found",
-                description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(6)}, ${newPosition[1].toFixed(6)}`,
-                duration: 3000,
-              });
+              if (!isUnmountedRef.current) {
+                toast({
+                  title: "Location Found",
+                  description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(6)}, ${newPosition[1].toFixed(6)}`,
+                  duration: 3000,
+                });
+              }
             } catch (err) {
               console.error('Error adding location marker:', err);
               flyInProgressRef.current = false;
               transitionInProgressRef.current = false;
             }
           }, 500);
-          timeoutRefsRef.current.push(markerTimer);
         }, 300);
-        timeoutRefsRef.current.push(flyTimer);
       } catch (error) {
         console.error('Error flying to location in Leaflet:', error);
         flyInProgressRef.current = false;
         transitionInProgressRef.current = false;
-        toast({
-          title: "Navigation Error",
-          description: "Could not navigate to the selected location",
-          variant: "destructive",
-          duration: 3000,
-        });
+        
+        if (!isUnmountedRef.current) {
+          toast({
+            title: "Navigation Error",
+            description: "Could not navigate to the selected location",
+            variant: "destructive",
+            duration: 3000,
+          });
+        }
       }
     }
   }, [selectedLocation, map, isMapReady, hasInitialPositioning]);

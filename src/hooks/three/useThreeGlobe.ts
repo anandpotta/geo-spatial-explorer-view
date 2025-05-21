@@ -27,6 +27,7 @@ export function useThreeGlobe(
   // Refs for tracking state
   const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
+  const isDisposedRef = useRef<boolean>(false);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
@@ -36,7 +37,7 @@ export function useThreeGlobe(
   
   // Handle textures loaded callback
   const handleTexturesLoaded = useCallback(() => {
-    if (onInitialized && isInitialized) {
+    if (onInitialized && isInitialized && !isDisposedRef.current) {
       console.log("Calling onInitialized callback - textures loaded");
       onInitialized();
     }
@@ -62,7 +63,7 @@ export function useThreeGlobe(
   );
   
   // Get enhanced fly to location functionality
-  const { enhancedFlyToLocation } = useEnhancedFlyToLocation(
+  const { enhancedFlyToLocation, cancelFlight } = useEnhancedFlyToLocation(
     camera,
     controlsRef,
     EARTH_RADIUS,
@@ -71,11 +72,11 @@ export function useThreeGlobe(
   
   // Initialize effect - mark as initialized after a small timeout
   useEffect(() => {
-    if (isSetupCompleteRef.current || !containerRef.current) return;
+    if (isSetupCompleteRef.current || !containerRef.current || isDisposedRef.current) return;
     
     // Mark as initialized after a small timeout to ensure everything is ready
-    setTimeout(() => {
-      if (!isInitialized && containerRef.current) {
+    const initTimer = setTimeout(() => {
+      if (!isInitialized && containerRef.current && !isDisposedRef.current) {
         console.log("Setting isInitialized to true");
         setIsInitialized(true);
         isSetupCompleteRef.current = true;
@@ -90,6 +91,8 @@ export function useThreeGlobe(
     }, 2000); // Give it 2 seconds to load, then move on regardless
     
     return () => {
+      clearTimeout(initTimer);
+      isDisposedRef.current = true;
       isSetupCompleteRef.current = false;
     };
   }, [isInitialized, setIsInitialized, onInitialized, containerRef]);
@@ -102,6 +105,7 @@ export function useThreeGlobe(
     globe,
     isInitialized,
     flyToLocation: enhancedFlyToLocation,
+    cancelFlight,
     setAutoRotation,
     addMarker
   };

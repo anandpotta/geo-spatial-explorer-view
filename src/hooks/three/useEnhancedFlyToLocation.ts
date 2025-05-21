@@ -1,5 +1,5 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFlyToLocation } from './useFlyToLocation';
 import { useAutoRotation } from './useAutoRotation';
@@ -24,14 +24,26 @@ export function useEnhancedFlyToLocation(
   const { setAutoRotation } = useAutoRotation(controlsRef);
   
   // Get basic flyToLocation from useFlyToLocation
-  const { flyToLocation } = useFlyToLocation(
+  const { flyToLocation, cancelFlight, animationInProgressRef } = useFlyToLocation(
     { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
     controlsRef,
     globeRadius
   );
   
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      // Cancel any ongoing flights when component unmounts
+      cancelFlight();
+      isFlyingRef.current = false;
+    };
+  }, [cancelFlight]);
+  
   // Wrap the flyToLocation to handle auto-rotation and flying state
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
+    // Cancel any ongoing flight first
+    cancelFlight();
+    
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
     
@@ -51,10 +63,11 @@ export function useEnhancedFlyToLocation(
         if (onComplete) onComplete();
       }, 500);
     });
-  }, [flyToLocation, setAutoRotation, isFlyingRef]);
+  }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight]);
   
   return {
     enhancedFlyToLocation,
-    isFlyingRef
+    isFlyingRef,
+    cancelFlight
   };
 }

@@ -1,21 +1,22 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
-// Define a type that accepts either a direct camera instance or a React ref to a camera
-type CameraRefType = React.MutableRefObject<THREE.PerspectiveCamera | null> | {
-  current: THREE.PerspectiveCamera | null;
-};
 
 /**
  * Hook providing functionality to fly to a specific location on the globe
  */
 export function useFlyToLocation(
-  cameraRef: CameraRefType,
+  cameraRef: React.MutableRefObject<THREE.PerspectiveCamera | null> | {
+    current: THREE.PerspectiveCamera | null;
+  },
   controlsRef: React.MutableRefObject<OrbitControls | null>,
   globeRadius: number
 ) {
+  // Animation frame reference to ensure proper cleanup
+  const animationFrameRef = useRef<number | null>(null);
+  const animationInProgressRef = useRef<boolean>(false);
+  
   // Method to fly to a specific location on the globe
   const flyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
     if (!cameraRef.current || !controlsRef.current) {
@@ -32,6 +33,12 @@ export function useFlyToLocation(
     }
     
     console.log(`Flying to location: ${latitude}, ${longitude}`);
+    
+    // Cancel any existing animation frame
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     
     // Convert lat/long to 3D coordinates
     const phi = (90 - latitude) * (Math.PI / 180);
@@ -78,12 +85,21 @@ export function useFlyToLocation(
     
     // Animate camera position
     let startTime: number | null = null;
-    const duration = 2000; // Slower animation (2 seconds) for smoother movement
+    const duration = 1800; // Slightly faster animation (1.8 seconds) for smoother movement
+    animationInProgressRef.current = true;
     
     const animateCamera = (timestamp: number) => {
+      // Check if animation should continue
+      if (!animationInProgressRef.current) {
+        console.log("Animation canceled due to component unmounting or new animation");
+        if (onComplete) onComplete();
+        return;
+      }
+      
       // Check if camera and controls still exist
       if (!cameraRef.current || !controlsRef.current) {
         console.warn("Camera or controls no longer exist during animation");
+        animationInProgressRef.current = false;
         if (onComplete) onComplete();
         return;
       }
@@ -125,13 +141,19 @@ export function useFlyToLocation(
         }
       } catch (error) {
         console.error("Error during camera animation:", error);
+        animationInProgressRef.current = false;
+        if (onComplete) onComplete();
+        return;
       }
       
       // Continue animation if not complete
-      if (progress < 1) {
-        requestAnimationFrame(animateCamera);
+      if (progress < 1 && animationInProgressRef.current) {
+        animationFrameRef.current = requestAnimationFrame(animateCamera);
       } else {
         // Animation complete
+        animationFrameRef.current = null;
+        animationInProgressRef.current = false;
+        
         // Restore controls settings with null checks
         if (controlsRef.current) {
           controlsRef.current.enableDamping = wasDamping;
@@ -152,10 +174,19 @@ export function useFlyToLocation(
     };
     
     // Start animation
-    requestAnimationFrame(animateCamera);
+    animationFrameRef.current = requestAnimationFrame(animateCamera);
   }, [cameraRef, controlsRef, globeRadius]);
   
+  // Return the flyToLocation function and cleanup helper
   return {
-    flyToLocation
+    flyToLocation,
+    cancelFlight: useCallback(() => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      animationInProgressRef.current = false;
+    }, []),
+    animationInProgressRef
   };
 }

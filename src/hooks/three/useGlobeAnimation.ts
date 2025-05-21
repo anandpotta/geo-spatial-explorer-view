@@ -12,6 +12,7 @@ export function useGlobeAnimation(
 ) {
   // Animation frame reference
   const animationFrameRef = useRef<number | null>(null);
+  const isAnimatingRef = useRef<boolean>(true);
   
   // Setup and handle the animation loop
   useEffect(() => {
@@ -21,9 +22,15 @@ export function useGlobeAnimation(
     }
     
     console.log("Starting globe animation loop");
+    isAnimatingRef.current = true;
     
     // Animation function
     const animate = () => {
+      // Check if animation should continue
+      if (!isAnimatingRef.current) {
+        return;
+      }
+      
       if (!scene || !camera || !renderer || !controlsRef.current) {
         console.warn("Animation loop missing required objects");
         return;
@@ -47,18 +54,23 @@ export function useGlobeAnimation(
     };
     
     // Start animation
-    animate();
+    animationFrameRef.current = requestAnimationFrame(animate);
     
     // Cleanup function
     return () => {
+      isAnimatingRef.current = false;
+      
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
+      
+      console.log("Globe animation loop stopped");
     };
   }, [scene, camera, renderer, controlsRef, autoRotationEnabledRef, isFlyingRef]);
   
   return {
-    animationFrameRef
+    animationFrameRef,
+    isAnimatingRef
   };
 }
