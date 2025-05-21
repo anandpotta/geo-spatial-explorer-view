@@ -23,10 +23,19 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
+  
+  // Track component mount status
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   // Initialize configuration and event handlers using custom hooks
   useDrawToolsConfiguration(featureGroup);
@@ -45,10 +54,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   
   // Force visibility of drawing controls
   useEffect(() => {
+    if (!isMountedRef.current || !featureGroup) return;
+    
     // Function to enforce drawing controls visibility
     const enforceControlsVisibility = () => {
       // Set timeout to allow the map to render first
       setTimeout(() => {
+        if (!isMountedRef.current) return;
+        
         try {
           // Find and force display of all drawing controls
           const drawControls = document.querySelectorAll('.leaflet-draw-toolbar');
@@ -87,7 +100,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     enforceControlsVisibility();
     
     // Set up a periodic check to maintain visibility
-    const visibilityInterval = setInterval(enforceControlsVisibility, 3000);
+    const visibilityInterval = setInterval(() => {
+      if (isMountedRef.current) {
+        enforceControlsVisibility();
+      }
+    }, 3000);
     
     // Add styles for Leaflet Draw controls
     const styleEl = document.createElement('style');
@@ -112,18 +129,27 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     document.head.appendChild(styleEl);
     
     return () => {
-      clearInterval(visibilityInterval);
-      if (styleEl.parentNode) {
+      if (visibilityInterval) {
+        clearInterval(visibilityInterval);
+      }
+      if (styleEl && styleEl.parentNode) {
         styleEl.parentNode.removeChild(styleEl);
       }
     };
-  }, []);
+  }, [featureGroup]);
+
+  // Safe create handler that checks mount status
+  const safeHandleCreated = (event: any) => {
+    if (isMountedRef.current) {
+      handleCreated(event);
+    }
+  };
 
   return (
     <EditControl
       ref={editControlRef}
       position="topright"
-      onCreated={handleCreated}
+      onCreated={safeHandleCreated}
       draw={drawOptions}
       edit={false}
       featureGroup={featureGroup}
