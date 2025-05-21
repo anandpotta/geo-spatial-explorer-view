@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, CSSProperties } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
@@ -32,18 +32,16 @@ const MapViews: React.FC<MapViewsProps> = ({
   const [transitioning, setTransitioning] = useState(false);
   const [previousView, setPreviousView] = useState<'cesium' | 'leaflet' | null>(null);
   const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
-  const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
+  const lastSelectedLocationRef = useRef<Location | undefined>(undefined);
   const [fadeIn, setFadeIn] = useState(false);
   
   // Track location changes to prevent duplicate transitions
   useEffect(() => {
-    if (selectedLocation && 
-        (!lastSelectedLocation || 
-         selectedLocation.id !== lastSelectedLocation.id)) {
-      console.log('New location selected:', selectedLocation.label);
-      setLastSelectedLocation(selectedLocation);
+    if (selectedLocation && selectedLocation !== lastSelectedLocationRef.current) {
+      console.log('MapViews: New location selected:', selectedLocation.label);
+      lastSelectedLocationRef.current = selectedLocation;
     }
-  }, [selectedLocation, lastSelectedLocation]);
+  }, [selectedLocation]);
   
   // Handle view transitions
   useEffect(() => {
@@ -101,7 +99,7 @@ const MapViews: React.FC<MapViewsProps> = ({
     const styles = getTransitionStyles(isCurrent);
     
     return {
-      position: 'absolute' as 'absolute',
+      position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
@@ -121,7 +119,7 @@ const MapViews: React.FC<MapViewsProps> = ({
     const styles = getTransitionStyles(!isCurrent);
     
     return {
-      position: 'absolute' as 'absolute',
+      position: 'absolute',
       top: 0,
       left: 0,
       right: 0,

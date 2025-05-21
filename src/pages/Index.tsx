@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import MapContent from '@/components/explorer/MapContent';
 import ExplorerSidebar from '@/components/explorer/ExplorerSidebar';
@@ -11,7 +10,7 @@ const Index = () => {
   const [flyCompleted, setFlyCompleted] = useState<boolean>(true);
   const viewTransitionInProgressRef = useRef(false);
   const locationSelectionTimeRef = useRef<number | null>(null);
-  const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
+  const [shouldKeepLocation, setShouldKeepLocation] = useState(false);
   const previousLocationRef = useRef<string | null>(null);
 
   const handleLocationSelect = (location: Location) => {
@@ -35,13 +34,13 @@ const Index = () => {
     setSelectedLocation(location);
     setFlyCompleted(false);
     
+    // When selecting a location, remember to keep it during view switch
+    setShouldKeepLocation(true);
+    
     // Auto-switch to 3D globe view for better experience with new location
     if (currentView === 'leaflet') {
       console.log("Auto-switching to 3D view for better location experience");
       setCurrentView('cesium');
-    } else {
-      // If already in cesium view, mark that we should switch to leaflet after fly completes
-      setShouldSwitchToLeaflet(true);
     }
   };
 
@@ -49,13 +48,12 @@ const Index = () => {
     console.log("Main: Fly completed");
     setFlyCompleted(true);
     
-    // If we should switch to leaflet after fly completes, do it now
-    if (shouldSwitchToLeaflet && currentView === 'cesium') {
-      console.log("Switching to leaflet view after fly completion");
+    // After fly completes in cesium, switch to leaflet if needed
+    if (currentView === 'cesium' && shouldKeepLocation && selectedLocation) {
+      console.log("Switching to leaflet view after fly completion with location", selectedLocation.label);
       setTimeout(() => {
         setCurrentView('leaflet');
-        setShouldSwitchToLeaflet(false);
-      }, 1000); // Use a longer delay for smoother transition
+      }, 1000); // Use a delay for smoother transition
     }
     
     // Reset location selection timer
@@ -91,7 +89,6 @@ const Index = () => {
     
     console.log(`Changing view to ${view}`);
     setCurrentView(view);
-    setShouldSwitchToLeaflet(false); // Reset switch flag when manually changing view
     
     // Set transition flag
     viewTransitionInProgressRef.current = true;
@@ -110,6 +107,11 @@ const Index = () => {
     };
     handleLocationSelect(newLocation);
   };
+  
+  // Reset shouldKeepLocation after view changes
+  useEffect(() => {
+    setShouldKeepLocation(false);
+  }, [currentView]);
 
   return (
     <div className="h-screen flex">

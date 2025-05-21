@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
+import { useLocationSync } from '@/hooks/useLocationSync';
 import MapView from './MapView';
 import { getSavedMarkers, LocationMarker, createMarker } from '@/utils/marker-utils';
 import { toast } from '@/components/ui/use-toast';
@@ -25,6 +26,9 @@ const LeafletMap = ({
     isMapReady,
     handleSetMapRef
   } = useMapInitialization(selectedLocation);
+  
+  // Use our new useLocationSync hook to handle location changes
+  useLocationSync(mapRef.current, selectedLocation, isMapReady);
   
   const [position, setPosition] = useState<[number, number]>([0, 0]);
   const [zoom, setZoom] = useState<number>(2);
@@ -61,39 +65,13 @@ const LeafletMap = ({
         duration: 3000,
       });
       
-      // Position map if we have a selected location
+      // Update position state if we have a selected location
       if (selectedLocation) {
-        try {
-          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 14, {
-            animate: true,
-            duration: 1.5
-          });
-        } catch (err) {
-          console.error('Error positioning map:', err);
-        }
+        setPosition([selectedLocation.y, selectedLocation.x]);
+        setZoom(14); 
       }
     }
   }, [isMapReady, mapRef, onMapReady, selectedLocation]);
-  
-  // Handle location selection from parent
-  useEffect(() => {
-    if (selectedLocation && mapRef.current && isMapReady) {
-      try {
-        // Update position and zoom for the selected location
-        const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
-        setPosition(newPosition);
-        setZoom(14); // Zoom level for location view
-        
-        // Fly to the location
-        mapRef.current.flyTo(newPosition, 14, {
-          animate: true,
-          duration: 1.5
-        });
-      } catch (err) {
-        console.error('Error handling selected location:', err);
-      }
-    }
-  }, [selectedLocation, isMapReady]);
 
   const handleMapClick = (latlng: any) => {
     setTempMarker([latlng.lat, latlng.lng]);
