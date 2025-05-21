@@ -18,7 +18,7 @@ export function useLocationSync(
   useEffect(() => {
     return () => {
       // Clear any pending timeouts to prevent memory leaks and stale updates
-      timeoutRefsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      timeoutRefsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
       timeoutRefsRef.current = [];
       flyInProgressRef.current = false;
     };
@@ -41,7 +41,7 @@ export function useLocationSync(
       console.log('Leaflet map: Fly already in progress, will try again later');
       
       // Queue the operation by setting a timeout
-      const timer = setTimeout(() => {
+      const timer = window.setTimeout(() => {
         if (locationId === processedLocationRef.current) {
           console.log('Leaflet map: Skipping deferred update - location already processed');
           return;
@@ -64,7 +64,7 @@ export function useLocationSync(
 
       try {
         // Force map invalidation to ensure proper rendering
-        const invalidateTimer = setTimeout(() => {
+        const invalidateTimer = window.setTimeout(() => {
           if (!map) return;
           map.invalidateSize(true);
         }, 100);
@@ -77,7 +77,7 @@ export function useLocationSync(
         map.setView(newPosition, 14, { animate: false });
         
         // Then use flyTo for smoother animation
-        const flyTimer = setTimeout(() => {
+        const flyTimer = window.setTimeout(() => {
           if (!map) {
             flyInProgressRef.current = false;
             return;
@@ -90,7 +90,7 @@ export function useLocationSync(
           });
           
           // Add a marker after a short delay
-          const markerTimer = setTimeout(() => {
+          const markerTimer = window.setTimeout(() => {
             if (!map) {
               flyInProgressRef.current = false;
               return;
