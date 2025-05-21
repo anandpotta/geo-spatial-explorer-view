@@ -14,6 +14,7 @@ const Index = () => {
   const [shouldKeepLocation, setShouldKeepLocation] = useState(true); // Default to true to preserve location
   const previousLocationRef = useRef<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
+  const [leafletRefreshTrigger, setLeafletRefreshTrigger] = useState<number>(0);
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
@@ -32,7 +33,7 @@ const Index = () => {
     previousLocationRef.current = locationId;
     
     locationSelectionTimeRef.current = now;
-    console.log("Main: Location selected:", location.label);
+    console.log("Main: Location selected:", location.label, "at coordinates:", location.y, location.x);
     setSelectedLocation(location);
     setFlyCompleted(false);
     
@@ -53,12 +54,19 @@ const Index = () => {
     // After fly completes in cesium, switch to leaflet if needed
     if (currentView === 'cesium' && selectedLocation) {
       console.log("Switching to leaflet view after fly completion with location", selectedLocation.label);
+      
+      // Set a short timeout to allow for state updates
       setTimeout(() => {
         setCurrentView('leaflet');
         
         // Force map refresh to ensure proper positioning
         setMapKey(Date.now());
-      }, 1000); // Use a delay for smoother transition
+        
+        // Add a small delay then trigger a Leaflet refresh
+        setTimeout(() => {
+          setLeafletRefreshTrigger(Date.now());
+        }, 500);
+      }, 800); // Use a delay for smoother transition
     }
     
     // Reset location selection timer
@@ -69,6 +77,13 @@ const Index = () => {
 
   const handleMapReady = () => {
     console.log('Map is ready');
+    
+    // If we have a location and we're in leaflet view, trigger a refresh
+    if (selectedLocation && currentView === 'leaflet') {
+      setTimeout(() => {
+        setLeafletRefreshTrigger(Date.now());
+      }, 300);
+    }
   };
 
   const handleViewChange = (view: 'cesium' | 'leaflet') => {
@@ -95,6 +110,16 @@ const Index = () => {
     console.log(`Changing view to ${view}`);
     setCurrentView(view);
     
+    // Force map refresh when switching to leaflet with location
+    if (view === 'leaflet' && selectedLocation) {
+      setMapKey(Date.now());
+      
+      // Trigger leaflet refresh after a small delay
+      setTimeout(() => {
+        setLeafletRefreshTrigger(Date.now());
+      }, 500);
+    }
+    
     // Set transition flag
     viewTransitionInProgressRef.current = true;
     setTimeout(() => {
@@ -117,6 +142,13 @@ const Index = () => {
   useEffect(() => {
     if (selectedLocation) {
       console.log(`View changed to ${currentView}, preserving location ${selectedLocation.label}`);
+      
+      // If switching to leaflet, ensure the map refreshes
+      if (currentView === 'leaflet') {
+        setTimeout(() => {
+          setLeafletRefreshTrigger(Date.now());
+        }, 300);
+      }
     }
   }, [currentView, selectedLocation]);
 
@@ -135,7 +167,7 @@ const Index = () => {
         onMapReady={handleMapReady}
         onFlyComplete={handleFlyComplete}
         onLocationSelect={handleLocationSelect}
-        key={mapKey} // Force recreation when changing views with location
+        key={`${mapKey}-${leafletRefreshTrigger}`} // Force recreation with both keys
       />
     </div>
   );

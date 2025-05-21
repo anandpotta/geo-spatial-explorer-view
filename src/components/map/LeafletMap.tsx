@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
 import { useLocationSync } from '@/hooks/useLocationSync';
@@ -27,6 +27,10 @@ const LeafletMap = ({
     handleSetMapRef
   } = useMapInitialization(selectedLocation);
   
+  // Track last processed location
+  const lastLocationRef = useRef<string | null>(null);
+  const initialPositionSetRef = useRef(false);
+  
   // Use our enhanced useLocationSync hook to handle location changes
   useLocationSync(mapRef.current, selectedLocation, isMapReady);
   
@@ -42,6 +46,23 @@ const LeafletMap = ({
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
   }, []);
+  
+  // Update the initial position when selected location changes
+  useEffect(() => {
+    if (selectedLocation) {
+      // Generate a location identifier to prevent duplicate processing
+      const locationId = `${selectedLocation.id}:${selectedLocation.y}:${selectedLocation.x}`;
+      
+      // Only update if this is a new location
+      if (locationId !== lastLocationRef.current) {
+        console.log(`LeafletMap: Setting position to [${selectedLocation.y}, ${selectedLocation.x}] for ${selectedLocation.label}`);
+        setPosition([selectedLocation.y, selectedLocation.x]);
+        setZoom(14); // Set a good default zoom level
+        lastLocationRef.current = locationId;
+        initialPositionSetRef.current = true;
+      }
+    }
+  }, [selectedLocation]);
   
   // When the map is ready, notify the parent component
   useEffect(() => {
@@ -65,10 +86,23 @@ const LeafletMap = ({
         duration: 3000,
       });
       
-      // Update position state if we have a selected location
-      if (selectedLocation) {
-        setPosition([selectedLocation.y, selectedLocation.x]);
-        setZoom(14); 
+      // Force the map to update its size
+      mapRef.current.invalidateSize(true);
+      
+      // Update position if we have a selected location
+      if (selectedLocation && !initialPositionSetRef.current) {
+        console.log(`LeafletMap: Initial positioning to [${selectedLocation.y}, ${selectedLocation.x}]`);
+        
+        // First set view without animation
+        mapRef.current.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
+        
+        // Then after a short delay, fly to ensure proper positioning
+        setTimeout(() => {
+          if (mapRef.current && selectedLocation) {
+            mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 14);
+            initialPositionSetRef.current = true;
+          }
+        }, 300);
       }
     }
   }, [isMapReady, mapRef, onMapReady, selectedLocation]);
@@ -94,7 +128,6 @@ const LeafletMap = ({
     if (!tempMarker) return;
     
     // Use the createMarker utility function instead of manually constructing the object
-    // This ensures all required properties are included
     const newMarker = createMarker({
       id: `marker-${Date.now()}`,
       position: tempMarker,
