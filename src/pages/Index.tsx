@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import MapContent from '@/components/explorer/MapContent';
 import ExplorerSidebar from '@/components/explorer/ExplorerSidebar';
@@ -12,21 +13,8 @@ const Index = () => {
   const locationSelectionTimeRef = useRef<number | null>(null);
   const [shouldSwitchToLeaflet, setShouldSwitchToLeaflet] = useState(false);
   const previousLocationRef = useRef<string | null>(null);
-  const [stayAtCurrentPosition, setStayAtCurrentPosition] = useState(false);
-  const isDrawingOrMarkingRef = useRef(false);
 
   const handleLocationSelect = (location: Location) => {
-    // If user is actively drawing or marking, don't navigate away
-    if (isDrawingOrMarkingRef.current || stayAtCurrentPosition) {
-      console.log("User is currently drawing/marking or stayAtCurrentPosition is true, skipping location change");
-      toast({
-        title: "Action in progress",
-        description: "Please complete your current action before navigating",
-        duration: 3000,
-      });
-      return;
-    }
-    
     // Prevent multiple rapid location selections
     const now = Date.now();
     if (locationSelectionTimeRef.current && 
@@ -42,8 +30,6 @@ const Index = () => {
     }
     previousLocationRef.current = locationId;
     
-    // Allow location selection and navigation
-    setStayAtCurrentPosition(false);
     locationSelectionTimeRef.current = now;
     console.log("Main: Location selected:", location.label);
     setSelectedLocation(location);
@@ -59,63 +45,12 @@ const Index = () => {
     }
   };
 
-  // Share the drawing/marking state with components that need it
-  useEffect(() => {
-    const handleDrawingStart = () => {
-      isDrawingOrMarkingRef.current = true;
-      setStayAtCurrentPosition(true);
-      console.log("Drawing/marking started, will stay at current position");
-    };
-    
-    const handleDrawingEnd = () => {
-      isDrawingOrMarkingRef.current = false;
-      // Don't immediately reset stayAtCurrentPosition to prevent flickering
-      setTimeout(() => {
-        if (!isDrawingOrMarkingRef.current) {
-          console.log("Drawing/marking ended, resetting stayAtCurrentPosition");
-          setStayAtCurrentPosition(false);
-        }
-      }, 1000);
-      console.log("Drawing/marking ended");
-    };
-    
-    const handleMarkerPlaced = () => {
-      isDrawingOrMarkingRef.current = true;
-      setStayAtCurrentPosition(true);
-      console.log("Marker placed, will stay at current position");
-    };
-    
-    const handleMarkerSaved = () => {
-      isDrawingOrMarkingRef.current = false;
-      // Keep the position for a bit longer after marker is saved
-      setTimeout(() => {
-        if (!isDrawingOrMarkingRef.current) {
-          console.log("Marker saved, resetting stayAtCurrentPosition");
-          setStayAtCurrentPosition(false);
-        }
-      }, 1000);
-      console.log("Marker saved");
-    };
-    
-    window.addEventListener('drawingStart', handleDrawingStart);
-    window.addEventListener('drawingEnd', handleDrawingEnd);
-    window.addEventListener('markerPlaced', handleMarkerPlaced);
-    window.addEventListener('markerSaved', handleMarkerSaved);
-    
-    return () => {
-      window.removeEventListener('drawingStart', handleDrawingStart);
-      window.removeEventListener('drawingEnd', handleDrawingEnd);
-      window.removeEventListener('markerPlaced', handleMarkerPlaced);
-      window.removeEventListener('markerSaved', handleMarkerSaved);
-    };
-  }, []);
-
   const handleFlyComplete = () => {
     console.log("Main: Fly completed");
     setFlyCompleted(true);
     
-    // Only switch to leaflet if we're not staying at current position
-    if (shouldSwitchToLeaflet && currentView === 'cesium' && !stayAtCurrentPosition) {
+    // If we should switch to leaflet after fly completes, do it now
+    if (shouldSwitchToLeaflet && currentView === 'cesium') {
       console.log("Switching to leaflet view after fly completion");
       setTimeout(() => {
         setCurrentView('leaflet');
@@ -145,7 +80,7 @@ const Index = () => {
     }
     
     // Don't allow switching to leaflet until fly is completed
-    if (view === 'leaflet' && !flyCompleted && selectedLocation && !stayAtCurrentPosition) {
+    if (view === 'leaflet' && !flyCompleted && selectedLocation) {
       toast({
         title: "Please wait",
         description: "Wait for navigation to complete before switching views",
@@ -166,17 +101,6 @@ const Index = () => {
   };
 
   const handleSavedLocationSelect = (position: [number, number]) => {
-    // Don't change location if drawing or marking
-    if (isDrawingOrMarkingRef.current || stayAtCurrentPosition) {
-      console.log("Currently drawing/marking, won't change location");
-      toast({
-        title: "Operation in progress",
-        description: "Complete your current action before navigating to a new location",
-        duration: 2000,
-      });
-      return;
-    }
-    
     // Convert position to Location
     const newLocation: Location = {
       id: `saved-${Date.now()}`,
@@ -202,7 +126,6 @@ const Index = () => {
         onMapReady={handleMapReady}
         onFlyComplete={handleFlyComplete}
         onLocationSelect={handleLocationSelect}
-        stayAtCurrentPosition={stayAtCurrentPosition}
       />
     </div>
   );

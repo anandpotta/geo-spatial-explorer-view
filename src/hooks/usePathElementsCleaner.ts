@@ -1,34 +1,66 @@
 
 import { useEffect } from 'react';
+import { getCurrentUser } from '@/services/auth-service';
 
+/**
+ * Hook to clean up path elements when user logs out or changes
+ */
 export function usePathElementsCleaner(clearPathElements: () => void) {
-  // Effect to listen for clear all events
+  // Clear path elements when user logs out or changes
   useEffect(() => {
-    const handleClearAll = () => {
-      console.log('Clear all SVG paths triggered');
+    const handleUserLogout = () => {
+      console.log('User logged out, clearing path elements');
+      clearPathElements();
+    };
+    
+    const handleUserChange = () => {
+      console.log('User changed, clearing path elements');
       clearPathElements();
       
-      // Add direct DOM manipulation as a failsafe
+      // Give time for new user data to load
       setTimeout(() => {
-        // Find all SVG paths in the overlay pane and force remove them
-        const overlayPanes = document.querySelectorAll('.leaflet-overlay-pane');
-        overlayPanes.forEach(pane => {
-          const paths = pane.querySelectorAll('path');
-          paths.forEach(path => {
-            path.remove();
-          });
-        });
-      }, 50);
+        console.log('Triggering path restore after user change');
+        window.dispatchEvent(new Event('drawingsUpdated'));
+      }, 100);
     };
     
-    window.addEventListener('clearAllSvgPaths', handleClearAll);
-    window.addEventListener('mapRefresh', handleClearAll);
-    window.addEventListener('clearAllDrawings', handleClearAll);
+    window.addEventListener('userLoggedOut', handleUserLogout);
+    window.addEventListener('userChanged', handleUserChange);
     
     return () => {
-      window.removeEventListener('clearAllSvgPaths', handleClearAll);
-      window.removeEventListener('mapRefresh', handleClearAll);
-      window.removeEventListener('clearAllDrawings', handleClearAll);
+      window.removeEventListener('userLoggedOut', handleUserLogout);
+      window.removeEventListener('userChanged', handleUserChange);
     };
   }, [clearPathElements]);
+  
+  // Listen for restoreSavedPaths event
+  useEffect(() => {
+    const handleRestorePaths = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && Array.isArray(customEvent.detail.paths)) {
+        console.log('Received restore paths event with', customEvent.detail.paths.length, 'paths');
+        
+        // Dispatch event to restore each saved path
+        customEvent.detail.paths.forEach((pathData: string) => {
+          try {
+            const pathObj = JSON.parse(pathData);
+            if (pathObj && pathObj.id) {
+              // Create a drawing created event to restore this path
+              window.dispatchEvent(new CustomEvent('restoreDrawing', {
+                detail: pathObj
+              }));
+            }
+          } catch (err) {
+            console.error('Failed to parse saved path data:', err);
+          }
+        });
+      }
+    };
+    
+    window.addEventListener('restoreSavedPaths', handleRestorePaths);
+    
+    return () => {
+      window.removeEventListener('restoreSavedPaths', handleRestorePaths);
+    };
+  }, []);
 }

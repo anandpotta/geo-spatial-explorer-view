@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';
@@ -13,8 +14,6 @@ import L from 'leaflet';
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-// Import custom override styles
-import '@/styles/leaflet-overrides.css';
 
 interface MapViewProps {
   position: [number, number];
@@ -35,7 +34,6 @@ interface MapViewProps {
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
   isMapReady?: boolean;
-  mapKey?: string;
 }
 
 const MapView = ({
@@ -56,16 +54,11 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
-  isMapReady = false,
-  mapKey = Date.now().toString()
+  isMapReady = false
 }: MapViewProps) => {
-  // Generate a unique map key using the provided key or create a new one
-  const uniqueMapId = useRef<string>(`map-${mapKey}-${Math.random().toString(36).substring(2, 9)}`);
-  const [instanceKey] = useState<string>(uniqueMapId.current);
+  // Generate a stable but unique key
+  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
   const drawingControlsRef = useRef(null);
-  const mapInitializedRef = useRef(false);
-  const [mapReadyForControls, setMapReadyForControls] = useState(false);
-  
   const {
     showFloorPlan,
     setShowFloorPlan,
@@ -73,22 +66,13 @@ const MapView = ({
     handleRegionClick
   } = useFloorPlanState();
 
-  // Track when the map is fully initialized and ready for UI components
+  // Reset map key whenever component remounts to ensure fresh instance
   useEffect(() => {
-    if (isMapReady && !mapInitializedRef.current) {
-      mapInitializedRef.current = true;
-      
-      // Wait a moment to ensure the map is rendered properly before adding controls
-      const timer = setTimeout(() => {
-        if (mapInitializedRef.current) {
-          setMapReadyForControls(true);
-          console.log("Map is now ready for drawing controls");
-        }
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isMapReady]);
+    return () => {
+      // Force a new key on unmount to ensure clean startup next time
+      setMapKey(`map-${Date.now()}`);
+    };
+  }, []);
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
@@ -113,14 +97,14 @@ const MapView = ({
         isMapReady={isMapReady} 
       />
       
-      <MapContainer
-        position={position}
-        zoom={zoom}
-        mapKey={instanceKey}
-      >
-        <MapReference onMapReady={onMapReady} mapKey={instanceKey} />
-        
-        {mapReadyForControls && (
+      <div className="w-full h-full" id={`map-container-${mapKey}`}>
+        <MapContainer
+          position={position}
+          zoom={zoom}
+          mapKey={mapKey}
+        >
+          <MapReference onMapReady={onMapReady} />
+          
           <DrawingControlsContainer
             ref={drawingControlsRef}
             onShapeCreated={onShapeCreated}
@@ -128,22 +112,21 @@ const MapView = ({
             onRegionClick={handleRegionClick}
             onClearAll={onClearAll}
           />
-        )}
-        
-        <MarkersContainer
-          markers={markers}
-          tempMarker={tempMarker}
-          markerName={markerName}
-          markerType={markerType}
-          onDeleteMarker={onDeleteMarker}
-          onSaveMarker={onSaveMarker}
-          setMarkerName={setMarkerName}
-          setMarkerType={setMarkerType}
-          mapKey={instanceKey}
-        />
-        
-        <MapEvents onMapClick={onMapClick} />
-      </MapContainer>
+          
+          <MarkersContainer
+            markers={markers}
+            tempMarker={tempMarker}
+            markerName={markerName}
+            markerType={markerType}
+            onDeleteMarker={onDeleteMarker}
+            onSaveMarker={onSaveMarker}
+            setMarkerName={setMarkerName}
+            setMarkerType={setMarkerType}
+          />
+          
+          <MapEvents onMapClick={onMapClick} />
+        </MapContainer>
+      </div>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -22,7 +21,6 @@ export function useMapState(selectedLocation?: Location) {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [stayAtCurrentPosition, setStayAtCurrentPosition] = useState(false);
 
   // Load existing markers and drawings when user changes or auth state changes
   useEffect(() => {
@@ -107,6 +105,9 @@ export function useMapState(selectedLocation?: Location) {
       userId: currentUser.id
     };
     
+    // Clear the temporary marker first to prevent duplicate displays
+    setTempMarker(null);
+    
     // Save the marker
     saveMarker(newMarker);
     
@@ -132,21 +133,12 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
+    // Reset marker name
+    setMarkerName('');
+    
     // Update the markers state with the new marker
     // Ensure we're using the latest markers by calling getSavedMarkers again
     setMarkers(getSavedMarkers());
-    
-    // Reset temp marker state AFTER saving to prevent position jumps
-    setTempMarker(null);
-    
-    // Reset marker name
-    setMarkerName('');
-
-    // Set this flag to prevent navigation back to initial position
-    setStayAtCurrentPosition(true);
-    
-    // Dispatch marker saved event
-    window.dispatchEvent(new CustomEvent('markerSaved'));
     
     toast.success("Location saved successfully");
     
@@ -194,8 +186,6 @@ export function useMapState(selectedLocation?: Location) {
     setSelectedDrawing,
     activeTool,
     setActiveTool,
-    stayAtCurrentPosition,
-    setStayAtCurrentPosition,
     handleSaveMarker,
     handleDeleteMarker,
     handleRegionClick

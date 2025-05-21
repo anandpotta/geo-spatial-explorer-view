@@ -51,6 +51,32 @@ const DeleteLocationDialog = ({
     };
   }, [isOpen, onCancel]);
   
+  // Clean up orphaned marker elements when dialog opens or closes
+  useEffect(() => {
+    if (!isOpen || !markerToDelete) return;
+    
+    // When dialog closes after deletion, ensure we clean up any orphaned marker elements
+    return () => {
+      setTimeout(() => {
+        // Clean up any leftover marker elements that might be causing duplicates
+        const orphanedMarkerIcons = document.querySelectorAll(`.leaflet-marker-icon:not([data-marker-id])`);
+        orphanedMarkerIcons.forEach(icon => {
+          if (icon.parentNode) {
+            icon.parentNode.removeChild(icon);
+          }
+        });
+        
+        // Also clean up marker shadows
+        const orphanedMarkerShadows = document.querySelectorAll(`.leaflet-marker-shadow:not([data-marker-id])`);
+        orphanedMarkerShadows.forEach(shadow => {
+          if (shadow.parentNode) {
+            shadow.parentNode.removeChild(shadow);
+          }
+        });
+      }, 100); // Slight delay to ensure React has finished its updates
+    };
+  }, [isOpen, markerToDelete]);
+  
   return (
     <AlertDialog 
       open={isOpen} 

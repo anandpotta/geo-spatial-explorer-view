@@ -39,11 +39,7 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
   };
 
   return (
-    <div 
-      className="absolute top-4 right-4 z-[1000]" 
-      data-map-header="true"
-      style={{ pointerEvents: 'auto' }}
-    >
+    <div className="absolute top-4 right-4 z-[1000]" data-map-header="true">
       <SavedLocationsDropdown 
         onLocationSelect={handleLocationSelect} 
         isMapReady={isMapReady && isVisible}

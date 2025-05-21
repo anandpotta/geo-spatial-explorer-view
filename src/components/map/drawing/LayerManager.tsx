@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
-import { ExtendedLayer } from '@/utils/leaflet-type-utils';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;

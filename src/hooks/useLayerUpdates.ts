@@ -4,7 +4,6 @@ import { DrawingData } from '@/utils/drawing-utils';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
 import debounce from 'lodash/debounce';  // Fixed import statement
 import { getCurrentUser } from '@/services/auth-service';
-import { ExtendedLayer } from '@/utils/leaflet-type-utils';
 
 interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;

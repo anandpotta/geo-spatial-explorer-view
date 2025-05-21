@@ -2,6 +2,8 @@
 import L from 'leaflet';
 import { createRoot } from '@/components/map/drawing/ReactDOMUtils';
 import RemoveButton from '../RemoveButton';
+import { useState } from 'react';
+import ConfirmationDialog from '../ConfirmationDialog';
 
 interface RemoveButtonControlProps {
   layer: L.Layer;
@@ -12,6 +14,43 @@ interface RemoveButtonControlProps {
   isMounted: boolean;
   onRemoveShape: (drawingId: string) => void;
 }
+
+const RemoveButtonComponent = ({
+  drawingId,
+  onRemoveClick,
+}: {
+  drawingId: string;
+  onRemoveClick: (drawingId: string) => void;
+}) => {
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsConfirmDialogOpen(true);
+  };
+  
+  const handleConfirmRemove = () => {
+    setIsConfirmDialogOpen(false);
+    onRemoveClick(drawingId);
+  };
+  
+  const handleCancelRemove = () => {
+    setIsConfirmDialogOpen(false);
+  };
+  
+  return (
+    <>
+      <RemoveButton onClick={handleButtonClick} />
+      <ConfirmationDialog
+        isOpen={isConfirmDialogOpen}
+        title="Remove Shape"
+        description="Are you sure you want to remove this shape from the map? This action cannot be undone."
+        onConfirm={handleConfirmRemove}
+        onCancel={handleCancelRemove}
+      />
+    </>
+  );
+};
 
 export const createRemoveButtonControl = ({
   layer,
@@ -46,11 +85,12 @@ export const createRemoveButtonControl = ({
       const root = createRoot(container);
       removeButtonRoots.set(drawingId, root);
       
+      // Use the new RemoveButtonComponent with confirmation dialog
       root.render(
-        <RemoveButton onClick={(e: React.MouseEvent) => {
-          e.stopPropagation();
-          onRemoveShape(drawingId);
-        }} />
+        <RemoveButtonComponent 
+          drawingId={drawingId}
+          onRemoveClick={onRemoveShape}
+        />
       );
     } catch (err) {
       console.error('Error rendering remove button:', err);

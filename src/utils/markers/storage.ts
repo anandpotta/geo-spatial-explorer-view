@@ -97,6 +97,27 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
+  // Clean up any DOM elements associated with this marker
+  setTimeout(() => {
+    // Remove marker icons with this ID
+    const markerIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${id}"]`);
+    markerIcons.forEach(icon => {
+      if (icon.parentNode) icon.parentNode.removeChild(icon);
+    });
+    
+    // Remove marker shadows with this ID
+    const markerShadows = document.querySelectorAll(`.leaflet-marker-shadow[data-marker-id="${id}"]`);
+    markerShadows.forEach(shadow => {
+      if (shadow.parentNode) shadow.parentNode.removeChild(shadow);
+    });
+    
+    // Remove tooltips associated with this marker
+    const tooltips = document.querySelectorAll(`[data-marker-tooltip-id="${id}"]`);
+    tooltips.forEach(tooltip => {
+      if (tooltip.parentNode) tooltip.parentNode.removeChild(tooltip);
+    });
+  }, 0);
+  
   // Notify components about storage changes
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('markersUpdated'));

@@ -29,3 +29,4 @@ export {
   moveImageInClipMask,
   resetImageTransform
 } from './svg-image-operations';
+

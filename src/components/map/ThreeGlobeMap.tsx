@@ -7,14 +7,12 @@ interface ThreeGlobeMapProps {
   selectedLocation?: Location;
   onMapReady?: (viewer?: any) => void;
   onFlyComplete?: () => void;
-  onViewerReady?: (viewer: any) => void; // Add this new prop
 }
 
 const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({ 
   selectedLocation, 
   onMapReady, 
-  onFlyComplete,
-  onViewerReady // Add this new prop
+  onFlyComplete 
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -47,11 +45,6 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     
     if (viewer) {
       globeInstanceRef.current = viewer;
-      
-      // Call onViewerReady prop if provided
-      if (onViewerReady) {
-        onViewerReady(viewer);
-      }
     }
     
     if (onMapReady) onMapReady(globeInstanceRef.current);

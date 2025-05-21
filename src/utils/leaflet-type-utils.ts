@@ -1,115 +1,24 @@
 
 import L from 'leaflet';
 
-// Define interface for internal map properties not exposed in TypeScript definitions
-export interface LeafletMapInternal extends L.Map {
-  _layers?: { [key: string]: L.Layer };
-  _leaflet_id?: number;
-  _loaded?: boolean;
-  _container?: HTMLElement;
-  _panes?: {
-    mapPane?: {
-      _leaflet_pos?: any;
-    };
-    tilePane?: HTMLElement;
-    shadowPane?: HTMLElement;
-    markerPane?: HTMLElement;
-    tooltipPane?: HTMLElement;
-    popupPane?: HTMLElement;
-    overlayPane?: HTMLElement;
-  };
-}
-
-// Define type for extended layer properties instead of extending the Layer interface
-export type ExtendedLayer = L.Layer & {
-  options?: {
-    isDrawn?: boolean;
-    id?: string;
-    data?: any;
-  } & L.PathOptions;
-  _path?: SVGPathElement;
-  _map?: L.Map;
-  _leaflet_id?: number;
-};
-
 /**
- * Checks if a map object is valid and ready for use
- * @param map The map instance to check
- * @returns boolean indicating if map is valid
+ * Safely gets the map from a Leaflet layer
  */
-export function isMapValid(map: any): boolean {
-  if (!map) return false;
-  
-  try {
-    // Check if map has essential properties
-    if (!map.getContainer || typeof map.getContainer !== 'function') return false;
-    
-    // Get container and check if it's in the DOM
-    try {
-      const container = map.getContainer();
-      if (!container || !document.body.contains(container)) return false;
-      
-      // Check if the container is marked as inactive
-      if (container.getAttribute('data-inactive') === 'true') {
-        console.warn('Map container is marked as inactive');
-        return false;
-      }
-      
-      // Check if container is being reused
-      if (container.getAttribute('data-in-use') === 'true') {
-        const mapId = map._leaflet_id || '';
-        const usedByMapId = container.getAttribute('data-used-by-map-id') || '';
-        
-        // If container is used by a different map instance, it's invalid
-        if (usedByMapId && usedByMapId !== String(mapId)) {
-          console.warn(`Container is being used by map ${usedByMapId}, not ${mapId}`);
-          return false;
-        }
-      }
-    } catch (err) {
-      return false;
-    }
-    
-    // Check if map has been loaded
-    const internalMap = map as LeafletMapInternal;
-    if (typeof internalMap._loaded !== 'undefined' && internalMap._loaded === false) return false;
-    
-    // Check if critical panes exist
-    if (!internalMap._panes || !internalMap._panes.mapPane) return false;
-    
-    return true;
-  } catch (err) {
-    console.error('Error checking map validity:', err);
-    return false;
-  }
-}
-
-/**
- * Gets the map a layer is attached to
- * @param layer The layer to get the map from
- * @returns The map instance or null
- */
-export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
+export const getMapFromLayer = (layer: L.Layer): L.Map | null => {
   if (!layer) return null;
   
   try {
-    // Cast to any to access protected properties safely
-    const extendedLayer = layer as any;
+    // Type assertion to access _map property
+    const map = (layer as any)._map;
+    if (map) return map;
     
-    // Try to access map directly
-    if (extendedLayer._map) {
-      return extendedLayer._map;
-    }
-    
-    // If it's a feature group, try to get map from first layer
-    if ('getLayers' in layer) {
-      const featureGroup = layer as L.FeatureGroup;
-      const layers = featureGroup.getLayers();
-      if (layers.length > 0) {
-        const firstLayer = layers[0] as any;
-        if (firstLayer._map) {
-          return firstLayer._map;
-        }
+    // Alternative approach for FeatureGroup
+    if (typeof (layer as any).getLayer === 'function') {
+      const firstLayer = (layer as any).getLayer(
+        Object.keys((layer as any)._layers)[0]
+      );
+      if (firstLayer && firstLayer._map) {
+        return firstLayer._map;
       }
     }
     
@@ -118,44 +27,61 @@ export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
     console.error('Error getting map from layer:', err);
     return null;
   }
-}
+};
 
 /**
- * Creates a unique identifier for map instances
- * @returns A unique string ID
+ * Checks if a map instance is valid and fully initialized
  */
-export function createUniqueMapId(): string {
-  return `map-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
+export const isMapValid = (map: L.Map | null | undefined): boolean => {
+  if (!map) return false;
+  
+  try {
+    // Check if container exists and is in the DOM
+    const container = map.getContainer();
+    if (!container || !document.body.contains(container)) {
+      return false;
+    }
+    
+    // Check if map panes are initialized
+    const internalMap = map as any;
+    if (!internalMap._panes || !internalMap._panes.mapPane) {
+      return false;
+    }
+    
+    // Check if position info is available
+    if (!internalMap._panes.mapPane._leaflet_pos) {
+      return false;
+    }
+    
+    // Additional check: verify that the map actually has dimensions
+    const size = map.getSize();
+    if (!size || size.x === 0 || size.y === 0) {
+      return false;
+    }
+    
+    // If we pass all checks, the map should be valid
+    return true;
+  } catch (err) {
+    console.error('Error validating map:', err);
+    return false;
+  }
+};
 
 /**
- * Checks if a map container is already in use by another map instance
- * @param container The DOM element to check
- * @param currentMapId ID of the current map instance
- * @returns boolean indicating if container is already in use
+ * Safely execute a map operation with validation
  */
-export function isContainerInUse(container: HTMLElement, currentMapId: string): boolean {
-  // Check if this container is already marked as in use
-  if (container.getAttribute('data-in-use') === 'true') {
-    const usedByMapId = container.getAttribute('data-used-by-map-id');
-    if (usedByMapId && usedByMapId !== currentMapId) {
-      console.warn(`Container is being used by map ${usedByMapId}, not ${currentMapId}`);
-      return true;
+export const safeMapOperation = <T>(
+  map: L.Map | null | undefined, 
+  operation: (map: L.Map) => T,
+  fallback: T
+): T => {
+  if (isMapValid(map)) {
+    try {
+      return operation(map as L.Map);
+    } catch (err) {
+      console.error('Map operation failed:', err);
+      return fallback;
     }
   }
-  
-  // Check if container is marked as inactive
-  if (container.getAttribute('data-inactive') === 'true') {
-    console.warn('Container is marked as inactive');
-    return true;
-  }
-  
-  return false;
-}
-
-export default { 
-  isMapValid, 
-  getMapFromLayer, 
-  createUniqueMapId, 
-  isContainerInUse 
+  return fallback;
 };

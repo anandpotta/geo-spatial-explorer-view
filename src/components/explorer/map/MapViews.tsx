@@ -1,22 +1,20 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState, useEffect, CSSProperties } from 'react';
 import { Location } from '@/utils/geo-utils';
+import CesiumMap from '../../CesiumMap'; // Now using Three.js inside
 import LeafletMap from '../../map/LeafletMap';
-import CesiumView from '../../map/CesiumMapLoading';
-import ThreeGlobeMap from '../../map/ThreeGlobeMap';
-import { createUniqueMapId } from '@/utils/leaflet-type-utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface MapViewsProps {
   currentView: 'cesium' | 'leaflet';
   mapKey: number;
-  selectedLocation?: Location;
-  onMapReady?: () => void;
-  onFlyComplete?: () => void;
-  handleCesiumViewerRef?: (viewer: any) => void;
-  handleLeafletMapRef?: (map: any) => void;
-  activeTool?: string | null;
-  handleClearAll?: () => void;
-  stayAtCurrentPosition?: boolean;
+  selectedLocation: Location | undefined;
+  onMapReady: () => void;
+  onFlyComplete: () => void;
+  handleCesiumViewerRef: (viewer: any) => void;
+  handleLeafletMapRef: (map: any) => void;
+  activeTool: string | null;
+  handleClearAll: () => void;
 }
 
 const MapViews: React.FC<MapViewsProps> = ({
@@ -28,100 +26,158 @@ const MapViews: React.FC<MapViewsProps> = ({
   handleCesiumViewerRef,
   handleLeafletMapRef,
   activeTool,
-  handleClearAll,
-  stayAtCurrentPosition = false
+  handleClearAll
 }) => {
-  console.log("MapViews rendering with stayAtCurrentPosition:", stayAtCurrentPosition);
+  // Add transition state to handle smoother view changes
+  const [transitioning, setTransitioning] = useState(false);
+  const [previousView, setPreviousView] = useState<'cesium' | 'leaflet' | null>(null);
+  const [viewChangeStarted, setViewChangeStarted] = useState<number | null>(null);
+  const [lastSelectedLocation, setLastSelectedLocation] = useState<Location | undefined>(undefined);
+  const [fadeIn, setFadeIn] = useState(false);
   
-  // Generate truly unique IDs for each view type that change with the mapKey
-  // This ensures no container ID conflicts between renders
-  const [uniqueLeafletKey] = useState<string>(`leaflet-${mapKey}-${createUniqueMapId()}`);
-  const [uniqueCesiumKey] = useState<string>(`cesium-${mapKey}-${createUniqueMapId()}`);
-  const currentViewRef = useRef<string>(currentView);
-  const previousViewRef = useRef<string | null>(null);
-  
-  // Track view changes to handle transitions properly
+  // Track location changes to prevent duplicate transitions
   useEffect(() => {
-    // When the view changes, mark previous map containers as inactive
-    if (currentView !== currentViewRef.current) {
-      console.log(`View changing from ${currentViewRef.current} to ${currentView}`);
-      
-      // Store the previous view before updating the current view reference
-      previousViewRef.current = currentViewRef.current;
-      
-      // Set a timeout to perform cleanup after the new view has mounted
-      setTimeout(() => {
-        // Find and mark containers from the previous view as inactive
-        document.querySelectorAll(`div[data-active="true"][data-container-type="leaflet-map"]`).forEach(el => {
-          // Only mark as inactive if it's not from the current view
-          if (currentView !== 'leaflet') {
-            el.setAttribute('data-active', 'false');
-            el.setAttribute('data-inactive', 'true');
-            el.setAttribute('data-removed-at', Date.now().toString());
-          }
-        });
-      }, 100);
-      
-      currentViewRef.current = currentView;
+    if (selectedLocation && 
+        (!lastSelectedLocation || 
+         selectedLocation.id !== lastSelectedLocation.id)) {
+      console.log('New location selected:', selectedLocation.label);
+      setLastSelectedLocation(selectedLocation);
     }
-  }, [currentView]);
+  }, [selectedLocation, lastSelectedLocation]);
   
-  // Clean up any orphaned Leaflet elements when view changes or component unmounts
+  // Handle view transitions
   useEffect(() => {
-    // Mark any existing markers as stale
-    document.querySelectorAll('.leaflet-marker-icon:not([data-stale="true"])').forEach(el => {
-      el.setAttribute('data-stale', 'true');
-    });
-    
-    document.querySelectorAll('.leaflet-marker-shadow:not([data-stale="true"])').forEach(el => {
-      el.setAttribute('data-stale', 'true');
-    });
-    
-    // Clean up all containers when the component unmounts
-    return () => {
-      // Only run cleanup on unmount, not during initial render
-      setTimeout(() => {
-        // Dispatch a cleanup event that other components can listen for
-        window.dispatchEvent(new CustomEvent('mapViewCleanup', {
-          detail: { previousView: previousViewRef.current }
-        }));
+    if (previousView && previousView !== currentView) {
+      // Start transition effect
+      setTransitioning(true);
+      setViewChangeStarted(Date.now());
+      
+      // End transition after animation completes
+      const timer = setTimeout(() => {
+        setTransitioning(false);
+        setViewChangeStarted(null);
         
-        // Clean up any orphaned markers when view changes
-        document.querySelectorAll('.leaflet-marker-icon[data-stale="true"]').forEach(el => {
-          el.remove();
-        });
-        
-        document.querySelectorAll('.leaflet-marker-shadow[data-stale="true"]').forEach(el => {
-          el.remove();
-        });
-      }, 300);
+        // Trigger fade in for new view
+        setFadeIn(true);
+        setTimeout(() => setFadeIn(false), 500);
+      }, 800); // Slightly longer to ensure render completes
+      
+      // Notify user about view change
+      toast({
+        title: `Switching to ${currentView === 'cesium' ? '3D Globe' : 'Map'} View`,
+        description: "Please wait while the view changes...",
+        duration: 2000,
+      });
+      
+      return () => clearTimeout(timer);
+    }
+    
+    setPreviousView(currentView);
+  }, [currentView, previousView]);
+  
+  // Calculate transition progress for smoother animations
+  const getTransitionStyles = (isCurrentView: boolean): React.CSSProperties => {
+    if (!transitioning) {
+      return {
+        opacity: isCurrentView ? 1 : 0,
+        transform: isCurrentView ? 'scale(1)' : 'scale(0.95)',
+        zIndex: isCurrentView ? 10 : 0,
+        visibility: isCurrentView ? 'visible' : 'hidden'
+      };
+    }
+    
+    // During transition, both views are visible but with different opacities
+    return {
+      opacity: isCurrentView ? 0.3 : 0.7, // Fading out current view, fading in new view
+      transform: isCurrentView ? 'scale(0.95)' : 'scale(0.98)', // Zoom effect
+      zIndex: isCurrentView ? 5 : 10, // New view on top during transition
+      visibility: 'visible' // Both visible during transition
     };
-  }, [currentView]);
+  };
+  
+  // Get styles for current view
+  const getCesiumStyles = (): React.CSSProperties => {
+    const isCurrent = currentView === 'cesium';
+    const styles = getTransitionStyles(isCurrent);
+    
+    return {
+      position: 'absolute' as 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100%',
+      height: '100%',
+      visibility: styles.visibility,
+      opacity: styles.opacity,
+      transform: styles.transform,
+      zIndex: styles.zIndex,
+      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out'
+    };
+  };
+  
+  const getLeafletStyles = (): React.CSSProperties => {
+    const isCurrent = currentView === 'leaflet';
+    const styles = getTransitionStyles(!isCurrent);
+    
+    return {
+      position: 'absolute' as 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100%',
+      height: '100%',
+      visibility: isCurrent || transitioning ? 'visible' : 'hidden',
+      opacity: 1 - (styles.opacity as number),
+      transform: isCurrent ? 'scale(1)' : 'scale(0.95)',
+      zIndex: isCurrent ? 10 : (transitioning ? 5 : 0),
+      transition: 'opacity 600ms ease-in-out, transform 600ms ease-in-out'
+    };
+  };
+  
+  // Add fade-in effect when a view becomes active
+  const fadeInClass = fadeIn ? 'animate-fade-in' : '';
   
   return (
     <>
-      {currentView === 'cesium' && (
-        <div key={uniqueCesiumKey} className="w-full h-full" data-view-type="cesium" data-container-id={uniqueCesiumKey}>
-          <ThreeGlobeMap
-            selectedLocation={selectedLocation}
-            onViewerReady={handleCesiumViewerRef}
-            onMapReady={onMapReady}
-            onFlyComplete={onFlyComplete}
-          />
-        </div>
-      )}
+      <div 
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${currentView === 'cesium' ? fadeInClass : ''}`}
+        style={getCesiumStyles()}
+        data-map-type="cesium"
+      >
+        <CesiumMap 
+          selectedLocation={selectedLocation}
+          onMapReady={onMapReady}
+          onFlyComplete={onFlyComplete}
+          cinematicFlight={true}
+          key={`cesium-${mapKey}`}
+          onViewerReady={handleCesiumViewerRef}
+        />
+      </div>
       
-      {currentView === 'leaflet' && (
-        <div key={uniqueLeafletKey} className="w-full h-full" data-view-type="leaflet" data-container-id={uniqueLeafletKey}>
-          <LeafletMap 
-            selectedLocation={selectedLocation}
-            onMapReady={handleLeafletMapRef}
-            activeTool={activeTool}
-            onClearAll={handleClearAll}
-            stayAtCurrentPosition={stayAtCurrentPosition}
-            mapInstanceKey={uniqueLeafletKey} // Pass unique key to prevent reuse
-          />
-        </div>
+      <div 
+        className={`absolute inset-0 transition-all duration-500 ease-in-out ${currentView === 'leaflet' ? fadeInClass : ''}`}
+        style={getLeafletStyles()}
+        data-map-type="leaflet"
+      >
+        <LeafletMap 
+          selectedLocation={selectedLocation} 
+          onMapReady={handleLeafletMapRef}
+          activeTool={activeTool}
+          key={`leaflet-${mapKey}`}
+          onClearAll={handleClearAll}
+        />
+      </div>
+      
+      {/* Add transition overlay */}
+      {transitioning && (
+        <div 
+          className="absolute inset-0 bg-black bg-opacity-30 z-20 pointer-events-none transition-opacity duration-300"
+          style={{
+            animation: 'fadeInOut 500ms ease-in-out forwards'
+          }}
+        />
       )}
     </>
   );

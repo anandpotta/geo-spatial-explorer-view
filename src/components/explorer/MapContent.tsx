@@ -9,21 +9,11 @@ interface MapContentProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
-  stayAtCurrentPosition?: boolean;
+  flyCompleted?: boolean;
 }
 
 const MapContent = (props: MapContentProps) => {
-  // Add logging to help debug any issues
-  console.log("MapContent rendering with props:", {
-    view: props.currentView,
-    stayAtCurrentPosition: props.stayAtCurrentPosition
-  });
-  
-  return (
-    <div className="relative flex-1 overflow-hidden">
-      <MapContentContainer {...props} />
-    </div>
-  );
+  return <MapContentContainer {...props} />;
 };
 
 export default MapContent;

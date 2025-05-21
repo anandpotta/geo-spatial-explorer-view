@@ -35,7 +35,6 @@ const debounce = (func: Function, delay: number) => {
 
 // Track the last shape added to prevent duplicates
 let lastShapeId: string | null = null;
-let lastMarkerPosition: string | null = null;
 
 export function createShapeCreationHandler({ 
   onCreated, 
@@ -50,25 +49,8 @@ export function createShapeCreationHandler({
   }, 2000); // Increased to 2 second debounce
   
   const handleCreatedWrapper = (shape: any) => {
-    // Generate a position identifier for markers
-    let positionIdentifier = null;
-    if (shape.type === 'marker' && shape.layer && shape.layer.getLatLng) {
-      const pos = shape.layer.getLatLng();
-      positionIdentifier = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`;
-      
-      // Skip if this is a duplicate marker at the same position
-      if (positionIdentifier === lastMarkerPosition) {
-        console.log('Skipping duplicate marker at same position');
-        return;
-      }
-      
-      // Update the last marker position
-      lastMarkerPosition = positionIdentifier;
-    }
-    
     // Skip processing if we've already handled this exact shape
-    if (shape.id && shape.id === lastShapeId && 
-        !(shape.type === 'marker' && positionIdentifier !== null)) {
+    if (shape.id && shape.id === lastShapeId) {
       return;
     }
     

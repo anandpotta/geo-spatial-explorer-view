@@ -8,86 +8,71 @@ import L from 'leaflet';
 interface UserMarkerProps {
   marker: LocationMarker;
   onDelete: (id: string) => void;
-  mapKey?: string;
 }
 
-const UserMarker = ({ marker, onDelete, mapKey = 'global' }: UserMarkerProps) => {
+const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const markerId = `marker-${marker.id}-${mapKey}`;
-  const iconElementRef = useRef<HTMLElement | null>(null);
-  const shadowElementRef = useRef<HTMLElement | null>(null);
   
-  // Set data attributes on marker elements for identification
-  const setMarkerDataAttributes = useCallback((marker: L.Marker | null) => {
-    if (!marker) return;
-    
-    try {
-      // Access the icon element
-      const icon = marker.getElement();
+  // Add data attribute to marker icon and create persistent tooltip
+  useEffect(() => {
+    if (markerRef.current) {
+      const icon = markerRef.current.getElement();
       if (icon) {
-        iconElementRef.current = icon;
-        icon.setAttribute('data-marker-id', markerId);
-        icon.setAttribute('data-map-key', mapKey);
-      }
-      
-      // Try to find the shadow element
-      const iconElementId = icon?.getAttribute('src') || '';
-      if (iconElementId) {
-        const shadowParts = iconElementId.split('/');
-        const iconFileName = shadowParts[shadowParts.length - 1];
-        const shadowFileName = iconFileName.replace('marker-icon', 'marker-shadow');
+        icon.setAttribute('data-marker-id', marker.id);
         
-        // Look for shadow elements
-        document.querySelectorAll('.leaflet-marker-shadow').forEach(el => {
-          const shadowSrc = el.getAttribute('src') || '';
-          if (shadowSrc.includes(shadowFileName)) {
-            shadowElementRef.current = el as HTMLElement;
-            el.setAttribute('data-marker-id', markerId);
-            el.setAttribute('data-map-key', mapKey);
+        // Remove any existing tooltip first to prevent duplicates
+        const existingTooltip = icon.querySelector('.marker-tooltip');
+        if (existingTooltip) {
+          existingTooltip.remove();
+        }
+        
+        // Create tooltip for the marker
+        const tooltip = document.createElement('div');
+        tooltip.className = 'marker-tooltip bg-white px-2 py-0.5 rounded shadow text-sm absolute z-50';
+        tooltip.style.left = '25px';
+        tooltip.style.top = '0';
+        tooltip.style.whiteSpace = 'nowrap';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.transform = 'translateY(-50%)';
+        tooltip.style.border = '1px solid #ccc';
+        tooltip.setAttribute('data-marker-tooltip-id', marker.id);
+        tooltip.textContent = marker.name;
+        icon.appendChild(tooltip);
+      }
+    }
+    
+    // When a user marker is created, we should clean up any search markers
+    // that might be at almost the same location to avoid duplicate markers
+    if (markerRef.current) {
+      // Use type assertion to access the protected _map property
+      const map = (markerRef.current as any)._map;
+      if (map) {
+        const userPos = markerRef.current.getLatLng();
+        
+        // Find and remove search result markers near this position
+        map.eachLayer(layer => {
+          if (layer instanceof L.Marker && 
+              layer.getElement()?.getAttribute('data-search-marker') === 'true') {
+            
+            const searchPos = layer.getLatLng();
+            
+            // If the search marker is very close to this user marker, remove it
+            if (Math.abs(searchPos.lat - userPos.lat) < 0.0001 && 
+                Math.abs(searchPos.lng - userPos.lng) < 0.0001) {
+              map.removeLayer(layer);
+            }
           }
         });
       }
-    } catch (err) {
-      console.warn('Error setting data attributes on marker', err);
     }
-  }, [markerId, mapKey]);
+  }, [marker.id, marker.name]);
   
-  // Cleanup marker when component unmounts or when clear all is triggered
+  // Cleanup marker when component unmounts
   useEffect(() => {
-    const handleClearAllMarkers = () => {
-      if (markerRef.current) {
-        try {
-          // First try to remove the marker with Leaflet's remove method
-          markerRef.current.remove();
-        } catch (error) {
-          console.error('Error removing marker during clear all:', error);
-        }
-        
-        // Also remove the DOM elements directly
-        if (iconElementRef.current) {
-          iconElementRef.current.remove();
-        }
-        if (shadowElementRef.current) {
-          shadowElementRef.current.remove();
-        }
-      }
-    };
-    
-    // Listen for clear all markers event
-    window.addEventListener('clearAllMarkers', handleClearAllMarkers);
-    
-    // Attach the marker reference after a short delay to ensure it's mounted
-    setTimeout(() => {
-      if (markerRef.current) {
-        setMarkerDataAttributes(markerRef.current);
-      }
-    }, 50);
-    
     return () => {
-      window.removeEventListener('clearAllMarkers', handleClearAllMarkers);
-      
       if (markerRef.current) {
         const leafletElement = markerRef.current;
+        // Ensure marker is properly removed from the map
         if (leafletElement && leafletElement.remove) {
           try {
             leafletElement.remove();
@@ -97,15 +82,25 @@ const UserMarker = ({ marker, onDelete, mapKey = 'global' }: UserMarkerProps) =>
         }
       }
       
-      // Also try to remove the DOM elements directly
-      if (iconElementRef.current) {
-        iconElementRef.current.remove();
-      }
-      if (shadowElementRef.current) {
-        shadowElementRef.current.remove();
-      }
+      // Also remove any tooltips associated with this marker
+      const tooltips = document.querySelectorAll(`[data-marker-tooltip-id="${marker.id}"]`);
+      tooltips.forEach(tooltip => {
+        if (tooltip.parentNode) {
+          tooltip.parentNode.removeChild(tooltip);
+        }
+      });
+      
+      // Clean up any orphaned marker icons with this ID
+      setTimeout(() => {
+        const orphanedIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${marker.id}"]`);
+        orphanedIcons.forEach(icon => {
+          if (icon.parentNode) {
+            icon.parentNode.removeChild(icon);
+          }
+        });
+      }, 0);
     };
-  }, [mapKey, setMarkerDataAttributes]);
+  }, [marker.id]);
   
   const handleDragEnd = useCallback((e: any) => {
     const updatedMarker = e.target;
@@ -132,23 +127,12 @@ const UserMarker = ({ marker, onDelete, mapKey = 'global' }: UserMarkerProps) =>
   return (
     <Marker 
       position={marker.position} 
-      key={markerId}
+      key={`marker-${marker.id}`}
       draggable={true}
       eventHandlers={{
-        dragend: handleDragEnd,
-        add: (e) => {
-          // Set data attributes when the marker is added to the map
-          setMarkerDataAttributes(e.target);
-        }
+        dragend: handleDragEnd
       }}
-      ref={(ref) => {
-        // In react-leaflet v4, we access the leaflet instance directly
-        if (ref) {
-          markerRef.current = ref;
-          // Set data attributes as soon as marker reference is available
-          setMarkerDataAttributes(ref);
-        }
-      }}
+      ref={markerRef}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
     </Marker>
