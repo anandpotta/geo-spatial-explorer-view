@@ -27,7 +27,7 @@ const LeafletMap = ({
     handleSetMapRef
   } = useMapInitialization(selectedLocation);
   
-  // Use our new useLocationSync hook to handle location changes
+  // Use our enhanced useLocationSync hook to handle location changes
   useLocationSync(mapRef.current, selectedLocation, isMapReady);
   
   const [position, setPosition] = useState<[number, number]>([0, 0]);

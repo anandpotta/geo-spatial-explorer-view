@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import MapContent from '@/components/explorer/MapContent';
 import ExplorerSidebar from '@/components/explorer/ExplorerSidebar';
@@ -10,8 +11,9 @@ const Index = () => {
   const [flyCompleted, setFlyCompleted] = useState<boolean>(true);
   const viewTransitionInProgressRef = useRef(false);
   const locationSelectionTimeRef = useRef<number | null>(null);
-  const [shouldKeepLocation, setShouldKeepLocation] = useState(false);
+  const [shouldKeepLocation, setShouldKeepLocation] = useState(true); // Default to true to preserve location
   const previousLocationRef = useRef<string | null>(null);
+  const [mapKey, setMapKey] = useState<number>(Date.now());
 
   const handleLocationSelect = (location: Location) => {
     // Prevent multiple rapid location selections
@@ -49,10 +51,13 @@ const Index = () => {
     setFlyCompleted(true);
     
     // After fly completes in cesium, switch to leaflet if needed
-    if (currentView === 'cesium' && shouldKeepLocation && selectedLocation) {
+    if (currentView === 'cesium' && selectedLocation) {
       console.log("Switching to leaflet view after fly completion with location", selectedLocation.label);
       setTimeout(() => {
         setCurrentView('leaflet');
+        
+        // Force map refresh to ensure proper positioning
+        setMapKey(Date.now());
       }, 1000); // Use a delay for smoother transition
     }
     
@@ -108,10 +113,12 @@ const Index = () => {
     handleLocationSelect(newLocation);
   };
   
-  // Reset shouldKeepLocation after view changes
+  // Always preserve the location when switching views
   useEffect(() => {
-    setShouldKeepLocation(false);
-  }, [currentView]);
+    if (selectedLocation) {
+      console.log(`View changed to ${currentView}, preserving location ${selectedLocation.label}`);
+    }
+  }, [currentView, selectedLocation]);
 
   return (
     <div className="h-screen flex">
@@ -128,6 +135,7 @@ const Index = () => {
         onMapReady={handleMapReady}
         onFlyComplete={handleFlyComplete}
         onLocationSelect={handleLocationSelect}
+        key={mapKey} // Force recreation when changing views with location
       />
     </div>
   );

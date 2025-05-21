@@ -51,48 +51,43 @@ export function useLocationSync(
         // Position the map at the selected location
         const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
         
+        // Use higher zoom level and slower animation for more precise positioning
         map.flyTo(newPosition, 14, {
           animate: true,
-          duration: 1.5
+          duration: 1.5,
+          easeLinearity: 0.5
         });
 
-        // Add a marker for the location
+        // Add a marker for the location after the fly animation completes
         setTimeout(() => {
           try {
-            // Check if we need to add a marker
-            let markerExists = false;
+            // Clear existing markers to prevent cluttering
             map.eachLayer((layer) => {
-              if (layer instanceof L.Marker && layer.getLatLng) {
-                const pos = layer.getLatLng();
-                if (Math.abs(pos.lat - newPosition[0]) < 0.01 && 
-                    Math.abs(pos.lng - newPosition[1]) < 0.01) {
-                  markerExists = true;
-                }
+              if (layer instanceof L.Marker) {
+                map.removeLayer(layer);
               }
             });
 
-            // Add marker if none exists
-            if (!markerExists) {
-              const marker = L.marker(newPosition).addTo(map);
-              marker.bindPopup(
-                `<b>${selectedLocation.label || 'Selected Location'}</b><br>` +
-                `${selectedLocation.y.toFixed(4)}, ${selectedLocation.x.toFixed(4)}`
-              ).openPopup();
-            }
+            // Add a new marker at the precise location
+            const marker = L.marker(newPosition).addTo(map);
+            marker.bindPopup(
+              `<b>${selectedLocation.label || 'Selected Location'}</b><br>` +
+              `${selectedLocation.y.toFixed(6)}, ${selectedLocation.x.toFixed(6)}`
+            ).openPopup();
             
             // Reset the fly progress flag
             flyInProgressRef.current = false;
             
             toast({
               title: "Location Found",
-              description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(4)}, ${newPosition[1].toFixed(4)}`,
+              description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(6)}, ${newPosition[1].toFixed(6)}`,
               duration: 3000,
             });
           } catch (err) {
             console.error('Error adding location marker:', err);
             flyInProgressRef.current = false;
           }
-        }, 1600);
+        }, 1600); // Wait until fly animation completes
       } catch (error) {
         console.error('Error flying to location in Leaflet:', error);
         flyInProgressRef.current = false;
