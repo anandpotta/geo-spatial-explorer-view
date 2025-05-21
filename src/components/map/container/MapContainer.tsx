@@ -3,6 +3,9 @@ import React, { useEffect } from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 // Import CSS directly from node_modules
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
+// Import our custom overrides
+import '@/styles/leaflet-overrides.css';
 
 interface MapContainerProps {
   position: [number, number];
