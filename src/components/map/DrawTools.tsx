@@ -24,6 +24,7 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   const isMountedRef = useRef(true);
+  const initializedRef = useRef(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
@@ -32,7 +33,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Track component mount status
   useEffect(() => {
     isMountedRef.current = true;
+    console.log('DrawTools mounted');
+    
     return () => {
+      console.log('DrawTools unmounting');
       isMountedRef.current = false;
     };
   }, []);
@@ -55,6 +59,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Force visibility of drawing controls
   useEffect(() => {
     if (!isMountedRef.current || !featureGroup) return;
+    
+    console.log('Initializing DrawTools visibility');
+    initializedRef.current = true;
     
     // Function to enforce drawing controls visibility
     const enforceControlsVisibility = () => {
@@ -87,9 +94,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
             (polygonButton as HTMLElement).style.opacity = '1';
             (polygonButton as HTMLElement).style.pointerEvents = 'auto';
           }
-          
-          // Force a reflow to ensure styles are applied
-          document.body.offsetHeight;
         } catch (error) {
           console.error('Error enforcing controls visibility:', error);
         }
@@ -103,6 +107,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     const visibilityInterval = setInterval(() => {
       if (isMountedRef.current) {
         enforceControlsVisibility();
+      } else {
+        clearInterval(visibilityInterval);
       }
     }, 3000);
     
@@ -129,6 +135,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     document.head.appendChild(styleEl);
     
     return () => {
+      console.log('Cleaning up DrawTools visibility');
       if (visibilityInterval) {
         clearInterval(visibilityInterval);
       }
@@ -144,6 +151,12 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       handleCreated(event);
     }
   };
+
+  console.log('Rendering DrawTools', { 
+    activeTool, 
+    featureGroupExists: !!featureGroup,
+    isMounted: isMountedRef.current
+  });
 
   return (
     <EditControl
