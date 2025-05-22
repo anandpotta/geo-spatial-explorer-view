@@ -1,8 +1,10 @@
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
+import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
+import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -10,6 +12,8 @@ interface UserMarkerProps {
 }
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
+  const markerRef = useRef<L.Marker | null>(null);
+
   const handleDragEnd = useCallback((e: any) => {
     const updatedMarker = e.target;
     const newPosition = updatedMarker.getLatLng();
@@ -31,17 +35,60 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     // Dispatch event to update other components
     window.dispatchEvent(new CustomEvent('markersUpdated'));
   }, [marker.id]);
+
+  useEffect(() => {
+    if (markerRef.current) {
+      // Ensure tooltip is shown by default
+      const leafletElement = markerRef.current;
+      setTimeout(() => {
+        try {
+          leafletElement.openTooltip();
+        } catch (error) {
+          console.error('Could not open tooltip:', error);
+        }
+      }, 100);
+    }
+  }, []);
   
   return (
     <Marker 
       position={marker.position} 
       key={`marker-${marker.id}`}
       draggable={true}
+      ref={markerRef}
       eventHandlers={{
-        dragend: handleDragEnd
+        dragend: handleDragEnd,
+        add: (e) => {
+          // Open tooltip on add
+          setTimeout(() => {
+            try {
+              const leafletElement = markerRef.current;
+              if (leafletElement) {
+                leafletElement.openTooltip();
+              }
+            } catch (error) {
+              console.error('Could not open tooltip on add:', error);
+            }
+          }, 100);
+        }
       }}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
+
+      {/* Add permanent tooltip showing the marker name */}
+      <TooltipProvider>
+        <Tooltip>
+          <L.Tooltip 
+            direction="top" 
+            offset={[0, -10]} 
+            opacity={0.9}
+            permanent={true}
+            className="custom-marker-tooltip"
+          >
+            <span className="font-medium">{marker.name}</span>
+          </L.Tooltip>
+        </Tooltip>
+      </TooltipProvider>
     </Marker>
   );
 };

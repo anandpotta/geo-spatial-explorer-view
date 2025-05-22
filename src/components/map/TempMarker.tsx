@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
-import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
+import NewMarkerForm from './NewMarkerForm';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -21,6 +21,18 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   setMarkerType,
   onSave
 }) => {
+  const markerRef = useRef<L.Marker | null>(null);
+
+  // Update tooltip content when markerName changes
+  useEffect(() => {
+    if (markerRef.current && markerName) {
+      const tooltipElement = markerRef.current.getTooltip();
+      if (tooltipElement) {
+        tooltipElement.setContent(`<span class="font-medium">${markerName || 'New Location'}</span>`);
+      }
+    }
+  }, [markerName]);
+
   // Create a custom marker with higher z-index to ensure it's on top
   const markerOptions = {
     draggable: true,
@@ -39,7 +51,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
           }
         }
       },
-      add: () => {
+      add: (e: L.LeafletEvent) => {
         // Force popup to open when marker is added to the map
         setTimeout(() => {
           const markerElement = document.querySelector('.leaflet-marker-draggable');
@@ -51,12 +63,28 @@ const TempMarker: React.FC<TempMarkerProps> = ({
             }));
           }
         }, 100);
+
+        // Add tooltip to new marker
+        const marker = e.target;
+        if (marker) {
+          marker.bindTooltip(`<span class="font-medium">${markerName || 'New Location'}</span>`, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -10],
+            opacity: 0.9,
+            className: 'custom-marker-tooltip'
+          }).openTooltip();
+        }
       }
     }
   };
   
   return (
-    <Marker position={position} {...markerOptions}>
+    <Marker 
+      position={position}
+      ref={markerRef}
+      {...markerOptions}
+    >
       <NewMarkerForm
         markerName={markerName}
         setMarkerName={setMarkerName}
@@ -64,6 +92,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         setMarkerType={setMarkerType}
         onSave={onSave}
       />
+      <L.Tooltip 
+        direction="top" 
+        offset={[0, -10]} 
+        opacity={0.9}
+        permanent={true}
+        className="custom-marker-tooltip"
+      >
+        <span className="font-medium">{markerName || 'New Location'}</span>
+      </L.Tooltip>
     </Marker>
   );
 };
