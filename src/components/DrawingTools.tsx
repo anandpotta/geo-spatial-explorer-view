@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MapControls from './drawing/MapControls';
 import ClearConfirmationDialog from './drawing/ConfirmationDialog';
