@@ -8,54 +8,57 @@ export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
   const [showConfirmation, setShowConfirmation] = useState(false);
   
-  // Centralized handler for all clear all actions with a single point of entry
+  // Listen for the custom leafletClearAllRequest event
   useEffect(() => {
-    const handleClearAllRequest = (e: MouseEvent | Event) => {
-      console.log('Handling clear all request');
-      
-      // If not authenticated, block the action
-      if (!isAuthenticated) {
+    const handleLeafletClearRequest = () => {
+      console.log('Received leaflet clear all request event');
+      if (isAuthenticated) {
+        setShowConfirmation(true);
+      } else {
         toast.error('Please log in to clear drawings');
-        return;
       }
-      
-      // For click events on Leaflet draw clear all button
-      if (e instanceof MouseEvent) {
-        const target = e.target as HTMLElement;
-        
-        // Check for Leaflet draw clear all button
-        if (target && target.tagName === 'A') {
-          // Check if this is the clear all button in Leaflet draw actions
-          const isDrawActionsParent = 
-            target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions');
-          
-          const isClearAllButton = 
-            target.textContent?.includes('Clear all') || 
-            target.textContent?.includes('Delete') ||
-            target.textContent?.trim() === 'Clear All';
-          
-          if (isDrawActionsParent && isClearAllButton) {
-            console.log('Leaflet draw clear all layers button clicked');
-            e.preventDefault();
-            e.stopPropagation();
-          } else {
-            // Not our target button
-            return;
-          }
-        }
-      }
-      
-      // Show confirmation dialog
-      setShowConfirmation(true);
     };
     
-    // Use capture phase to intercept early
-    document.addEventListener('click', handleClearAllRequest, true);
-    window.addEventListener('leafletClearAllRequest', handleClearAllRequest);
+    // Handle Leaflet Draw specific clear all action
+    const handleLeafletClearAction = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Enhanced check for clear all layers button
+      if (target && target.tagName === 'A') {
+        // Check if this is the clear all button in Leaflet draw actions
+        const isDrawActionsParent = 
+          target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions');
+        
+        const isClearAllButton = 
+          target.textContent?.includes('Clear all') || 
+          target.textContent?.includes('Delete') ||
+          target.textContent?.trim() === 'Clear All';
+        
+        if (isDrawActionsParent && isClearAllButton) {
+          console.log('Leaflet draw clear all layers button clicked');
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Instead of dispatching an event, directly show confirmation
+          if (isAuthenticated) {
+            setShowConfirmation(true);
+          } else {
+            toast.error('Please log in to clear drawings');
+          }
+          
+          // Return false to prevent the original action
+          return false;
+        }
+      }
+    };
+    
+    // Capture all click events to detect Leaflet clear action
+    document.addEventListener('click', handleLeafletClearAction, true);
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
-      document.removeEventListener('click', handleClearAllRequest, true);
-      window.removeEventListener('leafletClearAllRequest', handleClearAllRequest);
+      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+      document.removeEventListener('click', handleLeafletClearAction, true);
     };
   }, [isAuthenticated]);
   
