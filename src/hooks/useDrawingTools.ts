@@ -42,13 +42,11 @@ export function useDrawingTools(
         circlemarker: false
       };
       
-      // Configure edit options with the correct type syntax
-      const editOptions: L.Control.DrawOptions["edit"] = {
+      // Configure edit options with the correct type
+      const editOptions = {
         featureGroup: featureGroup,
         // Only enable edit handlers if edit tool is active, otherwise set to false
-        edit: activeTool === 'edit' ? {
-          // Add empty edit handler options
-        } : false,
+        edit: activeTool === 'edit' ? {} : false,
         // Only enable remove handlers if delete tool is active, otherwise set to false
         remove: activeTool === 'delete' ? {} : false
       };
