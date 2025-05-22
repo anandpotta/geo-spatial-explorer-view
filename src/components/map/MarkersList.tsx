@@ -24,11 +24,12 @@ const MarkersList = ({
   setMarkerName,
   setMarkerType
 }: MarkersListProps) => {
+  // Safely render markers with proper key management
   return (
     <>
       {Array.isArray(markers) && markers.map((marker) => (
         <UserMarker 
-          key={marker.id} 
+          key={`user-marker-${marker.id}`} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />
@@ -36,6 +37,7 @@ const MarkersList = ({
       
       {tempMarker && Array.isArray(tempMarker) && (
         <TempMarker 
+          key={`temp-marker-${tempMarker[0]}-${tempMarker[1]}`}
           position={tempMarker}
           markerName={markerName}
           setMarkerName={setMarkerName}

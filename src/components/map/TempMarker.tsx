@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Marker, Tooltip } from 'react-leaflet';
+import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import NewMarkerForm from './NewMarkerForm';
 
@@ -38,22 +38,25 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     draggable: true,
     autoPan: true,
     zIndexOffset: 9999, // Higher z-index to ensure visibility
-    eventHandlers: {
-      dragend: (e: L.LeafletEvent) => {
-        // Update marker position when dragged
-        const marker = e.target;
-        if (marker && marker.getLatLng) {
-          const position = marker.getLatLng();
-          // Update the position through the global handler
-          if (window.tempMarkerPositionUpdate) {
-            window.tempMarkerPositionUpdate([position.lat, position.lng]);
-            console.log("Marker position updated:", [position.lat, position.lng]);
-          }
+  };
+
+  const eventHandlers = {
+    dragend: (e: L.LeafletEvent) => {
+      // Update marker position when dragged
+      const marker = e.target;
+      if (marker && marker.getLatLng) {
+        const position = marker.getLatLng();
+        // Update the position through the global handler
+        if (window.tempMarkerPositionUpdate) {
+          window.tempMarkerPositionUpdate([position.lat, position.lng]);
+          console.log("Marker position updated:", [position.lat, position.lng]);
         }
-      },
-      add: (e: L.LeafletEvent) => {
-        // Force popup to open when marker is added to the map
-        setTimeout(() => {
+      }
+    },
+    add: (e: L.LeafletEvent) => {
+      // Force popup to open when marker is added to the map
+      setTimeout(() => {
+        try {
           const markerElement = document.querySelector('.leaflet-marker-draggable');
           if (markerElement) {
             markerElement.dispatchEvent(new MouseEvent('click', {
@@ -62,10 +65,10 @@ const TempMarker: React.FC<TempMarkerProps> = ({
               view: window
             }));
           }
-        }, 100);
-
-        // We no longer need this code as we're using react-leaflet's Tooltip component
-      }
+        } catch (error) {
+          console.error("Error dispatching click on marker:", error);
+        }
+      }, 100);
     }
   };
   
@@ -73,7 +76,10 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     <Marker 
       position={position}
       ref={markerRef}
-      {...markerOptions}
+      draggable={true}
+      autoPan={true}
+      zIndexOffset={9999}
+      eventHandlers={eventHandlers}
     >
       <NewMarkerForm
         markerName={markerName}

@@ -1,6 +1,6 @@
 
 import React, { useCallback, useRef, useEffect } from 'react';
-import { Marker, Tooltip } from 'react-leaflet';
+import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
@@ -13,7 +13,7 @@ interface UserMarkerProps {
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
 
-  const handleDragEnd = useCallback((e: any) => {
+  const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     const updatedMarker = e.target;
     const newPosition = updatedMarker.getLatLng();
     
@@ -35,19 +35,41 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     window.dispatchEvent(new CustomEvent('markersUpdated'));
   }, [marker.id]);
 
-  useEffect(() => {
-    if (markerRef.current) {
-      // Ensure tooltip is shown by default
-      const leafletElement = markerRef.current;
+  // Safe tooltip opening with error handling
+  const safeOpenTooltip = useCallback(() => {
+    if (!markerRef.current) return;
+    
+    try {
       setTimeout(() => {
-        try {
-          leafletElement.openTooltip();
-        } catch (error) {
-          console.error('Could not open tooltip:', error);
+        if (markerRef.current) {
+          markerRef.current.openTooltip();
         }
       }, 100);
+    } catch (error) {
+      console.error('Could not open tooltip safely:', error);
     }
   }, []);
+
+  useEffect(() => {
+    safeOpenTooltip();
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      if (markerRef.current) {
+        try {
+          markerRef.current.closeTooltip();
+          markerRef.current.closePopup();
+        } catch (error) {
+          console.error('Error cleaning up marker:', error);
+        }
+      }
+    };
+  }, [safeOpenTooltip]);
+  
+  const eventHandlers = {
+    dragend: handleDragEnd,
+    add: safeOpenTooltip
+  };
   
   return (
     <Marker 
@@ -55,26 +77,10 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       key={`marker-${marker.id}`}
       draggable={true}
       ref={markerRef}
-      eventHandlers={{
-        dragend: handleDragEnd,
-        add: (e) => {
-          // Open tooltip on add
-          setTimeout(() => {
-            try {
-              const leafletElement = markerRef.current;
-              if (leafletElement) {
-                leafletElement.openTooltip();
-              }
-            } catch (error) {
-              console.error('Could not open tooltip on add:', error);
-            }
-          }, 100);
-        }
-      }}
+      eventHandlers={eventHandlers}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
 
-      {/* Add permanent tooltip showing the marker name */}
       <Tooltip 
         direction="top" 
         offset={[0, -10]} 
