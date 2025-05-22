@@ -44,8 +44,32 @@ export function useMarkers(scene: THREE.Scene | null) {
     return marker;
   }, [scene]);
   
+  // Clear all markers
+  const clearMarkers = useCallback(() => {
+    if (!scene) return;
+    
+    // Remove all markers from the scene
+    markersRef.current.forEach((marker, id) => {
+      if (marker) {
+        scene.remove(marker);
+        // Also dispose of geometries and materials to prevent memory leaks
+        if (marker.geometry) marker.geometry.dispose();
+        if (marker.material instanceof THREE.Material) {
+          marker.material.dispose();
+        } else if (Array.isArray(marker.material)) {
+          marker.material.forEach(material => material.dispose());
+        }
+      }
+    });
+    
+    // Clear the markers map
+    markersRef.current.clear();
+    console.log("Cleared all markers from the globe");
+  }, [scene]);
+  
   return {
     addMarker,
+    clearMarkers,
     markersRef
   };
 }

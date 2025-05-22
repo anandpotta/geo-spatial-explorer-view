@@ -34,7 +34,7 @@ export function useThreeGlobe(
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
   
   // Get markers functionality
-  const { addMarker } = useMarkers(scene);
+  const { addMarker, clearMarkers } = useMarkers(scene);
   
   // Handle textures loaded callback
   const handleTexturesLoaded = useCallback(() => {
@@ -133,6 +133,7 @@ export function useThreeGlobe(
     flyToLocation: enhancedFlyToLocation,
     cancelFlight,
     setAutoRotation,
-    addMarker
+    addMarker,
+    clearMarkers  // Export the clearMarkers method
   };
 }
