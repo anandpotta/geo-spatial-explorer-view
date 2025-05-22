@@ -44,15 +44,21 @@ export function useGlobeAnimation(
       
       // If auto rotation is enabled and not flying to a location
       if (autoRotationEnabledRef.current && !isFlyingRef.current) {
-        // Use delta time for smoother rotation regardless of frame rate
-        if (controlsRef.current.autoRotateSpeed) {
-          const rotationAmount = controlsRef.current.autoRotateSpeed * delta * 0.1;
-          controlsRef.current.rotateLeft(rotationAmount);
+        // Use autoRotate property instead of manually rotating
+        // OrbitControls already handles rotation when autoRotate is true
+        if (!controlsRef.current.autoRotate) {
+          controlsRef.current.autoRotate = true;
+          controlsRef.current.autoRotateSpeed = 0.3; // Default rotation speed
         }
         
         // Let the orbit controls handle other updates
         controlsRef.current.update();
       } else if (controlsRef.current) {
+        // Turn off auto-rotation if it's not enabled
+        if (controlsRef.current.autoRotate && !autoRotationEnabledRef.current) {
+          controlsRef.current.autoRotate = false;
+        }
+        
         // Still update controls for other interactions
         controlsRef.current.update();
       }

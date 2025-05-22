@@ -19,9 +19,15 @@ export function useAutoRotation(controlsRef: React.MutableRefObject<OrbitControl
         
         // Gradually increase rotation speed for a smoother transition
         const increaseSpeed = () => {
-          if (controlsRef.current && controlsRef.current.autoRotateSpeed < rotationSpeedRef.current) {
-            controlsRef.current.autoRotateSpeed += 0.05;
-            setTimeout(increaseSpeed, 100);
+          if (controlsRef.current && controlsRef.current.autoRotate) {
+            controlsRef.current.autoRotateSpeed = Math.min(
+              rotationSpeedRef.current,
+              controlsRef.current.autoRotateSpeed + 0.05
+            );
+            
+            if (controlsRef.current.autoRotateSpeed < rotationSpeedRef.current) {
+              setTimeout(increaseSpeed, 100);
+            }
           }
         };
         setTimeout(increaseSpeed, 100);
@@ -36,9 +42,6 @@ export function useAutoRotation(controlsRef: React.MutableRefObject<OrbitControl
           }
         };
         decreaseSpeed();
-      } else {
-        // Direct setting if no transition needed
-        controlsRef.current.autoRotate = enabled;
       }
       autoRotationEnabledRef.current = enabled;
     }
