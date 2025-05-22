@@ -30,8 +30,12 @@ const MarkersList = ({
   
   // Safe delete handler that prevents unwanted marker creation
   const handleDeleteMarker = (id: string) => {
+    // Set global flag to prevent map click events temporarily
+    window.preventMapClick = true;
+    
     // Prevent event propagation and default behavior
     onDeleteMarker(id);
+    
     // Clear any active DOM elements that might trigger marker creation
     setTimeout(() => {
       const activePopups = document.querySelectorAll('.leaflet-popup');
@@ -42,6 +46,11 @@ const MarkersList = ({
           console.error('Error removing popup:', e);
         }
       });
+      
+      // Reset preventMapClick flag after a short delay
+      setTimeout(() => {
+        window.preventMapClick = false;
+      }, 500);
     }, 0);
   };
   

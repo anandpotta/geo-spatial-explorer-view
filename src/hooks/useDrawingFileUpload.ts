@@ -10,9 +10,13 @@ export function useDrawingFileUpload() {
   const handleUploadToDrawing = (drawingId: string, file: File) => {
     console.log(`Processing upload for drawing ${drawingId}, file: ${file.name}`);
     
+    // Set preventMapClick flag to avoid unwanted marker creation
+    window.preventMapClick = true;
+    
     const currentUser = getCurrentUser();
     if (!currentUser) {
       toast.error('Please log in to upload files');
+      window.preventMapClick = false; // Reset flag
       return;
     }
     
@@ -22,11 +26,13 @@ export function useDrawingFileUpload() {
     // Check file type and size
     if (!fileType.startsWith('image/') && fileType !== 'application/pdf') {
       toast.error('Please upload an image or PDF file');
+      window.preventMapClick = false; // Reset flag
       return;
     }
     
     if (file.size > 10 * 1024 * 1024) { // 10MB limit
       toast.error('File size should be less than 10MB');
+      window.preventMapClick = false; // Reset flag
       return;
     }
     
@@ -71,7 +77,8 @@ export function useDrawingFileUpload() {
                   // Force redraw
                   setTimeout(() => {
                     window.dispatchEvent(new Event('resize'));
-                  }, 50);
+                    window.preventMapClick = false; // Reset flag after success
+                  }, 300);
                 } else if (attempts < maxAttempts) {
                   attempts++;
                   console.log(`Failed to apply mask, retrying (${attempts}/${maxAttempts})...`);
@@ -79,6 +86,7 @@ export function useDrawingFileUpload() {
                 } else {
                   console.error('Could not apply image to drawing after multiple attempts');
                   toast.error('Could not apply image to drawing');
+                  window.preventMapClick = false; // Reset flag
                 }
               } else if (attempts < maxAttempts) {
                 attempts++;
@@ -87,6 +95,7 @@ export function useDrawingFileUpload() {
               } else {
                 console.error('Path element not found for ID after multiple attempts:', drawingId);
                 toast.error('Could not find the drawing on the map');
+                window.preventMapClick = false; // Reset flag
               }
             } catch (err) {
               console.error('Error applying image to path:', err);
@@ -95,12 +104,15 @@ export function useDrawingFileUpload() {
                 setTimeout(tryApplyMask, 300 * attempts);
               } else {
                 toast.error('Failed to apply image to drawing');
+                window.preventMapClick = false; // Reset flag
               }
             }
           };
           
           // Start the retry process
           setTimeout(tryApplyMask, 100);
+        } else {
+          window.preventMapClick = false; // Reset flag on failure
         }
       }
     };
@@ -108,6 +120,7 @@ export function useDrawingFileUpload() {
     reader.onerror = () => {
       console.error('Error reading file');
       toast.error('Failed to read the file');
+      window.preventMapClick = false; // Reset flag on error
     };
     
     reader.readAsDataURL(file);

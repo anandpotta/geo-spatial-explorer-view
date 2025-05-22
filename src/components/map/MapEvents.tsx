@@ -16,13 +16,21 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
-      // Ignore clicks on markers or popups
+      // Ignore clicks on markers, popups, or SVG paths
       if (
         e.originalEvent.target &&
         ((e.originalEvent.target as HTMLElement).closest('.leaflet-marker-icon') ||
-         (e.originalEvent.target as HTMLElement).closest('.leaflet-popup'))
+         (e.originalEvent.target as HTMLElement).closest('.leaflet-popup') ||
+         (e.originalEvent.target as HTMLElement).closest('path') ||
+         (e.originalEvent.target as HTMLElement).tagName === 'path' ||
+         (e.originalEvent.target as HTMLElement).tagName === 'svg' ||
+         // Also ignore clicks on upload buttons or image controls
+         (e.originalEvent.target as HTMLElement).closest('.upload-button-container') ||
+         (e.originalEvent.target as HTMLElement).closest('.upload-button-wrapper') ||
+         (e.originalEvent.target as HTMLElement).closest('.image-controls-container') ||
+         (e.originalEvent.target as HTMLElement).closest('.image-controls-wrapper'))
       ) {
-        console.log('Click on marker or popup ignored');
+        console.log('Click on marker, popup, path or control ignored');
         return;
       }
       
