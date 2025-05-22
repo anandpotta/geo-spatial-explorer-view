@@ -94,6 +94,9 @@ export function useFlyToLocation(
     // Position camera in space looking at Earth 
     const outerPosition = new THREE.Vector3().copy(directionToTarget).multiplyScalar(startDistance);
     
+    // Define the final camera position based on the target and the final distance
+    const finalPosition = new THREE.Vector3().copy(directionToTarget).multiplyScalar(finalDistance);
+    
     // Ensure controls target is not null
     if (!controlsRef.current.target) {
       console.error("OrbitControls target is null");
