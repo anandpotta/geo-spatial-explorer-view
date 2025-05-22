@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for working with SVG paths
  */
@@ -101,63 +100,81 @@ export const clearAllMapSvgElements = (map: any): void => {
     
     console.log('Clearing all SVG elements from map container');
     
-    // Clear SVG paths
-    const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
-    svgLayers.forEach(svg => {
-      // Clear all paths that aren't tile boundaries
-      const paths = svg.querySelectorAll('path');
-      paths.forEach(path => {
-        // Check if it's not a tile boundary path before removing
-        if (!path.classList.contains('leaflet-tile-boundary')) {
+    // Clear all SVG elements from all potential Leaflet panes
+    const allPanes = container.querySelectorAll('.leaflet-pane');
+    allPanes.forEach(pane => {
+      // Target all SVG elements in each pane
+      const svgElements = pane.querySelectorAll('svg');
+      svgElements.forEach(svg => {
+        // Clear all paths
+        svg.querySelectorAll('path').forEach(path => {
           if (path.parentNode) {
             path.parentNode.removeChild(path);
           }
+        });
+        
+        // Clear image elements (floor plans, etc.)
+        svg.querySelectorAll('image').forEach(img => {
+          if (img.parentNode) {
+            img.parentNode.removeChild(img);
+          }
+        });
+        
+        // Clear any other potential SVG elements
+        svg.querySelectorAll('g, rect, circle, polygon, polyline').forEach(element => {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        });
+        
+        // Clear clip paths
+        svg.querySelectorAll('clipPath').forEach(clipPath => {
+          if (clipPath.parentNode) {
+            clipPath.parentNode.removeChild(clipPath);
+          }
+        });
+        
+        // Clear defs elements that might contain clip paths
+        svg.querySelectorAll('defs').forEach(def => {
+          if (def.parentNode) {
+            def.parentNode.removeChild(def);
+          }
+        });
+      });
+      
+      // Clear marker images directly
+      pane.querySelectorAll('.leaflet-marker-icon, .leaflet-marker-shadow').forEach(marker => {
+        if (marker.parentNode) {
+          marker.parentNode.removeChild(marker);
         }
       });
       
-      // Clear image elements (floor plans, etc.)
-      const images = svg.querySelectorAll('image');
-      images.forEach(img => {
-        if (img.parentNode) {
-          img.parentNode.removeChild(img);
-        }
-      });
-      
-      // Clear clip paths
-      const clipPaths = svg.querySelectorAll('clipPath');
-      clipPaths.forEach(clipPath => {
-        if (clipPath.parentNode) {
-          clipPath.parentNode.removeChild(clipPath);
-        }
-      });
-      
-      // Clear defs elements that might contain clip paths
-      const defs = svg.querySelectorAll('defs');
-      defs.forEach(def => {
-        if (def.parentNode) {
-          def.parentNode.removeChild(def);
-        }
+      // Clear any zoom-animated elements that might contain paths
+      pane.querySelectorAll('.leaflet-zoom-animated').forEach(element => {
+        // Only remove children, keep the container
+        Array.from(element.children).forEach(child => {
+          // Type check to fix TypeScript error
+          if (child instanceof Element) {
+            element.removeChild(child);
+          }
+        });
       });
     });
     
-    // Remove any other custom overlays
-    const overlayPanes = container.querySelectorAll('.leaflet-overlay-pane, .leaflet-marker-pane');
-    overlayPanes.forEach(pane => {
-      // Preserve the pane itself but clear contents except SVG elements (already handled)
-      Array.from(pane.children).forEach(child => {
-        // Add type checking to fix the TypeScript error
-        if (child instanceof Element && child.tagName !== 'SVG') {
-          pane.removeChild(child);
-        }
+    // Double check for any remaining SVG elements in the overlay pane
+    const overlayPane = container.querySelector('.leaflet-overlay-pane');
+    if (overlayPane) {
+      Array.from(overlayPane.children).forEach(child => {
+        overlayPane.removeChild(child);
       });
-    });
+    }
     
-    // Clear the vector layers
-    const vectorPane = container.querySelector('.leaflet-vector-pane');
-    if (vectorPane) {
-      while (vectorPane.firstChild) {
-        vectorPane.removeChild(vectorPane.firstChild);
-      }
+    // Ensure the marker pane is also cleared
+    const markerPane = container.querySelector('.leaflet-marker-pane');
+    if (markerPane) {
+      Array.from(markerPane.children).forEach(child => {
+        markerPane.removeChild(child);
+      });
     }
     
     // Reset all paths in the map object directly
@@ -176,6 +193,20 @@ export const clearAllMapSvgElements = (map: any): void => {
     console.log('Dispatching SVG paths cleared events');
     window.dispatchEvent(new Event('svgPathsCleared'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
+    
+    // Add a slight delay then refresh the map
+    setTimeout(() => {
+      try {
+        if (map.invalidateSize) {
+          map.invalidateSize({ pan: false });
+        }
+        if (map._resetView && map.getCenter && map.getZoom) {
+          map._resetView(map.getCenter(), map.getZoom(), true);
+        }
+      } catch (e) {
+        console.error('Error refreshing map after clearing elements:', e);
+      }
+    }, 50);
   } catch (err) {
     console.error('Error clearing SVG elements from map:', err);
   }

@@ -19,46 +19,49 @@ export function useClearAllOperation(onClearAll?: () => void) {
       }
     };
     
-    // Handle Leaflet Draw specific clear all action
-    const handleLeafletClearAction = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      
-      // Enhanced check for clear all layers button
-      if (target && target.tagName === 'A') {
-        // Check if this is the clear all button in Leaflet draw actions
-        const isDrawActionsParent = 
-          target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions');
+    // Centralized handler for all clear all actions
+    const handleClearAllClick = (e: MouseEvent | Event) => {
+      // Handle click event
+      if (e instanceof MouseEvent) {
+        const target = e.target as HTMLElement;
         
-        const isClearAllButton = 
-          target.textContent?.includes('Clear all') || 
-          target.textContent?.includes('Delete') ||
-          target.textContent?.trim() === 'Clear All';
-        
-        if (isDrawActionsParent && isClearAllButton) {
-          console.log('Leaflet draw clear all layers button clicked');
-          e.preventDefault();
-          e.stopPropagation();
+        // Check for Leaflet draw clear all button
+        if (target && target.tagName === 'A') {
+          // Check if this is the clear all button in Leaflet draw actions
+          const isDrawActionsParent = 
+            target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions');
           
-          // Instead of dispatching an event, directly show confirmation
-          if (isAuthenticated) {
-            setShowConfirmation(true);
-          } else {
-            toast.error('Please log in to clear drawings');
+          const isClearAllButton = 
+            target.textContent?.includes('Clear all') || 
+            target.textContent?.includes('Delete') ||
+            target.textContent?.trim() === 'Clear All';
+          
+          if (isDrawActionsParent && isClearAllButton) {
+            console.log('Leaflet draw clear all layers button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Show confirmation if authenticated
+            if (isAuthenticated) {
+              setShowConfirmation(true);
+            } else {
+              toast.error('Please log in to clear drawings');
+            }
+            
+            // Prevent other handlers from running
+            return false;
           }
-          
-          // Return false to prevent the original action
-          return false;
         }
       }
     };
     
-    // Capture all click events to detect Leaflet clear action
-    document.addEventListener('click', handleLeafletClearAction, true);
+    // Use capture phase to intercept early
+    document.addEventListener('click', handleClearAllClick, true);
     window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
+      document.removeEventListener('click', handleClearAllClick, true);
       window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
-      document.removeEventListener('click', handleLeafletClearAction, true);
     };
   }, [isAuthenticated]);
   

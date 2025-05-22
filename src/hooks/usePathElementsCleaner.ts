@@ -36,8 +36,8 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
       }
     };
 
-    // We'll remove this handler to prevent duplicate confirmation dialogs
-    // The clear button handling is now fully managed by useClearAllOperation.ts
+    // We've removed the duplicate handler for leaflet-draw-edit-remove here
+    // Clear button handling is now fully centralized in useClearAllOperation.ts
     
     window.addEventListener('userLoggedOut', handleUserLogout);
     window.addEventListener('userChanged', handleUserChange);
