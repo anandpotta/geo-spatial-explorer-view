@@ -46,7 +46,7 @@ export function clearAllMapData(options: {
     cleared = true;
   }
   
-  // Restore auth data if preserved
+  // Restore auth data if preserved and restore function is available
   if (restoreAuthFn && typeof restoreAuthFn === 'function') {
     restoreAuthFn();
   }
