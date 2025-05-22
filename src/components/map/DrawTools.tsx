@@ -44,6 +44,31 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
+  // Set window.featureGroup to make it available to other components
+  useEffect(() => {
+    if (featureGroup) {
+      window.featureGroup = featureGroup;
+      
+      // Make sure the edit/delete controls are active when needed
+      if (featureGroup.getLayers().length > 0) {
+        console.log('Layers present, activating edit/delete controls');
+        const map = (featureGroup as any)._map;
+        if (map) {
+          // Force edit controls to update
+          setTimeout(() => {
+            map.fire('draw:created');
+          }, 100);
+        }
+      }
+    }
+    
+    return () => {
+      if (window.featureGroup === featureGroup) {
+        window.featureGroup = undefined;
+      }
+    };
+  }, [featureGroup]);
+
   // Enhanced listener for the leafletClearAllRequest custom event
   useEffect(() => {
     console.log('Setting up leafletClearAllRequest event listener in DrawTools');
@@ -85,6 +110,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       
       // Trigger Leaflet's draw:deleted event
       (featureGroup as any)._map.fire('draw:deleted');
+      // Trigger editStop to ensure the edit toolbar is updated
+      (featureGroup as any)._map.fire('draw:editstop');
     }
     
     // Clear path elements and saved paths

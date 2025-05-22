@@ -181,6 +181,7 @@ export const clearAllMapSvgElements = (map: any): void => {
         console.log(`Removing ${defs.length} defs elements`);
         defs.forEach(def => {
           try {
+            def.innerHTML = ''; // Clear contents first
             def.parentNode?.removeChild(def);
           } catch (err) {
             console.warn('Error removing defs:', err);
@@ -195,11 +196,31 @@ export const clearAllMapSvgElements = (map: any): void => {
             // Only remove groups with our custom elements
             if (group.querySelector('image, clipPath, path:not(.leaflet-tile-boundary)')) {
               group.parentNode?.removeChild(group);
+            } else {
+              // For other groups, clear their contents
+              group.innerHTML = '';
             }
           } catch (err) {
             console.warn('Error removing group:', err);
           }
         });
+        
+        // Clear all user-added elements (more aggressive approach)
+        svg.innerHTML = '';
+        // Re-add essential elements if needed
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.classList.add('leaflet-tile-container');
+        svg.appendChild(g);
+      });
+      
+      // Also check for and remove any marker divs
+      const markerDivs = pane.querySelectorAll('.leaflet-marker-icon, .leaflet-marker-shadow');
+      markerDivs.forEach(div => {
+        try {
+          div.parentNode?.removeChild(div);
+        } catch (err) {
+          console.warn('Error removing marker div:', err);
+        }
       });
     });
     
@@ -232,6 +253,10 @@ export const clearAllMapSvgElements = (map: any): void => {
       setTimeout(() => {
         try {
           map.invalidateSize({ animate: false });
+          
+          // Also fire these events after slight delay to ensure complete redraw
+          map.fire('draw:deleted');
+          map.fire('draw:editstop');
         } catch (err) {
           console.warn('Error invalidating map size:', err);
         }

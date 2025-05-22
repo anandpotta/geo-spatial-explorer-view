@@ -24,6 +24,8 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       // Trigger the leaflet draw deleted event to ensure all handlers are notified
       console.log('Triggering draw:deleted event');
       map.fire('draw:deleted');
+      // Trigger editStop to ensure the edit toolbar is updated
+      map.fire('draw:editstop');
     } else {
       // Fallback if map instance not available
       console.log('No map instance found, using event to clear paths');

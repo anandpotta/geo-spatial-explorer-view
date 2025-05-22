@@ -14,7 +14,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
   // Listen for the custom leafletClearAllRequest event with improved logging
   useEffect(() => {
     const handleLeafletClearRequest = () => {
-      console.log('Leaflet clear all request received!');
+      console.log('Leaflet clear all request received in useClearAllOperation!');
       
       // Only show the dialog if it's not already visible
       if (!dialogVisibleRef.current) {
@@ -62,30 +62,25 @@ export function useClearAllOperation(onClearAll?: () => void) {
       
       // Aggressively clear localStorage to ensure everything is gone
       console.log('Clearing local storage items');
-      localStorage.removeItem('svgPaths');
-      localStorage.removeItem('savedDrawings');
-      localStorage.removeItem('savedMarkers');
-      localStorage.removeItem('floorPlans');
       
       // Preserve authentication data
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
       
-      // Force clear all drawing-related data
+      // Force clear all non-auth data
       const keysToPreserve = ['geospatial_auth_state', 'geospatial_users'];
-      const keysToRemove = [];
       
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && !keysToPreserve.includes(key) && 
-            (key.includes('drawing') || key.includes('map') || 
-             key.includes('path') || key.includes('marker') || 
-             key.includes('floor') || key.includes('svg'))) {
-          keysToRemove.push(key);
+      Object.keys(localStorage).forEach(key => {
+        if (!keysToPreserve.includes(key)) {
+          localStorage.removeItem(key);
         }
-      }
+      });
       
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      // Explicitly clear specific items to ensure they're gone
+      localStorage.removeItem('svgPaths');
+      localStorage.removeItem('savedDrawings');
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('floorPlans');
       
       // Restore authentication data if it was removed
       if (authState) localStorage.setItem('geospatial_auth_state', authState);
@@ -103,26 +98,19 @@ export function useClearAllOperation(onClearAll?: () => void) {
       if ((featureGroup as any)._map) {
         console.log('Triggering map refresh');
         (featureGroup as any)._map.fire('draw:deleted');
+        // Trigger editStop to ensure the edit toolbar is updated
+        (featureGroup as any)._map.fire('draw:editstop');
       }
     } else {
       // Fallback if featureGroup is not available
       console.warn('Feature group not available for clear operation, using localStorage fallback');
+      
       // Preserve authentication data
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
       
       // Clear all non-auth storage
-      const keysToPreserve = ['geospatial_auth_state', 'geospatial_users'];
-      const keysToRemove = [];
-      
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && !keysToPreserve.includes(key)) {
-          keysToRemove.push(key);
-        }
-      }
-      
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      localStorage.clear();
       
       // Restore authentication data
       if (authState) localStorage.setItem('geospatial_auth_state', authState);

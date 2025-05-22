@@ -38,55 +38,50 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
 
     // Enhanced detection for Leaflet Draw clear all action
     const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      console.log('Click detected on:', target?.tagName, target?.className, target?.textContent);
-      
-      // More comprehensive checks for the clear all layers button
-      if (target) {
-        // Direct check for the clear all text content
-        if (target.textContent?.trim() === 'Clear all layers') {
-          console.log('CLEAR ALL LAYERS TEXT CLICKED!');
-          e.preventDefault();
-          e.stopPropagation();
-          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-          return;
-        }
+      if (!e.target) return;
 
-        // Direct check for the parent <a> element
-        if (target.tagName === 'A' && target.textContent?.trim() === 'Clear all layers') {
+      const target = e.target as HTMLElement;
+      const targetText = target.textContent?.trim();
+      
+      // Detect clicks on the clear all layers button with expanded detection
+      if (target.tagName === 'A' || target.parentElement?.tagName === 'A') {
+        const linkElement = target.tagName === 'A' ? target : target.parentElement;
+        if (linkElement?.textContent?.includes('Clear all layers')) {
           console.log('CLEAR ALL LAYERS LINK CLICKED!');
           e.preventDefault();
           e.stopPropagation();
           window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
           return;
         }
-        
-        // Check if clicked inside the edit-remove section
-        const editRemove = target.closest('.leaflet-draw-edit-remove');
-        if (editRemove) {
-          console.log('Clicked inside edit-remove section');
-          
-          // Find and check all anchor elements inside the edit-remove section
-          const anchors = editRemove.querySelectorAll('a');
-          anchors.forEach(anchor => {
-            if (anchor.textContent?.trim() === 'Clear all layers' || 
-                anchor.title === 'Clear all layers') {
-              console.log('Found Clear all layers link in edit-remove section!');
-              
-              // Check if the target is this anchor or a descendant
-              if (anchor.contains(target) || target === anchor) {
-                console.log('TRIGGERING CLEAR ALL REQUEST!');
-                e.preventDefault();
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-                return;
-              }
-            }
-          });
+      }
+
+      // Check parent elements up to 3 levels for "Clear all layers" text
+      let currentEl: HTMLElement | null = target;
+      for (let i = 0; i < 3 && currentEl; i++) {
+        if (currentEl.textContent?.includes('Clear all layers')) {
+          console.log('CLEAR ALL LAYERS PARENT ELEMENT CLICKED!');
+          e.preventDefault();
+          e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+          return;
+        }
+        currentEl = currentEl.parentElement;
+      }
+
+      // Check if clicked element is within the edit-remove control
+      const editRemove = target.closest('.leaflet-draw-edit-remove');
+      if (editRemove) {
+        const clearAllButton = editRemove.querySelector('a[title*="Clear all"], a[title*="clear all"], a.leaflet-draw-edit-remove, .leaflet-draw-actions a');
+        if (clearAllButton && (target === clearAllButton || clearAllButton.contains(target))) {
+          console.log('CLEAR ALL BUTTON DETECTED WITHIN DRAW-EDIT-REMOVE!');
+          e.preventDefault();
+          e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
         }
       }
     };
     
+    // Track clicks on the document body for maximum detection coverage
     window.addEventListener('userLoggedOut', handleUserLogout);
     window.addEventListener('userChanged', handleUserChange);
     window.addEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
