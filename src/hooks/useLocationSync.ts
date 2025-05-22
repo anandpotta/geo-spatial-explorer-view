@@ -70,6 +70,98 @@ export function useLocationSync(
     }
   }, [map, isMapReady, selectedLocation, hasInitialPositioning]);
 
+  // Define processLocationChange function
+  function processLocationChange(map: L.Map, locationId: string, selectedLocation: Location) {
+    if (isUnmountedRef.current || !map) return;
+    
+    // Set transition state
+    transitionInProgressRef.current = true;
+    
+    // Update location reference and set fly in progress
+    console.log(`useLocationSync: Flying to location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
+    processedLocationRef.current = locationId;
+    flyInProgressRef.current = true;
+
+    try {
+      // Force map invalidation to ensure proper rendering
+      safeSetTimeout(() => {
+        if (!map || isUnmountedRef.current) return;
+        
+        console.log("useLocationSync: Invalidating map size");
+        map.invalidateSize(true);
+        
+        // Position the map at the selected location
+        const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
+        
+        // Use flyTo with animation for smoother experience
+        map.flyTo(newPosition, 14, {
+          animate: true,
+          duration: 1.5,
+          easeLinearity: 0.5
+        });
+        
+        // Add a marker after a short delay
+        safeSetTimeout(() => {
+          if (!map || isUnmountedRef.current) {
+            flyInProgressRef.current = false;
+            transitionInProgressRef.current = false;
+            return;
+          }
+
+          try {
+            // Clear existing markers to prevent cluttering
+            map.eachLayer((layer) => {
+              if (layer instanceof L.Marker) {
+                map.removeLayer(layer);
+              }
+            });
+
+            // Add a new marker at the precise location
+            const marker = L.marker(newPosition).addTo(map);
+            marker.bindPopup(
+              `<b>${selectedLocation.label || 'Selected Location'}</b><br>` +
+              `${selectedLocation.y.toFixed(6)}, ${selectedLocation.x.toFixed(6)}`
+            ).openPopup();
+            
+            // Reset the transition flags
+            safeSetTimeout(() => {
+              flyInProgressRef.current = false;
+              transitionInProgressRef.current = false;
+              if (!isUnmountedRef.current) {
+                setHasInitialPositioning(true);
+              }
+            }, 300);
+            
+            if (!isUnmountedRef.current) {
+              toast({
+                title: "Location Found",
+                description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(4)}, ${newPosition[1].toFixed(4)}`,
+                duration: 3000,
+              });
+            }
+          } catch (err) {
+            console.error('Error adding location marker:', err);
+            flyInProgressRef.current = false;
+            transitionInProgressRef.current = false;
+          }
+        }, 500);
+      }, 200);
+    } catch (error) {
+      console.error('Error flying to location in Leaflet:', error);
+      flyInProgressRef.current = false;
+      transitionInProgressRef.current = false;
+      
+      if (!isUnmountedRef.current) {
+        toast({
+          title: "Navigation Error",
+          description: "Could not navigate to the selected location",
+          variant: "destructive",
+          duration: 3000,
+        });
+      }
+    }
+  }
+
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
     
@@ -103,7 +195,7 @@ export function useLocationSync(
         
         // Only process if component is still mounted
         if (!isUnmountedRef.current) {
-          processLocationChange();
+          processLocationChange(map, locationId, selectedLocation);
         }
       }, 1200);
       
@@ -116,7 +208,7 @@ export function useLocationSync(
       
       if (initialPositioningAttemptsRef.current > 3) {
         console.log(`useLocationSync: Multiple attempts (${initialPositioningAttemptsRef.current}) to position map, forcing approach`);
-        // Force a delay and retry with basic approach if we're having trouble
+        // Force a delay and retry with basic approach
         safeSetTimeout(() => {
           if (map && !isUnmountedRef.current) {
             try {
@@ -133,98 +225,7 @@ export function useLocationSync(
       }
     }
 
-    // Define processLocationChange function inside the useEffect to access the variables in scope
-    function processLocationChange() {
-      if (isUnmountedRef.current || !map) return;
-      
-      // Set transition state
-      transitionInProgressRef.current = true;
-      
-      // Update location reference and set fly in progress
-      console.log(`useLocationSync: Flying to location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
-      processedLocationRef.current = locationId;
-      flyInProgressRef.current = true;
-
-      try {
-        // Force map invalidation to ensure proper rendering
-        safeSetTimeout(() => {
-          if (!map || isUnmountedRef.current) return;
-          
-          console.log("useLocationSync: Invalidating map size");
-          map.invalidateSize(true);
-          
-          // Position the map at the selected location
-          const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
-          
-          // Use flyTo with animation for smoother experience
-          map.flyTo(newPosition, 14, {
-            animate: true,
-            duration: 1.5,
-            easeLinearity: 0.5
-          });
-          
-          // Add a marker after a short delay
-          safeSetTimeout(() => {
-            if (!map || isUnmountedRef.current) {
-              flyInProgressRef.current = false;
-              transitionInProgressRef.current = false;
-              return;
-            }
-
-            try {
-              // Clear existing markers to prevent cluttering
-              map.eachLayer((layer) => {
-                if (layer instanceof L.Marker) {
-                  map.removeLayer(layer);
-                }
-              });
-
-              // Add a new marker at the precise location
-              const marker = L.marker(newPosition).addTo(map);
-              marker.bindPopup(
-                `<b>${selectedLocation.label || 'Selected Location'}</b><br>` +
-                `${selectedLocation.y.toFixed(6)}, ${selectedLocation.x.toFixed(6)}`
-              ).openPopup();
-              
-              // Reset the transition flags
-              safeSetTimeout(() => {
-                flyInProgressRef.current = false;
-                transitionInProgressRef.current = false;
-                if (!isUnmountedRef.current) {
-                  setHasInitialPositioning(true);
-                }
-              }, 300);
-              
-              if (!isUnmountedRef.current) {
-                toast({
-                  title: "Location Found",
-                  description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(4)}, ${newPosition[1].toFixed(4)}`,
-                  duration: 3000,
-                });
-              }
-            } catch (err) {
-              console.error('Error adding location marker:', err);
-              flyInProgressRef.current = false;
-              transitionInProgressRef.current = false;
-            }
-          }, 500);
-        }, 200);
-      } catch (error) {
-        console.error('Error flying to location in Leaflet:', error);
-        flyInProgressRef.current = false;
-        transitionInProgressRef.current = false;
-        
-        if (!isUnmountedRef.current) {
-          toast({
-            title: "Navigation Error",
-            description: "Could not navigate to the selected location",
-            variant: "destructive",
-            duration: 3000,
-          });
-        }
-      }
-    }
-    
-    processLocationChange();
+    // Process the location change
+    processLocationChange(map, locationId, selectedLocation);
   }, [selectedLocation, map, isMapReady, hasInitialPositioning]);
 }

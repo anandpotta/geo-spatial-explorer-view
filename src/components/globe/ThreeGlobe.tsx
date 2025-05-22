@@ -23,6 +23,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const initializationAttemptedRef = useRef(false);
   const isUnmountedRef = useRef(false);
   const readyCallbackFiredRef = useRef(false);
+  const flyCompletionTimerRef = useRef<number | null>(null);
   
   // Initialize globe only once
   const globeAPI = useThreeGlobe(containerRef, () => {
@@ -72,10 +73,21 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     console.log("ThreeGlobe: Fly animation complete, notifying parent");
     setIsFlying(false);
     
-    if (onFlyComplete) {
-      console.log("ThreeGlobe: Calling onFlyComplete callback");
-      onFlyComplete();
+    // Cancel any pending completion timer
+    if (flyCompletionTimerRef.current !== null) {
+      clearTimeout(flyCompletionTimerRef.current);
     }
+    
+    // Set a small delay to ensure animation is fully complete
+    flyCompletionTimerRef.current = window.setTimeout(() => {
+      if (isUnmountedRef.current) return;
+      
+      if (onFlyComplete) {
+        console.log("ThreeGlobe: Calling onFlyComplete callback with slight delay");
+        onFlyComplete();
+      }
+      flyCompletionTimerRef.current = null;
+    }, 300);
   }, [onFlyComplete]);
   
   // Handle location changes
@@ -135,6 +147,11 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     
     // Cleanup function - cancel flights if component unmounts during flight
     return () => {
+      if (flyCompletionTimerRef.current !== null) {
+        clearTimeout(flyCompletionTimerRef.current);
+        flyCompletionTimerRef.current = null;
+      }
+      
       if (isFlying && globeAPI.cancelFlight) {
         globeAPI.cancelFlight();
       }
@@ -147,6 +164,10 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       isUnmountedRef.current = true;
       lastFlyLocationRef.current = null;
       initializationAttemptedRef.current = false;
+      
+      if (flyCompletionTimerRef.current !== null) {
+        clearTimeout(flyCompletionTimerRef.current);
+      }
       
       // Ensure any ongoing flights are canceled
       if (globeAPI.cancelFlight) {
@@ -168,7 +189,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       {/* Canvas will be added here by Three.js */}
       {isFlying && (
         <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-2 rounded-md animate-pulse">
-          <span className="text-sm">Navigating...</span>
+          <span className="text-sm">Navigating to {selectedLocation?.label}...</span>
         </div>
       )}
     </div>

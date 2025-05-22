@@ -47,7 +47,11 @@ const Index = () => {
   
   const handleLeafletMapRef = (map: any) => {
     leafletMapRef.current = map;
+    console.log('Leaflet map reference set', map ? 'successfully' : 'failed');
   };
+  
+  // Log state for debugging
+  console.log(`Index: Current view: ${currentView}, flyCompleted: ${flyCompleted}, has location: ${!!selectedLocation}`);
 
   return (
     <div className="h-screen flex">

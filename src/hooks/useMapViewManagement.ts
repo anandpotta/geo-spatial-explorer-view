@@ -19,14 +19,26 @@ export function useMapViewManagement(
   const preventRapidChangeTimerRef = useRef<number | null>(null);
   const lastSelectedLocationRef = useRef<Location | undefined>(undefined);
   const flyCompletedRef = useRef(flyCompleted);
-
+  const previousFlyCompletedRef = useRef(flyCompleted);
+  
+  // Debug log for state changes
+  console.log(`MapViewManagement: flyCompleted=${flyCompleted}, currentView=${currentView}, transition=${viewTransitionInProgressRef.current}`);
+  
   // Update the ref when flyCompleted changes
   useEffect(() => {
+    const wasCompleted = previousFlyCompletedRef.current;
+    previousFlyCompletedRef.current = flyCompleted;
     flyCompletedRef.current = flyCompleted;
+    
+    // Log when flyCompleted changes
+    if (wasCompleted !== flyCompleted && flyCompleted) {
+      console.log("MapViewManagement: Detected flyCompleted transition to true");
+    }
   }, [flyCompleted]);
 
   // Handle actual view change with state updates
   const changeView = (view: MapView) => {
+    console.log(`MapViewManagement: Changing view to ${view}`);
     setCurrentView(view);
     viewChangeInProgressRef.current = true;
     
@@ -68,7 +80,7 @@ export function useMapViewManagement(
       return;
     }
     
-    console.log(`Changing view to ${view}`);
+    console.log(`MapViewManagement: Manually changing view to ${view}`);
     
     // Set transition flags
     viewTransitionInProgressRef.current = true;
@@ -103,11 +115,19 @@ export function useMapViewManagement(
 
   // Schedule switching to leaflet after cesium fly completes
   useEffect(() => {
-    if (currentView === 'cesium' && selectedLocation && flyCompleted && !viewChangeInProgressRef.current) {
-      console.log(`MapViewManagement: Scheduling switch to leaflet view after fly completion with location ${selectedLocation.label}`);
+    // Only proceed if all required conditions are met
+    if (
+      currentView === 'cesium' && 
+      selectedLocation && 
+      flyCompleted && 
+      !viewChangeInProgressRef.current &&
+      !viewTransitionInProgressRef.current
+    ) {
+      console.log(`MapViewManagement: Auto-switching to leaflet view after fly completion with location ${selectedLocation.label}`);
       
-      // Set the view change flag to prevent rapid toggling
+      // Set the view change flags to prevent rapid toggling
       viewChangeInProgressRef.current = true;
+      viewTransitionInProgressRef.current = true;
       
       // Clear any existing pending view change
       if (pendingViewChangeTimerRef.current) {
@@ -126,15 +146,20 @@ export function useMapViewManagement(
         
         // Add a small delay then trigger a Leaflet refresh
         window.setTimeout(() => {
-          console.log("MapViewManagement: Triggering Leaflet refresh after view change");
+          console.log("MapViewManagement: Triggering Leaflet refresh after auto view change");
           setLeafletRefreshTrigger(prev => prev + 1);
           
-          // Reset the view change flag after transition completes
+          // Reset the transition flag after transition completes
           window.setTimeout(() => {
-            viewChangeInProgressRef.current = false;
-          }, 1000);
+            viewTransitionInProgressRef.current = false;
+            
+            // Reset the view change flag after a longer delay
+            window.setTimeout(() => {
+              viewChangeInProgressRef.current = false;
+            }, 1000);
+          }, 500);
         }, 700);
-      }, 800); // Slightly shorter delay for more responsive UI
+      }, 500); // Slightly shorter delay for more responsive UI
     }
   }, [currentView, selectedLocation, flyCompleted]);
 

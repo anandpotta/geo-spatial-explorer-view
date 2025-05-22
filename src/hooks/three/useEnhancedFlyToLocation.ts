@@ -16,6 +16,7 @@ export function useEnhancedFlyToLocation(
 ) {
   // Refs
   const internalFlyingRef = useRef<boolean>(false);
+  const completedCallbackRef = useRef<(() => void) | undefined>(undefined);
   
   // Determine which ref to use for tracking flying state
   const isFlyingRef = externalFlyingRef || internalFlyingRef;
@@ -36,8 +37,24 @@ export function useEnhancedFlyToLocation(
       // Cancel any ongoing flights when component unmounts
       cancelFlight();
       isFlyingRef.current = false;
+      completedCallbackRef.current = undefined;
     };
   }, [cancelFlight]);
+  
+  // Watch animation state and trigger callback when animation finishes
+  useEffect(() => {
+    if (!animationInProgressRef.current && isFlyingRef.current && completedCallbackRef.current) {
+      const callback = completedCallbackRef.current;
+      // Reset state before calling callback to prevent infinite loops
+      isFlyingRef.current = false;
+      completedCallbackRef.current = undefined;
+      
+      // Call the callback after a small delay to ensure everything is settled
+      setTimeout(() => {
+        if (callback) callback();
+      }, 100);
+    }
+  }, [animationInProgressRef.current, isFlyingRef]);
   
   // Wrap the flyToLocation to handle auto-rotation and flying state
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
@@ -47,30 +64,26 @@ export function useEnhancedFlyToLocation(
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
     
+    // Store the callback for later
+    completedCallbackRef.current = onComplete;
+    
     // Log the navigation attempt
     console.log(`EnhancedFlyToLocation: Flying to ${latitude}, ${longitude}`);
     
     // Temporarily disable auto-rotation for smoother flight
     setAutoRotation(false);
     
-    // Call the original flyToLocation
+    // Call the original flyToLocation with an internal callback
     flyToLocation(longitude, latitude, () => {
-      // Mark flying as complete
-      isFlyingRef.current = false;
+      // This will be called when the flight animation completes
+      console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
       
-      // Small delay before re-enabling rotation for smoother transition
+      // Re-enable auto-rotation with a smooth start after a delay
       setTimeout(() => {
-        // Re-enable auto-rotation with a smooth start
         setAutoRotation(true);
-        
-        console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
-        
-        // Ensure the onComplete callback is called
-        if (onComplete) {
-          console.log("EnhancedFlyToLocation: Calling onComplete callback");
-          onComplete();
-        }
       }, 500);
+      
+      // The main callback will be called through the effect watching animationInProgressRef
     });
   }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight]);
   

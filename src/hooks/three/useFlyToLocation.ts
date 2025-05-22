@@ -41,8 +41,9 @@ export function useFlyToLocation(
     }
     
     // Convert lat/long to 3D coordinates
+    // Note: Adjusted phi calculation for correct latitude mapping
     const phi = (90 - latitude) * (Math.PI / 180);
-    const theta = (longitude + 180) * (Math.PI / 180);
+    const theta = (longitude) * (Math.PI / 180); // Removed +180 to correctly orient
     
     // Calculate the point on the globe's surface
     const targetX = -globeRadius * Math.sin(phi) * Math.cos(theta);
@@ -80,7 +81,7 @@ export function useFlyToLocation(
     
     // Set the target to be slightly closer to the surface for better viewing
     // This makes the camera look at the actual surface location
-    const finalTarget = new THREE.Vector3(targetX * 0.9, targetY * 0.9, targetZ * 0.9);
+    const finalTarget = target.clone().multiplyScalar(0.9);
     
     // Temporarily disable auto-rotation and damping during transition for precision
     const wasAutoRotating = controlsRef.current.autoRotate;

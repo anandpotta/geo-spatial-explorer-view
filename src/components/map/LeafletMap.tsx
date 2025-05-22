@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
@@ -12,7 +13,7 @@ interface LeafletMapProps {
   onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
   onClearAll?: () => void;
-  isMapReady?: boolean; // Add this new prop
+  isMapReady?: boolean;
 }
 
 const LeafletMap: React.FC<LeafletMapProps> = ({
@@ -20,14 +21,17 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   onMapReady,
   activeTool = null,
   onClearAll,
-  isMapReady: parentIsMapReady = false // Add this new prop with default value
+  isMapReady: parentIsMapReady = false
 }) => {
   const { 
     mapRef,
     mapInstanceKey,
-    isMapReady,
+    isMapReady: internalMapReady,
     handleSetMapRef
   } = useMapInitialization(selectedLocation);
+  
+  // Combine parent and internal map ready states
+  const isMapReady = parentIsMapReady && internalMapReady;
   
   // Track last processed location
   const lastLocationRef = useRef<string | null>(null);
@@ -35,7 +39,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const [viewStable, setViewStable] = useState(false);
   
   // Use our enhanced useLocationSync hook to handle location changes
-  useLocationSync(mapRef.current, selectedLocation, parentIsMapReady);
+  useLocationSync(mapRef.current, selectedLocation, isMapReady);
   
   const [position, setPosition] = useState<[number, number]>([0, 0]);
   const [zoom, setZoom] = useState<number>(2);
@@ -43,6 +47,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
   const [markerName, setMarkerName] = useState<string>("");
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('pin');
+  
+  // Log when props change
+  useEffect(() => {
+    console.log(`LeafletMap: props updated - selectedLocation=${!!selectedLocation}, isMapReady=${isMapReady}`);
+  }, [selectedLocation, isMapReady]);
   
   // Load saved markers on component mount
   useEffect(() => {
@@ -71,7 +80,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   
   // When the map is ready, handle stabilization and notify the parent
   useEffect(() => {
-    if (isMapReady && mapRef.current) {
+    if (internalMapReady && mapRef.current) {
       // Set stability after a short delay to ensure proper rendering
       if (viewStabilizationTimerRef.current) {
         window.clearTimeout(viewStabilizationTimerRef.current);
@@ -93,6 +102,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       
       // Call the parent's onMapReady callback
       if (onMapReady) {
+        console.log('LeafletMap: Calling parent onMapReady with map instance');
         onMapReady(mapRef.current);
       }
       
@@ -102,6 +112,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       
       // Force the map to update its size
       mapRef.current.invalidateSize(true);
+      
+      // If we have a selected location, fly to it
+      if (selectedLocation && viewStable) {
+        console.log('LeafletMap: Flying to selected location after stabilization');
+        mapRef.current.setView([selectedLocation.y, selectedLocation.x], 14, {
+          animate: true
+        });
+      }
     }
     
     // Cleanup
@@ -111,7 +129,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         viewStabilizationTimerRef.current = null;
       }
     };
-  }, [isMapReady, mapRef, onMapReady]);
+  }, [internalMapReady, mapRef, onMapReady, selectedLocation, viewStable]);
 
   const handleMapClick = (latlng: any) => {
     setTempMarker([latlng.lat, latlng.lng]);
@@ -182,7 +200,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         activeTool={activeTool}
         onRegionClick={handleRegionClick}
         onClearAll={onClearAll}
-        isMapReady={isMapReady}
+        isMapReady={internalMapReady}
       />
     </div>
   );
