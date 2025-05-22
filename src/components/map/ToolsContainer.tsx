@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import DrawingTools from '@/components/DrawingTools';
 import DrawingToolHandler from '../explorer/map/DrawingToolHandler';
 import MapTools from '../explorer/map/MapTools';
+import { initializeLeafletDrawComplete } from '@/utils/leaflet-draw-initializer';
 
 interface ToolsContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -29,20 +30,26 @@ const ToolsContainer: React.FC<ToolsContainerProps> = ({
   onResetView,
   onClearAll
 }) => {
-  // Force Leaflet Draw to be loaded when the component mounts
+  // Initialize Leaflet Draw when the component mounts
   useEffect(() => {
-    // Ensure leaflet-draw is loaded by checking if L.Control.Draw exists
-    const ensureLeafletDrawLoaded = () => {
-      const L = window.L;
-      if (L && !L.Control.Draw) {
-        console.warn("Leaflet Draw not detected, trying to load it");
-        import('leaflet-draw').catch(err => {
-          console.error("Failed to load leaflet-draw:", err);
-        });
+    // Make sure leaflet-draw is properly initialized
+    const initializeDrawingTools = async () => {
+      console.log("ToolsContainer: Initializing Leaflet Draw");
+      
+      try {
+        // Import leaflet-draw
+        await import('leaflet-draw');
+        
+        // Initialize Leaflet Draw
+        initializeLeafletDrawComplete();
+        
+        console.log("ToolsContainer: Leaflet Draw initialized successfully");
+      } catch (err) {
+        console.error("Failed to initialize Leaflet Draw:", err);
       }
     };
     
-    ensureLeafletDrawLoaded();
+    initializeDrawingTools();
   }, []);
   
   return (

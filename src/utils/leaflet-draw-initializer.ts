@@ -8,13 +8,24 @@ export const initializeLeafletDraw = () => {
     // Check if L.Control.Draw is already available
     if (L && !L.Control.Draw) {
       console.warn("L.Control.Draw not found, attempting to initialize");
-      // Try to ensure leaflet-draw is loaded
-      // We need to re-require leaflet-draw here to ensure it's loaded
-      require('leaflet-draw');
+      
+      // Define L.Control.Draw if it doesn't exist
+      if (L.Control && !L.Control.Draw) {
+        try {
+          // Import dynamically to ensure it's loaded
+          import('leaflet-draw').then(() => {
+            console.log("Leaflet Draw imported successfully");
+          }).catch(err => {
+            console.error("Failed to dynamically import leaflet-draw:", err);
+          });
+        } catch (err) {
+          console.error("Error importing leaflet-draw:", err);
+        }
+      }
     }
     
     // Check if initialization worked
-    if (L && L.Control.Draw) {
+    if (L && L.Control && L.Control.Draw) {
       console.log("L.Control.Draw is now available");
       return true;
     } else {
@@ -29,19 +40,30 @@ export const initializeLeafletDraw = () => {
 export const setupLeafletDrawIcons = () => {
   // Add styles to fix the missing icons issue
   if (typeof document !== 'undefined') {
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-      /* Fix for missing Draw icons */
-      .leaflet-draw-toolbar a {
-        background-image: url('https://unpkg.com/leaflet-draw@1.0.4/dist/images/spritesheet.png');
-        background-repeat: no-repeat;
-      }
-      .leaflet-retina .leaflet-draw-toolbar a {
-        background-image: url('https://unpkg.com/leaflet-draw@1.0.4/dist/images/spritesheet-2x.png');
-        background-size: 270px 30px;
-      }
-    `;
-    document.head.appendChild(styleEl);
+    // Check if styles are already added
+    if (!document.getElementById('leaflet-draw-icons-fix')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'leaflet-draw-icons-fix';
+      styleEl.textContent = `
+        /* Fix for missing Draw icons */
+        .leaflet-draw-toolbar a {
+          background-image: url('https://unpkg.com/leaflet-draw@1.0.4/dist/images/spritesheet.png');
+          background-repeat: no-repeat;
+        }
+        .leaflet-retina .leaflet-draw-toolbar a {
+          background-image: url('https://unpkg.com/leaflet-draw@1.0.4/dist/images/spritesheet-2x.png');
+          background-size: 270px 30px;
+        }
+        .leaflet-draw-toolbar .leaflet-draw-draw-polyline { background-position: -2px -2px; }
+        .leaflet-draw-toolbar .leaflet-draw-draw-polygon { background-position: -31px -2px; }
+        .leaflet-draw-toolbar .leaflet-draw-draw-rectangle { background-position: -62px -2px; }
+        .leaflet-draw-toolbar .leaflet-draw-draw-circle { background-position: -92px -2px; }
+        .leaflet-draw-toolbar .leaflet-draw-draw-marker { background-position: -122px -2px; }
+        .leaflet-draw-toolbar .leaflet-draw-edit-edit { background-position: -152px -2px; }
+        .leaflet-draw-toolbar .leaflet-draw-edit-remove { background-position: -182px -2px; }
+      `;
+      document.head.appendChild(styleEl);
+    }
   }
 };
 
@@ -49,5 +71,34 @@ export const setupLeafletDrawIcons = () => {
 export const initializeLeafletDrawComplete = () => {
   const isInitialized = initializeLeafletDraw();
   setupLeafletDrawIcons();
+  
+  // Manually set up Leaflet Draw if needed
+  if (!isInitialized && L && L.Control) {
+    try {
+      // Define a simple stub if needed
+      if (!L.Control.Draw) {
+        console.warn("Creating stub for L.Control.Draw");
+        L.Control.Draw = class Draw extends L.Control {
+          constructor(options: any) {
+            super(options);
+            console.log("Draw control initialized with options:", options);
+          }
+          
+          onAdd(map: L.Map) {
+            const container = L.DomUtil.create('div', 'leaflet-draw');
+            console.log("Draw control added to map");
+            return container;
+          }
+          
+          onRemove() {
+            console.log("Draw control removed from map");
+          }
+        };
+      }
+    } catch (err) {
+      console.error("Failed to create stub for L.Control.Draw:", err);
+    }
+  }
+  
   return isInitialized;
 };

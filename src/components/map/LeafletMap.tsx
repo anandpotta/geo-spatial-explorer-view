@@ -2,10 +2,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.css';
+import '@/styles/leaflet-draw-styles.css'; // Use our custom styles
 import 'leaflet-draw'; // Ensure leaflet-draw is imported
 import { Location } from '@/utils/geo-utils';
 import { useDrawingTools } from '@/hooks/useDrawingTools';
+import { initializeLeafletDrawComplete } from '@/utils/leaflet-draw-initializer';
 
 interface LeafletMapProps {
   selectedLocation: Location | undefined;
@@ -30,6 +31,12 @@ const LeafletMap = ({
   const locationMarkerRef = useRef<L.Marker | null>(null);
   const initCompletedRef = useRef<boolean>(false);
   const { initDrawingControls } = useDrawingTools(mapRef, drawnItemsRef, activeTool);
+  
+  // Initialize Leaflet Draw
+  useEffect(() => {
+    // Make sure Leaflet Draw is properly initialized
+    initializeLeafletDrawComplete();
+  }, []);
   
   // Clean up any orphaned Leaflet container classes
   const cleanupOrphanedMaps = useCallback(() => {
@@ -60,7 +67,7 @@ const LeafletMap = ({
     console.log(`LeafletMap: Initializing map at position [${position[0]}, ${position[1]}], zoom ${zoom}`);
     
     // Wait for DOM to be ready
-    setTimeout(() => {
+    const initTimer = setTimeout(() => {
       if (containerRef.current && !mapRef.current) {
         console.log("LeafletMap: Container is ready, creating map");
         
@@ -91,7 +98,7 @@ const LeafletMap = ({
           L.control.attribution({ position: 'bottomright' }).addTo(map);
 
           // Force invalidate size after a short delay
-          setTimeout(() => {
+          const invalidateTimer = setTimeout(() => {
             if (map) {
               console.log("LeafletMap: Forcing map invalidation");
               map.invalidateSize(true);
@@ -107,7 +114,7 @@ const LeafletMap = ({
             
             // Initialize drawing controls after map is ready
             if (drawnItemsRef.current) {
-              setTimeout(() => {
+              const drawingTimer = setTimeout(() => {
                 if (!initCompletedRef.current) {
                   initDrawingControls(map, featureGroup);
                   initCompletedRef.current = true;
@@ -116,7 +123,7 @@ const LeafletMap = ({
             }
             
             // Force another invalidation after a longer delay for stability
-            setTimeout(() => {
+            const finalInvalidateTimer = setTimeout(() => {
               if (map) {
                 map.invalidateSize(true);
               }
@@ -143,7 +150,7 @@ const LeafletMap = ({
         initCompletedRef.current = false;
       }
     };
-  }, [selectedLocation, cleanupOrphanedMaps, onMapReady]);
+  }, [selectedLocation, cleanupOrphanedMaps, onMapReady, initDrawingControls]);
 
   // Handle location changes
   useEffect(() => {
@@ -173,13 +180,6 @@ const LeafletMap = ({
             .bindPopup(selectedLocation.label)
             .openPopup();
         }
-        
-        // Force refresh map after position change
-        setTimeout(() => {
-          if (mapRef.current) {
-            mapRef.current.invalidateSize(true);
-          }
-        }, 300);
       } catch (err) {
         console.error("Error updating map position:", err);
       }
