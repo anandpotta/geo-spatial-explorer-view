@@ -1,7 +1,8 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
-import MapControls from './drawing/MapControls';
-import { handleClearAll } from './map/drawing/ClearAllHandler';
+import MapControls from '../drawing/MapControls';
+import { handleClearAll } from './drawing/ClearAllHandler';
 import { toast } from 'sonner';
 import { initializeLeafletDrawCompatibility } from '@/utils/leaflet-draw-helpers';
 import {
