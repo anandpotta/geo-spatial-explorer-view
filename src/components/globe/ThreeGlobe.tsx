@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useThreeGlobe } from '@/hooks/useThreeGlobe';
 import { createMarkerPosition } from '@/utils/globe-utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
@@ -77,16 +78,11 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   
   // Handle location changes
   useEffect(() => {
-    if (!selectedLocation) return;
+    if (!selectedLocation || !globeAPI.isInitialized) return;
     
     // Prevent duplicate fly operations for the same location
     const locationId = selectedLocation.id;
-    if (isFlying) {
-      console.log("ThreeGlobe: Already flying, skipping new flight request");
-      return;
-    }
-    
-    if (locationId === lastFlyLocationRef.current) {
+    if (locationId === lastFlyLocationRef.current && isFlying) {
       console.log("ThreeGlobe: Skipping duplicate location selection:", locationId);
       return;
     }
@@ -95,8 +91,20 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     setIsFlying(true);
     lastFlyLocationRef.current = locationId;
     
+    // Show a toast to inform the user about navigation
+    toast({
+      title: "Navigating to location",
+      description: `Flying to ${selectedLocation.label}`,
+      duration: 3000
+    });
+    
     // Calculate marker position
     const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
+    
+    // Clear any previous markers first
+    if (globeAPI.clearMarkers) {
+      globeAPI.clearMarkers();
+    }
     
     // Fly to the location - ensure coordinates are valid numbers
     if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
@@ -104,12 +112,21 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       
       // Add marker at the location with null check
       if (globeAPI.addMarker) {
-        globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+        setTimeout(() => {
+          globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
+        }, 1000); // Add marker after flight starts for better visual effect
       }
     } else {
       console.error("Invalid coordinates:", selectedLocation);
       setIsFlying(false);
       if (onFlyComplete) onFlyComplete();
+      
+      toast({
+        title: "Navigation Error",
+        description: "Could not navigate to the selected location due to invalid coordinates",
+        variant: "destructive",
+        duration: 3000
+      });
     }
     
     // Cleanup function - cancel flights if component unmounts during flight
@@ -145,6 +162,11 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       }}
     >
       {/* Canvas will be added here by Three.js */}
+      {isFlying && (
+        <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-2 rounded-md animate-pulse">
+          <span className="text-sm">Navigating...</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -52,10 +52,13 @@ export function useFlyToLocation(
     const target = new THREE.Vector3(targetX, targetY, targetZ);
     
     // Calculate camera position (at a specified distance from the target point)
-    const distance = globeRadius * 1.5; // Slightly further for smoother view
-    const cameraTargetX = -distance * Math.sin(phi) * Math.cos(theta);
-    const cameraTargetY = distance * Math.cos(phi);
-    const cameraTargetZ = distance * Math.sin(phi) * Math.sin(theta);
+    // Use a more dynamic distance based on current camera position for smoother animation
+    const initialDistance = cameraRef.current.position.length();
+    const finalDistance = globeRadius * 1.3; // Closer to the globe than before
+    
+    const cameraTargetX = -finalDistance * Math.sin(phi) * Math.cos(theta);
+    const cameraTargetY = finalDistance * Math.cos(phi);
+    const cameraTargetZ = finalDistance * Math.sin(phi) * Math.sin(theta);
     
     // Ensure we have valid current positions before proceeding
     if (!cameraRef.current.position) {
@@ -85,7 +88,7 @@ export function useFlyToLocation(
     
     // Animate camera position
     let startTime: number | null = null;
-    const duration = 1800; // Slightly faster animation (1.8 seconds) for smoother movement
+    const duration = 2000; // Slightly longer animation (2 seconds) for smoother movement
     animationInProgressRef.current = true;
     
     const animateCamera = (timestamp: number) => {
@@ -108,16 +111,15 @@ export function useFlyToLocation(
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Use custom easing function for smoother motion
-      // This is a combination of ease-out-cubic at start and ease-in-cubic near end
-      let ease;
-      if (progress < 0.5) {
-        // First half: accelerate out of starting position (ease-out-cubic)
-        ease = 0.5 * (1 - Math.pow(1 - 2 * progress, 3));
-      } else {
-        // Second half: decelerate into final position (ease-in-out)
-        ease = 0.5 * (1 + Math.pow(2 * progress - 1, 3));
-      }
+      // Use smooth easing functions for better animation
+      // This is a custom easing that starts slow, speeds up, then slows down at the end
+      const easeInOutCubic = (t: number): number => {
+        return t < 0.5
+          ? 4 * t * t * t
+          : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      };
+      
+      const ease = easeInOutCubic(progress);
       
       // Interpolate camera position
       const newX = currentPos.x + (targetPos.x - currentPos.x) * ease;

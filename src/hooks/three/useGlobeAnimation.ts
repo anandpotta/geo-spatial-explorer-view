@@ -13,6 +13,7 @@ export function useGlobeAnimation(
   // Animation frame reference
   const animationFrameRef = useRef<number | null>(null);
   const isAnimatingRef = useRef<boolean>(true);
+  const lastTimeRef = useRef<number>(0);
   
   // Setup and handle the animation loop
   useEffect(() => {
@@ -24,8 +25,8 @@ export function useGlobeAnimation(
     console.log("Starting globe animation loop");
     isAnimatingRef.current = true;
     
-    // Animation function
-    const animate = () => {
+    // Animation function with time delta for smoother animations
+    const animate = (time: number) => {
       // Check if animation should continue
       if (!isAnimatingRef.current) {
         return;
@@ -36,11 +37,20 @@ export function useGlobeAnimation(
         return;
       }
       
+      const delta = (time - lastTimeRef.current) * 0.001; // Convert to seconds
+      lastTimeRef.current = time;
+      
       animationFrameRef.current = requestAnimationFrame(animate);
       
       // If auto rotation is enabled and not flying to a location
       if (autoRotationEnabledRef.current && !isFlyingRef.current) {
-        // Let the orbit controls handle rotation
+        // Use delta time for smoother rotation regardless of frame rate
+        if (controlsRef.current.autoRotateSpeed) {
+          const rotationAmount = controlsRef.current.autoRotateSpeed * delta * 0.1;
+          controlsRef.current.rotateLeft(rotationAmount);
+        }
+        
+        // Let the orbit controls handle other updates
         controlsRef.current.update();
       } else if (controlsRef.current) {
         // Still update controls for other interactions
