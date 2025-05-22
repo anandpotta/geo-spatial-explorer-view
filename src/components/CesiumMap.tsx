@@ -15,14 +15,26 @@ interface CesiumMapProps {
  * Main Map component (now using ThreeJS)
  */
 const CesiumMap: React.FC<CesiumMapProps> = (props) => {
+  // Handle the onMapReady and onViewerReady callbacks
+  const handleMapReady = (viewer: any) => {
+    console.log("CesiumMap: Map is ready, viewer:", !!viewer);
+    
+    if (props.onMapReady) {
+      console.log("CesiumMap: Calling onMapReady callback");
+      props.onMapReady();
+    }
+    
+    if (props.onViewerReady && viewer) {
+      console.log("CesiumMap: Calling onViewerReady callback with viewer");
+      props.onViewerReady(viewer);
+    }
+  };
+  
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
       <ThreeGlobeMap 
         selectedLocation={props.selectedLocation}
-        onMapReady={(viewer) => {
-          if (props.onMapReady) props.onMapReady();
-          if (props.onViewerReady && viewer) props.onViewerReady(viewer);
-        }}
+        onMapReady={handleMapReady}
         onFlyComplete={props.onFlyComplete}
       />
     </div>

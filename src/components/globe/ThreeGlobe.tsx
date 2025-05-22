@@ -21,16 +21,48 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const lastFlyLocationRef = useRef<string | null>(null);
   const initializationAttemptedRef = useRef(false);
   const isUnmountedRef = useRef(false);
+  const readyCallbackFiredRef = useRef(false);
   
   // Initialize globe only once
   const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized && !initializationAttemptedRef.current && !isUnmountedRef.current) {
-      initializationAttemptedRef.current = true;
+    if (!isUnmountedRef.current && !readyCallbackFiredRef.current) {
+      readyCallbackFiredRef.current = true;
       setIsInitialized(true);
-      console.log("ThreeGlobe: Globe initialized");
-      if (onMapReady) onMapReady(globeAPI);
+      console.log("ThreeGlobe: Globe initialized and ready");
+      if (onMapReady) {
+        console.log("ThreeGlobe: Calling onMapReady callback");
+        onMapReady(globeAPI);
+      }
     }
   });
+  
+  // Ensure we call onMapReady even if the initialization callback doesn't fire
+  useEffect(() => {
+    if (globeAPI.isInitialized && !readyCallbackFiredRef.current && !isUnmountedRef.current) {
+      console.log("ThreeGlobe: Globe detected as initialized via effect");
+      readyCallbackFiredRef.current = true;
+      setIsInitialized(true);
+      if (onMapReady) {
+        console.log("ThreeGlobe: Calling onMapReady callback (from effect)");
+        onMapReady(globeAPI);
+      }
+    }
+    
+    // Force ready state after a timeout as a fallback
+    const timerId = setTimeout(() => {
+      if (!readyCallbackFiredRef.current && !isUnmountedRef.current) {
+        console.log("ThreeGlobe: Forcing ready state after timeout");
+        readyCallbackFiredRef.current = true;
+        setIsInitialized(true);
+        if (onMapReady) {
+          console.log("ThreeGlobe: Calling onMapReady callback (from timeout)");
+          onMapReady(globeAPI);
+        }
+      }
+    }, 3000);
+    
+    return () => clearTimeout(timerId);
+  }, [globeAPI, onMapReady, globeAPI.isInitialized]);
   
   // Safe fly completion handler that checks component mount state
   const handleFlyComplete = useCallback(() => {
@@ -45,7 +77,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   
   // Handle location changes
   useEffect(() => {
-    if (!globeAPI.isInitialized || !selectedLocation) return;
+    if (!selectedLocation) return;
     
     // Prevent duplicate fly operations for the same location
     const locationId = selectedLocation.id;

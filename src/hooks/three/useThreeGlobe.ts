@@ -28,6 +28,7 @@ export function useThreeGlobe(
   const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
   const isDisposedRef = useRef<boolean>(false);
+  const initCallbackFiredRef = useRef<boolean>(false);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
@@ -37,14 +38,15 @@ export function useThreeGlobe(
   
   // Handle textures loaded callback
   const handleTexturesLoaded = useCallback(() => {
-    if (onInitialized && isInitialized && !isDisposedRef.current) {
+    if (onInitialized && isInitialized && !isDisposedRef.current && !initCallbackFiredRef.current) {
       console.log("Calling onInitialized callback - textures loaded");
+      initCallbackFiredRef.current = true;
       onInitialized();
     }
   }, [onInitialized, isInitialized]);
   
   // Use globe setup hook with texture callback
-  const { globe } = useGlobeSetup(
+  const { globe, texturesLoaded } = useGlobeSetup(
     scene,
     camera,
     controlsRef,
@@ -70,32 +72,56 @@ export function useThreeGlobe(
     isFlyingRef
   );
   
-  // Initialize effect - mark as initialized after a small timeout
+  // Initialize effect - mark as initialized after scene is ready
   useEffect(() => {
-    if (isSetupCompleteRef.current || !containerRef.current || isDisposedRef.current) return;
+    if (!containerRef.current || isDisposedRef.current || initCallbackFiredRef.current) return;
     
-    // Mark as initialized after a small timeout to ensure everything is ready
-    const initTimer = setTimeout(() => {
-      if (!isInitialized && containerRef.current && !isDisposedRef.current) {
+    // Check if scene is really ready
+    if (scene && camera && renderer && controlsRef.current) {
+      console.log("ThreeGlobe initialization check: scene ready");
+      
+      // If scene is ready but not marked initialized yet
+      if (!isInitialized) {
         console.log("Setting isInitialized to true");
         setIsInitialized(true);
+      }
+      
+      // If we've loaded textures or waited long enough, fire the callback
+      if ((texturesLoaded || isSetupCompleteRef.current) && !initCallbackFiredRef.current) {
+        console.log("ThreeGlobe: All conditions met for initialization");
         isSetupCompleteRef.current = true;
+        initCallbackFiredRef.current = true;
         
-        // Even if textures are still loading, we'll consider the globe ready
-        // to avoid getting stuck at the loading screen
         if (onInitialized) {
-          console.log("Calling onInitialized even though textures may not be fully loaded");
+          console.log("Calling onInitialized callback from main effect");
           onInitialized();
         }
       }
-    }, 2000); // Give it 2 seconds to load, then move on regardless
+    }
+  }, [scene, camera, renderer, controlsRef, isInitialized, setIsInitialized, onInitialized, 
+      containerRef, texturesLoaded, isSetupCompleteRef]);
+  
+  // Backup timer to ensure callback is fired even if textures fail
+  useEffect(() => {
+    if (!containerRef.current || isDisposedRef.current || initCallbackFiredRef.current) return;
+    
+    const timer = setTimeout(() => {
+      if (!initCallbackFiredRef.current && !isDisposedRef.current) {
+        console.log("ThreeGlobe: Firing initialization callback after timeout");
+        isSetupCompleteRef.current = true;
+        initCallbackFiredRef.current = true;
+        
+        if (onInitialized) {
+          onInitialized();
+        }
+      }
+    }, 4000);
     
     return () => {
-      clearTimeout(initTimer);
+      clearTimeout(timer);
       isDisposedRef.current = true;
-      isSetupCompleteRef.current = false;
     };
-  }, [isInitialized, setIsInitialized, onInitialized, containerRef]);
+  }, [onInitialized, containerRef]);
   
   return {
     scene,

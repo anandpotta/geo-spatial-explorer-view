@@ -19,6 +19,23 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
+  const loadingTimerRef = useRef<any>(null);
+  
+  // Set a timeout to force loading to complete if it takes too long
+  useEffect(() => {
+    loadingTimerRef.current = setTimeout(() => {
+      if (isLoading) {
+        console.log("ThreeGlobeMap: Force completing loading after timeout");
+        setIsLoading(false);
+      }
+    }, 5000); // 5 second timeout
+    
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+    };
+  }, [isLoading]);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
@@ -47,7 +64,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       globeInstanceRef.current = viewer;
     }
     
-    if (onMapReady) onMapReady(globeInstanceRef.current);
+    if (onMapReady && globeInstanceRef.current) {
+      console.log("ThreeGlobeMap: Calling parent onMapReady");
+      onMapReady(globeInstanceRef.current);
+    }
   };
   
   // Clean up resources on unmount
@@ -57,6 +77,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       viewerInitializedRef.current = false;
       lastLocationRef.current = null;
       globeInstanceRef.current = null;
+      
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
     };
   }, []);
   
