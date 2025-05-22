@@ -145,7 +145,8 @@ export const clearAllMapSvgElements = (map: any): void => {
     overlayPanes.forEach(pane => {
       // Preserve the pane itself but clear contents except SVG elements (already handled)
       Array.from(pane.children).forEach(child => {
-        if (child.tagName !== 'SVG') {
+        // Add type checking to fix the TypeScript error
+        if (child instanceof Element && child.tagName !== 'SVG') {
           pane.removeChild(child);
         }
       });
@@ -159,3 +160,4 @@ export const clearAllMapSvgElements = (map: any): void => {
     console.error('Error clearing SVG elements from map:', err);
   }
 };
+
