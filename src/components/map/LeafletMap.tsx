@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
-import { useLocationSync } from '@/hooks/useLocationSync';
+import { useLocationSync } from '@/hooks/location-sync';
 import MapView from './MapView';
 import { getSavedMarkers, LocationMarker, createMarker } from '@/utils/marker-utils';
 import { toast } from '@/components/ui/use-toast';
