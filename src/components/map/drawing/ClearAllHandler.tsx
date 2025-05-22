@@ -26,6 +26,15 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       map.fire('draw:deleted');
       // Trigger editStop to ensure the edit toolbar is updated
       map.fire('draw:editstop');
+      
+      // Add a slight delay and fire resize to ensure all UI elements update
+      setTimeout(() => {
+        map.invalidateSize();
+        // Force the edit toolbar to reset
+        if (map.editTools) {
+          map.editTools.stopDrawing();
+        }
+      }, 100);
     } else {
       // Fallback if map instance not available
       console.log('No map instance found, using event to clear paths');

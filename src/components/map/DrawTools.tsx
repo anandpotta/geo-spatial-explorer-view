@@ -75,20 +75,16 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     
     const handleLeafletClearRequest = (event: Event) => {
       console.log('DrawTools: Received leafletClearAllRequest event');
-      // Stop event propagation to prevent multiple handlers
-      event.stopPropagation();
       // Show confirmation dialog
       console.log('DrawTools: Showing clear all confirmation dialog');
       setShowClearDialog(true);
     };
     
-    // Remove existing listener to prevent duplicates
-    window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
-    // Add listener with highest priority
-    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest, { capture: true });
+    // Listen for the custom event
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
-      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest, { capture: true });
+      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     };
   }, []);
 
