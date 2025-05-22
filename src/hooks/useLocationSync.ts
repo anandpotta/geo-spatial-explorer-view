@@ -52,12 +52,23 @@ export function useLocationSync(
           
           // If we have a location but haven't positioned the map yet, do it now
           if (selectedLocation && !hasInitialPositioning) {
-            processLocationChange();
+            // We need to call processLocationChange, but it's defined in another effect
+            // Instead, we'll call all the necessary logic here directly
+            if (map && !isUnmountedRef.current) {
+              try {
+                console.log("useLocationSync: Forcing initial positioning");
+                map.invalidateSize(true);
+                map.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
+                setHasInitialPositioning(true);
+              } catch (err) {
+                console.error("Error in initial positioning:", err);
+              }
+            }
           }
         }
       }, 300);
     }
-  }, [map, isMapReady]);
+  }, [map, isMapReady, selectedLocation, hasInitialPositioning]);
 
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
@@ -122,8 +133,7 @@ export function useLocationSync(
       }
     }
 
-    processLocationChange();
-
+    // Define processLocationChange function inside the useEffect to access the variables in scope
     function processLocationChange() {
       if (isUnmountedRef.current || !map) return;
       
@@ -214,5 +224,7 @@ export function useLocationSync(
         }
       }
     }
+    
+    processLocationChange();
   }, [selectedLocation, map, isMapReady, hasInitialPositioning]);
 }
