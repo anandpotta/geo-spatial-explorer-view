@@ -72,7 +72,10 @@ export function isMapPaneReady(map: L.Map | null): boolean {
     
     // Check if map pane exists and has position
     const mapPane = map.getPane('mapPane');
-    return !!(mapPane && (mapPane as any)._leaflet_pos);
+    if (!mapPane) return false;
+    
+    // Check if _leaflet_pos exists to prevent the specific error
+    return !!(mapPane as any)._leaflet_pos;
   } catch (err) {
     console.warn('Error checking map pane readiness:', err);
     return false;
@@ -90,5 +93,26 @@ export function safeMapOperation<T>(map: L.Map | null, operation: (map: L.Map) =
   } catch (err) {
     console.warn(`Map operation failed: ${err.message}`);
     return fallback;
+  }
+}
+
+/**
+ * Safely invalidates the map size with proper type checking
+ */
+export function safeInvalidateSize(map: any): void {
+  if (!map) return;
+  
+  try {
+    // First check if it's a valid map object
+    if (isMapValid(map)) {
+      map.invalidateSize(true);
+    } else if (typeof map.invalidateSize === 'function') {
+      // Fallback if it has the method but didn't pass full validation
+      map.invalidateSize(true);
+    } else {
+      console.warn('Map object doesn\'t have invalidateSize method');
+    }
+  } catch (err) {
+    console.warn('Error invalidating map size:', err);
   }
 }

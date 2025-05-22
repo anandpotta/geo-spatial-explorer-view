@@ -1,11 +1,10 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { Location } from '@/utils/geo-utils';
-import { isMapValid } from '@/utils/leaflet-type-utils';
+import { isMapValid, safeInvalidateSize } from '@/utils/leaflet-type-utils';
 import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 
@@ -195,16 +194,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             
             // Try to invalidate the map size
             if (mapRef.current) {
-              try {
-                // Fix for the TypeScript error - check map type before calling invalidateSize
-                if ('invalidateSize' in mapRef.current) {
-                  mapRef.current.invalidateSize(true);
-                } else {
-                  console.warn('invalidateSize method not available on map object');
-                }
-              } catch (e) {
-                console.warn('Error invalidating map size:', e);
-              }
+              // Use our safe utility function instead of direct call
+              safeInvalidateSize(mapRef.current);
             }
             
             // Try again after a delay

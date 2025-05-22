@@ -1,8 +1,8 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { toast } from 'sonner';
+import { isMapValid, safeInvalidateSize } from '@/utils/leaflet-type-utils';
 
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
@@ -42,25 +42,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     if (!map) return false;
     
     try {
-      // Check if map instance exists and has required methods
-      if (typeof map.getContainer !== 'function') return false;
-      
-      // Check if the container element exists in the DOM
-      const container = map.getContainer();
-      if (!container || !document.body.contains(container)) {
-        return false;
-      }
-      
-      // Check if map pane exists and has position
-      const mapPane = map.getPane('mapPane');
-      if (!mapPane || !(mapPane as any)._leaflet_pos) {
-        return false;
-      }
-      
-      // For maximum safety, check that map has core Leaflet methods
-      return typeof map.setView === 'function' && 
-             typeof map.addLayer === 'function' && 
-             typeof map.getZoom === 'function';
+      return isMapValid(map);
     } catch (err) {
       console.warn('Error checking map validity:', err);
       return false;
@@ -79,7 +61,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
     const initializeMap = () => {
       // Always invalidate size immediately
       try {
-        map.invalidateSize(true);
+        safeInvalidateSize(map);
         console.log('Initial size invalidation completed');
       } catch (err) {
         console.log('Initial invalidateSize encountered an issue, continuing');
@@ -111,7 +93,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
         
         try {
           // Final invalidateSize for good measure
-          map.invalidateSize(true);
+          safeInvalidateSize(map);
           
           console.log('Map container verified, calling onMapReady');
           hasCalledOnReady.current = true;
@@ -125,12 +107,8 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           // Just one additional invalidation after a reasonable delay
           const additionalTimeout = setTimeout(() => {
             if (map && !(map as L.Map & LeafletMapInternal)._isDestroyed) {
-              try {
-                map.invalidateSize(true);
-                console.log('Final map invalidation completed');
-              } catch (err) {
-                // Ignore errors during additional invalidations
-              }
+              safeInvalidateSize(map);
+              console.log('Final map invalidation completed');
             }
           }, 1000);
           timeoutRefs.current.push(additionalTimeout);
