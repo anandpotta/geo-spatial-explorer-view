@@ -1,10 +1,11 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
 import { useMapEvents } from '@/hooks/useMapEvents';
 import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { Location } from '@/utils/geo-utils';
-import { isMapValid, safeInvalidateSize } from '@/utils/leaflet-type-utils';
+import { isMapValid, safeInvalidateSize, forceMapTileRefresh, isMapPaneReady } from '@/utils/leaflet-type-utils';
 import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 
@@ -48,7 +49,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     const resizeObserver = new ResizeObserver(() => {
       if (mapRef.current && isMapValid(mapRef.current)) {
         try {
-          mapRef.current.invalidateSize();
+          // Use safeInvalidateSize instead of direct call
+          safeInvalidateSize(mapRef.current);
           console.log("Map resized due to container change");
         } catch (err) {
           console.error("Error resizing map:", err);
@@ -106,8 +108,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         if (map && isMapValid(map)) {
           console.log("Forcing tile refresh");
           
-          // First invalidate the map size
-          map.invalidateSize(true);
+          // Use our utility function instead of direct invalidateSize
+          safeInvalidateSize(map);
+          
+          // Check and fix map pane position if needed
+          isMapPaneReady(map); // This function now creates _leaflet_pos if missing
           
           // If there's an existing tile layer, remove and re-add it
           if (tileLayerRef.current) {
@@ -129,12 +134,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               setTimeout(() => {
                 if (map && isMapValid(map)) {
                   try {
-                    // Check if map panes are initialized before setting view
-                    if (map.getPane('mapPane') && (map.getPane('mapPane') as any)._leaflet_pos) {
-                      map.setView(currentCenter, currentZoom, { animate: false });
-                    } else {
-                      console.log('Map panes not ready for setView');
+                    // Make sure map pane has _leaflet_pos before setView
+                    const mapPane = map.getPane('mapPane');
+                    if (mapPane && !(mapPane as any)._leaflet_pos) {
+                      console.log('Creating _leaflet_pos before setView');
+                      (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
                     }
+                    
+                    map.setView(currentCenter, currentZoom, { animate: false });
                   } catch (e) {
                     console.error('Error in setView:', e);
                   }
@@ -153,12 +160,18 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     // Initial tile refresh after map is ready
     const initialRefreshTimeout = setTimeout(refreshTiles, 500);
     
-    // Periodic tile refreshes
-    const periodicRefreshInterval = setInterval(refreshTiles, 5000);
+    // Periodic tile refreshes - more frequent at first, then less often
+    const periodicRefreshIntervals = [1000, 2000, 3000, 5000];
+    const periodicRefreshTimeouts: NodeJS.Timeout[] = [];
+    
+    periodicRefreshIntervals.forEach(interval => {
+      const timeout = setTimeout(refreshTiles, interval);
+      periodicRefreshTimeouts.push(timeout);
+    });
     
     return () => {
       clearTimeout(initialRefreshTimeout);
-      clearInterval(periodicRefreshInterval);
+      periodicRefreshTimeouts.forEach(clearTimeout);
     };
   }, [mapRef.current, isMapReady]);
   
@@ -173,6 +186,13 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         // Check if map is valid before calling onMapReady
         if (isMapValid(mapRef.current)) {
           console.log('Map is valid, calling onMapReady');
+          
+          // Ensure map pane has _leaflet_pos
+          const mapPane = mapRef.current.getPane('mapPane');
+          if (mapPane && !(mapPane as any)._leaflet_pos) {
+            console.log('Creating _leaflet_pos before onMapReady');
+            (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
+          }
           
           // Mark as ready
           onMapReadyCalledRef.current = true;
@@ -234,7 +254,12 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       forceTileRefreshRef.current = setTimeout(() => {
         if (mapRef.current && isMapValid(mapRef.current)) {
           console.log("Forcing tile refresh for preloaded map");
-          mapRef.current.invalidateSize(true);
+          
+          // Use our safe invalidateSize utility
+          safeInvalidateSize(mapRef.current);
+          
+          // Use the enhanced tile refresh utility
+          forceMapTileRefresh(mapRef.current);
         }
       }, 1000); // Shorter timeout for faster loading
     }
@@ -320,19 +345,24 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       // Force a map redraw after initialization
       setTimeout(() => {
         if (map && isMapValid(map)) {
-          map.invalidateSize(true);
+          // Make sure _leaflet_pos exists before invalidateSize
+          const mapPane = map.getPane('mapPane');
+          if (mapPane && !(mapPane as any)._leaflet_pos) {
+            console.log('Creating _leaflet_pos before invalidateSize');
+            (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
+          }
+          
+          safeInvalidateSize(map);
           // Add additional redraw to ensure tiles load
-          setTimeout(() => map.invalidateSize(true), 200);
+          setTimeout(() => safeInvalidateSize(map), 200);
+          
+          // Force tile refresh
+          setTimeout(() => forceMapTileRefresh(map), 500);
         }
       }, 100);
       
       // Notify that map is ready sooner
       setLoading(false);
-      
-      // Additional invalidate after initialization
-      if (map && isMapValid(map)) {
-        map.invalidateSize(true);
-      }
     } catch (err) {
       console.error("Map initialization error:", err);
       setMapError(`Failed to initialize map: ${err.message}`);

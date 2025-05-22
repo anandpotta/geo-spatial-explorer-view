@@ -10,6 +10,7 @@ import 'leaflet/dist/leaflet.css';
 const MapInitializer = () => {
   const map = useMap();
   const refreshAttemptsRef = useRef(0);
+  const maxRefreshAttempts = 8; // Increased from 5
   
   useEffect(() => {
     if (!map) return;
@@ -18,14 +19,26 @@ const MapInitializer = () => {
     const handleInitialSetup = () => {
       safeInvalidateSize(map);
       
-      // Set up periodic tile refreshes
-      const refreshIntervals = [500, 1500, 3000]; // ms
+      // Set up more frequent tile refreshes
+      const refreshIntervals = [200, 500, 1000, 1500, 2500, 3500]; // ms - Added more intervals
       
       refreshIntervals.forEach((delay) => {
         setTimeout(() => {
-          if (refreshAttemptsRef.current < 5) {
+          if (refreshAttemptsRef.current < maxRefreshAttempts) {
             refreshAttemptsRef.current++;
             console.log(`Refreshing map tiles (attempt ${refreshAttemptsRef.current})`);
+            
+            // Try to ensure the map pane has _leaflet_pos before refreshing
+            try {
+              const mapPane = map.getPane('mapPane');
+              if (mapPane && !(mapPane as any)._leaflet_pos) {
+                console.log('Creating _leaflet_pos for mapPane');
+                (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
+              }
+            } catch (e) {
+              console.warn('Error accessing map pane:', e);
+            }
+            
             forceMapTileRefresh(map);
           }
         }, delay);
@@ -34,8 +47,16 @@ const MapInitializer = () => {
     
     handleInitialSetup();
     
+    // Add a final check and refresh after all intervals
+    setTimeout(() => {
+      if (map && refreshAttemptsRef.current >= maxRefreshAttempts) {
+        console.log('Final map refresh attempt');
+        forceMapTileRefresh(map);
+      }
+    }, 4000);
+    
     return () => {
-      refreshAttemptsRef.current = 5; // Stop any pending refreshes
+      refreshAttemptsRef.current = maxRefreshAttempts; // Stop any pending refreshes
     };
   }, [map]);
   

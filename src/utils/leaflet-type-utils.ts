@@ -77,8 +77,9 @@ export function isMapPaneReady(map: L.Map | null): boolean {
     // Check if _leaflet_pos exists to prevent specific errors
     if (!(mapPane as any)._leaflet_pos) {
       // Force create _leaflet_pos if missing to prevent errors
-      (mapPane as any)._leaflet_pos = new L.Point(0, 0);
-      return false;
+      (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
+      console.log('Created missing _leaflet_pos for mapPane');
+      return true; // Return true since we've fixed the issue
     }
     
     return true;
@@ -114,8 +115,16 @@ export function safeInvalidateSize(map: any): void {
       // Ensure map pane exists and has _leaflet_pos
       const mapPane = map.getPane('mapPane');
       if (mapPane && !(mapPane as any)._leaflet_pos) {
-        (mapPane as any)._leaflet_pos = new L.Point(0, 0);
+        console.log('Creating missing _leaflet_pos before invalidateSize');
+        (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
       }
+      
+      // Check for panes object
+      if ((map as any)._panes && (map as any)._panes.mapPane && !(map as any)._panes.mapPane._leaflet_pos) {
+        console.log('Creating missing _leaflet_pos on _panes.mapPane');
+        (map as any)._panes.mapPane._leaflet_pos = { x: 0, y: 0 };
+      }
+      
       map.invalidateSize(true);
       
       // Force tile refresh by triggering a moveend event
@@ -145,6 +154,13 @@ export function forceMapTileRefresh(map: L.Map | null): void {
     // First invalidate size
     safeInvalidateSize(map);
     
+    // Make sure mapPane has _leaflet_pos
+    const mapPane = map.getPane('mapPane');
+    if (mapPane && !(mapPane as any)._leaflet_pos) {
+      console.log('Creating _leaflet_pos during tile refresh');
+      (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
+    }
+    
     // Get all tile layers
     map.eachLayer(layer => {
       if (layer instanceof L.TileLayer) {
@@ -159,6 +175,14 @@ export function forceMapTileRefresh(map: L.Map | null): void {
         }
       }
     });
+    
+    // Trigger move events to ensure tiles update
+    setTimeout(() => {
+      if (isMapValid(map)) {
+        map.fire('move');
+        map.fire('moveend');
+      }
+    }, 100);
   } catch (err) {
     console.warn('Error during tile refresh:', err);
   }
