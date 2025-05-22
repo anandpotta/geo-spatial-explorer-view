@@ -48,9 +48,9 @@ export function useDrawingTools(
         draw: drawOptions,
         edit: {
           featureGroup: featureGroup,
-          // For edit and remove properties, use proper object structure when active or false when not
-          edit: activeTool === 'edit' ? {} : false,
-          remove: activeTool === 'delete' ? {} : false
+          // Specify edit options based on active tool
+          edit: activeTool === 'edit',
+          remove: activeTool === 'delete'
         }
       });
       
