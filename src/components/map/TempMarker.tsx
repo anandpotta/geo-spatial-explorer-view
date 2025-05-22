@@ -1,9 +1,8 @@
 
-import React, { useEffect, useRef } from 'react';
-import { Marker, useMap } from 'react-leaflet';
+import React from 'react';
+import { Marker } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 import L from 'leaflet';
-import { isMapValid } from '@/utils/leaflet-type-utils';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -22,9 +21,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   setMarkerType,
   onSave
 }) => {
-  const markerRef = useRef<L.Marker | null>(null);
-  const map = useMap();
-  
   // Create a custom marker with higher z-index to ensure it's on top
   const markerOptions = {
     draggable: true,
@@ -42,38 +38,25 @@ const TempMarker: React.FC<TempMarkerProps> = ({
             console.log("Marker position updated:", [position.lat, position.lng]);
           }
         }
+      },
+      add: () => {
+        // Force popup to open when marker is added to the map
+        setTimeout(() => {
+          const markerElement = document.querySelector('.leaflet-marker-draggable');
+          if (markerElement) {
+            markerElement.dispatchEvent(new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            }));
+          }
+        }, 100);
       }
     }
   };
   
-  // Check if map is valid before opening popup
-  useEffect(() => {
-    if (markerRef.current && isMapValid(map)) {
-      try {
-        // Short delay to ensure DOM is ready
-        const timer = setTimeout(() => {
-          if (markerRef.current && isMapValid(map)) {
-            markerRef.current.openPopup();
-          }
-        }, 100);
-        
-        return () => clearTimeout(timer);
-      } catch (err) {
-        console.error("Error opening popup:", err);
-      }
-    }
-  }, [map, position]);
-  
-  if (!isMapValid(map)) {
-    return null; // Don't render marker if map is invalid
-  }
-  
   return (
-    <Marker 
-      position={position} 
-      {...markerOptions}
-      ref={markerRef}
-    >
+    <Marker position={position} {...markerOptions}>
       <NewMarkerForm
         markerName={markerName}
         setMarkerName={setMarkerName}

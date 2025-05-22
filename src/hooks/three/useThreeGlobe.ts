@@ -2,107 +2,209 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { useThreeScene } from './useThreeScene';
-import { useAutoRotation } from './useAutoRotation';
-import { useEnhancedFlyToLocation } from './useEnhancedFlyToLocation';
-import { useMarkers } from './useMarkers';
-import { useGlobeSetup } from './useGlobeSetup';
-import { useGlobeAnimation } from './useGlobeAnimation';
-import { EARTH_RADIUS } from '@/utils/three/globe-factory';
+import { useFlyToLocation } from './useFlyToLocation';
+import { disposeObject3D } from '@/utils/three-utils';
+import { 
+  createEarthGlobe, 
+  createAtmosphere, 
+  setupLighting,
+  configureControls,
+  EARTH_RADIUS
+} from '@/utils/three/globe-factory';
+import { loadEarthTextures, createStarfield } from '@/utils/three/texture-loader';
 
 export function useThreeGlobe(
   containerRef: React.RefObject<HTMLDivElement>,
   onInitialized?: () => void
 ) {
+  // Globe-specific refs
+  const globeRef = useRef<THREE.Group | null>(null);
+  const atmosphereRef = useRef<THREE.Mesh | null>(null);
+  const earthMeshRef = useRef<THREE.Mesh | null>(null);
+  const autoRotationEnabledRef = useRef<boolean>(true);
+  
   // Use the scene hook
   const {
     scene,
     camera,
     renderer,
+    controls: existingControls,
     isInitialized,
     setIsInitialized,
+    animationFrameRef,
     canvasElementRef,
     controlsRef
   } = useThreeScene(containerRef);
 
-  // Refs for tracking state
+  // Track if textures are loaded
+  const [texturesLoaded, setTexturesLoaded] = useState(false);
+  
+  // Flag to prevent multiple initializations
   const isSetupCompleteRef = useRef(false);
-  const isFlyingRef = useRef<boolean>(false);
   
-  // Get auto-rotation functionality
-  const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
-  
-  // Get markers functionality
-  const { addMarker } = useMarkers(scene);
-  
-  // Handle textures loaded callback
-  const handleTexturesLoaded = useCallback(() => {
-    if (onInitialized && isInitialized) {
-      console.log("Calling onInitialized callback - textures loaded");
-      onInitialized();
-    }
-  }, [onInitialized, isInitialized]);
-  
-  // Use globe setup hook with texture callback
-  const { globe } = useGlobeSetup(
-    scene,
-    camera,
-    controlsRef,
-    containerRef,
-    handleTexturesLoaded
-  );
-  
-  // Set up animation loop
-  useGlobeAnimation(
-    scene,
-    camera,
-    renderer,
-    controlsRef,
-    autoRotationEnabledRef,
-    isFlyingRef
-  );
-  
-  // Get enhanced fly to location functionality
-  const { enhancedFlyToLocation } = useEnhancedFlyToLocation(
-    camera,
-    controlsRef,
-    EARTH_RADIUS,
-    isFlyingRef
-  );
-  
-  // Initialize effect - mark as initialized after a small timeout
+  // Setup globe objects and controls
   useEffect(() => {
-    if (isSetupCompleteRef.current || !containerRef.current) return;
+    if (!scene || !camera || !renderer || isSetupCompleteRef.current) {
+      console.log("Scene not ready or setup already complete");
+      return;
+    }
+    
+    console.log("Setting up globe objects and controls");
+    isSetupCompleteRef.current = true;
+    
+    // Clear any previous starfield or elements
+    scene.children.forEach(child => {
+      if (child instanceof THREE.Points || 
+          (child instanceof THREE.Mesh && child.userData.type === 'starfield')) {
+        scene.remove(child);
+      }
+    });
+    
+    // Add starfield background
+    createStarfield(scene);
+    
+    // Set up lighting
+    setupLighting(scene);
+    
+    // Create Earth globe
+    const { globeGroup, earthMesh, setTexturesLoaded: updateTextureLoadStatus } = createEarthGlobe(scene);
+    if (globeGroup) {
+      globeGroup.rotation.y = Math.PI;
+      scene.add(globeGroup); // Add to scene
+      globeRef.current = globeGroup;
+      earthMeshRef.current = earthMesh;
+      
+      console.log("Globe created and added to scene");
+      
+      // Load textures
+      loadEarthTextures(earthMesh.material as THREE.MeshPhongMaterial, (earthLoaded, bumpLoaded) => {
+        const allLoaded = updateTextureLoadStatus(earthLoaded, bumpLoaded);
+        if (allLoaded) {
+          console.log("All Earth textures loaded successfully");
+          setTexturesLoaded(true);
+        }
+      });
+    }
+    
+    // Create atmosphere
+    const atmosphere = createAtmosphere(scene);
+    atmosphereRef.current = atmosphere;
+    
+    // Configure controls with auto-rotation enabled
+    if (controlsRef.current) {
+      configureControls(controlsRef.current, camera);
+      controlsRef.current.autoRotate = true;
+      autoRotationEnabledRef.current = true;
+    }
+    
+    console.log("Globe setup complete, starting animation");
+    
+    // Start animation loop
+    const animate = () => {
+      if (!scene || !camera || !renderer || !controlsRef.current) {
+        console.warn("Animation loop missing required objects");
+        return;
+      }
+      
+      animationFrameRef.current = requestAnimationFrame(animate);
+      
+      // If we have a globe, rotate it slightly for a more dynamic appearance
+      if (globeRef.current && autoRotationEnabledRef.current) {
+        // The globe rotation is now handled by OrbitControls autoRotate
+        // but we could add additional rotation effects here if needed
+      }
+      
+      // Make sure controls are updated every frame
+      controlsRef.current.update();
+      
+      // Ensure the renderer is drawing the scene
+      renderer.render(scene, camera);
+    };
+    
+    // Start animation
+    animate();
     
     // Mark as initialized after a small timeout to ensure everything is ready
     setTimeout(() => {
-      if (!isInitialized && containerRef.current) {
+      if (!isInitialized) {
         console.log("Setting isInitialized to true");
         setIsInitialized(true);
-        isSetupCompleteRef.current = true;
         
         // Even if textures are still loading, we'll consider the globe ready
         // to avoid getting stuck at the loading screen
-        if (onInitialized) {
-          console.log("Calling onInitialized even though textures may not be fully loaded");
+        if (!texturesLoaded && onInitialized) {
+          console.log("Calling onInitialized even though textures aren't fully loaded");
           onInitialized();
         }
       }
     }, 2000); // Give it 2 seconds to load, then move on regardless
     
+    // Cleanup function
     return () => {
+      console.log("Globe effect cleanup");
       isSetupCompleteRef.current = false;
+      // Dispose globe and atmosphere meshes
+      if (globeRef.current) {
+        scene.remove(globeRef.current);
+        disposeObject3D(globeRef.current);
+        globeRef.current = null;
+      }
+      
+      if (atmosphereRef.current) {
+        scene.remove(atmosphereRef.current);
+        disposeObject3D(atmosphereRef.current);
+        atmosphereRef.current = null;
+      }
+      
+      earthMeshRef.current = null;
     };
-  }, [isInitialized, setIsInitialized, onInitialized, containerRef]);
+  }, [scene, camera, renderer, setIsInitialized, animationFrameRef, controlsRef, isInitialized, onInitialized, texturesLoaded]);
+  
+  // Call onInitialized when textures are loaded
+  useEffect(() => {
+    if (texturesLoaded && onInitialized && isInitialized) {
+      console.log("Calling onInitialized callback - textures loaded");
+      onInitialized();
+    }
+  }, [texturesLoaded, onInitialized, isInitialized]);
+  
+  // Enable/disable auto-rotation
+  const setAutoRotation = useCallback((enabled: boolean) => {
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = enabled;
+      autoRotationEnabledRef.current = enabled;
+    }
+  }, [controlsRef]);
+  
+  // Get flyToLocation functionality
+  const { flyToLocation } = useFlyToLocation(
+    { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
+    controlsRef,
+    EARTH_RADIUS
+  );
+  
+  // Wrap the flyToLocation to handle auto-rotation
+  const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
+    // Ensure the globe is rotating while flying for a more dynamic effect
+    setAutoRotation(true);
+    
+    // Call the original flyToLocation
+    flyToLocation(longitude, latitude, () => {
+      // Keep auto-rotation on after flying
+      setAutoRotation(true);
+      
+      if (onComplete) onComplete();
+    });
+  }, [flyToLocation, setAutoRotation]);
   
   return {
     scene,
     camera,
     renderer,
     controls: controlsRef.current,
-    globe,
+    globe: globeRef.current,
     isInitialized,
     flyToLocation: enhancedFlyToLocation,
-    setAutoRotation,
-    addMarker
+    setAutoRotation
   };
 }

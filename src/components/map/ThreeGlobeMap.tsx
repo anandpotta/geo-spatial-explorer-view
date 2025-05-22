@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
 
@@ -16,89 +16,30 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
-  const viewerInitializedRef = useRef(false);
-  const lastLocationRef = useRef<string | null>(null);
-  const globeInstanceRef = useRef<any>(null);
-  const flyCompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Track location changes to prevent duplicate processing
-  useEffect(() => {
-    if (selectedLocation) {
-      const locationId = selectedLocation.id;
-      if (locationId === lastLocationRef.current) {
-        console.log('Skipping duplicate location selection:', locationId);
-        return;
-      }
-      lastLocationRef.current = locationId;
-    }
-  }, [selectedLocation]);
   
   // Handle map ready state
   const handleMapReady = (viewer?: any) => {
-    if (viewerInitializedRef.current) {
-      console.log('Globe is already initialized, skipping duplicate ready event');
-      return;
-    }
-    
     console.log("ThreeGlobeMap: Globe is ready");
-    viewerInitializedRef.current = true;
     setIsLoading(false);
-    
-    if (viewer) {
-      globeInstanceRef.current = viewer;
-    }
-    
-    // Notify parent that map is ready after ensuring the globe is fully rendered
-    setTimeout(() => {
-      if (onMapReady) onMapReady(globeInstanceRef.current);
-    }, 100);
-  };
-  
-  // Handle fly complete with debouncing to prevent rapid transitions
-  const handleFlyComplete = () => {
-    // Clear any existing timeout to avoid multiple calls
-    if (flyCompleteTimeoutRef.current) {
-      clearTimeout(flyCompleteTimeoutRef.current);
-    }
-    
-    // Set a short timeout to ensure stable transition
-    flyCompleteTimeoutRef.current = setTimeout(() => {
-      if (onFlyComplete) {
-        console.log("ThreeGlobeMap: Notifying fly completion");
-        onFlyComplete();
-      }
-      flyCompleteTimeoutRef.current = null;
-    }, 200);
+    if (onMapReady) onMapReady(viewer);
   };
   
   // Clean up resources on unmount
   React.useEffect(() => {
     return () => {
       console.log("ThreeGlobeMap unmounted, cleaning up resources");
-      viewerInitializedRef.current = false;
-      lastLocationRef.current = null;
-      globeInstanceRef.current = null;
-      
-      if (flyCompleteTimeoutRef.current) {
-        clearTimeout(flyCompleteTimeoutRef.current);
-      }
     };
   }, []);
-  
-  // Handle errors that might occur
-  const handleError = (error: Error) => {
-    console.error("Globe error:", error);
-    setMapError(error.message || "Failed to initialize 3D globe");
-  };
   
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: 'black' }}>
       {/* Loading overlay - only show while loading */}
       {isLoading && (
-        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="text-center p-4">
+        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="text-center p-6">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <h3 className="text-lg font-bold text-white">Loading 3D Globe</h3>
+            <h3 className="text-xl font-bold text-white">Loading 3D Globe</h3>
+            <p className="text-sm text-gray-300">Please wait...</p>
           </div>
         </div>
       )}
@@ -114,11 +55,11 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         </div>
       )}
       
-      {/* ThreeJS Globe with optimized transitions */}
+      {/* ThreeJS Globe */}
       <ThreeGlobe 
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
-        onFlyComplete={handleFlyComplete}
+        onFlyComplete={onFlyComplete}
       />
     </div>
   );

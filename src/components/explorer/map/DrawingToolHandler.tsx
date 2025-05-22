@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 
@@ -18,15 +18,6 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   setActiveTool,
   onToolSelect
 }) => {
-  const [editEnabled, setEditEnabled] = useState(false);
-
-  // Reset edit mode when the tool changes
-  useEffect(() => {
-    if (activeTool !== 'edit') {
-      setEditEnabled(false);
-    }
-  }, [activeTool]);
-
   const handleToolSelect = (tool: string) => {
     console.log(`Tool selected: ${tool}`);
     setActiveTool(tool === activeTool ? null : tool);
@@ -37,24 +28,16 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         toast.info('Clearing all shapes');
       }
     } else if (currentView === 'leaflet') {
-      // Handle special tools for leaflet map
       if (tool === 'clear' && leafletMapRef.current) {
         try {
           // Validate the map instance before using it
           if (isMapValid(leafletMapRef.current)) {
-            // Use type assertion to access _layers property safely
-            const map = leafletMapRef.current as L.Map & { _layers?: {[key: string]: L.Layer} };
-            const layers = map._layers;
-            
+            const layers = leafletMapRef.current._layers;
             if (layers) {
               Object.keys(layers).forEach(layerId => {
                 const layer = layers[layerId];
-                // Check if layer has options and if options have our custom properties
-                if (layer && layer.options) {
-                  const layerOptions = layer.options as L.LayerOptions;
-                  if (layerOptions.isDrawn || layerOptions.id) {
-                    map.removeLayer(layer);
-                  }
+                if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+                  leafletMapRef.current.removeLayer(layer);
                 }
               });
               toast.info('All shapes cleared');
@@ -66,35 +49,6 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
         } catch (err) {
           console.error('Error during clear operation:', err);
           toast.error('Failed to clear shapes. Please try again.');
-        }
-      } else if (tool === 'edit' && leafletMapRef.current) {
-        try {
-          // Enable or disable edit mode
-          if (!editEnabled) {
-            // Access the global featureGroup
-            if (window.featureGroup) {
-              const featureGroup = window.featureGroup;
-              const map = leafletMapRef.current;
-              
-              // Find the edit button in the Leaflet draw control and click it
-              const container = map.getContainer();
-              if (container) {
-                const editButton = container.querySelector('.leaflet-draw-edit-edit');
-                if (editButton) {
-                  (editButton as HTMLElement).click();
-                  setEditEnabled(true);
-                  toast.info('Edit mode enabled. Drag the white squares to reshape your paths.');
-                } else {
-                  toast.info('Draw a shape first before editing');
-                }
-              }
-            } else {
-              toast.info('No drawings available to edit');
-            }
-          }
-        } catch (err) {
-          console.error('Error enabling edit mode:', err);
-          toast.error('Failed to enable editing. Please try again.');
         }
       }
     }

@@ -36,26 +36,20 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady(false);
     
     return () => {
-      // Clean up Leaflet map instance
       if (mapRef.current) {
         console.log('Cleaning up Leaflet map instance');
         
         try {
-          // Add an _isDestroyed flag to prevent operations on removed maps
-          Object.defineProperty(mapRef.current, '_isDestroyed', {
-            value: true,
-            writable: false
-          });
-          
-          // Only remove if the container exists and is attached to DOM
-          try {
-            const container = mapRef.current.getContainer();
-            if (container && document.body.contains(container)) {
-              console.log('Map container exists and is attached - removing map instance');
-              mapRef.current.remove();
+          if (mapRef.current && mapRef.current.remove) {
+            try {
+              const container = mapRef.current.getContainer();
+              if (container && document.body.contains(container)) {
+                console.log('Map container exists and is attached - removing map instance');
+                mapRef.current.remove();
+              }
+            } catch (e) {
+              console.log('Map container already detached or removed');
             }
-          } catch (e) {
-            console.log('Map container already detached or removed');
           }
         } catch (err) {
           console.error('Error cleaning up map:', err);
@@ -112,7 +106,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
             recoveryAttemptRef.current += 1;
             
             setTimeout(() => {
-              if (mapRef.current && !(mapRef.current as any)._isDestroyed) {
+              if (mapRef.current) {
                 try {
                   mapRef.current.invalidateSize(true);
                 } catch (err) {
@@ -151,13 +145,6 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       const container = map.getContainer();
       if (container && document.body.contains(container)) {
         console.log('Map container verified, storing reference');
-        
-        // Add a custom property to check if map is destroyed
-        Object.defineProperty(map, '_isDestroyed', {
-          value: false,
-          writable: true
-        });
-        
         mapRef.current = map;
         mapAttachedRef.current = true;
         
@@ -167,7 +154,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         
         // Single invalidation to ensure the map is properly sized
         setTimeout(() => {
-          if (mapRef.current && !(mapRef.current as any)._isDestroyed) {
+          if (mapRef.current) {
             try {
               mapRef.current.invalidateSize(true);
               console.log('Initial map invalidation completed');

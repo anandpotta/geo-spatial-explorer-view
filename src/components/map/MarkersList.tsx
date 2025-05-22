@@ -1,8 +1,7 @@
-import React from 'react';
-import { LayerGroup } from 'react-leaflet';
-import TempMarker from './TempMarker';
+
+import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
-import { LocationMarker } from '@/utils/marker-utils';
+import TempMarker from './TempMarker';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -26,18 +25,17 @@ const MarkersList = ({
   setMarkerType
 }: MarkersListProps) => {
   return (
-    <LayerGroup>
-      {markers.map((marker) => (
+    <>
+      {Array.isArray(markers) && markers.map((marker) => (
         <UserMarker 
-          key={`marker-${marker.id}`} 
+          key={marker.id} 
           marker={marker} 
           onDelete={onDeleteMarker} 
         />
       ))}
       
-      {tempMarker && (
-        <TempMarker
-          key={`temp-marker-${tempMarker[0]}-${tempMarker[1]}`}
+      {tempMarker && Array.isArray(tempMarker) && (
+        <TempMarker 
           position={tempMarker}
           markerName={markerName}
           setMarkerName={setMarkerName}
@@ -46,7 +44,7 @@ const MarkersList = ({
           onSave={onSaveMarker}
         />
       )}
-    </LayerGroup>
+    </>
   );
 };
 

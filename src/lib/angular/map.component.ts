@@ -1,6 +1,7 @@
 
 /**
- * Angular Map Component
+ * This is a simplified Angular component definition
+ * In a real application, this would be a proper Angular component
  */
 
 export const MapComponentAngular = {
@@ -63,101 +64,3 @@ export const MapComponentAngular = {
   }
 };
 
-/**
- * This is the actual Angular component code that would be used
- * in a separate Angular project's source files.
- * 
- * Angular implementation sample:
- * 
- * ```typescript
- * import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
- * import { MapCore } from '../geospatial-core/map';
- * import { MapViewOptions, GeoLocation } from '../geospatial-core/types';
- * 
- * @Component({
- *   selector: 'geo-map',
- *   template: `
- *     <div #mapContainer class="map-container"></div>
- *   `,
- *   styles: [`
- *     .map-container {
- *       width: 100%;
- *       height: 100%;
- *       position: relative;
- *     }
- *   `]
- * })
- * export class MapComponent implements OnInit, OnDestroy, OnChanges {
- *   @ViewChild('mapContainer', { static: true }) mapContainer: ElementRef;
- *   
- *   @Input() options: Partial<MapViewOptions> = {};
- *   @Input() selectedLocation: GeoLocation | null = null;
- *   
- *   @Output() ready = new EventEmitter<any>();
- *   @Output() locationSelect = new EventEmitter<GeoLocation>();
- *   @Output() error = new EventEmitter<Error>();
- * 
- *   private map: MapCore | null = null;
- *   private isReady = false;
- *   
- *   ngOnInit() {
- *     this.initMap();
- *   }
- *   
- *   ngOnDestroy() {
- *     if (this.map) {
- *       this.map.dispose();
- *       this.map = null;
- *     }
- *   }
- *   
- *   ngOnChanges(changes: SimpleChanges) {
- *     if (changes.selectedLocation && !changes.selectedLocation.firstChange && 
- *         this.map && this.isReady && this.selectedLocation) {
- *       this.map.centerMap(this.selectedLocation.y, this.selectedLocation.x);
- *       this.map.addMarker(this.selectedLocation);
- *     }
- *   }
- *   
- *   private initMap() {
- *     try {
- *       this.map = new MapCore(this.options);
- *       
- *       this.map.init({
- *         getElement: () => this.mapContainer.nativeElement,
- *         getDimensions: () => ({
- *           width: this.mapContainer.nativeElement.clientWidth,
- *           height: this.mapContainer.nativeElement.clientHeight
- *         }),
- *         onResize: (callback) => {
- *           const resizeObserver = new ResizeObserver(() => callback());
- *           resizeObserver.observe(this.mapContainer.nativeElement);
- *           return () => resizeObserver.disconnect();
- *         },
- *         onCleanup: (callback) => {}
- *       });
- *       
- *       this.isReady = true;
- *       this.ready.emit(this.map);
- *       
- *       // Add click handler for location selection
- *       this.mapContainer.nativeElement.addEventListener('click', (event) => {
- *         // In a real implementation, would convert screen coordinates to geo coordinates
- *         // This is just a placeholder
- *         const mockLocation: GeoLocation = {
- *           id: `loc-${Date.now()}`,
- *           label: 'Selected Location',
- *           x: Math.random() * 180 - 90, // mock longitude
- *           y: Math.random() * 90 - 45,  // mock latitude
- *         };
- *         this.locationSelect.emit(mockLocation);
- *       });
- *       
- *     } catch (error) {
- *       console.error('Failed to initialize map:', error);
- *       this.error.emit(error as Error);
- *     }
- *   }
- * }
- * ```
- */

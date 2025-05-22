@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useThreeGlobe } from '@/hooks/useThreeGlobe';
-import { createMarkerPosition } from '@/utils/globe-utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
@@ -11,89 +11,135 @@ interface ThreeGlobeProps {
 }
 
 const ThreeGlobe: React.FC<ThreeGlobeProps> = ({ 
-  selectedLocation, 
-  onMapReady, 
-  onFlyComplete 
+  selectedLocation,
+  onMapReady,
+  onFlyComplete
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isGlobeReady, setIsGlobeReady] = useState(false);
   const [isFlying, setIsFlying] = useState(false);
-  const lastFlyLocationRef = useRef<string | null>(null);
-  const initializationAttemptedRef = useRef(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const previousLocationRef = useRef<string | null>(null);
   
-  // Initialize globe only once
-  const globeAPI = useThreeGlobe(containerRef, () => {
-    if (!isInitialized && !initializationAttemptedRef.current) {
-      initializationAttemptedRef.current = true;
-      setIsInitialized(true);
-      console.log("ThreeGlobe: Globe initialized");
-      if (onMapReady) onMapReady(globeAPI);
-    }
+  // Use our custom hook to handle Three.js setup and animation
+  const { 
+    scene, 
+    camera, 
+    renderer, 
+    controls,
+    globe,
+    flyToLocation,
+    isInitialized
+  } = useThreeGlobe(containerRef, () => {
+    console.log("ThreeGlobe: Scene initialized successfully");
+    setIsGlobeReady(true);
+    if (onMapReady) onMapReady({ scene, camera, renderer, globe, controls });
   });
   
-  // Handle location changes
+  // Show loading progress animation
   useEffect(() => {
-    if (!globeAPI.isInitialized || !selectedLocation) return;
+    // Only start progress animation if not ready yet
+    if (!isGlobeReady) {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 1;
+        if (progress >= 95) {
+          // If we reach 95% and still not ready, stay there
+          setLoadingProgress(95);
+          clearInterval(interval);
+        } else {
+          setLoadingProgress(progress);
+        }
+      }, 50);
+      
+      return () => clearInterval(interval);
+    } else {
+      // When ready, set to 100% immediately
+      setLoadingProgress(100);
+    }
+  }, [isGlobeReady]);
+  
+  // Handle flying to a location when selectedLocation changes
+  useEffect(() => {
+    if (!isInitialized || !selectedLocation) return;
     
-    // Prevent duplicate fly operations for the same location
-    const locationId = selectedLocation.id;
-    if (isFlying) {
-      console.log("ThreeGlobe: Already flying, skipping new flight request");
+    // Create a unique ID for the location to detect changes
+    const locationId = `${selectedLocation.id}-${selectedLocation.x}-${selectedLocation.y}`;
+    
+    // Skip if we're already flying or it's the same location
+    if (isFlying || locationId === previousLocationRef.current) return;
+    
+    // Validate coordinates before flying
+    if (typeof selectedLocation.x !== 'number' || typeof selectedLocation.y !== 'number' ||
+        isNaN(selectedLocation.x) || isNaN(selectedLocation.y)) {
+      console.error('Invalid coordinates:', selectedLocation);
+      toast({
+        title: "Navigation Error",
+        description: "Cannot navigate to location due to invalid coordinates",
+        variant: "destructive"
+      });
       return;
     }
     
-    if (locationId === lastFlyLocationRef.current) {
-      console.log("ThreeGlobe: Skipping duplicate location selection:", locationId);
-      return;
-    }
-    
-    console.log("ThreeGlobe: Flying to location:", selectedLocation.label);
+    console.log('Flying to location:', selectedLocation);
     setIsFlying(true);
-    lastFlyLocationRef.current = locationId;
+    previousLocationRef.current = locationId;
     
-    // Calculate marker position
-    const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
-    
-    // Fly to the location - ensure coordinates are valid numbers
-    if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
-      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, () => {
+    flyToLocation(
+      selectedLocation.x,
+      selectedLocation.y,
+      () => {
         setIsFlying(false);
         if (onFlyComplete) {
-          console.log("ThreeGlobe: Fly complete");
+          console.log("Flight complete, calling onFlyComplete callback");
           onFlyComplete();
         }
-      });
-      
-      // Add marker at the location with null check
-      if (globeAPI.addMarker) {
-        globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
       }
-    } else {
-      console.error("Invalid coordinates:", selectedLocation);
-      setIsFlying(false);
-      if (onFlyComplete) onFlyComplete();
-    }
-  }, [selectedLocation, globeAPI, onFlyComplete, isFlying, globeAPI.isInitialized]);
-  
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      lastFlyLocationRef.current = null;
-      initializationAttemptedRef.current = false;
-    };
-  }, []);
-  
+    );
+  }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);
+
   return (
     <div 
       ref={containerRef} 
       className="w-full h-full"
       style={{ 
-        position: 'relative', 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '100%',
+        background: '#000011', // Very dark blue background
         overflow: 'hidden',
-        backgroundColor: 'black'
+        zIndex: 0
       }}
+      data-testid="three-globe-container"
     >
-      {/* Canvas will be added here by Three.js */}
+      {!isGlobeReady && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white z-10">
+          <div className="text-center p-8">
+            <div className="relative mx-auto mb-6">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-400"></div>
+              <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                <svg className="h-8 w-8 text-blue-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M2 12h20" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-xl font-bold mb-2 text-blue-100">Loading Natural Earth View</h3>
+            <div className="w-64 h-3 bg-gray-800 rounded-full overflow-hidden mb-2 mx-auto">
+              <div 
+                className="h-full bg-green-500 transition-all duration-300 ease-out"
+                style={{ width: `${loadingProgress}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-green-200">Loading high-resolution terrain...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

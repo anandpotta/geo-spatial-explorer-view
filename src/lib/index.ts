@@ -25,18 +25,3 @@ export {
   formatCoordinate,
   calculateDistance as calculateDistanceUtil 
 } from './utils';
-
-/**
- * GeoSpatial Explorer Library
- * 
- * A cross-platform library for geospatial visualization that works across:
- * - React Web applications
- * - React Native mobile applications
- * - Angular applications
- * 
- * This library provides consistent interfaces for:
- * - 3D interactive globes
- * - 2D interactive maps
- * - Location handling and management
- * - Geospatial calculations and utilities
- */

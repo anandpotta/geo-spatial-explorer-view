@@ -33,7 +33,6 @@ export interface GlobeOptions {
   backgroundColor?: string;
   autoRotate?: boolean;
   rotationSpeed?: number;
-  transitionDelay?: number; // Delay before view transition in ms
 }
 
 // Map view options
@@ -52,8 +51,6 @@ export interface GlobeEventHandlers {
   onFlyComplete?: () => void;
   onLocationSelect?: (location: GeoLocation) => void;
   onError?: (error: Error) => void;
-  onBeforeTransition?: () => void; // New event before view transition
-  onAfterTransition?: () => void;  // New event after view transition
 }
 
 // Renderer context - abstraction for platform-specific rendering
