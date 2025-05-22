@@ -43,6 +43,7 @@ const Index = () => {
   
   const handleCesiumViewerRef = (viewer: any) => {
     cesiumViewerRef.current = viewer;
+    console.log('Cesium viewer reference set', viewer ? 'successfully' : 'failed');
   };
   
   const handleLeafletMapRef = (map: any) => {

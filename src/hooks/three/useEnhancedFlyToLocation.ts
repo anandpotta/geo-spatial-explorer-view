@@ -51,7 +51,10 @@ export function useEnhancedFlyToLocation(
       
       // Call the callback after a small delay to ensure everything is settled
       setTimeout(() => {
-        if (callback) callback();
+        if (callback) {
+          console.log("Fly animation complete, calling completion callback");
+          callback();
+        }
       }, 100);
     }
   }, [animationInProgressRef.current, isFlyingRef]);

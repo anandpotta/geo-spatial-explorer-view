@@ -129,6 +129,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     // Clear any previous markers first
     if (globeAPI.clearMarkers) {
       globeAPI.clearMarkers();
+      console.log("Cleared all markers from the globe");
     }
     
     // Calculate marker position 
@@ -136,6 +137,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     
     // Fly to the location - Y is latitude, X is longitude
     globeAPI.flyToLocation(selectedLocation.x, selectedLocation.y, handleFlyComplete);
+    console.log(`EnhancedFlyToLocation: Flying to ${selectedLocation.y}, ${selectedLocation.x}`);
     
     // Add marker after a slight delay
     setTimeout(() => {

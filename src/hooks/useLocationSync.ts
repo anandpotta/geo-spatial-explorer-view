@@ -42,43 +42,15 @@ export function useLocationSync(
     return timeoutId;
   };
 
-  // Force map refresh after it becomes ready
-  useEffect(() => {
-    if (map && isMapReady) {
-      safeSetTimeout(() => {
-        if (!isUnmountedRef.current && map) {
-          console.log("useLocationSync: Map is ready, forcing invalidateSize");
-          map.invalidateSize(true);
-          
-          // If we have a location but haven't positioned the map yet, do it now
-          if (selectedLocation && !hasInitialPositioning) {
-            // We need to call processLocationChange, but it's defined in another effect
-            // Instead, we'll call all the necessary logic here directly
-            if (map && !isUnmountedRef.current) {
-              try {
-                console.log("useLocationSync: Forcing initial positioning");
-                map.invalidateSize(true);
-                map.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
-                setHasInitialPositioning(true);
-              } catch (err) {
-                console.error("Error in initial positioning:", err);
-              }
-            }
-          }
-        }
-      }, 300);
-    }
-  }, [map, isMapReady, selectedLocation, hasInitialPositioning]);
-
   // Define processLocationChange function
-  function processLocationChange(map: L.Map, locationId: string, selectedLocation: Location) {
+  function processLocationChange(map: L.Map, locationId: string, location: Location) {
     if (isUnmountedRef.current || !map) return;
     
     // Set transition state
     transitionInProgressRef.current = true;
     
     // Update location reference and set fly in progress
-    console.log(`useLocationSync: Flying to location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
+    console.log(`useLocationSync: Flying to location ${location.label} at [${location.y}, ${location.x}]`);
     processedLocationRef.current = locationId;
     flyInProgressRef.current = true;
 
@@ -91,7 +63,7 @@ export function useLocationSync(
         map.invalidateSize(true);
         
         // Position the map at the selected location
-        const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
+        const newPosition: [number, number] = [location.y, location.x];
         
         // Use flyTo with animation for smoother experience
         map.flyTo(newPosition, 14, {
@@ -119,8 +91,8 @@ export function useLocationSync(
             // Add a new marker at the precise location
             const marker = L.marker(newPosition).addTo(map);
             marker.bindPopup(
-              `<b>${selectedLocation.label || 'Selected Location'}</b><br>` +
-              `${selectedLocation.y.toFixed(6)}, ${selectedLocation.x.toFixed(6)}`
+              `<b>${location.label || 'Selected Location'}</b><br>` +
+              `${location.y.toFixed(6)}, ${location.x.toFixed(6)}`
             ).openPopup();
             
             // Reset the transition flags
@@ -135,7 +107,7 @@ export function useLocationSync(
             if (!isUnmountedRef.current) {
               toast({
                 title: "Location Found",
-                description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(4)}, ${newPosition[1].toFixed(4)}`,
+                description: `Navigated to ${location.label || 'coordinates'}: ${newPosition[0].toFixed(4)}, ${newPosition[1].toFixed(4)}`,
                 duration: 3000,
               });
             }
@@ -161,6 +133,30 @@ export function useLocationSync(
       }
     }
   }
+
+  // Force map refresh after it becomes ready
+  useEffect(() => {
+    if (map && isMapReady) {
+      safeSetTimeout(() => {
+        if (!isUnmountedRef.current && map) {
+          console.log("useLocationSync: Map is ready, forcing invalidateSize");
+          map.invalidateSize(true);
+          
+          // If we have a location but haven't positioned the map yet, do it now
+          if (selectedLocation && !hasInitialPositioning) {
+            try {
+              console.log("useLocationSync: Forcing initial positioning");
+              map.invalidateSize(true);
+              map.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
+              setHasInitialPositioning(true);
+            } catch (err) {
+              console.error("Error in initial positioning:", err);
+            }
+          }
+        }
+      }, 300);
+    }
+  }, [map, isMapReady, selectedLocation, hasInitialPositioning]);
 
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
