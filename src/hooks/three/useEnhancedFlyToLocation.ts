@@ -47,6 +47,9 @@ export function useEnhancedFlyToLocation(
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
     
+    // Log the navigation attempt
+    console.log(`EnhancedFlyToLocation: Flying to ${latitude}, ${longitude}`);
+    
     // Temporarily disable auto-rotation for smoother flight
     setAutoRotation(false);
     
@@ -60,6 +63,7 @@ export function useEnhancedFlyToLocation(
         // Re-enable auto-rotation with a smooth start
         setAutoRotation(true);
         
+        console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
         if (onComplete) onComplete();
       }, 500);
     });

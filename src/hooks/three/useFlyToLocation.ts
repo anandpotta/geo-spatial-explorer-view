@@ -51,10 +51,9 @@ export function useFlyToLocation(
     
     const target = new THREE.Vector3(targetX, targetY, targetZ);
     
-    // Calculate camera position (at a specified distance from the target point)
-    // Use a more dynamic distance based on current camera position for smoother animation
-    const initialDistance = cameraRef.current.position.length();
-    const finalDistance = globeRadius * 1.3; // Closer to the globe than before
+    // Calculate camera position at a good distance for viewing the location
+    // Position the camera closer to the globe's surface for a more detailed view
+    const finalDistance = globeRadius * 1.5; // Closer to the location point
     
     const cameraTargetX = -finalDistance * Math.sin(phi) * Math.cos(theta);
     const cameraTargetY = finalDistance * Math.cos(phi);
@@ -78,7 +77,10 @@ export function useFlyToLocation(
     
     // Save the current target of the controls with null check
     const currentTarget = controlsRef.current.target.clone();
-    const finalTarget = new THREE.Vector3(targetX * 0.2, targetY * 0.2, targetZ * 0.2);
+    
+    // Set the target to be slightly closer to the surface for better viewing
+    // This makes the camera look at the actual surface location
+    const finalTarget = new THREE.Vector3(targetX * 0.9, targetY * 0.9, targetZ * 0.9);
     
     // Temporarily disable auto-rotation and damping during transition for precision
     const wasAutoRotating = controlsRef.current.autoRotate;
@@ -88,7 +90,7 @@ export function useFlyToLocation(
     
     // Animate camera position
     let startTime: number | null = null;
-    const duration = 2000; // Slightly longer animation (2 seconds) for smoother movement
+    const duration = 2000; // 2 seconds for a smooth flight
     animationInProgressRef.current = true;
     
     const animateCamera = (timestamp: number) => {
@@ -112,7 +114,6 @@ export function useFlyToLocation(
       const progress = Math.min(elapsed / duration, 1);
       
       // Use smooth easing functions for better animation
-      // This is a custom easing that starts slow, speeds up, then slows down at the end
       const easeInOutCubic = (t: number): number => {
         return t < 0.5
           ? 4 * t * t * t

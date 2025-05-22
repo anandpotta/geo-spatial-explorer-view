@@ -69,9 +69,11 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const handleFlyComplete = useCallback(() => {
     if (isUnmountedRef.current) return;
     
+    console.log("ThreeGlobe: Fly animation complete, notifying parent");
     setIsFlying(false);
+    
     if (onFlyComplete) {
-      console.log("ThreeGlobe: Fly complete");
+      console.log("ThreeGlobe: Calling onFlyComplete callback");
       onFlyComplete();
     }
   }, [onFlyComplete]);
@@ -80,6 +82,20 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   useEffect(() => {
     if (!selectedLocation || !globeAPI.isInitialized) return;
     
+    // Validate the coordinates first
+    if (typeof selectedLocation.x !== 'number' || 
+        typeof selectedLocation.y !== 'number' ||
+        isNaN(selectedLocation.x) || 
+        isNaN(selectedLocation.y)) {
+      console.error("Invalid coordinates for location:", selectedLocation);
+      toast({
+        title: "Navigation Error",
+        description: "Invalid coordinates provided",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Prevent duplicate fly operations for the same location
     const locationId = selectedLocation.id;
     if (locationId === lastFlyLocationRef.current && isFlying) {
@@ -87,7 +103,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       return;
     }
     
-    console.log("ThreeGlobe: Flying to location:", selectedLocation.label);
+    console.log(`ThreeGlobe: Flying to location: ${selectedLocation.label} at coordinates [${selectedLocation.x}, ${selectedLocation.y}]`);
     setIsFlying(true);
     lastFlyLocationRef.current = locationId;
     
@@ -98,36 +114,24 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       duration: 3000
     });
     
-    // Calculate marker position
-    const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
-    
     // Clear any previous markers first
     if (globeAPI.clearMarkers) {
       globeAPI.clearMarkers();
     }
     
-    // Fly to the location - ensure coordinates are valid numbers
-    if (typeof selectedLocation.x === 'number' && typeof selectedLocation.y === 'number') {
-      globeAPI.flyToLocation(selectedLocation.y, selectedLocation.x, handleFlyComplete);
-      
-      // Add marker at the location with null check
-      if (globeAPI.addMarker) {
-        setTimeout(() => {
-          globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
-        }, 1000); // Add marker after flight starts for better visual effect
+    // Calculate marker position 
+    const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
+    
+    // Fly to the location - Y is latitude, X is longitude
+    globeAPI.flyToLocation(selectedLocation.x, selectedLocation.y, handleFlyComplete);
+    
+    // Add marker after a slight delay
+    setTimeout(() => {
+      if (!isUnmountedRef.current && globeAPI.addMarker) {
+        console.log(`Adding marker for ${selectedLocation.label}`);
+        globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
       }
-    } else {
-      console.error("Invalid coordinates:", selectedLocation);
-      setIsFlying(false);
-      if (onFlyComplete) onFlyComplete();
-      
-      toast({
-        title: "Navigation Error",
-        description: "Could not navigate to the selected location due to invalid coordinates",
-        variant: "destructive",
-        duration: 3000
-      });
-    }
+    }, 500);
     
     // Cleanup function - cancel flights if component unmounts during flight
     return () => {

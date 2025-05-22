@@ -75,9 +75,13 @@ export function useMapViewManagement(
       setMapKey(Date.now());
       lastSelectedLocationRef.current = selectedLocation;
       
-      // Trigger leaflet refresh after a small delay
+      // Log the location for debugging
+      console.log(`MapViewManagement: Switching to leaflet view with location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
+      
+      // Trigger leaflet refresh after a small delay to ensure it's fully mounted
       setTimeout(() => {
         setLeafletRefreshTrigger(prev => prev + 1);
+        console.log("MapViewManagement: Triggering Leaflet refresh");
       }, 700);
     }
     
@@ -94,7 +98,7 @@ export function useMapViewManagement(
   // Schedule switching to leaflet after cesium fly completes
   useEffect(() => {
     if (currentView === 'cesium' && selectedLocation && flyCompleted && !viewChangeInProgressRef.current) {
-      console.log("Scheduling switch to leaflet view after fly completion with location", selectedLocation.label);
+      console.log(`MapViewManagement: Scheduling switch to leaflet view after fly completion with location ${selectedLocation.label}`);
       
       // Set the view change flag to prevent rapid toggling
       viewChangeInProgressRef.current = true;
@@ -104,9 +108,9 @@ export function useMapViewManagement(
         window.clearTimeout(pendingViewChangeTimerRef.current);
       }
       
-      // Set a short timeout to allow for state updates
+      // Set a timeout to allow for state updates
       pendingViewChangeTimerRef.current = window.setTimeout(() => {
-        console.log("Executing scheduled view change to leaflet");
+        console.log("MapViewManagement: Executing scheduled view change to leaflet");
         pendingViewChangeTimerRef.current = null;
         
         // Force map refresh to ensure proper positioning
@@ -116,6 +120,7 @@ export function useMapViewManagement(
         
         // Add a small delay then trigger a Leaflet refresh
         window.setTimeout(() => {
+          console.log("MapViewManagement: Triggering Leaflet refresh after view change");
           setLeafletRefreshTrigger(prev => prev + 1);
           
           // Reset the view change flag after transition completes
@@ -123,7 +128,7 @@ export function useMapViewManagement(
             viewChangeInProgressRef.current = false;
           }, 1000);
         }, 700);
-      }, 1200); // Use a longer delay for smoother transition
+      }, 1000); // Slightly shorter delay for more responsive UI
     }
   }, [currentView, selectedLocation, flyCompleted]);
 

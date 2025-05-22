@@ -43,10 +43,12 @@ export function useLocationSync(
 
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
+    
+    console.log(`useLocationSync: Syncing to location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
 
     // Prevent operations during active transitions
     if (transitionInProgressRef.current) {
-      console.log('Leaflet map: View transition in progress, skipping location update');
+      console.log('useLocationSync: View transition in progress, skipping location update');
       return;
     }
 
@@ -55,18 +57,18 @@ export function useLocationSync(
 
     // Skip if it's the same location we're already at
     if (locationId === processedLocationRef.current && hasInitialPositioning) {
-      console.log('Leaflet map: Skipping duplicate location selection', locationId);
+      console.log('useLocationSync: Skipping duplicate location selection', locationId);
       return;
     }
 
     // Skip if fly is already in progress
     if (flyInProgressRef.current) {
-      console.log('Leaflet map: Fly already in progress, will try again later');
+      console.log('useLocationSync: Fly already in progress, will try again later');
       
       // Queue the operation by setting a timeout
       const timer = safeSetTimeout(() => {
         if (locationId === processedLocationRef.current) {
-          console.log('Leaflet map: Skipping deferred update - location already processed');
+          console.log('useLocationSync: Skipping deferred update - location already processed');
           return;
         }
         
@@ -88,7 +90,7 @@ export function useLocationSync(
       transitionInProgressRef.current = true;
       
       // Update location reference and set fly in progress
-      console.log(`Leaflet map: Flying to location ${selectedLocation.label || 'Unnamed'} at [${selectedLocation.y}, ${selectedLocation.x}]`);
+      console.log(`useLocationSync: Flying to location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
       processedLocationRef.current = locationId;
       flyInProgressRef.current = true;
 
@@ -96,26 +98,17 @@ export function useLocationSync(
         // Force map invalidation to ensure proper rendering
         safeSetTimeout(() => {
           if (!map || isUnmountedRef.current) return;
-          map.invalidateSize(true);
-        }, 100);
-        
-        // Position the map at the selected location
-        const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
-        
-        // Use setView with animation disabled first to ensure correct positioning
-        map.setView(newPosition, 14, { animate: false });
-        
-        // Then use flyTo for smoother animation
-        safeSetTimeout(() => {
-          if (!map || isUnmountedRef.current) {
-            flyInProgressRef.current = false;
-            transitionInProgressRef.current = false;
-            return;
-          }
           
+          console.log("useLocationSync: Invalidating map size");
+          map.invalidateSize(true);
+          
+          // Position the map at the selected location
+          const newPosition: [number, number] = [selectedLocation.y, selectedLocation.x];
+          
+          // Use flyTo with animation for smoother experience
           map.flyTo(newPosition, 14, {
             animate: true,
-            duration: 1.0, // Reduced for quicker transitions
+            duration: 1.5,
             easeLinearity: 0.5
           });
           
@@ -154,7 +147,7 @@ export function useLocationSync(
               if (!isUnmountedRef.current) {
                 toast({
                   title: "Location Found",
-                  description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(6)}, ${newPosition[1].toFixed(6)}`,
+                  description: `Navigated to ${selectedLocation.label || 'coordinates'}: ${newPosition[0].toFixed(4)}, ${newPosition[1].toFixed(4)}`,
                   duration: 3000,
                 });
               }
@@ -164,7 +157,7 @@ export function useLocationSync(
               transitionInProgressRef.current = false;
             }
           }, 500);
-        }, 300);
+        }, 200);
       } catch (error) {
         console.error('Error flying to location in Leaflet:', error);
         flyInProgressRef.current = false;
