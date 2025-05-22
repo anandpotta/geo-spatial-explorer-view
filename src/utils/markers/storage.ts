@@ -24,16 +24,10 @@ export function getSavedMarkers(): LocationMarker[] {
   try {
     let markers = JSON.parse(markersJson);
     
-    // Make sure markers is an array
-    if (!Array.isArray(markers)) {
-      console.warn('Markers in localStorage is not an array, resetting');
-      return [];
-    }
-    
     // Map the dates
     markers = markers.map((marker: any) => ({
       ...marker,
-      createdAt: marker.createdAt ? new Date(marker.createdAt) : new Date()
+      createdAt: new Date(marker.createdAt)
     }));
     
     // Filter markers by user if a user is logged in
@@ -44,7 +38,6 @@ export function getSavedMarkers(): LocationMarker[] {
     return markers;
   } catch (e) {
     console.error('Failed to parse saved markers', e);
-    localStorage.removeItem('savedMarkers'); // Reset corrupt data
     return [];
   }
 }
@@ -102,10 +95,6 @@ export function deleteMarker(id: string): void {
   
   const savedMarkers = getSavedMarkers();
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
-  
-  // If no markers were removed, don't bother saving or notifying
-  if (filteredMarkers.length === savedMarkers.length) return;
-  
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
   // Notify components about storage changes
@@ -122,13 +111,4 @@ export function deleteMarker(id: string): void {
         }
       });
   }
-}
-
-// Function to completely clear all markers - useful for reset operations
-export function clearAllMarkers(): void {
-  localStorage.removeItem('savedMarkers');
-  
-  // Notify components
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
 }

@@ -44,43 +44,13 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
-  // Set window.featureGroup to make it available to other components
+  // Listen for the leafletClearAllRequest custom event
   useEffect(() => {
-    if (featureGroup) {
-      window.featureGroup = featureGroup;
-      
-      // Make sure the edit/delete controls are active when needed
-      if (featureGroup.getLayers().length > 0) {
-        console.log('Layers present, activating edit/delete controls');
-        const map = (featureGroup as any)._map;
-        if (map) {
-          // Force edit controls to update
-          setTimeout(() => {
-            map.fire('draw:created');
-          }, 100);
-        }
-      }
-    }
-    
-    return () => {
-      if (window.featureGroup === featureGroup) {
-        window.featureGroup = undefined;
-      }
-    };
-  }, [featureGroup]);
-
-  // Enhanced listener for the leafletClearAllRequest custom event
-  useEffect(() => {
-    console.log('Setting up leafletClearAllRequest event listener in DrawTools');
-    
-    const handleLeafletClearRequest = (event: Event) => {
-      console.log('DrawTools: Received leafletClearAllRequest event');
-      // Show confirmation dialog
-      console.log('DrawTools: Showing clear all confirmation dialog');
+    const handleLeafletClearRequest = () => {
+      console.log('Showing clear all confirmation dialog');
       setShowClearDialog(true);
     };
     
-    // Listen for the custom event
     window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
@@ -89,64 +59,26 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   }, []);
 
   const handleConfirmClear = () => {
-    console.log('DrawTools: Confirming clear all');
     // Close the dialog
     setShowClearDialog(false);
     
     // Clear the feature group
     if (featureGroup) {
-      console.log('Clearing feature group layers');
       featureGroup.clearLayers();
     }
     
     // Clear SVG elements from the DOM
     if (featureGroup && (featureGroup as any)._map) {
-      console.log('Clearing SVG elements from the map');
       clearAllMapSvgElements((featureGroup as any)._map);
-      
-      // Trigger Leaflet's draw:deleted event
-      (featureGroup as any)._map.fire('draw:deleted');
-      // Trigger editStop to ensure the edit toolbar is updated
-      (featureGroup as any)._map.fire('draw:editstop');
     }
     
-    // Clear path elements and saved paths
-    console.log('Clearing path elements');
+    // Clear path elements
     clearPathElements();
     
-    // Preserve authentication data
-    const authState = localStorage.getItem('geospatial_auth_state');
-    const users = localStorage.getItem('geospatial_users');
-    
-    // Clear all non-auth localStorage items
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key !== 'geospatial_auth_state' && key !== 'geospatial_users') {
-        keysToRemove.push(key);
-      }
-    }
-    console.log(`Removing ${keysToRemove.length} localStorage items`);
-    keysToRemove.forEach(key => localStorage.removeItem(key));
-    
-    // Restore auth data
-    if (authState) localStorage.setItem('geospatial_auth_state', authState);
-    if (users) localStorage.setItem('geospatial_users', users);
-    
-    // Explicitly remove from localStorage to prevent reloading
-    localStorage.removeItem('svgPaths');
-    localStorage.removeItem('savedDrawings');
-    localStorage.removeItem('savedMarkers');
-    localStorage.removeItem('floorPlans');
-    
     // Dispatch events
-    console.log('Dispatching clear events');
     window.dispatchEvent(new Event('clearAllSvgPaths'));
     window.dispatchEvent(new Event('drawingsUpdated'));
-    window.dispatchEvent(new Event('markersUpdated'));
-    window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
-    window.dispatchEvent(new Event('mapRefresh'));
     
     // Call the onClearAll callback if provided
     if (onClearAll) {
@@ -166,15 +98,12 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         position="topright"
         onCreated={handleCreated}
         draw={drawOptions}
-        edit={{ 
-          featureGroup: featureGroup,
-          remove: true  // Ensure remove option is enabled
-        }}
+        edit={false}
         featureGroup={featureGroup}
       />
       
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <AlertDialogContent className="z-[10000]">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
             <AlertDialogDescription>
