@@ -157,6 +157,10 @@
   width: 100% !important;
 }
 
+.leaflet-tooltip-pane {
+  margin-top: -33px;
+}
+
 /* Map container fixes */
 .map-wrapper, .map-container {
   position: relative !important;
