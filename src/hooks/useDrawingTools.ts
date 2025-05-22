@@ -42,20 +42,15 @@ export function useDrawingTools(
         circlemarker: false
       };
       
-      // Configure edit options with the correct type
-      const editOptions = {
-        featureGroup: featureGroup,
-        // Only enable edit handlers if edit tool is active, otherwise set to false
-        edit: activeTool === 'edit' ? {} : false,
-        // Only enable remove handlers if delete tool is active, otherwise set to false
-        remove: activeTool === 'delete' ? {} : false
-      };
-      
-      // Create drawing control
+      // Create drawing control with proper edit options
       const drawControl = new L.Control.Draw({
         position: 'topright',
         draw: drawOptions,
-        edit: editOptions
+        edit: {
+          featureGroup: featureGroup,
+          edit: activeTool === 'edit',
+          remove: activeTool === 'delete'
+        }
       });
       
       // Add to map
