@@ -31,6 +31,14 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
     return cleanup;
   }, [mapKey]);
   
+  // Create a style to ensure that map tiles are visible
+  const mapStyle = { 
+    width: '100%', 
+    height: '100%',
+    zIndex: 1, // Ensure z-index is set
+    opacity: 1  // Ensure opacity is set to 1
+  };
+  
   return (
     <LeafletMapContainer 
       key={mapKey}
@@ -42,7 +50,12 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       fadeAnimation={true}
       markerZoomAnimation={true}
       preferCanvas={true}
+      style={mapStyle}
       whenReady={() => {
+        console.log(`MapContainer: Map ready, key=${mapKey}`);
+        // Fire a custom event to notify components that Leaflet map is ready
+        window.dispatchEvent(new CustomEvent('leafletMapReady', { detail: { mapKey } }));
+        
         // Access the map instance through the global variable
         const leafletMap = document.querySelector(`.leaflet-container[data-map-key="${mapKey}"]`);
         if (leafletMap) {
@@ -56,6 +69,14 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         subdomains={['a', 'b', 'c']}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         className="leaflet-tile-pane"
+        eventHandlers={{
+          load: () => {
+            console.log("MapContainer: Tile layer loaded");
+          },
+          error: (e) => {
+            console.error("MapContainer: Tile layer error", e);
+          }
+        }}
       />
       <AttributionControl position="bottomright" prefix={false} />
       

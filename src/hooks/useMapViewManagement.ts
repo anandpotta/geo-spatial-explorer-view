@@ -173,6 +173,10 @@ export function useMapViewManagement(
             // Reset the view change flag after a longer delay
             window.setTimeout(() => {
               viewChangeInProgressRef.current = false;
+              
+              // Force another refresh after all transitions complete
+              setLeafletRefreshTrigger(prev => prev + 1);
+              console.log("MapViewManagement: Forced additional refresh after transitions complete");
             }, 800); // Reduced from 1000ms to 800ms
           }, 400); // Reduced from 500ms to 400ms
         }, 500); // Reduced from 700ms to 500ms

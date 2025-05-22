@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../../map/LeafletMap';
@@ -33,6 +32,7 @@ const LeafletViewContainer: React.FC<LeafletViewContainerProps> = ({
   
   // Handle map ready event
   const handleMapReady = (map: any) => {
+    console.log("LeafletViewContainer: Map is ready, notifying parent");
     setIsMapReady(true);
     if (onMapReady) {
       onMapReady(map);
@@ -42,25 +42,25 @@ const LeafletViewContainer: React.FC<LeafletViewContainerProps> = ({
     if (map) {
       setTimeout(() => {
         if (map.invalidateSize) {
+          console.log("LeafletViewContainer: Forcing map invalidation");
           map.invalidateSize(true);
         }
       }, 300);
     }
   };
   
-  // Get styles for the container
+  // Get styles for the container with improved visibility handling
   const getStyles = (): React.CSSProperties => {
-    const oppositeIsCurrentView = !isCurrentView;
-    
     let opacity = isCurrentView ? 1 : 0;
     let transform = isCurrentView ? 'scale(1)' : 'scale(0.95)';
     let zIndex = isCurrentView ? 10 : 0;
+    // Always keep the map visible when it's the current view
     let visibility: 'visible' | 'hidden' = isCurrentView || transitioning ? 'visible' : 'hidden';
     let pointerEvents: 'auto' | 'none' = isCurrentView && !transitioning ? 'auto' : 'none';
     
-    // During transition, adjust the values
+    // During transition, adjust the values but keep map visible
     if (transitioning) {
-      opacity = 1 - (oppositeIsCurrentView ? 0.3 : 0.7);
+      opacity = isCurrentView ? 1 : 0.3;  // Keep more opacity for current view
       transform = isCurrentView ? 'scale(1)' : 'scale(0.95)';
       zIndex = isCurrentView ? 10 : 5;
     }
