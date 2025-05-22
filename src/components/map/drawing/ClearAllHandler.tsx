@@ -20,6 +20,10 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       console.log('Force clearing SVG paths from DOM');
       // Force SVG paths to be removed directly from the DOM
       clearAllMapSvgElements(map);
+      
+      // Trigger the leaflet draw deleted event to ensure all handlers are notified
+      console.log('Triggering draw:deleted event');
+      map.fire('draw:deleted');
     } else {
       // Fallback if map instance not available
       console.log('No map instance found, using event to clear paths');
@@ -37,8 +41,23 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     const authState = localStorage.getItem('geospatial_auth_state');
     const users = localStorage.getItem('geospatial_users');
     
-    // Completely clear localStorage related to drawings and paths
-    console.log('Clearing localStorage of all drawing data');
+    // Get all keys that should be removed (related to map data)
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key !== 'geospatial_auth_state' && key !== 'geospatial_users' &&
+          (key.includes('drawing') || key.includes('map') || 
+           key.includes('path') || key.includes('marker') || 
+           key.includes('floor') || key.includes('svg'))) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    // Remove all identified keys
+    console.log(`Removing ${keysToRemove.length} localStorage items related to map data`);
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Explicitly clear common drawing-related storage
     localStorage.removeItem('savedDrawings');
     localStorage.removeItem('savedMarkers');
     localStorage.removeItem('floorPlans');

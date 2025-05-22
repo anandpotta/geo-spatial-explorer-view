@@ -36,50 +36,53 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
       }
     };
 
-    // Handle Leaflet Draw specific clear all action with improved detection
+    // Enhanced detection for Leaflet Draw clear all action
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      console.log('Click detected on:', target?.tagName, target?.textContent);
+      console.log('Click detected on:', target?.tagName, target?.className, target?.textContent);
       
-      // Check if it's a direct click on the "Clear all layers" text
-      if (target && target.textContent?.trim() === 'Clear all layers') {
-        console.log('Clear all layers text clicked directly!');
-        e.preventDefault();
-        e.stopPropagation();
-        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-        return;
-      }
-      
-      // Check if it's a click on the parent <a> element
-      if (target && target.tagName === 'A' && target.textContent?.trim() === 'Clear all layers') {
-        console.log('Clear all layers link clicked directly!');
-        e.preventDefault();
-        e.stopPropagation();
-        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-        return;
-      }
-      
-      // Check if it's a click within the parent li that contains the clear all text
-      const parentLi = target?.closest('li');
-      if (parentLi && parentLi.querySelector('a')?.textContent?.trim() === 'Clear all layers') {
-        console.log('Clear all layers parent li clicked!');
-        e.preventDefault();
-        e.stopPropagation();
-        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-        return;
-      }
-      
-      // Check for any click within the remove control that might contain "Clear all layers"
-      const removeControl = target?.closest('.leaflet-draw-edit-remove');
-      if (removeControl && removeControl.textContent?.includes('Clear all layers')) {
-        const clearAllLink = removeControl.querySelector('a[title="Clear all layers"]') || 
-                            removeControl.querySelector('a:contains("Clear all layers")');
-        if (clearAllLink) {
-          console.log('Clear all layers found in remove control!');
+      // More comprehensive checks for the clear all layers button
+      if (target) {
+        // Direct check for the clear all text content
+        if (target.textContent?.trim() === 'Clear all layers') {
+          console.log('CLEAR ALL LAYERS TEXT CLICKED!');
           e.preventDefault();
           e.stopPropagation();
           window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
           return;
+        }
+
+        // Direct check for the parent <a> element
+        if (target.tagName === 'A' && target.textContent?.trim() === 'Clear all layers') {
+          console.log('CLEAR ALL LAYERS LINK CLICKED!');
+          e.preventDefault();
+          e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+          return;
+        }
+        
+        // Check if clicked inside the edit-remove section
+        const editRemove = target.closest('.leaflet-draw-edit-remove');
+        if (editRemove) {
+          console.log('Clicked inside edit-remove section');
+          
+          // Find and check all anchor elements inside the edit-remove section
+          const anchors = editRemove.querySelectorAll('a');
+          anchors.forEach(anchor => {
+            if (anchor.textContent?.trim() === 'Clear all layers' || 
+                anchor.title === 'Clear all layers') {
+              console.log('Found Clear all layers link in edit-remove section!');
+              
+              // Check if the target is this anchor or a descendant
+              if (anchor.contains(target) || target === anchor) {
+                console.log('TRIGGERING CLEAR ALL REQUEST!');
+                e.preventDefault();
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+                return;
+              }
+            }
+          });
         }
       }
     };
@@ -88,14 +91,16 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
     window.addEventListener('userChanged', handleUserChange);
     window.addEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
     
-    // Use capture phase to catch the event before other handlers
+    // Use both capture and bubbling phase to ensure we catch the event
     document.addEventListener('click', handleClick, true);
+    document.addEventListener('click', handleClick, false);
     
     return () => {
       window.removeEventListener('userLoggedOut', handleUserLogout);
       window.removeEventListener('userChanged', handleUserChange);
       window.removeEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
       document.removeEventListener('click', handleClick, true);
+      document.removeEventListener('click', handleClick, false);
     };
   }, [clearPathElements]);
   

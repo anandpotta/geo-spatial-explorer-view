@@ -101,89 +101,143 @@ export const clearAllMapSvgElements = (map: any): void => {
     
     console.log('Clearing all SVG elements from map container');
     
-    // First, try to clear layers from the map itself
+    // First, try to clear layers directly from the map
     if (map && map.eachLayer) {
       console.log('Iterating through map layers to clear user-added layers');
       map.eachLayer((layer: any) => {
-        // Skip tile layers and base layers
-        if (layer._url || layer.options?.baseLayer) {
-          return;
-        }
-        
-        // Remove user-added layers
-        if (layer.options?.isDrawn || layer.options?.id) {
-          console.log('Removing user-added layer:', layer.options?.id || 'unnamed');
-          map.removeLayer(layer);
+        try {
+          // Skip tile layers and base layers
+          if (layer._url || layer.options?.baseLayer) {
+            return;
+          }
+          
+          // Check for drawn elements with more criteria
+          const isDrawnLayer = layer.options?.isDrawn || 
+                              layer.options?.id ||
+                              layer.feature || 
+                              layer._leaflet_id && !layer._url;
+          
+          if (isDrawnLayer) {
+            console.log('Removing user-added layer:', layer.options?.id || 'unnamed');
+            try {
+              map.removeLayer(layer);
+            } catch (err) {
+              console.warn('Error removing layer:', err);
+            }
+          }
+        } catch (err) {
+          console.warn('Error processing layer:', err);
         }
       });
     }
     
-    // Clear SVG paths
-    const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg, .leaflet-svg-layer');
-    console.log(`Found ${svgLayers.length} SVG layers to process`);
+    // Clear all SVG elements in all leaflet panels
+    const allLeafletPanes = container.querySelectorAll('.leaflet-pane');
+    console.log(`Found ${allLeafletPanes.length} leaflet panes to check`);
     
-    svgLayers.forEach(svg => {
-      // Clear path elements
-      const paths = svg.querySelectorAll('path:not(.leaflet-tile-boundary)');
-      console.log(`Removing ${paths.length} path elements`);
-      paths.forEach(path => path.remove());
+    allLeafletPanes.forEach(pane => {
+      // Skip tile pane
+      if (pane.classList.contains('leaflet-tile-pane')) return;
       
-      // Clear image elements (floor plans, etc.)
-      const images = svg.querySelectorAll('image');
-      console.log(`Removing ${images.length} image elements`);
-      images.forEach(img => img.remove());
-      
-      // Clear clip paths
-      const clipPaths = svg.querySelectorAll('clipPath');
-      console.log(`Removing ${clipPaths.length} clip path elements`);
-      clipPaths.forEach(clipPath => clipPath.remove());
-      
-      // Clear defs elements that might contain clip paths
-      const defs = svg.querySelectorAll('defs');
-      console.log(`Removing ${defs.length} defs elements`);
-      defs.forEach(def => def.remove());
-      
-      // Clear g elements that might contain paths or images
-      const groups = svg.querySelectorAll('g:not(.leaflet-tile-container)');
-      console.log(`Checking ${groups.length} group elements`);
-      groups.forEach(group => {
-        // Only remove groups that contain our custom elements
-        if (group.querySelector('image, clipPath, path:not(.leaflet-tile-boundary)')) {
-          group.remove();
-        }
+      // Clear SVG elements
+      const svgs = pane.querySelectorAll('svg');
+      console.log(`Found ${svgs.length} SVG elements in pane`);
+      svgs.forEach(svg => {
+        // Clear all paths except tile boundaries
+        const paths = svg.querySelectorAll('path:not(.leaflet-tile-boundary)');
+        console.log(`Removing ${paths.length} path elements`);
+        paths.forEach(path => {
+          try {
+            path.parentNode?.removeChild(path);
+          } catch (err) {
+            console.warn('Error removing path:', err);
+          }
+        });
+        
+        // Clear all images
+        const images = svg.querySelectorAll('image');
+        console.log(`Removing ${images.length} image elements`);
+        images.forEach(img => {
+          try {
+            img.parentNode?.removeChild(img);
+          } catch (err) {
+            console.warn('Error removing image:', err);
+          }
+        });
+        
+        // Clear all clip paths
+        const clipPaths = svg.querySelectorAll('clipPath');
+        console.log(`Removing ${clipPaths.length} clip path elements`);
+        clipPaths.forEach(clipPath => {
+          try {
+            clipPath.parentNode?.removeChild(clipPath);
+          } catch (err) {
+            console.warn('Error removing clip path:', err);
+          }
+        });
+        
+        // Clear all defs elements
+        const defs = svg.querySelectorAll('defs');
+        console.log(`Removing ${defs.length} defs elements`);
+        defs.forEach(def => {
+          try {
+            def.parentNode?.removeChild(def);
+          } catch (err) {
+            console.warn('Error removing defs:', err);
+          }
+        });
+        
+        // Clear non-tile-container groups
+        const groups = svg.querySelectorAll('g:not(.leaflet-tile-container)');
+        console.log(`Checking ${groups.length} group elements`);
+        groups.forEach(group => {
+          try {
+            // Only remove groups with our custom elements
+            if (group.querySelector('image, clipPath, path:not(.leaflet-tile-boundary)')) {
+              group.parentNode?.removeChild(group);
+            }
+          } catch (err) {
+            console.warn('Error removing group:', err);
+          }
+        });
       });
     });
     
-    // Clear any elements in the Draw control
-    const drawControl = container.querySelector('.leaflet-draw');
-    if (drawControl) {
-      console.log('Found draw control, clearing any SVG elements inside');
-      const drawSvgs = drawControl.querySelectorAll('svg');
-      drawSvgs.forEach(svg => {
-        const paths = svg.querySelectorAll('path:not(.leaflet-tile-boundary)');
-        paths.forEach(path => path.remove());
-      });
-    }
-    
-    // Clear all elements in the edit feature group if available
+    // Clear any feature group directly
     if (window.featureGroup) {
       console.log('Clearing feature group');
-      window.featureGroup.clearLayers();
+      try {
+        window.featureGroup.clearLayers();
+      } catch (err) {
+        console.warn('Error clearing feature group:', err);
+      }
     }
     
-    // Trigger events to notify components
-    console.log('Dispatching SVG paths cleared event');
-    window.dispatchEvent(new Event('svgPathsCleared'));
-    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
-    
-    // Also remove svgPaths from localStorage to prevent reloading
+    // Force complete clearing of localStorage
     localStorage.removeItem('svgPaths');
     localStorage.removeItem('savedDrawings');
     localStorage.removeItem('savedMarkers');
     localStorage.removeItem('floorPlans');
     
-    // Dispatch storage event to ensure other components are notified
+    // Dispatch events to ensure all components are updated
+    console.log('Dispatching SVG paths cleared events');
+    window.dispatchEvent(new Event('svgPathsCleared'));
+    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
     window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('markersUpdated'));
+    window.dispatchEvent(new Event('drawingsUpdated'));
+    
+    // Fire map resize event to force redraw
+    if (map.invalidateSize) {
+      setTimeout(() => {
+        try {
+          map.invalidateSize({ animate: false });
+        } catch (err) {
+          console.warn('Error invalidating map size:', err);
+        }
+      }, 100);
+    }
+    
   } catch (err) {
     console.error('Error clearing SVG elements from map:', err);
   }

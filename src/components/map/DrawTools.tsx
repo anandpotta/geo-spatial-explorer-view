@@ -44,21 +44,26 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
-  // Listen for the leafletClearAllRequest custom event with enhanced logging
+  // Enhanced listener for the leafletClearAllRequest custom event
   useEffect(() => {
-    const handleLeafletClearRequest = () => {
+    console.log('Setting up leafletClearAllRequest event listener in DrawTools');
+    
+    const handleLeafletClearRequest = (event: Event) => {
       console.log('DrawTools: Received leafletClearAllRequest event');
+      // Stop event propagation to prevent multiple handlers
+      event.stopPropagation();
+      // Show confirmation dialog
       console.log('DrawTools: Showing clear all confirmation dialog');
       setShowClearDialog(true);
     };
     
     // Remove existing listener to prevent duplicates
     window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
-    // Add listener with higher priority
-    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest, true);
+    // Add listener with highest priority
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest, { capture: true });
     
     return () => {
-      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest, true);
+      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest, { capture: true });
     };
   }, []);
 
@@ -77,11 +82,33 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     if (featureGroup && (featureGroup as any)._map) {
       console.log('Clearing SVG elements from the map');
       clearAllMapSvgElements((featureGroup as any)._map);
+      
+      // Trigger Leaflet's draw:deleted event
+      (featureGroup as any)._map.fire('draw:deleted');
     }
     
     // Clear path elements and saved paths
     console.log('Clearing path elements');
     clearPathElements();
+    
+    // Preserve authentication data
+    const authState = localStorage.getItem('geospatial_auth_state');
+    const users = localStorage.getItem('geospatial_users');
+    
+    // Clear all non-auth localStorage items
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key !== 'geospatial_auth_state' && key !== 'geospatial_users') {
+        keysToRemove.push(key);
+      }
+    }
+    console.log(`Removing ${keysToRemove.length} localStorage items`);
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Restore auth data
+    if (authState) localStorage.setItem('geospatial_auth_state', authState);
+    if (users) localStorage.setItem('geospatial_users', users);
     
     // Explicitly remove from localStorage to prevent reloading
     localStorage.removeItem('svgPaths');
@@ -96,6 +123,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     window.dispatchEvent(new Event('markersUpdated'));
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
+    window.dispatchEvent(new Event('mapRefresh'));
     
     // Call the onClearAll callback if provided
     if (onClearAll) {
@@ -123,7 +151,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       />
       
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[10000]">
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
             <AlertDialogDescription>
