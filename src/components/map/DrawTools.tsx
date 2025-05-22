@@ -18,6 +18,42 @@ import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
+// Initialize L.drawVersion to avoid type errors
+if (typeof L !== 'undefined' && !L.drawVersion) {
+  L.drawVersion = '1.0.4';
+}
+
+// Ensure GeometryUtil functions are available
+if (typeof L !== 'undefined' && !L.GeometryUtil) {
+  L.GeometryUtil = {
+    geodesicArea: function(latLngs) {
+      let area = 0;
+      if (latLngs && latLngs.length > 2) {
+        area = Math.abs(L.LatLngUtil.geodesicArea(latLngs));
+      }
+      return area;
+    },
+    readableArea: function(area, isMetric = true) {
+      let areaStr;
+      if (isMetric) {
+        if (area >= 10000) {
+          areaStr = (area * 0.0001).toFixed(2) + ' ha';
+        } else {
+          areaStr = area.toFixed(2) + ' m²';
+        }
+      } else {
+        const areaInSqFeet = area * 10.764;
+        if (areaInSqFeet >= 43560) {
+          areaStr = (areaInSqFeet / 43560).toFixed(2) + ' acres';
+        } else {
+          areaStr = areaInSqFeet.toFixed(2) + ' ft²';
+        }
+      }
+      return areaStr;
+    }
+  };
+}
+
 interface DrawToolsProps {
   onCreated: (shape: any) => void;
   activeTool: string | null;

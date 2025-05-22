@@ -11,7 +11,9 @@ export const getDrawOptions = () => {
         opacity: 1,
         fillOpacity: 0.3,
         stroke: true
-      }
+      },
+      metric: true,
+      showArea: true
     },
     polygon: {
       allowIntersection: false,
