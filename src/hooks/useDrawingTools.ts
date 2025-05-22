@@ -42,8 +42,8 @@ export function useDrawingTools(
         circlemarker: false
       };
       
-      // Configure edit options - fix the type issue by using proper structure
-      const editOptions: L.Control.DrawOptions.Edit = {
+      // Configure edit options with the correct type syntax
+      const editOptions: L.Control.DrawOptions["edit"] = {
         featureGroup: featureGroup,
         // Only enable edit handlers if edit tool is active, otherwise set to false
         edit: activeTool === 'edit' ? {
