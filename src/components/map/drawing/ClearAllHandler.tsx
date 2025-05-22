@@ -9,6 +9,8 @@ interface ClearAllHandlerProps {
 }
 
 export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProps) {
+  console.log('Executing clear all handler');
+  
   if (featureGroup) {
     // Clear all visible layers from the map
     featureGroup.clearLayers();
@@ -18,6 +20,18 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     if (map) {
       // Force SVG paths to be removed directly from the DOM
       clearAllMapSvgElements(map);
+      
+      // Force removal of any remaining markers
+      try {
+        const markerPane = map._panes.markerPane;
+        if (markerPane) {
+          while (markerPane.firstChild) {
+            markerPane.removeChild(markerPane.firstChild);
+          }
+        }
+      } catch (err) {
+        console.error('Error clearing marker pane:', err);
+      }
     } else {
       // Fallback if map instance not available
       window.dispatchEvent(new Event('clearAllSvgPaths'));
@@ -51,6 +65,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     localStorage.removeItem('svgPaths');
     
     // Dispatch storage and related events to notify components
+    console.log('Dispatching events for clear all operation');
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('markersUpdated'));
     window.dispatchEvent(new Event('drawingsUpdated'));
@@ -62,6 +77,19 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     if (onClearAll) {
       onClearAll();
     }
+    
+    // Force update of the edit toolbar if it exists
+    setTimeout(() => {
+      if (map && map.fire) {
+        try {
+          map.fire('draw:editstart');
+          map.fire('draw:editstop');
+          console.log('Fired edit events to refresh toolbar state');
+        } catch (e) {
+          console.error('Error refreshing edit toolbar:', e);
+        }
+      }
+    }, 100);
     
     toast.success('All map data cleared while preserving user accounts');
   }

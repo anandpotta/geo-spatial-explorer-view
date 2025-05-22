@@ -10,6 +10,7 @@ import { useSavedPathsRestoration } from '@/hooks/useSavedPathsRestoration';
 import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
 import { getDrawOptions } from './drawing/DrawOptionsConfiguration';
 import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
+import { useClearAllOperation } from '@/hooks/useClearAllOperation';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 
@@ -26,11 +27,21 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
-  const [showClearDialog, setShowClearDialog] = useState(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
+  
+  // Use the clear all operation hook
+  const { 
+    showConfirmation, 
+    setShowConfirmation, 
+    confirmClearAll 
+  } = useClearAllOperation(() => {
+    if (onClearAll) {
+      onClearAll();
+    }
+  });
   
   // Initialize configuration and event handlers using custom hooks
   useDrawToolsConfiguration(featureGroup);
@@ -44,50 +55,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
-  // Listen for the leafletClearAllRequest custom event
-  useEffect(() => {
-    const handleLeafletClearRequest = () => {
-      console.log('Showing clear all confirmation dialog');
-      setShowClearDialog(true);
-    };
-    
-    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
-    
-    return () => {
-      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
-    };
-  }, []);
-
-  const handleConfirmClear = () => {
-    // Close the dialog
-    setShowClearDialog(false);
-    
-    // Clear the feature group
-    if (featureGroup) {
-      featureGroup.clearLayers();
-    }
-    
-    // Clear SVG elements from the DOM
-    if (featureGroup && (featureGroup as any)._map) {
-      clearAllMapSvgElements((featureGroup as any)._map);
-    }
-    
-    // Clear path elements
-    clearPathElements();
-    
-    // Dispatch events
-    window.dispatchEvent(new Event('clearAllSvgPaths'));
-    window.dispatchEvent(new Event('drawingsUpdated'));
-    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
-    
-    // Call the onClearAll callback if provided
-    if (onClearAll) {
-      onClearAll();
-    }
-    
-    toast.success('All shapes and layers cleared');
-  };
-
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
 
@@ -98,11 +65,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         position="topright"
         onCreated={handleCreated}
         draw={drawOptions}
-        edit={false}
+        edit={{
+          featureGroup,
+          remove: true
+        }}
         featureGroup={featureGroup}
       />
       
-      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
@@ -112,7 +82,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmClear}>Clear All</AlertDialogAction>
+            <AlertDialogAction onClick={confirmClearAll}>Clear All</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

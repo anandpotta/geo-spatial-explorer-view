@@ -40,18 +40,28 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
     const handleLeafletClearAction = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       
-      // Check if the clicked element is the "Clear all layers" button in Leaflet draw
-      if (target && 
-          target.tagName === 'A' && 
-          target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions') &&
-          target.textContent?.includes('Clear all')) {
+      // Enhanced check for clear all layers button
+      if (target && target.tagName === 'A') {
+        // Check if this is the clear all button in Leaflet draw actions
+        const isDrawActionsParent = 
+          target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions');
         
-        console.log('Leaflet draw clear all layers button clicked');
-        e.preventDefault();
-        e.stopPropagation();
+        const isClearAllButton = 
+          target.textContent?.includes('Clear all') || 
+          target.textContent?.includes('Delete') ||
+          target.textContent?.trim() === 'Clear All';
         
-        // Dispatch a custom event to show the confirmation dialog
-        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+        if (isDrawActionsParent && isClearAllButton) {
+          console.log('Leaflet draw clear all layers button clicked');
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Dispatch a custom event to show the confirmation dialog
+          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+          
+          // Return false to prevent the original action
+          return false;
+        }
       }
     };
     

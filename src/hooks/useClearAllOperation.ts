@@ -11,6 +11,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
   // Listen for the custom leafletClearAllRequest event
   useEffect(() => {
     const handleLeafletClearRequest = () => {
+      console.log('Received leaflet clear all request event');
       if (isAuthenticated) {
         setShowConfirmation(true);
       } else {
@@ -35,6 +36,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
   }, [isAuthenticated]);
   
   const confirmClearAll = useCallback(() => {
+    console.log('Confirming clear all operation');
     const featureGroup = window.featureGroup;
     if (featureGroup) {
       handleClearAll({

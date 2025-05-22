@@ -99,37 +99,60 @@ export const clearAllMapSvgElements = (map: any): void => {
     const container = map.getContainer();
     if (!container) return;
     
+    console.log('Clearing all SVG elements from map container');
+    
     // Clear SVG paths
     const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
     svgLayers.forEach(svg => {
+      // Clear all paths that aren't tile boundaries
       const paths = svg.querySelectorAll('path');
       paths.forEach(path => {
         // Check if it's not a tile boundary path before removing
         if (!path.classList.contains('leaflet-tile-boundary')) {
-          path.parentNode?.removeChild(path);
+          if (path.parentNode) {
+            path.parentNode.removeChild(path);
+          }
         }
       });
       
       // Clear image elements (floor plans, etc.)
       const images = svg.querySelectorAll('image');
       images.forEach(img => {
-        img.parentNode?.removeChild(img);
+        if (img.parentNode) {
+          img.parentNode.removeChild(img);
+        }
       });
       
       // Clear clip paths
       const clipPaths = svg.querySelectorAll('clipPath');
       clipPaths.forEach(clipPath => {
-        clipPath.parentNode?.removeChild(clipPath);
+        if (clipPath.parentNode) {
+          clipPath.parentNode.removeChild(clipPath);
+        }
       });
       
       // Clear defs elements that might contain clip paths
       const defs = svg.querySelectorAll('defs');
       defs.forEach(def => {
-        def.parentNode?.removeChild(def);
+        if (def.parentNode) {
+          def.parentNode.removeChild(def);
+        }
+      });
+    });
+    
+    // Remove any other custom overlays
+    const overlayPanes = container.querySelectorAll('.leaflet-overlay-pane, .leaflet-marker-pane');
+    overlayPanes.forEach(pane => {
+      // Preserve the pane itself but clear contents except SVG elements (already handled)
+      Array.from(pane.children).forEach(child => {
+        if (child.tagName !== 'SVG') {
+          pane.removeChild(child);
+        }
       });
     });
     
     // Trigger events to notify components
+    console.log('Dispatching SVG paths cleared events');
     window.dispatchEvent(new Event('svgPathsCleared'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
   } catch (err) {
