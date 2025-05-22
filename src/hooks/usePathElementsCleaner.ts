@@ -37,28 +37,44 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
     };
 
     // Handle Leaflet Draw specific clear all action
-    const handleLeafletClearAction = (e: Event) => {
+    const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       
+      // Debug info
       console.log('Click detected, checking if clear all button', target?.tagName, target?.textContent);
       
-      // Check if it's the clear all button with more robust detection
+      // First check: if it's an <a> element with text "Clear all layers"
       if (target && 
           target.tagName === 'A' && 
           target.textContent?.trim() === 'Clear all layers') {
         
         // Check if it's within the remove control
-        const isInRemoveControl = !!target.closest('.leaflet-draw-edit-remove');
-        
-        if (isInRemoveControl) {
-          console.log('Leaflet draw clear all layers button clicked!', target);
+        if (target.closest('.leaflet-draw-edit-remove')) {
+          console.log('Leaflet clear all layers button clicked! Intercepting...');
           e.preventDefault();
           e.stopPropagation();
           
           // Dispatch a custom event to show the confirmation dialog
           console.log('Dispatching leafletClearAllRequest event');
           window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-          return false;
+          return;
+        }
+      }
+      
+      // Second check: if it's a child element within the clear all button
+      if (target && target.parentElement) {
+        const parentLink = target.closest('a');
+        if (parentLink && 
+            parentLink.textContent?.trim() === 'Clear all layers' &&
+            parentLink.closest('.leaflet-draw-edit-remove')) {
+          console.log('Leaflet clear all layers button child element clicked! Intercepting...');
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Dispatch a custom event to show the confirmation dialog
+          console.log('Dispatching leafletClearAllRequest event');
+          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+          return;
         }
       }
     };
@@ -67,16 +83,14 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
     window.addEventListener('userChanged', handleUserChange);
     window.addEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
     
-    // Use both capture and bubbling phase to ensure we catch the event
-    document.addEventListener('click', handleLeafletClearAction as EventListener, true);
-    document.addEventListener('click', handleLeafletClearAction as EventListener, false);
+    // Use capture phase to catch the event before other handlers
+    document.addEventListener('click', handleClick, true);
     
     return () => {
       window.removeEventListener('userLoggedOut', handleUserLogout);
       window.removeEventListener('userChanged', handleUserChange);
       window.removeEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
-      document.removeEventListener('click', handleLeafletClearAction as EventListener, true);
-      document.removeEventListener('click', handleLeafletClearAction as EventListener, false);
+      document.removeEventListener('click', handleClick, true);
     };
   }, [clearPathElements]);
   

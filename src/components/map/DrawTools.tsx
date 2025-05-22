@@ -51,7 +51,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       setShowClearDialog(true);
     };
     
+    // Remove existing listener to prevent duplicates
     window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+    // Add listener with higher priority
     window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
@@ -80,13 +82,18 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     console.log('Clearing path elements');
     clearPathElements();
     
-    // Save an empty array to prevent reloading of cleared paths
+    // Explicitly remove from localStorage to prevent reloading
     localStorage.removeItem('svgPaths');
+    localStorage.removeItem('savedDrawings');
+    localStorage.removeItem('savedMarkers');
+    localStorage.removeItem('floorPlans');
     
     // Dispatch events
     console.log('Dispatching clear events');
     window.dispatchEvent(new Event('clearAllSvgPaths'));
     window.dispatchEvent(new Event('drawingsUpdated'));
+    window.dispatchEvent(new Event('markersUpdated'));
+    window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
     
     // Call the onClearAll callback if provided

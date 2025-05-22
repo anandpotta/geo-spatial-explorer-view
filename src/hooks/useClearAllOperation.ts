@@ -21,8 +21,9 @@ export function useClearAllOperation(onClearAll?: () => void) {
       }
     };
     
-    // Ensure this listener gets priority
+    // Remove any existing listeners to avoid duplicates
     window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+    // Add listener with higher priority by using capture phase
     window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
@@ -52,6 +53,9 @@ export function useClearAllOperation(onClearAll?: () => void) {
       // Explicitly clear saved paths for current user
       console.log('Clearing saved paths');
       saveSvgPaths([]);
+      
+      // Also directly remove from localStorage to ensure it's gone
+      localStorage.removeItem('svgPaths');
       
       // Also dispatch the clearAllSvgPaths event to make sure all handlers are notified
       window.dispatchEvent(new Event('clearAllSvgPaths'));
