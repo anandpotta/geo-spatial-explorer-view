@@ -105,8 +105,9 @@ export const initializeLeafletDrawComplete = () => {
         }
       }) as any;
       
-      // Ensure the prototype is properly set up
-      L.Control.Draw.prototype.options = {
+      // Fix: Cast the prototype options to 'any' to avoid TypeScript errors
+      // since the Draw control extends the base Control with additional options
+      (L.Control.Draw.prototype as any).options = {
         position: 'topright',
         draw: {},
         edit: undefined
