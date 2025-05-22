@@ -48,7 +48,20 @@ export function useGlobeNavigation(
 
   // Handle location changes
   useEffect(() => {
-    if (!selectedLocation || !globeAPI.isInitialized || !isInitialized) return;
+    if (!selectedLocation || !globeAPI || !isInitialized) {
+      console.log("Globe navigation: Missing requirements", { 
+        hasLocation: !!selectedLocation, 
+        hasGlobeAPI: !!globeAPI, 
+        isInitialized 
+      });
+      return;
+    }
+    
+    // Make sure the globe API is initialized
+    if (!globeAPI.isInitialized) {
+      console.log("Globe API not fully initialized yet, skipping navigation");
+      return;
+    }
     
     // Validate the coordinates first
     if (typeof selectedLocation.x !== 'number' || 
@@ -93,8 +106,8 @@ export function useGlobeNavigation(
     const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
     
     // Fly to the location - Y is latitude, X is longitude
+    console.log(`EnhancedFlyToLocation: Flying to coordinates [${selectedLocation.y}, ${selectedLocation.x}]`);
     globeAPI.flyToLocation(selectedLocation.x, selectedLocation.y, handleFlyComplete);
-    console.log(`EnhancedFlyToLocation: Flying to ${selectedLocation.y}, ${selectedLocation.x}`);
     
     // Add marker after a slight delay
     setTimeout(() => {
@@ -103,7 +116,7 @@ export function useGlobeNavigation(
         globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
       }
     }, 300);
-  }, [selectedLocation, globeAPI, isFlying, isInitialized, globeAPI.isInitialized]);
+  }, [selectedLocation, globeAPI, isFlying, isInitialized, globeAPI?.isInitialized]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -116,7 +129,7 @@ export function useGlobeNavigation(
       }
       
       // Ensure any ongoing flights are canceled
-      if (globeAPI.cancelFlight) {
+      if (globeAPI && globeAPI.cancelFlight) {
         globeAPI.cancelFlight();
       }
     };
