@@ -15,6 +15,7 @@ export function useLocationSync(
   const [hasInitialPositioning, setHasInitialPositioning] = useState(false);
   const transitionInProgressRef = useRef(false);
   const isUnmountedRef = useRef(false);
+  const initialPositioningAttemptsRef = useRef(0);
 
   // Clear all timeouts on unmount or when dependencies change
   useEffect(() => {
@@ -40,6 +41,23 @@ export function useLocationSync(
     timeoutRefsRef.current.push(timeoutId);
     return timeoutId;
   };
+
+  // Force map refresh after it becomes ready
+  useEffect(() => {
+    if (map && isMapReady) {
+      safeSetTimeout(() => {
+        if (!isUnmountedRef.current && map) {
+          console.log("useLocationSync: Map is ready, forcing invalidateSize");
+          map.invalidateSize(true);
+          
+          // If we have a location but haven't positioned the map yet, do it now
+          if (selectedLocation && !hasInitialPositioning) {
+            processLocationChange();
+          }
+        }
+      }, 300);
+    }
+  }, [map, isMapReady]);
 
   useEffect(() => {
     if (!selectedLocation || !map || !isMapReady) return;
@@ -79,6 +97,29 @@ export function useLocationSync(
       }, 1200);
       
       return;
+    }
+
+    // Multiple retry attempts for initial positioning
+    if (!hasInitialPositioning) {
+      initialPositioningAttemptsRef.current++;
+      
+      if (initialPositioningAttemptsRef.current > 3) {
+        console.log(`useLocationSync: Multiple attempts (${initialPositioningAttemptsRef.current}) to position map, forcing approach`);
+        // Force a delay and retry with basic approach if we're having trouble
+        safeSetTimeout(() => {
+          if (map && !isUnmountedRef.current) {
+            try {
+              console.log("useLocationSync: Forcing basic positioning approach");
+              map.invalidateSize(true);
+              map.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
+              setHasInitialPositioning(true);
+            } catch (err) {
+              console.error("Error in force positioning:", err);
+            }
+          }
+        }, 800);
+        return;
+      }
     }
 
     processLocationChange();

@@ -18,6 +18,12 @@ export function useMapViewManagement(
   const viewChangeInProgressRef = useRef(false);
   const preventRapidChangeTimerRef = useRef<number | null>(null);
   const lastSelectedLocationRef = useRef<Location | undefined>(undefined);
+  const flyCompletedRef = useRef(flyCompleted);
+
+  // Update the ref when flyCompleted changes
+  useEffect(() => {
+    flyCompletedRef.current = flyCompleted;
+  }, [flyCompleted]);
 
   // Handle actual view change with state updates
   const changeView = (view: MapView) => {
@@ -53,7 +59,7 @@ export function useMapViewManagement(
     }
     
     // Don't allow switching to leaflet until fly is completed
-    if (view === 'leaflet' && !flyCompleted && selectedLocation) {
+    if (view === 'leaflet' && !flyCompletedRef.current && selectedLocation) {
       toast({
         title: "Please wait",
         description: "Wait for navigation to complete before switching views",
@@ -128,7 +134,7 @@ export function useMapViewManagement(
             viewChangeInProgressRef.current = false;
           }, 1000);
         }, 700);
-      }, 1000); // Slightly shorter delay for more responsive UI
+      }, 800); // Slightly shorter delay for more responsive UI
     }
   }, [currentView, selectedLocation, flyCompleted]);
 

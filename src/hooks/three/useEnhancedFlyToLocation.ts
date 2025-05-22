@@ -64,7 +64,12 @@ export function useEnhancedFlyToLocation(
         setAutoRotation(true);
         
         console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
-        if (onComplete) onComplete();
+        
+        // Ensure the onComplete callback is called
+        if (onComplete) {
+          console.log("EnhancedFlyToLocation: Calling onComplete callback");
+          onComplete();
+        }
       }, 500);
     });
   }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight]);

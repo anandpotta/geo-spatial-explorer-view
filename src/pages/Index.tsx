@@ -15,7 +15,7 @@ const Index = () => {
     handleSavedLocationSelect
   } = useLocationManagement();
 
-  // Get view management functionality
+  // Get view management functionality with flyCompleted state
   const {
     currentView,
     mapKey,
@@ -34,6 +34,7 @@ const Index = () => {
     if (selectedLocation && currentView === 'leaflet' && leafletMapRef.current) {
       setTimeout(() => {
         if (leafletMapRef.current && leafletMapRef.current.invalidateSize) {
+          console.log('Forcing Leaflet map refresh from Index');
           leafletMapRef.current.invalidateSize(true);
         }
       }, 300);
