@@ -21,7 +21,9 @@ const Index = () => {
     mapKey,
     leafletRefreshTrigger,
     handleViewChange
-  } = useMapViewManagement(selectedLocation, flyCompleted);
+  } = useMapViewManagement(selectedLocation, flyCompleted, () => {
+    console.log("Index: View change complete callback");
+  });
 
   // Map viewer references
   const cesiumViewerRef = useRef<any>(null);
@@ -49,6 +51,19 @@ const Index = () => {
   const handleLeafletMapRef = (map: any) => {
     leafletMapRef.current = map;
     console.log('Leaflet map reference set', map ? 'successfully' : 'failed');
+    
+    // Force a map refresh whenever the reference is updated
+    if (map && map.invalidateSize) {
+      setTimeout(() => {
+        map.invalidateSize(true);
+      }, 200);
+    }
+  };
+  
+  // Handle fly complete with logging for debugging
+  const handleFlyCompleteWithLogging = () => {
+    console.log('Index: Fly complete detected, handling completion');
+    handleFlyComplete();
   };
   
   // Log state for debugging
@@ -67,7 +82,7 @@ const Index = () => {
         currentView={currentView}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
-        onFlyComplete={handleFlyComplete}
+        onFlyComplete={handleFlyCompleteWithLogging}
         onLocationSelect={handleLocationSelect}
         handleCesiumViewerRef={handleCesiumViewerRef}
         handleLeafletMapRef={handleLeafletMapRef}

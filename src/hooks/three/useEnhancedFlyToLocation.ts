@@ -18,6 +18,7 @@ export function useEnhancedFlyToLocation(
   const internalFlyingRef = useRef<boolean>(false);
   const completedCallbackRef = useRef<(() => void) | undefined>(undefined);
   const callbackTimeoutRef = useRef<number | null>(null);
+  const stabilizationTimeoutRef = useRef<number | null>(null);
   
   // Determine which ref to use for tracking flying state
   const isFlyingRef = externalFlyingRef || internalFlyingRef;
@@ -44,6 +45,11 @@ export function useEnhancedFlyToLocation(
         window.clearTimeout(callbackTimeoutRef.current);
         callbackTimeoutRef.current = null;
       }
+      
+      if (stabilizationTimeoutRef.current !== null) {
+        window.clearTimeout(stabilizationTimeoutRef.current);
+        stabilizationTimeoutRef.current = null;
+      }
     };
   }, [cancelFlight]);
   
@@ -68,7 +74,7 @@ export function useEnhancedFlyToLocation(
           console.log("Fly animation complete, calling completion callback from effect");
           callback();
         }
-      }, 200);
+      }, 250); // Slightly longer delay for better stability
     }
   }, [animationInProgressRef.current, isFlyingRef]);
   
@@ -77,10 +83,15 @@ export function useEnhancedFlyToLocation(
     // Cancel any ongoing flight first
     cancelFlight();
     
-    // Clear any existing timeout
+    // Clear any existing timeouts
     if (callbackTimeoutRef.current !== null) {
       window.clearTimeout(callbackTimeoutRef.current);
       callbackTimeoutRef.current = null;
+    }
+    
+    if (stabilizationTimeoutRef.current !== null) {
+      window.clearTimeout(stabilizationTimeoutRef.current);
+      stabilizationTimeoutRef.current = null;
     }
     
     // Set flying state to true to prevent animation conflicts
@@ -100,23 +111,25 @@ export function useEnhancedFlyToLocation(
       // This will be called when the flight animation completes
       console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
       
-      // Re-enable auto-rotation with a smooth start after a delay
-      setTimeout(() => {
-        setAutoRotation(true);
-      }, 500);
-      
-      // Call onComplete directly here as well as relying on the effect
-      // This ensures the callback is definitely triggered
-      if (onComplete && isFlyingRef.current) {
-        console.log("Calling onComplete callback from direct callback");
+      // Add a stabilization period after flight completes before callback
+      stabilizationTimeoutRef.current = window.setTimeout(() => {
+        stabilizationTimeoutRef.current = null;
         
-        // Add a small delay to ensure processing is complete
-        callbackTimeoutRef.current = window.setTimeout(() => {
-          callbackTimeoutRef.current = null;
-          isFlyingRef.current = false;
-          onComplete();
-        }, 100);
-      }
+        // Re-enable auto-rotation with a smooth start
+        setAutoRotation(true);
+        
+        // Call onComplete directly here as well as relying on the effect
+        if (onComplete && isFlyingRef.current) {
+          console.log("Calling onComplete callback from direct callback");
+          
+          // Add a small delay to ensure processing is complete
+          callbackTimeoutRef.current = window.setTimeout(() => {
+            callbackTimeoutRef.current = null;
+            isFlyingRef.current = false;
+            onComplete();
+          }, 150);
+        }
+      }, 300); // Let the view stabilize after animation
     });
   }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight]);
   

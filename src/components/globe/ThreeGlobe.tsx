@@ -37,35 +37,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       }
     }
   });
-  
-  // Ensure we call onMapReady even if the initialization callback doesn't fire
-  useEffect(() => {
-    if (globeAPI.isInitialized && !readyCallbackFiredRef.current && !isUnmountedRef.current) {
-      console.log("ThreeGlobe: Globe detected as initialized via effect");
-      readyCallbackFiredRef.current = true;
-      setIsInitialized(true);
-      if (onMapReady) {
-        console.log("ThreeGlobe: Calling onMapReady callback (from effect)");
-        onMapReady(globeAPI);
-      }
-    }
-    
-    // Force ready state after a timeout as a fallback
-    const timerId = setTimeout(() => {
-      if (!readyCallbackFiredRef.current && !isUnmountedRef.current) {
-        console.log("ThreeGlobe: Forcing ready state after timeout");
-        readyCallbackFiredRef.current = true;
-        setIsInitialized(true);
-        if (onMapReady) {
-          console.log("ThreeGlobe: Calling onMapReady callback (from timeout)");
-          onMapReady(globeAPI);
-        }
-      }
-    }, 3000);
-    
-    return () => clearTimeout(timerId);
-  }, [globeAPI, onMapReady, globeAPI.isInitialized]);
-  
+
   // Safe fly completion handler that checks component mount state
   const handleFlyComplete = useCallback(() => {
     if (isUnmountedRef.current) return;
@@ -87,7 +59,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         onFlyComplete();
       }
       flyCompletionTimerRef.current = null;
-    }, 300);
+    }, 200); // Reduced from 300ms to 200ms for faster response
   }, [onFlyComplete]);
   
   // Handle location changes
@@ -145,19 +117,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         console.log(`Adding marker for ${selectedLocation.label}`);
         globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
       }
-    }, 500);
-    
-    // Cleanup function - cancel flights if component unmounts during flight
-    return () => {
-      if (flyCompletionTimerRef.current !== null) {
-        clearTimeout(flyCompletionTimerRef.current);
-        flyCompletionTimerRef.current = null;
-      }
-      
-      if (isFlying && globeAPI.cancelFlight) {
-        globeAPI.cancelFlight();
-      }
-    };
+    }, 300); // Reduced from 500ms to 300ms
   }, [selectedLocation, globeAPI, handleFlyComplete, isFlying, globeAPI.isInitialized]);
   
   // Clean up on unmount
@@ -177,6 +137,34 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       }
     };
   }, [globeAPI]);
+
+  // Ensure we call onMapReady even if initialization is delayed
+  useEffect(() => {
+    if (globeAPI.isInitialized && !readyCallbackFiredRef.current && !isUnmountedRef.current) {
+      console.log("ThreeGlobe: Globe detected as initialized via effect");
+      readyCallbackFiredRef.current = true;
+      setIsInitialized(true);
+      if (onMapReady) {
+        console.log("ThreeGlobe: Calling onMapReady callback (from effect)");
+        onMapReady(globeAPI);
+      }
+    }
+    
+    // Force ready state after a timeout as a fallback
+    const timerId = setTimeout(() => {
+      if (!readyCallbackFiredRef.current && !isUnmountedRef.current) {
+        console.log("ThreeGlobe: Forcing ready state after timeout");
+        readyCallbackFiredRef.current = true;
+        setIsInitialized(true);
+        if (onMapReady) {
+          console.log("ThreeGlobe: Calling onMapReady callback (from timeout)");
+          onMapReady(globeAPI);
+        }
+      }
+    }, 2000); // Reduced from 3000ms to 2000ms for faster initialization
+    
+    return () => clearTimeout(timerId);
+  }, [globeAPI, onMapReady, globeAPI.isInitialized]);
   
   return (
     <div 

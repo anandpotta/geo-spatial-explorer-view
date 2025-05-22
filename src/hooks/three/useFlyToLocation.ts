@@ -53,7 +53,7 @@ export function useFlyToLocation(
     
     // Calculate camera position at a good distance for viewing the location
     // Position the camera closer to the globe's surface for a more detailed view
-    const finalDistance = globeRadius * 1.5; // Closer to the location point
+    const finalDistance = globeRadius * 1.25; // Even closer to the location point
     
     const cameraTargetX = -finalDistance * Math.sin(phi) * Math.cos(theta);
     const cameraTargetY = finalDistance * Math.cos(phi);
@@ -90,7 +90,7 @@ export function useFlyToLocation(
     
     // Animate camera position
     let startTime: number | null = null;
-    const duration = 2000; // 2 seconds for a smooth flight
+    const duration = 1500; // Faster animation (reduced from 2000ms) for more responsiveness
     animationInProgressRef.current = true;
     
     const animateCamera = (timestamp: number) => {
@@ -113,14 +113,12 @@ export function useFlyToLocation(
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Use smooth easing functions for better animation
-      const easeInOutCubic = (t: number): number => {
-        return t < 0.5
-          ? 4 * t * t * t
-          : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      // Use improved easing functions for smoother animation
+      const easeOutCubic = (t: number): number => {
+        return 1 - Math.pow(1 - t, 3);
       };
       
-      const ease = easeInOutCubic(progress);
+      const ease = easeOutCubic(progress);
       
       // Interpolate camera position
       const newX = currentPos.x + (targetPos.x - currentPos.x) * ease;
@@ -166,13 +164,16 @@ export function useFlyToLocation(
             if (controlsRef.current && wasAutoRotating) {
               controlsRef.current.autoRotate = true;
             }
-          }, 300);
+          }, 200); // Reduced from 300ms to 200ms
         }
         
-        if (onComplete) {
-          console.log("Fly animation complete, calling completion callback");
-          onComplete();
-        }
+        // Wait for a moment for the view to stabilize before triggering callbacks
+        setTimeout(() => {
+          if (onComplete) {
+            console.log("Fly animation complete, calling completion callback");
+            onComplete();
+          }
+        }, 100); // Add a small buffer for stability
       }
     };
     

@@ -21,6 +21,7 @@ export function useMapViewManagement(
   const flyCompletedRef = useRef(flyCompleted);
   const previousFlyCompletedRef = useRef(flyCompleted);
   const autoSwitchToLeafletTimerRef = useRef<number | null>(null);
+  const pendingSwapRef = useRef(false);
   
   // Debug log for state changes
   console.log(`MapViewManagement: flyCompleted=${flyCompleted}, currentView=${currentView}, transition=${viewTransitionInProgressRef.current}`);
@@ -34,6 +35,9 @@ export function useMapViewManagement(
     // Log when flyCompleted changes
     if (wasCompleted !== flyCompleted && flyCompleted) {
       console.log("MapViewManagement: Detected flyCompleted transition to true");
+      
+      // Flag a pending swap when flyCompleted becomes true
+      pendingSwapRef.current = true;
     }
   }, [flyCompleted]);
 
@@ -51,7 +55,7 @@ export function useMapViewManagement(
     preventRapidChangeTimerRef.current = window.setTimeout(() => {
       viewChangeInProgressRef.current = false;
       preventRapidChangeTimerRef.current = null;
-    }, 1500);
+    }, 1000); // Reduced from 1500ms to 1000ms for faster responsiveness
   };
 
   // Public method to handle view change requests
@@ -101,7 +105,7 @@ export function useMapViewManagement(
       setTimeout(() => {
         setLeafletRefreshTrigger(prev => prev + 1);
         console.log("MapViewManagement: Triggering Leaflet refresh");
-      }, 700);
+      }, 500); // Reduced from 700ms to 500ms
     }
     
     // Reset transition flags after a delay
@@ -111,7 +115,7 @@ export function useMapViewManagement(
       if (onViewChangeComplete) {
         onViewChangeComplete();
       }
-    }, 1500);
+    }, 1000); // Reduced from 1500ms to 1000ms
   };
 
   // Schedule switching to leaflet after cesium fly completes
@@ -122,15 +126,20 @@ export function useMapViewManagement(
       autoSwitchToLeafletTimerRef.current = null;
     }
     
-    // Only proceed if all required conditions are met
+    // Only proceed with auto-switching if we have a pending swap
+    // or if all required conditions are met
     if (
-      currentView === 'cesium' && 
-      selectedLocation && 
-      flyCompleted && 
-      !viewChangeInProgressRef.current &&
-      !viewTransitionInProgressRef.current
+      (pendingSwapRef.current || 
+       (currentView === 'cesium' && 
+        selectedLocation && 
+        flyCompleted && 
+        !viewChangeInProgressRef.current &&
+        !viewTransitionInProgressRef.current))
     ) {
-      console.log(`MapViewManagement: Auto-switching to leaflet view after fly completion with location ${selectedLocation.label}`);
+      console.log(`MapViewManagement: Auto-switching to leaflet view after fly completion with location ${selectedLocation?.label}`);
+      
+      // Reset pending swap flag
+      pendingSwapRef.current = false;
       
       // Set the view change flags to prevent rapid toggling
       viewChangeInProgressRef.current = true;
@@ -164,10 +173,10 @@ export function useMapViewManagement(
             // Reset the view change flag after a longer delay
             window.setTimeout(() => {
               viewChangeInProgressRef.current = false;
-            }, 1000);
-          }, 500);
-        }, 700);
-      }, 500); // Slightly shorter delay for more responsive UI
+            }, 800); // Reduced from 1000ms to 800ms
+          }, 400); // Reduced from 500ms to 400ms
+        }, 500); // Reduced from 700ms to 500ms
+      }, 400); // Reduced from 500ms to 400ms for more responsive UI
     }
   }, [currentView, selectedLocation, flyCompleted]);
 
