@@ -17,12 +17,12 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [initKey, setInitKey] = useState<number>(0); // Key to force re-initialization
+  const [initKey, setInitKey] = useState<number>(0); // Key for force re-initialization
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
-  const loadingTimerRef = useRef<number | null>(null);
-  const initTimeoutRef = useRef<number | null>(null);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const errorRecoveryAttemptsRef = useRef<number>(0);
   
   // Set a timeout to force loading to complete if it takes too long

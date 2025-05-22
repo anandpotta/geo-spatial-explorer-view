@@ -10,7 +10,7 @@ export function useGlobeLifecycle(
   const [isInitialized, setIsInitialized] = useState(false);
   const initCallbackFiredRef = useRef(false);
   const errorRef = useRef<Error | null>(null);
-  const initTimeoutRef = useRef<number | null>(null);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const globeAPIRef = useRef<any>(null);
 
   // Handle initialization completion

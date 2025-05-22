@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { createMarkerPosition } from '@/utils/globe-utils';
@@ -13,9 +12,9 @@ export function useGlobeNavigation(
   const [isFlying, setIsFlying] = useState(false);
   const [selectedLocationLabel, setSelectedLocationLabel] = useState<string>('');
   const lastFlyLocationRef = useRef<string | null>(null);
-  const flyCompletionTimerRef = useRef<number | null>(null);
+  const flyCompletionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isUnmountedRef = useRef(false);
-  const initializationTimerRef = useRef<number | null>(null);
+  const initializationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const navigationAttemptsRef = useRef<number>(0);
   const maxNavigationAttempts = 5;
   
@@ -38,7 +37,7 @@ export function useGlobeNavigation(
     }
     
     // Set a small delay to ensure animation is fully complete
-    flyCompletionTimerRef.current = window.setTimeout(() => {
+    flyCompletionTimerRef.current = setTimeout(() => {
       if (isUnmountedRef.current) return;
       
       if (onFlyComplete) {
@@ -56,7 +55,7 @@ export function useGlobeNavigation(
   useEffect(() => {
     console.log("ThreeGlobe: Setting up initialization check timer");
     
-    initializationTimerRef.current = window.setTimeout(() => {
+    initializationTimerRef.current = setTimeout(() => {
       if (globeAPI && !isFlying && selectedLocation) {
         console.log("ThreeGlobe: Initialization check - attempting navigation if needed");
         
