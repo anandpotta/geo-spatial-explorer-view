@@ -1,7 +1,7 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 
 interface MarkersContainerProps {
   markers: LocationMarker[];
@@ -24,20 +24,9 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
-  // Use memoized markers to prevent unnecessary re-renders
-  const memoizedMarkers = useMemo(() => {
-    // Ensure we have unique markers by ID
-    return markers.reduce((unique: LocationMarker[], marker) => {
-      if (!unique.find(m => m.id === marker.id)) {
-        unique.push(marker);
-      }
-      return unique;
-    }, []);
-  }, [markers]);
-  
   return (
     <MarkersList
-      markers={memoizedMarkers}
+      markers={markers}
       tempMarker={tempMarker}
       markerName={markerName}
       markerType={markerType}

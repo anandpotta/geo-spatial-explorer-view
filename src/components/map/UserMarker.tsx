@@ -1,9 +1,9 @@
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import { Marker } from 'react-leaflet';
+import React, { useCallback, useState } from 'react';
+import { Marker, useMap } from 'react-leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
-import L from 'leaflet';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -11,60 +11,8 @@ interface UserMarkerProps {
 }
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
-  const markerRef = useRef<L.Marker | null>(null);
-  
-  // Add data attribute to marker icon and create persistent tooltip
-  useEffect(() => {
-    if (markerRef.current) {
-      const icon = markerRef.current.getElement();
-      if (icon) {
-        icon.setAttribute('data-marker-id', marker.id);
-        
-        // Remove any existing tooltip first to prevent duplicates
-        const existingTooltip = icon.querySelector('.marker-tooltip');
-        if (existingTooltip) {
-          existingTooltip.remove();
-        }
-        
-        // Create tooltip for the marker
-        const tooltip = document.createElement('div');
-        tooltip.className = 'marker-tooltip bg-white px-2 py-0.5 rounded shadow text-sm absolute z-50';
-        tooltip.style.left = '25px';
-        tooltip.style.top = '0';
-        tooltip.style.whiteSpace = 'nowrap';
-        tooltip.style.pointerEvents = 'none';
-        tooltip.style.transform = 'translateY(-50%)';
-        tooltip.style.border = '1px solid #ccc';
-        tooltip.setAttribute('data-marker-tooltip-id', marker.id);
-        tooltip.textContent = marker.name;
-        icon.appendChild(tooltip);
-      }
-    }
-  }, [marker.id, marker.name]);
-  
-  // Cleanup marker when component unmounts
-  useEffect(() => {
-    return () => {
-      if (markerRef.current) {
-        const leafletElement = markerRef.current;
-        if (leafletElement && leafletElement.remove) {
-          try {
-            leafletElement.remove();
-          } catch (error) {
-            console.error('Error removing marker:', error);
-          }
-        }
-      }
-      
-      // Also remove any tooltips associated with this marker
-      const tooltips = document.querySelectorAll(`[data-marker-tooltip-id="${marker.id}"]`);
-      tooltips.forEach(tooltip => {
-        if (tooltip.parentNode) {
-          tooltip.parentNode.removeChild(tooltip);
-        }
-      });
-    };
-  }, [marker.id]);
+  const map = useMap();
+  const [isMounted, setIsMounted] = useState(true);
   
   const handleDragEnd = useCallback((e: any) => {
     const updatedMarker = e.target;
@@ -88,15 +36,20 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     window.dispatchEvent(new CustomEvent('markersUpdated'));
   }, [marker.id]);
   
+  // If the map isn't valid, don't render
+  if (!isMapValid(map) || !isMounted) {
+    return null;
+  }
+  
   return (
     <Marker 
       position={marker.position} 
       key={`marker-${marker.id}`}
       draggable={true}
       eventHandlers={{
-        dragend: handleDragEnd
+        dragend: handleDragEnd,
+        remove: () => setIsMounted(false)
       }}
-      ref={markerRef}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
     </Marker>

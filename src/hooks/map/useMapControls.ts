@@ -1,11 +1,15 @@
 
+import { useState } from 'react';
 import { zoomIn, zoomOut, resetCamera } from '@/utils/threejs-camera';
+import { isMapValid } from '@/utils/leaflet-type-utils';
 
-export function useMapNavigationControls(
+export function useMapControls(
   currentView: 'cesium' | 'leaflet',
-  cesiumViewerRef: React.RefObject<any>,
-  leafletMapRef: React.RefObject<any>
+  cesiumViewerRef: React.MutableRefObject<any>,
+  leafletMapRef: React.MutableRefObject<any>
 ) {
+  const [activeTool, setActiveTool] = useState<string | null>(null);
+
   const handleZoomIn = () => {
     if (currentView === 'cesium' && cesiumViewerRef.current) {
       zoomIn(cesiumViewerRef.current);
@@ -42,9 +46,36 @@ export function useMapNavigationControls(
     }
   };
 
+  const handleToolSelect = (tool: string) => {
+    console.log(`Tool selected: ${tool}`);
+    setActiveTool(tool === activeTool ? null : tool);
+  };
+
+  const handleClearAll = () => {
+    if (currentView === 'leaflet' && leafletMapRef.current) {
+      try {
+        const layers = leafletMapRef.current._layers;
+        if (layers) {
+          Object.keys(layers).forEach(layerId => {
+            const layer = layers[layerId];
+            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+              leafletMapRef.current.removeLayer(layer);
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error during clear all operation:', err);
+      }
+    }
+  };
+
   return {
+    activeTool,
+    setActiveTool,
     handleZoomIn,
     handleZoomOut,
-    handleResetView
+    handleResetView,
+    handleToolSelect,
+    handleClearAll
   };
 }

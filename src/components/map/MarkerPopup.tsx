@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { LocationMarker } from '@/utils/markers/types';
 import { Button } from '@/components/ui/button';
@@ -26,39 +26,7 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
     
     // Dispatch storage event to notify other components
     window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('markersUpdated'));
   };
-
-  // Set up a permanent tooltip when the marker is created
-  useEffect(() => {
-    // Find the marker element by its ID
-    setTimeout(() => {
-      const markerElement = document.querySelector(`.leaflet-marker-icon[data-marker-id="${marker.id}"]`);
-      if (markerElement && !markerElement.querySelector('.marker-tooltip')) {
-        // Create tooltip element
-        const tooltip = document.createElement('div');
-        tooltip.className = 'marker-tooltip bg-white px-2 py-0.5 rounded shadow text-sm absolute z-50';
-        tooltip.style.left = '25px'; // Position to the right of the marker
-        tooltip.style.top = '0';
-        tooltip.style.pointerEvents = 'none'; // Allow clicks to pass through
-        tooltip.setAttribute('data-marker-tooltip-id', marker.id);
-        tooltip.textContent = marker.name;
-        
-        // Add to marker
-        markerElement.appendChild(tooltip);
-      }
-    }, 100); // Short delay to ensure the marker icon is rendered
-    
-    return () => {
-      // Cleanup function - remove tooltip when component unmounts
-      const tooltips = document.querySelectorAll(`[data-marker-tooltip-id="${marker.id}"]`);
-      tooltips.forEach(tooltip => {
-        if (tooltip.parentNode) {
-          tooltip.parentNode.removeChild(tooltip);
-        }
-      });
-    };
-  }, [marker.id, marker.name]);
 
   return (
     <Popup>

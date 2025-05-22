@@ -1,142 +1,105 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { toast } from 'sonner';
 
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
 }
 
+// Define interface for internal map properties not exposed in TypeScript definitions
+// Use type intersection instead of extends to avoid interface compatibility issues
+interface LeafletMapInternal {
+  _panes?: {
+    mapPane?: {
+      _leaflet_pos?: any;
+    };
+  };
+  _isDestroyed?: boolean;
+}
+
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap();
-  const initialized = useRef(false);
-  const mountedRef = useRef(true);
+  const hasCalledOnReady = useRef(false);
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const [isStable, setIsStable] = useState(false);
   
+  // Clear all timeouts when unmounting
   useEffect(() => {
-    mountedRef.current = true;
-    
     return () => {
-      mountedRef.current = false;
+      timeoutRefs.current.forEach(clearTimeout);
+      timeoutRefs.current = [];
     };
   }, []);
   
   useEffect(() => {
-    if (!map || initialized.current || !mountedRef.current) {
-      return;
-    }
-    
-    console.log('Map reference provided');
-    
-    // Verify map container is valid before proceeding
-    if (!map.getContainer() || !document.body.contains(map.getContainer())) {
-      console.warn("Map container not verified, skipping reference assignment");
-      return;
-    }
-    
-    console.log('Map container verified, storing reference');
-    initialized.current = true;
-    
-    // Store map instance globally for marker positioning
-    (window as any).leafletMapInstance = map;
-    
-    // Create a custom event for map movement
-    const createMapMoveEvent = () => {
-      window.dispatchEvent(new CustomEvent('mapMove'));
-    };
-    
-    // Listen to map events
-    map.on('move', createMapMoveEvent);
-    map.on('zoom', createMapMoveEvent);
-    map.on('viewreset', createMapMoveEvent);
-    
-    // Force redraw of map to ensure all controls are visible
-    const initializeMapWithDelay = setTimeout(() => {
-      try {
-        // Verify map is still valid before accessing methods
-        if (mountedRef.current && map && map.getContainer && 
-            document.body.contains(map.getContainer())) {
-          console.log('Invalidating map size');
-          map.invalidateSize();
-          
-          // Initialize drawing handler if it exists on the map
-          if ((L.Draw as any) && (L.Draw as any).Polygon) {
-            try {
-              console.log('Initializing polygon drawing');
-              // Ensure polygon drawing works correctly by forcing initialization
-              (L.Draw as any).Polygon.prototype._enabled = true;
-              
-              // Make sure vertex markers are visible
-              const style = document.createElement('style');
-              style.innerHTML = `
-                .leaflet-draw-tooltip {
-                  background: #333;
-                  background: rgba(0, 0, 0, 0.8);
-                  border: none;
-                  border-radius: 4px;
-                  color: #fff;
-                  font: 12px/18px "Helvetica Neue", Arial, Helvetica, sans-serif;
-                  margin-left: 20px;
-                  margin-top: -21px;
-                  padding: 4px 8px;
-                  position: absolute;
-                  visibility: visible !important;
-                  white-space: nowrap;
-                  z-index: 6;
-                }
-                .leaflet-draw-guide-dash {
-                  background-color: #0ff;
-                  border-radius: 2px;
-                  height: 2px;
-                  opacity: 0.8;
-                  position: absolute;
-                  width: 5px;
-                  z-index: 5;
-                }
-                .leaflet-draw-tooltip-single {
-                  margin-top: -12px;
-                }
-                .leaflet-marker-draggable {
-                  cursor: move;
-                  opacity: 1 !important;
-                }
-              `;
-              document.head.appendChild(style);
-              
-              // Force a refresh of the map viewport
-              map.fire('viewreset');
-              
-              console.log('Map initialization complete, ready for drawing');
-            } catch (e) {
-              console.error("Error initializing polygon drawing:", e);
-            }
-          }
-          
-          // Call the parent's onMapReady callback
-          if (typeof onMapReady === 'function') {
-            console.log('Calling onMapReady callback');
-            onMapReady(map);
-          }
-          
-          console.log('Initial map invalidation completed');
-        }
-      } catch (err) {
-        console.error("Error initializing map reference:", err);
-      }
-    }, 500);
-    
-    return () => {
-      clearTimeout(initializeMapWithDelay);
+    // Only call onMapReady once per instance
+    if (map && onMapReady && !hasCalledOnReady.current) {
+      console.log('Map is ready, will call onMapReady after initialization');
       
-      try {
-        if (map && typeof map.off === 'function' && mountedRef.current) {
-          map.off('move', createMapMoveEvent);
-          map.off('zoom', createMapMoveEvent);
-          map.off('viewreset', createMapMoveEvent);
+      // Call onMapReady sooner to start initialization process
+      const timeout = setTimeout(() => {
+        try {
+          // Check if map container still exists and is attached to DOM
+          if (map && map.getContainer() && document.body.contains(map.getContainer())) {
+            // Mark as called immediately to prevent duplicate calls
+            hasCalledOnReady.current = true;
+            
+            // Always invalidate size immediately for better responsiveness
+            try {
+              map.invalidateSize(true);
+              console.log('Initial size invalidation completed');
+            } catch (err) {
+              console.log('Initial invalidateSize encountered an issue, continuing');
+            }
+            
+            console.log('Map container verified, calling onMapReady');
+            onMapReady(map);
+            
+            // Mark map as stable after initial setup
+            setTimeout(() => {
+              setIsStable(true);
+            }, 300); // Shorter delay for faster stabilization
+            
+            // Just one additional invalidation after a reasonable delay
+            const additionalTimeout = setTimeout(() => {
+              if (map && !(map as L.Map & LeafletMapInternal)._isDestroyed) {
+                try {
+                  map.invalidateSize(true);
+                  console.log('Final map invalidation completed');
+                } catch (err) {
+                  // Ignore errors during additional invalidations
+                }
+              }
+            }, 1000); // Faster final invalidation
+            timeoutRefs.current.push(additionalTimeout);
+          } else {
+            console.log('Map container not ready or not attached to DOM');
+            // Retry in case the map container wasn't ready yet
+            const retryTimeout = setTimeout(() => {
+              if (map && !hasCalledOnReady.current) {
+                try {
+                  if (map.getContainer() && document.body.contains(map.getContainer())) {
+                    hasCalledOnReady.current = true;
+                    onMapReady(map);
+                    map.invalidateSize(true);
+                  }
+                } catch (e) {
+                  console.warn('Failed to initialize map on retry');
+                }
+              }
+            }, 500); // Faster retry
+            timeoutRefs.current.push(retryTimeout);
+          }
+        } catch (err) {
+          console.error('Error in map initialization:', err);
+          toast.error("Map initialization issue. Please refresh the page.");
         }
-      } catch (err) {
-        console.error("Error cleaning up map event listeners:", err);
-      }
-    };
+      }, 100); // Much faster initial call
+      
+      timeoutRefs.current.push(timeout);
+    }
   }, [map, onMapReady]);
   
   return null;

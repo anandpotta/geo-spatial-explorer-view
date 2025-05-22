@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -105,9 +106,6 @@ export function useMapState(selectedLocation?: Location) {
       userId: currentUser.id
     };
     
-    // Clear the temporary marker first to prevent duplicate displays
-    setTempMarker(null);
-    
     // Save the marker
     saveMarker(newMarker);
     
@@ -133,11 +131,11 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Reset marker name
+    // Clear the temporary marker to allow placing a new one
+    setTempMarker(null);
     setMarkerName('');
     
     // Update the markers state with the new marker
-    // Ensure we're using the latest markers by calling getSavedMarkers again
     setMarkers(getSavedMarkers());
     
     toast.success("Location saved successfully");

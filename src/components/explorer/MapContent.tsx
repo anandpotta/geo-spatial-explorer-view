@@ -9,13 +9,30 @@ interface MapContentProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
-  flyCompleted?: boolean;
-  handleCesiumViewerRef?: (viewer: any) => void;
-  handleLeafletMapRef?: (map: any) => void;
+  onClearLocation?: () => void;
+  viewTransitionReady?: boolean;
 }
 
-const MapContent = (props: MapContentProps) => {
-  return <MapContentContainer {...props} />;
+const MapContent: React.FC<MapContentProps> = ({ 
+  currentView, 
+  selectedLocation, 
+  onMapReady, 
+  onFlyComplete,
+  onLocationSelect,
+  onClearLocation,
+  viewTransitionReady = true 
+}) => {
+  return (
+    <MapContentContainer
+      currentView={currentView}
+      selectedLocation={selectedLocation}
+      onMapReady={onMapReady}
+      onFlyComplete={onFlyComplete}
+      onLocationSelect={onLocationSelect}
+      onClearLocation={onClearLocation}
+      viewTransitionReady={viewTransitionReady}
+    />
+  );
 };
 
 export default MapContent;

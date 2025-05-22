@@ -1,8 +1,8 @@
-
 import React from 'react';
-import { LocationMarker } from '@/utils/geo-utils';
-import UserMarker from './UserMarker';
+import { LayerGroup } from 'react-leaflet';
 import TempMarker from './TempMarker';
+import UserMarker from './UserMarker';
+import { LocationMarker } from '@/utils/marker-utils';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -25,18 +25,9 @@ const MarkersList = ({
   setMarkerName,
   setMarkerType
 }: MarkersListProps) => {
-  // Ensure we have unique markers by ID
-  const uniqueMarkers = markers.reduce((acc, marker) => {
-    // Only add marker if it's not already in the accumulator
-    if (!acc.some(m => m.id === marker.id)) {
-      acc.push(marker);
-    }
-    return acc;
-  }, [] as LocationMarker[]);
-  
   return (
-    <>
-      {Array.isArray(uniqueMarkers) && uniqueMarkers.map((marker) => (
+    <LayerGroup>
+      {markers.map((marker) => (
         <UserMarker 
           key={`marker-${marker.id}`} 
           marker={marker} 
@@ -44,8 +35,9 @@ const MarkersList = ({
         />
       ))}
       
-      {tempMarker && Array.isArray(tempMarker) && (
-        <TempMarker 
+      {tempMarker && (
+        <TempMarker
+          key={`temp-marker-${tempMarker[0]}-${tempMarker[1]}`}
           position={tempMarker}
           markerName={markerName}
           setMarkerName={setMarkerName}
@@ -54,8 +46,8 @@ const MarkersList = ({
           onSave={onSaveMarker}
         />
       )}
-    </>
+    </LayerGroup>
   );
 };
 
-export default React.memo(MarkersList);
+export default MarkersList;

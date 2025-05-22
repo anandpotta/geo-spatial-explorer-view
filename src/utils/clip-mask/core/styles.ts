@@ -49,37 +49,9 @@ if (typeof document !== 'undefined') {
       visibility: visible !important;
     }
     
-    /* Set default fill-opacity for all SVG paths */
-    svg path:not([data-has-clip-mask="true"]):not([fill^="url(#pattern-"]):not(.visible-path-stroke):not(.has-image-fill) {
-      fill-opacity: 0.6 !important;
-    }
-    
-    /* Ensure all draw shapes use SVG path */
-    .leaflet-draw-draw-polygon,
-    .leaflet-draw-draw-rectangle,
-    .leaflet-draw-draw-circle {
-      pointer-events: auto !important;
-    }
-
-    /* Fix specific rectangle drawing issues */
-    .leaflet-rectangle-editing path.leaflet-interactive,
-    .leaflet-draw-draw-rectangle + path.leaflet-interactive,
-    .leaflet-editing-rectangle {
-      stroke-width: 4px !important;
-      stroke: #33C3F0 !important;
-      stroke-opacity: 1 !important;
-      stroke-linecap: round !important;
-      stroke-linejoin: round !important;
-      vector-effect: non-scaling-stroke;
-      pointer-events: auto !important;
-      fill-opacity: 0.6 !important;
-    }
-    
-    .leaflet-draw-tooltip {
-      background: rgba(0, 0, 0, 0.7) !important;
-      color: white !important;
-      border: 1px solid #33C3F0 !important;
-      pointer-events: none !important;
+    /* Ensure SVG patterns render correctly */
+    svg path {
+      fill-opacity: 1 !important;
     }
     
     @keyframes dash {

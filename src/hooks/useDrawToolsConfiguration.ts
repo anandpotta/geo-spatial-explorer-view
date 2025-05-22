@@ -1,153 +1,45 @@
 
-import L from 'leaflet';
 import { useEffect } from 'react';
-import { 
-  configureSvgRenderer, 
-  optimizePolygonDrawing, 
-  enhancePathPreservation,
-  fixTypeIsNotDefinedError,
-  extendGeometryUtil,
-  setupEditHandlers,
-  configureDrawingTools,
-  makeFeatureGroupGlobal
-} from '@/utils/drawing-tools';
+import L from 'leaflet';
+import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
 
 /**
- * Hook to handle SVG configuration and optimizations for drawing tools
+ * Hook to configure drawing tools with optimized rendering
  */
-export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
+export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup) {
   useEffect(() => {
-    if (!featureGroup) return;
-    
-    // Fix: Don't use getMap as it doesn't exist on FeatureGroup
-    // Use type assertion to access _map internally without TypeScript errors
-    const map = (featureGroup as any)._map;
-    if (!map) return;
-    
-    // Fix the "type is not defined" error in area calculations
-    const cleanupTypePatching = fixTypeIsNotDefinedError();
-    
-    // Extend GeometryUtil with getCorners function
-    const cleanupGeometryUtil = extendGeometryUtil();
-    
-    // Set up SVG renderer configuration to reduce flickering
-    const cleanupSvgRenderer = configureSvgRenderer();
-    
-    // Set up edit handlers if needed
-    const cleanupEditHandlers = setupEditHandlers();
-    
-    // Configure additional drawing tools
-    const cleanupDrawingTools = configureDrawingTools();
-    
-    // Optimize polygon drawing specifically
-    const originalOnMarkerDrag = optimizePolygonDrawing();
-    
-    // Set up path preservation
-    const cleanupPathPreservation = enhancePathPreservation(map);
-    
-    // Make feature group globally available for edit operations
-    const cleanupFeatureGroup = makeFeatureGroupGlobal(featureGroup);
-    
-    // Apply additional anti-flickering CSS to the map container
-    const mapContainer = map.getContainer();
-    if (mapContainer) {
-      mapContainer.classList.add('optimize-svg-rendering');
+    try {
+      // Apply SVG renderer enhancements to reduce flickering
+      const cleanupSvgRenderer = configureSvgRenderer();
       
-      // Add a style element with our anti-flicker CSS
-      const styleEl = document.createElement('style');
-      styleEl.innerHTML = `
-        .optimize-svg-rendering .leaflet-overlay-pane svg {
-          transform: translateZ(0);
-          backface-visibility: hidden;
-          perspective: 1000px;
-        }
-        .leaflet-drawing {
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          vector-effect: non-scaling-stroke;
-        }
-        .leaflet-interactive {
-          transform: translateZ(0);
-          backface-visibility: hidden;
-          pointer-events: auto !important;
-        }
-        
-        /* Force SVG rendering for all draw shapes */
-        .leaflet-draw-draw-polygon,
-        .leaflet-draw-draw-rectangle,
-        .leaflet-draw-draw-circle {
-          pointer-events: auto !important;
-        }
-        
-        /* Ensure path elements are visible */
-        .leaflet-overlay-pane path,
-        .leaflet-draw-item path {
-          fill-opacity: 0.6 !important;
-          stroke-width: 4px !important;
-          stroke-opacity: 1 !important;
-          pointer-events: auto !important;
-        }
-        
-        .image-controls-wrapper {
-          opacity: 1 !important;
-          transition: opacity 0.2s ease-in-out;
-          z-index: 1000 !important;
-          pointer-events: auto !important;
-        }
-        .persistent-control {
-          visibility: visible !important;
-          display: block !important;
-          opacity: 1 !important;
-        }
-        .visible-path-stroke {
-          stroke-width: 4px !important;
-          stroke: #33C3F0 !important;
-          stroke-opacity: 1 !important;
-          stroke-linecap: round !important;
-          stroke-linejoin: round !important;
-          fill-opacity: 0.7 !important;
-          vector-effect: non-scaling-stroke;
-        }
-        .leaflet-overlay-pane path.leaflet-interactive {
-          stroke-width: 4px !important;
-          stroke-opacity: 1 !important;
-          pointer-events: auto !important;
-          cursor: pointer !important;
-        }
-      `;
-      document.head.appendChild(styleEl);
+      // Apply polygon drawing optimization
+      const originalOnMarkerDrag = optimizePolygonDrawing();
       
-      // Force the browser to acknowledge these changes
-      mapContainer.getBoundingClientRect();
+      // Enhance path preservation (if map is available)
+      let cleanupPathPreservation: (() => void) | null = null;
+      if (featureGroup && (featureGroup as any)._map) {
+        cleanupPathPreservation = enhancePathPreservation((featureGroup as any)._map);
+      }
+      
+      // Cleanup on unmount
+      return () => {
+        cleanupSvgRenderer();
+        if (cleanupPathPreservation) {
+          cleanupPathPreservation();
+        }
+        
+        // Restore original onMarkerDrag if it was modified
+        if (L.Edit && typeof L.Edit === 'object') {
+          // Use type assertion to access the Poly property safely
+          const EditPoly = (L.Edit as any).Poly;
+          if (EditPoly && EditPoly.prototype && originalOnMarkerDrag) {
+            EditPoly.prototype._onMarkerDrag = originalOnMarkerDrag;
+          }
+        }
+      };
+    } catch (err) {
+      console.error('Error configuring drawing tools:', err);
+      return () => {};
     }
-    
-    // Cleanup function
-    return () => {
-      cleanupTypePatching();
-      cleanupGeometryUtil();
-      cleanupSvgRenderer();
-      cleanupEditHandlers();
-      cleanupDrawingTools();
-      cleanupPathPreservation();
-      cleanupFeatureGroup();
-      
-      // Restore original marker drag handler if it was modified
-      if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
-        (L.Edit as any).Poly.prototype._onMarkerDrag = originalOnMarkerDrag;
-      }
-      
-      // Remove the style element
-      const styles = document.querySelectorAll('style');
-      styles.forEach(style => {
-        if (style.innerHTML.includes('optimize-svg-rendering')) {
-          document.head.removeChild(style);
-        }
-      });
-      
-      // Remove the class from map container
-      if (mapContainer) {
-        mapContainer.classList.remove('optimize-svg-rendering');
-      }
-    };
   }, [featureGroup]);
 }

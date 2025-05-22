@@ -1,10 +1,19 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useRef, useEffect } from 'react';
+import { Trash2, Edit2 } from 'lucide-react';
 import MapControls from './drawing/MapControls';
-import ClearConfirmationDialog from './drawing/ConfirmationDialog';
-import ToolbarContainer from './drawing/ToolbarContainer';
-import ToolButtons from './drawing/ToolButtons';
+import { handleClearAll } from './map/drawing/ClearAllHandler';
 import { toast } from 'sonner';
-import { preserveAuthData } from '@/utils/clear-operations';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 interface Position {
   x: number;
@@ -30,14 +39,15 @@ const DrawingTools = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
-  const [activeButton, setActiveButton] = useState<string | null>(null);
+  const [isEditActive, setIsEditActive] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       
-      const newX = Math.max(0, Math.min(window.innerWidth - 200, e.clientX - dragOffset.x));
-      const newY = Math.max(0, Math.min(window.innerHeight - 200, e.clientY - dragOffset.y));
+      const newX = Math.max(0, Math.min(window.innerWidth - (containerRef.current?.offsetWidth || 0), e.clientX - dragOffset.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - (containerRef.current?.offsetHeight || 0), e.clientY - dragOffset.y));
       
       setPosition({ x: newX, y: newY });
     };
@@ -58,7 +68,9 @@ const DrawingTools = ({
   }, [isDragging, dragOffset]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
+    if (!containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
     setDragOffset({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
@@ -73,41 +85,49 @@ const DrawingTools = ({
       return;
     }
     
-    // Toggle active button
-    setActiveButton(prev => tool === prev ? null : tool);
-    onToolSelect(tool);
-    
     if (tool === 'edit') {
-      // Show info about edit mode to guide the user
-      toast.success('Edit mode enabled! Click on any shape to modify it.', {
-        duration: 3000
-      });
+      setIsEditActive(!isEditActive);
     }
+    
+    onToolSelect(tool);
   };
 
   const processClientClearAll = () => {
+    if (!containerRef.current) return;
+    
     // Use the enhanced clear all handler from ClearAllHandler
-    const featureGroup = (window as any).featureGroup;
+    const featureGroup = window.featureGroup;
     if (featureGroup) {
-      // Call the passed in onClearAll prop
-      if (onClearAll) {
-        onClearAll();
-      }
-      
-      // Force redraw of the map after a short delay
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-      }, 100);
+      handleClearAll({ 
+        featureGroup,
+        onClearAll: () => {
+          // Additional cleanup after clearing
+          if (onClearAll) {
+            onClearAll();
+          }
+          
+          // Force redraw of the map after a short delay
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 100);
+        }
+      });
     } else {
       // Fallback if featureGroup is not available - perform direct localStorage clearing
-      // Preserve authentication data and get restore function
-      const restoreAuth = preserveAuthData();
+      // Preserve authentication data
+      const authState = localStorage.getItem('geospatial_auth_state');
+      const users = localStorage.getItem('geospatial_users');
       
       // Clear everything
       localStorage.clear();
       
       // Restore authentication data
-      restoreAuth();
+      if (authState) {
+        localStorage.setItem('geospatial_auth_state', authState);
+      }
+      if (users) {
+        localStorage.setItem('geospatial_users', users);
+      }
       
       // Forcefully clear specific storages that might be causing issues
       localStorage.removeItem('savedDrawings');
@@ -133,10 +153,16 @@ const DrawingTools = ({
 
   return (
     <>
-      <ToolbarContainer 
-        position={position}
-        isDragging={isDragging}
-        dragOffset={dragOffset}
+      <div 
+        ref={containerRef}
+        className="fixed bg-background/80 backdrop-blur-sm p-2 rounded-md shadow-md cursor-move select-none transition-shadow hover:shadow-lg active:shadow-md"
+        style={{ 
+          left: position.x,
+          top: position.y,
+          zIndex: 20000,
+          isolation: 'isolate',
+          touchAction: 'none'
+        }}
         onMouseDown={handleMouseDown}
       >
         <MapControls 
@@ -147,17 +173,39 @@ const DrawingTools = ({
         
         <div className="h-4" />
         
-        <ToolButtons 
-          activeButton={activeButton}
-          onToolClick={handleToolClick}
-        />
-      </ToolbarContainer>
+        <button
+          className={`w-full p-2 my-2 rounded-md ${isEditActive ? 'bg-green-500' : 'bg-blue-500'} text-white hover:${isEditActive ? 'bg-green-600' : 'bg-blue-600'} transition-colors flex items-center justify-center`}
+          onClick={() => handleToolClick('edit')}
+          aria-label="Edit existing shapes"
+        >
+          <Edit2 className="h-5 w-5" />
+          <span className="ml-2">Edit Shapes</span>
+        </button>
+        
+        <button
+          className="w-full p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"
+          onClick={() => handleToolClick('clear')}
+          aria-label="Clear all layers"
+        >
+          <Trash2 className="h-5 w-5" />
+          <span className="ml-2">Clear All</span>
+        </button>
+      </div>
 
-      <ClearConfirmationDialog 
-        isOpen={isClearDialogOpen} 
-        onConfirm={processClientClearAll}
-        onCancel={() => setIsClearDialogOpen(false)}
-      />
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear all drawings and markers? User accounts will be preserved, but all other data will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={processClientClearAll}>Clear All</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

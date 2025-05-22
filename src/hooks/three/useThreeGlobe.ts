@@ -27,26 +27,23 @@ export function useThreeGlobe(
   // Refs for tracking state
   const isSetupCompleteRef = useRef(false);
   const isFlyingRef = useRef<boolean>(false);
-  const isDisposedRef = useRef<boolean>(false);
-  const initCallbackFiredRef = useRef<boolean>(false);
   
   // Get auto-rotation functionality
   const { autoRotationEnabledRef, setAutoRotation } = useAutoRotation(controlsRef);
   
   // Get markers functionality
-  const { addMarker, clearMarkers } = useMarkers(scene);
+  const { addMarker } = useMarkers(scene);
   
   // Handle textures loaded callback
   const handleTexturesLoaded = useCallback(() => {
-    if (onInitialized && isInitialized && !isDisposedRef.current && !initCallbackFiredRef.current) {
+    if (onInitialized && isInitialized) {
       console.log("Calling onInitialized callback - textures loaded");
-      initCallbackFiredRef.current = true;
       onInitialized();
     }
   }, [onInitialized, isInitialized]);
   
   // Use globe setup hook with texture callback
-  const { globe, texturesLoaded } = useGlobeSetup(
+  const { globe } = useGlobeSetup(
     scene,
     camera,
     controlsRef,
@@ -65,63 +62,37 @@ export function useThreeGlobe(
   );
   
   // Get enhanced fly to location functionality
-  const { enhancedFlyToLocation, cancelFlight } = useEnhancedFlyToLocation(
+  const { enhancedFlyToLocation } = useEnhancedFlyToLocation(
     camera,
     controlsRef,
     EARTH_RADIUS,
     isFlyingRef
   );
   
-  // Initialize effect - mark as initialized after scene is ready
+  // Initialize effect - mark as initialized after a small timeout
   useEffect(() => {
-    if (!containerRef.current || isDisposedRef.current || initCallbackFiredRef.current) return;
+    if (isSetupCompleteRef.current || !containerRef.current) return;
     
-    // Check if scene is really ready
-    if (scene && camera && renderer && controlsRef.current) {
-      console.log("ThreeGlobe initialization check: scene ready");
-      
-      // If scene is ready but not marked initialized yet
-      if (!isInitialized) {
+    // Mark as initialized after a small timeout to ensure everything is ready
+    setTimeout(() => {
+      if (!isInitialized && containerRef.current) {
         console.log("Setting isInitialized to true");
         setIsInitialized(true);
-      }
-      
-      // If we've loaded textures or waited long enough, fire the callback
-      if ((texturesLoaded || isSetupCompleteRef.current) && !initCallbackFiredRef.current) {
-        console.log("ThreeGlobe: All conditions met for initialization");
         isSetupCompleteRef.current = true;
-        initCallbackFiredRef.current = true;
         
+        // Even if textures are still loading, we'll consider the globe ready
+        // to avoid getting stuck at the loading screen
         if (onInitialized) {
-          console.log("Calling onInitialized callback from main effect");
+          console.log("Calling onInitialized even though textures may not be fully loaded");
           onInitialized();
         }
       }
-    }
-  }, [scene, camera, renderer, controlsRef, isInitialized, setIsInitialized, onInitialized, 
-      containerRef, texturesLoaded, isSetupCompleteRef]);
-  
-  // Backup timer to ensure callback is fired even if textures fail
-  useEffect(() => {
-    if (!containerRef.current || isDisposedRef.current || initCallbackFiredRef.current) return;
-    
-    const timer = setTimeout(() => {
-      if (!initCallbackFiredRef.current && !isDisposedRef.current) {
-        console.log("ThreeGlobe: Firing initialization callback after timeout");
-        isSetupCompleteRef.current = true;
-        initCallbackFiredRef.current = true;
-        
-        if (onInitialized) {
-          onInitialized();
-        }
-      }
-    }, 4000);
+    }, 2000); // Give it 2 seconds to load, then move on regardless
     
     return () => {
-      clearTimeout(timer);
-      isDisposedRef.current = true;
+      isSetupCompleteRef.current = false;
     };
-  }, [onInitialized, containerRef]);
+  }, [isInitialized, setIsInitialized, onInitialized, containerRef]);
   
   return {
     scene,
@@ -131,9 +102,7 @@ export function useThreeGlobe(
     globe,
     isInitialized,
     flyToLocation: enhancedFlyToLocation,
-    cancelFlight,
     setAutoRotation,
-    addMarker,
-    clearMarkers  // Export the clearMarkers method
+    addMarker
   };
 }

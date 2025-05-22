@@ -1,6 +1,6 @@
 
+import { getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
 import { toast } from 'sonner';
-import { clearMapData } from '@/utils/clear-operations/clear-map-refreshes';
 
 interface ClearAllHandlerProps {
   featureGroup: L.FeatureGroup;
@@ -9,20 +9,52 @@ interface ClearAllHandlerProps {
 
 export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProps) {
   if (featureGroup) {
-    try {
-      // Use our centralized clear function
-      const success = clearMapData(featureGroup);
-      
-      // Call the callback if provided
-      if (success && onClearAll) {
-        onClearAll();
-      }
-      
-      // Show success message
-      toast.success('All map data cleared while preserving user accounts');
-    } catch (error) {
-      console.error('Error in clear all operation:', error);
-      toast.error('Error clearing map data');
+    // Clear all visible layers from the map
+    featureGroup.clearLayers();
+    
+    // Force SVG paths to be removed by triggering all relevant events
+    window.dispatchEvent(new Event('clearAllSvgPaths'));
+    
+    // Clear all markers from storage
+    const markers = getSavedMarkers();
+    markers.forEach(marker => {
+      deleteMarker(marker.id);
+    });
+    
+    // Preserve authentication data
+    const authState = localStorage.getItem('geospatial_auth_state');
+    const users = localStorage.getItem('geospatial_users');
+    
+    // Completely clear localStorage
+    localStorage.clear();
+    
+    // Restore authentication data
+    if (authState) {
+      localStorage.setItem('geospatial_auth_state', authState);
     }
+    if (users) {
+      localStorage.setItem('geospatial_users', users);
+    }
+    
+    // Forcefully clear specific storages that might be causing issues
+    localStorage.removeItem('savedDrawings');
+    localStorage.removeItem('savedMarkers');
+    localStorage.removeItem('floorPlans');
+    localStorage.removeItem('svgPaths');
+    
+    // Dispatch storage and related events to notify components
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('markersUpdated'));
+    window.dispatchEvent(new Event('drawingsUpdated'));
+    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
+    
+    // Force a complete refresh of the map to ensure all elements are cleared
+    window.dispatchEvent(new Event('mapRefresh'));
+    
+    if (onClearAll) {
+      onClearAll();
+    }
+    
+    toast.success('All map data cleared while preserving user accounts');
   }
 }

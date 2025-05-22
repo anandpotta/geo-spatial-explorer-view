@@ -1,5 +1,5 @@
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import { useFlyToLocation } from './useFlyToLocation';
 import { useAutoRotation } from './useAutoRotation';
@@ -16,7 +16,6 @@ export function useEnhancedFlyToLocation(
 ) {
   // Refs
   const internalFlyingRef = useRef<boolean>(false);
-  const completedCallbackRef = useRef<(() => void) | undefined>(undefined);
   
   // Determine which ref to use for tracking flying state
   const isFlyingRef = externalFlyingRef || internalFlyingRef;
@@ -25,74 +24,63 @@ export function useEnhancedFlyToLocation(
   const { setAutoRotation } = useAutoRotation(controlsRef);
   
   // Get basic flyToLocation from useFlyToLocation
-  const { flyToLocation, cancelFlight, animationInProgressRef } = useFlyToLocation(
+  const { flyToLocation } = useFlyToLocation(
     { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
     controlsRef,
     globeRadius
   );
   
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      // Cancel any ongoing flights when component unmounts
-      cancelFlight();
-      isFlyingRef.current = false;
-      completedCallbackRef.current = undefined;
-    };
-  }, [cancelFlight]);
-  
-  // Watch animation state and trigger callback when animation finishes
-  useEffect(() => {
-    if (!animationInProgressRef.current && isFlyingRef.current && completedCallbackRef.current) {
-      const callback = completedCallbackRef.current;
-      // Reset state before calling callback to prevent infinite loops
-      isFlyingRef.current = false;
-      completedCallbackRef.current = undefined;
-      
-      // Call the callback after a small delay to ensure everything is settled
-      setTimeout(() => {
-        if (callback) {
-          console.log("Fly animation complete, calling completion callback");
-          callback();
-        }
-      }, 100);
-    }
-  }, [animationInProgressRef.current, isFlyingRef]);
-  
   // Wrap the flyToLocation to handle auto-rotation and flying state
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
-    // Cancel any ongoing flight first
-    cancelFlight();
-    
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
-    
-    // Store the callback for later
-    completedCallbackRef.current = onComplete;
-    
-    // Log the navigation attempt
-    console.log(`EnhancedFlyToLocation: Flying to ${latitude}, ${longitude}`);
     
     // Temporarily disable auto-rotation for smoother flight
     setAutoRotation(false);
     
-    // Call the original flyToLocation with an internal callback
+    // Pre-trigger callback with minimal delay so UI can prepare for transition sooner
+    // This helps start the map preparation earlier for a more seamless experience
+    const preTransitionTimeout = setTimeout(() => {
+      if (isFlyingRef.current) {
+        // Signal that we're about to complete the fly (this primes the UI)
+        console.log('Pre-triggering transition preparation');
+      }
+    }, 1000); // Short pre-trigger for UI preparation
+    
+    // Clear any existing flight completion callbacks
+    const flyCompletionTimeout = setTimeout(() => {
+      // If the flight doesn't complete in 6 seconds (reduced from 8), force completion
+      if (isFlyingRef.current) {
+        console.log('Flight timeout exceeded, forcing completion');
+        isFlyingRef.current = false;
+        clearTimeout(preTransitionTimeout);
+        
+        if (onComplete) onComplete();
+      }
+    }, 6000); // Reduced timeout for better responsiveness
+    
+    // Call the original flyToLocation with enhanced completion handling
     flyToLocation(longitude, latitude, () => {
-      // This will be called when the flight animation completes
-      console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
+      // Mark flying as complete
+      isFlyingRef.current = false;
       
-      // Re-enable auto-rotation with a smooth start after a delay
+      // Clear the safety timeouts
+      clearTimeout(flyCompletionTimeout);
+      clearTimeout(preTransitionTimeout);
+      
+      // Immediate callback to prevent delay in transition
+      if (onComplete) onComplete();
+      
+      // Small delay before re-enabling rotation for smoother transition
       setTimeout(() => {
+        // Re-enable auto-rotation with a smooth start
         setAutoRotation(true);
       }, 500);
-      
-      // The main callback will be called through the effect watching animationInProgressRef
     });
-  }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight]);
+  }, [flyToLocation, setAutoRotation, isFlyingRef]);
   
   return {
     enhancedFlyToLocation,
-    isFlyingRef,
-    cancelFlight
+    isFlyingRef
   };
 }

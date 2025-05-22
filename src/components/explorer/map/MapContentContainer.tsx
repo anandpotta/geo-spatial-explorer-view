@@ -1,13 +1,15 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Location } from '@/utils/geo-utils';
+import DrawingTools from '@/components/DrawingTools';
 import MapViews from './MapViews';
-import MapControlsLayout from './MapControlsLayout';
-import MapSearchOverlay from './MapSearchOverlay';
-import { useMapRefs } from '@/hooks/useMapRefs';
-import { useMapNavigation } from '@/hooks/useMapNavigation';
-import { useDrawingToolsManager } from '@/hooks/useDrawingToolsManager';
-import { toast } from '@/components/ui/use-toast';
+import MapTools from './MapTools';
+import DrawingToolHandler from './DrawingToolHandler';
+import { useMapRefs } from '@/hooks/map/useMapRefs';
+import { useMapTransition } from '@/hooks/map/useMapTransition';
+import { useMapControls } from '@/hooks/map/useMapControls';
+import SearchOverlay from './components/SearchOverlay';
+import TransitionOverlay from './components/TransitionOverlay';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -15,7 +17,8 @@ interface MapContentContainerProps {
   onMapReady: () => void;
   onFlyComplete: () => void;
   onLocationSelect: (location: Location) => void;
-  flyCompleted?: boolean;
+  onClearLocation?: () => void;
+  viewTransitionReady?: boolean;
 }
 
 const MapContentContainer: React.FC<MapContentContainerProps> = ({ 
@@ -24,62 +27,27 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   onMapReady, 
   onFlyComplete,
   onLocationSelect,
-  flyCompleted = true
+  onClearLocation,
+  viewTransitionReady = true
 }) => {
-  // Map references and state management
+  // Use extracted hooks
+  const { cesiumViewerRef, leafletMapRef, handleCesiumViewerRef, handleLeafletMapRef } = useMapRefs();
+  
+  const { 
+    mapKey, 
+    viewTransitionInProgress, 
+    handleMapReadyInternal 
+  } = useMapTransition(currentView, selectedLocation, onMapReady);
+  
   const {
-    cesiumViewerRef,
-    leafletMapRef,
-    mapReady,
-    mapKey,
-    viewTransitionInProgress,
-    handleCesiumViewerRef,
-    handleLeafletMapRef,
-    handleMapReady,
-    handleViewTransition
-  } = useMapRefs();
-
-  // Navigation controls
-  const {
+    activeTool,
+    setActiveTool,
     handleZoomIn,
     handleZoomOut,
     handleResetView,
+    handleToolSelect,
     handleClearAll
-  } = useMapNavigation(currentView, cesiumViewerRef, leafletMapRef);
-
-  // Drawing tools management
-  const { activeTool, setActiveTool, handleToolSelect } = useDrawingToolsManager();
-  
-  // Handle view changes
-  useEffect(() => {
-    const cleanup = handleViewTransition(currentView);
-    return cleanup;
-  }, [currentView]);
-
-  // Display notifications when map is ready
-  useEffect(() => {
-    if (mapReady && !viewTransitionInProgress) {
-      if (currentView === 'cesium') {
-        toast({
-          title: "3D Globe Ready",
-          description: "Interactive 3D globe view has been loaded.",
-          variant: "default",
-        });
-      } else if (currentView === 'leaflet') {
-        toast({
-          title: "Map View Ready",
-          description: "Tiled map view has been loaded successfully.",
-          variant: "default",
-        });
-      }
-    }
-  }, [mapReady, viewTransitionInProgress, currentView]);
-
-  // Handler for map ready event
-  const handleMapReadyInternal = () => {
-    handleMapReady();
-    onMapReady();
-  };
+  } = useMapControls(currentView, cesiumViewerRef, leafletMapRef);
 
   return (
     <div className="flex-1 relative w-full h-full overflow-hidden bg-black">
@@ -94,23 +62,44 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           handleLeafletMapRef={handleLeafletMapRef}
           activeTool={activeTool}
           handleClearAll={handleClearAll}
+          onClearLocation={onClearLocation}
+          viewTransitionReady={viewTransitionReady}
+          viewTransitionInProgress={viewTransitionInProgress}
         />
         
-        <MapControlsLayout
+        <DrawingTools 
+          onToolSelect={handleToolSelect}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onReset={handleResetView}
+          onClearAll={handleClearAll}
+        />
+        
+        <DrawingToolHandler
           currentView={currentView}
-          cesiumViewerRef={cesiumViewerRef}
           leafletMapRef={leafletMapRef}
           activeTool={activeTool}
           setActiveTool={setActiveTool}
-          handleToolSelect={handleToolSelect}
-          handleZoomIn={handleZoomIn}
-          handleZoomOut={handleZoomOut}
-          handleResetView={handleResetView}
-          handleClearAll={handleClearAll}
+          onToolSelect={handleToolSelect}
+        />
+        
+        <MapTools
+          currentView={currentView}
+          cesiumViewerRef={cesiumViewerRef}
+          leafletMapRef={leafletMapRef}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onResetView={handleResetView}
         />
       </div>
       
-      <MapSearchOverlay onLocationSelect={onLocationSelect} flyCompleted={flyCompleted} />
+      <SearchOverlay 
+        onLocationSelect={onLocationSelect} 
+        selectedLocation={selectedLocation} 
+      />
+      
+      {/* Transition overlay that appears only during view transitions */}
+      <TransitionOverlay isVisible={viewTransitionInProgress && !viewTransitionReady} />
     </div>
   );
 };

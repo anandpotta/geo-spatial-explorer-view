@@ -1,6 +1,4 @@
 
-import L from 'leaflet';
-
 /**
  * Configuration for drawing tool options
  */
@@ -12,12 +10,7 @@ export const getDrawOptions = () => {
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
-        stroke: true,
-        renderer: L.svg(), // Force SVG renderer for rectangles
-        lineCap: 'round',  // Add round line caps for rectangles too
-        lineJoin: 'round',  // Add round line joins for rectangles too
-        metric: true, // Use metric measurements
-        showArea: true // Show area while drawing
+        stroke: true
       }
     },
     polygon: {
@@ -33,8 +26,7 @@ export const getDrawOptions = () => {
         fillOpacity: 0.3,
         stroke: true,
         lineCap: 'round',
-        lineJoin: 'round',
-        renderer: L.svg() // Force SVG renderer for polygons
+        lineJoin: 'round'
       },
       showArea: false,
       metric: true,
@@ -46,8 +38,7 @@ export const getDrawOptions = () => {
         weight: 4,
         opacity: 1,
         fillOpacity: 0.3,
-        stroke: true,
-        renderer: L.svg() // Force SVG renderer for circles
+        stroke: true
       }
     },
     circlemarker: false,

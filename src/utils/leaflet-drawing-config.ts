@@ -28,8 +28,6 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
         l.options.weight = options.weight || 4;
         l.options.opacity = 1;
         l.options.color = '#33C3F0'; // Sky blue color
-        l.options.lineCap = 'round';
-        l.options.lineJoin = 'round';
       }
       
       // Store SVG path data if available
@@ -39,14 +37,6 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
           
           // Add class for visible stroke
           l._path.classList.add('visible-path-stroke');
-          
-          // Apply additional styling for rectangles specifically
-          if (drawing.geoJSON.geometry && drawing.geoJSON.geometry.type === 'Polygon' && 
-              drawing.geoJSON.geometry.coordinates[0] && 
-              drawing.geoJSON.geometry.coordinates[0].length === 5) {
-            // This is likely a rectangle (5 points with first and last being the same)
-            l._path.classList.add('leaflet-rectangle-path');
-          }
           
           // Force a reflow to ensure styles are applied
           l._path.getBoundingClientRect();
@@ -82,14 +72,11 @@ export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[n
     const northEast = bounds.getNorthEast();
     const southWest = bounds.getSouthWest();
     
-    // For rectangles, ensure we create a proper closed polygon with 5 points
-    // (last point same as first to close the shape)
     return [
       [southWest.lat, southWest.lng],
       [northEast.lat, southWest.lng],
       [northEast.lat, northEast.lng],
-      [southWest.lat, northEast.lng],
-      [southWest.lat, southWest.lng]  // Close the rectangle
+      [southWest.lat, northEast.lng]
     ];
   } else if (layerType === 'circle') {
     const center = layer.getLatLng();

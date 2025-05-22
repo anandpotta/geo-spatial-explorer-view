@@ -23,23 +23,10 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
-  const isMountedRef = useRef(true);
-  const initializedRef = useRef(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
-  
-  // Track component mount status
-  useEffect(() => {
-    isMountedRef.current = true;
-    console.log('DrawTools mounted');
-    
-    return () => {
-      console.log('DrawTools unmounting');
-      isMountedRef.current = false;
-    };
-  }, []);
   
   // Initialize configuration and event handlers using custom hooks
   useDrawToolsConfiguration(featureGroup);
@@ -53,118 +40,49 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
-  // Get draw options from configuration
-  const drawOptions = getDrawOptions();
-  
-  // Force visibility of drawing controls
+  // Set up global featureGroup reference for external tools to access
   useEffect(() => {
-    if (!isMountedRef.current || !featureGroup) return;
-    
-    console.log('Initializing DrawTools visibility');
-    initializedRef.current = true;
-    
-    // Function to enforce drawing controls visibility
-    const enforceControlsVisibility = () => {
-      // Set timeout to allow the map to render first
-      setTimeout(() => {
-        if (!isMountedRef.current) return;
-        
-        try {
-          // Find and force display of all drawing controls
-          const drawControls = document.querySelectorAll('.leaflet-draw-toolbar');
-          drawControls.forEach((control: Element) => {
-            (control as HTMLElement).style.display = 'block';
-            (control as HTMLElement).style.visibility = 'visible';
-            (control as HTMLElement).style.opacity = '1';
-          });
-          
-          // Force display of all draw buttons
-          const drawButtons = document.querySelectorAll('[class*="leaflet-draw-draw-"]');
-          drawButtons.forEach((button: Element) => {
-            (button as HTMLElement).style.display = 'block';
-            (button as HTMLElement).style.visibility = 'visible';
-            (button as HTMLElement).style.opacity = '1';
-          });
-          
-          // Make polygon button specifically visible
-          const polygonButton = document.querySelector('.leaflet-draw-draw-polygon');
-          if (polygonButton) {
-            (polygonButton as HTMLElement).style.display = 'block';
-            (polygonButton as HTMLElement).style.visibility = 'visible';
-            (polygonButton as HTMLElement).style.opacity = '1';
-            (polygonButton as HTMLElement).style.pointerEvents = 'auto';
-          }
-        } catch (error) {
-          console.error('Error enforcing controls visibility:', error);
-        }
-      }, 1000);
-    };
-    
-    // Call it initially
-    enforceControlsVisibility();
-    
-    // Set up a periodic check to maintain visibility
-    const visibilityInterval = setInterval(() => {
-      if (isMountedRef.current) {
-        enforceControlsVisibility();
-      } else {
-        clearInterval(visibilityInterval);
-      }
-    }, 3000);
-    
-    // Add styles for Leaflet Draw controls
-    const styleEl = document.createElement('style');
-    styleEl.innerHTML = `
-      .leaflet-draw-toolbar {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-      }
-      .leaflet-draw-draw-polygon,
-      .leaflet-draw-draw-rectangle,
-      .leaflet-draw-draw-circle,
-      .leaflet-draw-draw-marker,
-      .leaflet-draw-edit-edit,
-      .leaflet-draw-edit-remove {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-      }
-    `;
-    document.head.appendChild(styleEl);
+    // Make featureGroup accessible for external components
+    window.featureGroup = featureGroup;
     
     return () => {
-      console.log('Cleaning up DrawTools visibility');
-      if (visibilityInterval) {
-        clearInterval(visibilityInterval);
-      }
-      if (styleEl && styleEl.parentNode) {
-        styleEl.parentNode.removeChild(styleEl);
+      // Cleanup the global reference on unmount
+      if (window.featureGroup === featureGroup) {
+        window.featureGroup = undefined;
       }
     };
   }, [featureGroup]);
 
-  // Safe create handler that checks mount status
-  const safeHandleCreated = (event: any) => {
-    if (isMountedRef.current) {
-      handleCreated(event);
+  // Get draw options from configuration
+  const drawOptions = getDrawOptions();
+  
+  // Configure edit options to ensure proper editing
+  const editOptions = {
+    featureGroup: featureGroup,
+    edit: {
+      // Ensure proper options for edit mode
+      selectedPathOptions: {
+        maintainColor: true,
+        dashArray: '10, 10',
+        fill: true,
+        fillColor: '#ffffff',
+        fillOpacity: 0.1,
+        maintainDashArray: false 
+      }
+    },
+    remove: true,
+    poly: {
+      allowIntersection: false
     }
   };
-
-  console.log('Rendering DrawTools', { 
-    activeTool, 
-    featureGroupExists: !!featureGroup,
-    isMounted: isMountedRef.current
-  });
 
   return (
     <EditControl
       ref={editControlRef}
       position="topright"
-      onCreated={safeHandleCreated}
+      onCreated={handleCreated}
       draw={drawOptions}
-      edit={false}
+      edit={editOptions}
       featureGroup={featureGroup}
     />
   );

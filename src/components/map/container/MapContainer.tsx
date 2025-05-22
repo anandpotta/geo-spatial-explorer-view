@@ -1,11 +1,8 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 // Import CSS directly from node_modules
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
-// Import our custom overrides
-import '@/styles/leaflet-overrides.css';
 
 interface MapContainerProps {
   position: [number, number];
@@ -15,22 +12,6 @@ interface MapContainerProps {
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, children }) => {
-  // Clear any existing map instances from the DOM before mounting
-  useEffect(() => {
-    // Find and remove any orphaned Leaflet container classes
-    const cleanup = () => {
-      const orphanedContainers = document.querySelectorAll('.leaflet-container');
-      orphanedContainers.forEach(container => {
-        if (!document.body.contains(container.parentElement)) {
-          container.remove();
-        }
-      });
-    };
-    
-    cleanup();
-    return cleanup;
-  }, [mapKey]);
-  
   return (
     <LeafletMapContainer 
       key={mapKey}
@@ -42,13 +23,6 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
       fadeAnimation={true}
       markerZoomAnimation={true}
       preferCanvas={true}
-      whenReady={() => {
-        // Access the map instance through the global variable
-        const leafletMap = document.querySelector(`.leaflet-container[data-map-key="${mapKey}"]`);
-        if (leafletMap) {
-          leafletMap.setAttribute('data-instance-id', mapKey);
-        }
-      }}
     >
       <TileLayer 
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
