@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
-import { resetMap } from '@/utils/clear-operations';
+import { preserveAuthData } from '@/utils/clear-operations';
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
@@ -25,15 +25,43 @@ export function useClearAllOperation(onClearAll?: () => void) {
       return;
     }
     
-    const featureGroup = (window as any).featureGroup;
+    const featureGroup = window.featureGroup;
     if (featureGroup) {
       handleClearAll({
         featureGroup,
         onClearAll
       });
     } else {
-      // Use our utility function for a complete reset
-      resetMap();
+      // Fallback if featureGroup is not available
+      console.warn('Feature group not available for clear operation, using localStorage fallback');
+      
+      // Get restore function for auth data
+      const restoreAuth = preserveAuthData();
+      
+      // Clear localStorage
+      localStorage.clear();
+      
+      // Restore auth data
+      restoreAuth();
+      
+      // Forcefully clear specific items
+      localStorage.removeItem('savedDrawings');
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('floorPlans');
+      localStorage.removeItem('svgPaths');
+      
+      // Clean up all marker tooltips
+      const tooltips = document.querySelectorAll('.marker-tooltip');
+      tooltips.forEach(tooltip => {
+        if (tooltip.parentNode) {
+          tooltip.parentNode.removeChild(tooltip);
+        }
+      });
+      
+      // Dispatch events to notify components
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      window.dispatchEvent(new Event('drawingsUpdated'));
       
       if (onClearAll) {
         onClearAll();

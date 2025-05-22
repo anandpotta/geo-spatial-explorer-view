@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+
+import React from 'react';
 import DrawingTools from '@/components/DrawingTools';
 import DrawingToolHandler from '../explorer/map/DrawingToolHandler';
 import MapTools from '../explorer/map/MapTools';
-import { initializeLeafletDrawComplete } from '@/utils/leaflet-draw-initializer';
 
 interface ToolsContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -29,25 +29,6 @@ const ToolsContainer: React.FC<ToolsContainerProps> = ({
   onResetView,
   onClearAll
 }) => {
-  // Initialize Leaflet Draw when the component mounts
-  useEffect(() => {
-    // Make sure leaflet-draw is properly initialized
-    const initializeDrawingTools = async () => {
-      console.log("ToolsContainer: Initializing Leaflet Draw");
-      
-      try {
-        // Initialize Leaflet Draw
-        initializeLeafletDrawComplete();
-        
-        console.log("ToolsContainer: Leaflet Draw initialized successfully");
-      } catch (err) {
-        console.error("Failed to initialize Leaflet Draw:", err);
-      }
-    };
-    
-    initializeDrawingTools();
-  }, []);
-  
   return (
     <>
       <DrawingTools 

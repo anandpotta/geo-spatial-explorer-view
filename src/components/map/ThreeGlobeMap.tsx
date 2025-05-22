@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import ThreeGlobe from '@/components/globe/ThreeGlobe';
-import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeMapProps {
   selectedLocation?: Location;
@@ -17,75 +16,57 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [initKey, setInitKey] = useState<number>(0); // Key for force re-initialization
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
-  const readyCallbackFiredRef = useRef<boolean>(false);
-  const errorRecoveryAttemptsRef = useRef<number>(0);
+  const loadingTimerRef = useRef<any>(null);
+  
+  // Set a timeout to force loading to complete if it takes too long
+  useEffect(() => {
+    loadingTimerRef.current = setTimeout(() => {
+      if (isLoading) {
+        console.log("ThreeGlobeMap: Force completing loading after timeout");
+        setIsLoading(false);
+      }
+    }, 5000); // 5 second timeout
+    
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+    };
+  }, [isLoading]);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
     if (selectedLocation) {
       const locationId = selectedLocation.id;
       if (locationId === lastLocationRef.current) {
-        console.log('ThreeGlobeMap: Skipping duplicate location selection:', locationId);
+        console.log('Skipping duplicate location selection:', locationId);
         return;
       }
       lastLocationRef.current = locationId;
-      
-      // Add a small delay to ensure the globe is fully initialized
-      if (globeInstanceRef.current && viewerInitializedRef.current) {
-        console.log("ThreeGlobeMap: Globe is ready, can navigate to:", selectedLocation.label);
-      } else {
-        console.log("ThreeGlobeMap: Globe not ready yet, waiting for initialization");
-      }
     }
   }, [selectedLocation]);
   
   // Handle map ready state
   const handleMapReady = (viewer?: any) => {
-    if (readyCallbackFiredRef.current) {
-      console.log('ThreeGlobeMap: Ready callback already fired, ignoring duplicate event');
+    if (viewerInitializedRef.current) {
+      console.log('Globe is already initialized, skipping duplicate ready event');
       return;
     }
     
-    console.log("ThreeGlobeMap: Globe is ready, hiding loading indicator");
-    readyCallbackFiredRef.current = true;
+    console.log("ThreeGlobeMap: Globe is ready");
     viewerInitializedRef.current = true;
     setIsLoading(false);
     
-    // Clear any previous error state
-    if (mapError) {
-      setMapError(null);
-    }
-    
     if (viewer) {
       globeInstanceRef.current = viewer;
-      
-      // Ensure the viewer has all required methods
-      if (!viewer.flyToLocation) {
-        console.error("Globe viewer is missing flyToLocation method");
-        setMapError("Globe initialization incomplete");
-        return;
-      }
     }
     
     if (onMapReady && globeInstanceRef.current) {
       console.log("ThreeGlobeMap: Calling parent onMapReady");
-      // Add a short delay to ensure everything is fully initialized
-      setTimeout(() => {
-        if (onMapReady) onMapReady(globeInstanceRef.current);
-      }, 500);
-    }
-  };
-  
-  // Handle successful flight completion
-  const handleFlyComplete = () => {
-    console.log("ThreeGlobeMap: Flight complete, notifying parent");
-    
-    if (onFlyComplete) {
-      onFlyComplete();
+      onMapReady(globeInstanceRef.current);
     }
   };
   
@@ -96,48 +77,17 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       viewerInitializedRef.current = false;
       lastLocationRef.current = null;
       globeInstanceRef.current = null;
-      readyCallbackFiredRef.current = false;
+      
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
     };
   }, []);
   
   // Handle errors that might occur
   const handleError = (error: Error) => {
-    console.error("ThreeGlobeMap: Globe error:", error);
-    
-    // Try to recover by reinitializing the globe
-    if (errorRecoveryAttemptsRef.current < 2) {
-      errorRecoveryAttemptsRef.current++;
-      console.log(`ThreeGlobeMap: Attempting to recover from globe error (attempt ${errorRecoveryAttemptsRef.current})`);
-      
-      // Reset state
-      viewerInitializedRef.current = false;
-      globeInstanceRef.current = null;
-      readyCallbackFiredRef.current = false;
-      
-      // Force re-initialization
-      setInitKey(prev => prev + 1);
-      
-      toast({
-        title: "Globe Recovery",
-        description: "Trying to reinitialize the 3D globe...",
-        duration: 3000
-      });
-    } else {
-      // After multiple attempts, show error to user
-      setMapError(error.message || "Failed to initialize 3D globe");
-      
-      toast({
-        title: "Globe Error",
-        description: "Could not initialize the 3D globe view",
-        variant: "destructive"
-      });
-      
-      // Still notify parent that the map is ready so the app can proceed
-      if (onMapReady && !readyCallbackFiredRef.current) {
-        readyCallbackFiredRef.current = true;
-        onMapReady(null);
-      }
-    }
+    console.error("Globe error:", error);
+    setMapError(error.message || "Failed to initialize 3D globe");
   };
   
   return (
@@ -160,28 +110,15 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
             <h3 className="text-xl font-bold text-white mb-2">Globe Error</h3>
             <p className="text-white mb-4">{mapError}</p>
-            <button 
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              onClick={() => {
-                setMapError(null);
-                errorRecoveryAttemptsRef.current = 0;
-                readyCallbackFiredRef.current = false;
-                setInitKey(prev => prev + 1);
-              }}
-            >
-              Try Again
-            </button>
           </div>
         </div>
       )}
       
-      {/* ThreeJS Globe with key for forced re-initialization */}
+      {/* ThreeJS Globe */}
       <ThreeGlobe 
-        key={`globe-${initKey}`}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
-        onFlyComplete={handleFlyComplete}
-        onError={handleError}
+        onFlyComplete={onFlyComplete}
       />
     </div>
   );

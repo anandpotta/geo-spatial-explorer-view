@@ -58,7 +58,6 @@ const MapView = ({
 }: MapViewProps) => {
   // Generate a stable but unique key
   const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
-  const mapReadyRef = useRef<boolean>(false);
   const drawingControlsRef = useRef(null);
   const {
     showFloorPlan,
@@ -69,32 +68,11 @@ const MapView = ({
 
   // Reset map key whenever component remounts to ensure fresh instance
   useEffect(() => {
-    console.log("MapView: Component mounted or updated");
     return () => {
       // Force a new key on unmount to ensure clean startup next time
       setMapKey(`map-${Date.now()}`);
-      console.log("MapView: Component unmounted, resetting map key");
     };
   }, []);
-  
-  // Handle map ready internally to avoid duplicate notifications
-  const handleMapReadyInternal = (map: L.Map) => {
-    if (!mapReadyRef.current) {
-      console.log("MapView: Map is ready, notifying parent");
-      mapReadyRef.current = true;
-      
-      // Wait a brief moment to ensure the map is fully rendered
-      setTimeout(() => {
-        if (map && map.invalidateSize) {
-          map.invalidateSize(true);
-          console.log("MapView: Forced initial map invalidation");
-        }
-        
-        // Notify parent component
-        onMapReady(map);
-      }, 100);
-    }
-  };
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
@@ -116,7 +94,7 @@ const MapView = ({
     <div className="w-full h-full relative">
       <MapHeader 
         onLocationSelect={handleLocationSelect} 
-        isMapReady={isMapReady || mapReadyRef.current} 
+        isMapReady={isMapReady} 
       />
       
       <div className="w-full h-full" id={`map-container-${mapKey}`}>
@@ -125,7 +103,7 @@ const MapView = ({
           zoom={zoom}
           mapKey={mapKey}
         >
-          <MapReference onMapReady={handleMapReadyInternal} />
+          <MapReference onMapReady={onMapReady} />
           
           <DrawingControlsContainer
             ref={drawingControlsRef}

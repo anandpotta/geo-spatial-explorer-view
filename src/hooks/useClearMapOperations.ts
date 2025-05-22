@@ -1,25 +1,20 @@
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import { clearAllMapData, resetMap } from '@/utils/clear-operations/clear-map-refreshes';
 
-/**
- * Hook providing clear map operations with toast notifications and confirmation dialog
- */
 export function useClearMapOperations(
   currentView: 'cesium' | 'leaflet',
   leafletMapRef: React.RefObject<any>
 ) {
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
 
-  const requestClearAll = useCallback(() => {
+  const requestClearAll = () => {
     setIsClearDialogOpen(true);
-  }, []);
+  };
 
-  const handleClearAll = useCallback(() => {
+  const handleClearAll = () => {
     if (currentView === 'leaflet' && leafletMapRef.current) {
       try {
-        // First remove any active layers from the map
         const layers = leafletMapRef.current._layers;
         if (layers) {
           Object.keys(layers).forEach(layerId => {
@@ -30,8 +25,18 @@ export function useClearMapOperations(
           });
         }
         
-        // Then use our utility to clear everything else
-        resetMap();
+        // Clear any SVG paths
+        window.dispatchEvent(new CustomEvent('clearAllSvgPaths'));
+        
+        // Clear any markers from storage
+        localStorage.removeItem('savedMarkers');
+        localStorage.removeItem('savedDrawings');
+        localStorage.removeItem('svgPaths');
+        
+        // Notify components
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('markersUpdated'));
+        window.dispatchEvent(new Event('drawingsUpdated'));
         
         toast({
           title: "Map Cleared",
@@ -43,11 +48,11 @@ export function useClearMapOperations(
       
       setIsClearDialogOpen(false);
     }
-  }, [currentView, leafletMapRef]);
+  };
 
-  const handleCancelClear = useCallback(() => {
+  const handleCancelClear = () => {
     setIsClearDialogOpen(false);
-  }, []);
+  };
 
   return {
     isClearDialogOpen,

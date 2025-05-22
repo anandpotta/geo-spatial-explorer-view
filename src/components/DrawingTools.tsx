@@ -107,9 +107,7 @@ const DrawingTools = ({
       localStorage.clear();
       
       // Restore authentication data
-      if (restoreAuth && typeof restoreAuth === 'function') {
-        restoreAuth();
-      }
+      restoreAuth();
       
       // Forcefully clear specific storages that might be causing issues
       localStorage.removeItem('savedDrawings');
