@@ -1,5 +1,6 @@
+
 import React, { useRef, useEffect, useState } from 'react';
-import { MapCore } from '../geospatial-core/map';
+import { MapCore } from '../geospatial-core/map/index';
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 
 interface MapComponentProps {
