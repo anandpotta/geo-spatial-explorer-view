@@ -32,7 +32,9 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       localStorage.clear();
       
       // Restore authentication data
-      restoreAuth();
+      if (restoreAuth && typeof restoreAuth === 'function') {
+        restoreAuth();
+      }
       
       // Clear drawings
       clearAllDrawings();
