@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import DrawingTools from '@/components/DrawingTools';
 import DrawingToolHandler from '../explorer/map/DrawingToolHandler';
@@ -37,9 +36,6 @@ const ToolsContainer: React.FC<ToolsContainerProps> = ({
       console.log("ToolsContainer: Initializing Leaflet Draw");
       
       try {
-        // Import leaflet-draw
-        await import('leaflet-draw');
-        
         // Initialize Leaflet Draw
         initializeLeafletDrawComplete();
         

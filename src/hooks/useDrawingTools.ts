@@ -50,14 +50,15 @@ export function useDrawingTools(
       };
       
       // Create drawing control with proper edit options
+      // Fixed: Use objects for edit/remove instead of boolean values
       const drawControl = new L.Control.Draw({
         position: 'topright',
         draw: drawOptions,
         edit: {
           featureGroup: featureGroup,
-          // Use boolean values for edit/remove options
-          edit: activeTool === 'edit',
-          remove: activeTool === 'delete'
+          // Use proper edit options objects rather than boolean values
+          edit: activeTool === 'edit' ? {} : false,
+          remove: activeTool === 'delete' ? {} : false
         }
       });
       
