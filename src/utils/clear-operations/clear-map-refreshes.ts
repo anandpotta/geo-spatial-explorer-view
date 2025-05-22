@@ -26,7 +26,7 @@ export function clearAllMapData(options: {
   } = options;
   
   // Get restore function for auth data if needed
-  const restoreAuth = preserveAuth ? preserveAuthData() : null;
+  const restoreAuthFn = preserveAuth ? preserveAuthData() : null;
   
   // Clear components based on options
   let cleared = false;
@@ -47,8 +47,8 @@ export function clearAllMapData(options: {
   }
   
   // Restore auth data if preserved
-  if (restoreAuth) {
-    restoreAuth();
+  if (restoreAuthFn && typeof restoreAuthFn === 'function') {
+    restoreAuthFn();
   }
   
   // Force refresh if requested
