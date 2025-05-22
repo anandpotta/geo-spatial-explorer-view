@@ -4,3 +4,4 @@ export * from './clear-markers';
 export * from './clear-drawings';
 export * from './preserve-auth-data';
 export * from './map-refresh';
+export * from './clear-map-refreshes';
