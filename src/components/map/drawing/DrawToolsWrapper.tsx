@@ -10,30 +10,20 @@ interface DrawToolsWrapperProps {
   featureGroup: L.FeatureGroup;
 }
 
-// Using forwardRef properly with explicit types
+// Using forwardRef properly without trying to assign it to a FC type directly
 const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
   onCreated,
   activeTool,
   onClearAll,
   featureGroup
 }, ref) => {
-  // Now we pass the onToolSelect prop that DrawTools requires
-  const handleToolSelect = (tool: string) => {
-    console.log('Tool selected:', tool);
-  };
-  
   return (
     <DrawTools 
-      onToolSelect={handleToolSelect}
-      onZoomIn={() => featureGroup && (featureGroup as any)._map?.zoomIn()}
-      onZoomOut={() => featureGroup && (featureGroup as any)._map?.zoomOut()}
-      onReset={() => {
-        if (featureGroup && (featureGroup as any)._map) {
-          const map = (featureGroup as any)._map;
-          map.setView([51.505, -0.09], 13); // Default view
-        }
-      }}
+      ref={ref}
+      onCreated={onCreated} 
+      activeTool={activeTool} 
       onClearAll={onClearAll}
+      featureGroup={featureGroup}
     />
   );
 });
