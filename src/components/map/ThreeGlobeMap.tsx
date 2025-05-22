@@ -20,6 +20,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
   const loadingTimerRef = useRef<any>(null);
+  const initTimeoutRef = useRef<any>(null);
   
   // Set a timeout to force loading to complete if it takes too long
   useEffect(() => {
@@ -34,6 +35,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       if (loadingTimerRef.current) {
         clearTimeout(loadingTimerRef.current);
       }
+      
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
     };
   }, [isLoading]);
   
@@ -46,6 +51,11 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         return;
       }
       lastLocationRef.current = locationId;
+      
+      // Add a small delay to ensure the globe is fully initialized
+      if (globeInstanceRef.current && viewerInitializedRef.current) {
+        console.log("Globe is ready, can navigate to:", selectedLocation.label);
+      }
     }
   }, [selectedLocation]);
   
@@ -62,11 +72,21 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     
     if (viewer) {
       globeInstanceRef.current = viewer;
+      
+      // Ensure the viewer has all required methods
+      if (!viewer.flyToLocation) {
+        console.error("Globe viewer is missing flyToLocation method");
+        setMapError("Globe initialization incomplete");
+        return;
+      }
     }
     
     if (onMapReady && globeInstanceRef.current) {
       console.log("ThreeGlobeMap: Calling parent onMapReady");
-      onMapReady(globeInstanceRef.current);
+      // Add a short delay to ensure everything is fully initialized
+      initTimeoutRef.current = setTimeout(() => {
+        onMapReady(globeInstanceRef.current);
+      }, 500);
     }
   };
   
@@ -80,6 +100,10 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       
       if (loadingTimerRef.current) {
         clearTimeout(loadingTimerRef.current);
+      }
+      
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
       }
     };
   }, []);
@@ -119,6 +143,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
         onFlyComplete={onFlyComplete}
+        onError={handleError}
       />
     </div>
   );

@@ -9,12 +9,14 @@ interface ThreeGlobeProps {
   selectedLocation?: Location;
   onMapReady?: (viewer?: any) => void;
   onFlyComplete?: () => void;
+  onError?: (error: Error) => void;
 }
 
 const ThreeGlobe: React.FC<ThreeGlobeProps> = ({ 
   selectedLocation, 
   onMapReady, 
-  onFlyComplete 
+  onFlyComplete,
+  onError
 }) => {
   // Container reference for the Three.js canvas
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,7 +36,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   }, [selectedLocation]);
   
   // Use custom hooks to handle globe lifecycle and navigation
-  const { isInitialized } = useGlobeLifecycle(containerRef, onMapReady);
+  const { isInitialized } = useGlobeLifecycle(containerRef, onMapReady, onError);
   const { isFlying, selectedLocationLabel } = useGlobeNavigation(
     selectedLocation, 
     isInitialized, 

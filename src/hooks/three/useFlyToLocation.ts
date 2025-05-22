@@ -2,6 +2,7 @@
 import { useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { toast } from '@/components/ui/use-toast';
 
 /**
  * Hook providing functionality to fly to a specific location on the globe
@@ -16,14 +17,35 @@ export function useFlyToLocation(
   // Animation frame reference to ensure proper cleanup
   const animationFrameRef = useRef<number | null>(null);
   const animationInProgressRef = useRef<boolean>(false);
+  const retryAttemptsRef = useRef<number>(0);
   
   // Method to fly to a specific location on the globe
   const flyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
     if (!cameraRef.current || !controlsRef.current) {
-      console.error("Cannot fly to location - camera or controls not initialized");
-      if (onComplete) onComplete();
-      return;
+      console.warn("Camera or controls not ready yet, will retry in a moment");
+      
+      // Retry a few times before giving up
+      if (retryAttemptsRef.current < 3) {
+        retryAttemptsRef.current++;
+        
+        setTimeout(() => {
+          flyToLocation(longitude, latitude, onComplete);
+        }, 500);
+        return;
+      } else {
+        console.error("Camera still not initialized after delay, cannot navigate");
+        toast({
+          title: "Navigation Error",
+          description: "Couldn't initialize camera for navigation",
+          variant: "destructive"
+        });
+        if (onComplete) onComplete();
+        return;
+      }
     }
+    
+    // Reset retry counter on successful attempt
+    retryAttemptsRef.current = 0;
     
     // Validate inputs to avoid NaN errors
     if (isNaN(longitude) || isNaN(latitude)) {
@@ -66,9 +88,11 @@ export function useFlyToLocation(
     const earthCenter = new THREE.Vector3(0, 0, 0);
     const directionToTarget = new THREE.Vector3().subVectors(target, earthCenter).normalize();
     
+    // Save current camera position for smoother transition
+    const startPosition = cameraRef.current.position.clone();
+    
     // Position camera in space looking at Earth 
     const outerPosition = new THREE.Vector3().copy(directionToTarget).multiplyScalar(startDistance);
-    cameraRef.current.position.copy(outerPosition);
     
     // Ensure controls target is not null
     if (!controlsRef.current.target) {
@@ -96,6 +120,42 @@ export function useFlyToLocation(
     const duration = 2500; // Longer animation for dramatic effect
     animationInProgressRef.current = true;
     
+    // First stage: move camera out to space if not already there (quick transition)
+    const animateCameraOutward = (timestamp: number) => {
+      if (!animationInProgressRef.current) {
+        return;
+      }
+      
+      if (!cameraRef.current || !controlsRef.current) {
+        animationInProgressRef.current = false;
+        if (onComplete) onComplete();
+        return;
+      }
+      
+      if (startTime === null) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / 300, 1); // Fast initial outward movement
+      
+      // Simple ease-out for quick outward movement
+      const ease = 1 - Math.pow(1 - progress, 2);
+      
+      // Interpolate camera position from current to outer space
+      cameraRef.current.position.lerpVectors(startPosition, outerPosition, ease);
+      
+      // Update controls
+      controlsRef.current.update();
+      
+      // Continue animation if not complete
+      if (progress < 1 && animationInProgressRef.current) {
+        animationFrameRef.current = requestAnimationFrame(animateCameraOutward);
+      } else {
+        // Start the main animation once we're in outer space
+        startTime = null; // Reset for main animation
+        animationFrameRef.current = requestAnimationFrame(animateCamera);
+      }
+    };
+    
+    // Main animation function
     const animateCamera = (timestamp: number) => {
       // Check if animation should continue
       if (!animationInProgressRef.current) {
@@ -167,8 +227,8 @@ export function useFlyToLocation(
       }
     };
     
-    // Start animation
-    animationFrameRef.current = requestAnimationFrame(animateCamera);
+    // Start animation with outward movement first
+    animationFrameRef.current = requestAnimationFrame(animateCameraOutward);
   }, [cameraRef, controlsRef, globeRadius]);
   
   // Return the flyToLocation function and cleanup helper
