@@ -20,7 +20,7 @@ export function useFlyToLocation(
   // Method to fly to a specific location on the globe
   const flyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
     if (!cameraRef.current || !controlsRef.current) {
-      console.warn("Cannot fly to location - camera or controls not initialized");
+      console.error("Cannot fly to location - camera or controls not initialized");
       if (onComplete) onComplete();
       return;
     }
@@ -51,13 +51,9 @@ export function useFlyToLocation(
     
     const target = new THREE.Vector3(targetX, targetY, targetZ);
     
-    // Calculate camera position at a good distance for viewing the location
-    // Position the camera closer to the globe's surface for a more detailed view
-    const finalDistance = globeRadius * 1.25; // Even closer to the location point
-    
-    const cameraTargetX = -finalDistance * Math.sin(phi) * Math.cos(theta);
-    const cameraTargetY = finalDistance * Math.cos(phi);
-    const cameraTargetZ = finalDistance * Math.sin(phi) * Math.sin(theta);
+    // Start the camera from a farther position for dramatic effect
+    const startDistance = globeRadius * 6; // Far away from globe
+    const finalDistance = globeRadius * 1.25; // Close to the location point
     
     // Ensure we have valid current positions before proceeding
     if (!cameraRef.current.position) {
@@ -66,8 +62,13 @@ export function useFlyToLocation(
       return;
     }
     
-    const currentPos = cameraRef.current.position.clone();
-    const targetPos = new THREE.Vector3(cameraTargetX, cameraTargetY, cameraTargetZ);
+    // Calculate initial distant camera position (from space)
+    const earthCenter = new THREE.Vector3(0, 0, 0);
+    const directionToTarget = new THREE.Vector3().subVectors(target, earthCenter).normalize();
+    
+    // Position camera in space looking at Earth 
+    const outerPosition = new THREE.Vector3().copy(directionToTarget).multiplyScalar(startDistance);
+    cameraRef.current.position.copy(outerPosition);
     
     // Ensure controls target is not null
     if (!controlsRef.current.target) {
@@ -75,12 +76,14 @@ export function useFlyToLocation(
       controlsRef.current.target = new THREE.Vector3(0, 0, 0);
     }
     
-    // Save the current target of the controls with null check
+    // Save the current target of the controls
     const currentTarget = controlsRef.current.target.clone();
     
     // Set the target to be slightly closer to the surface for better viewing
-    // This makes the camera look at the actual surface location
     const finalTarget = target.clone().multiplyScalar(0.99);
+    
+    // Calculate final camera position near the globe surface
+    const finalPosition = new THREE.Vector3().copy(directionToTarget).multiplyScalar(finalDistance);
     
     // Temporarily disable auto-rotation and damping during transition for precision
     const wasAutoRotating = controlsRef.current.autoRotate;
@@ -90,7 +93,7 @@ export function useFlyToLocation(
     
     // Animate camera position
     let startTime: number | null = null;
-    const duration = 1500; // Faster animation (reduced from 2000ms) for more responsiveness
+    const duration = 2500; // Longer animation for dramatic effect
     animationInProgressRef.current = true;
     
     const animateCamera = (timestamp: number) => {
@@ -113,39 +116,26 @@ export function useFlyToLocation(
       const elapsed = timestamp - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Use improved easing functions for smoother animation
-      const easeOutCubic = (t: number): number => {
-        return 1 - Math.pow(1 - t, 3);
+      // Custom easing function for smoother animation with initial slow motion
+      const easeInOutCubic = (t: number): number => {
+        return t < 0.5 
+          ? 4 * t * t * t 
+          : 1 - Math.pow(-2 * t + 2, 3) / 2;
       };
       
-      const ease = easeOutCubic(progress);
+      const ease = easeInOutCubic(progress);
       
-      // Interpolate camera position
-      const newX = currentPos.x + (targetPos.x - currentPos.x) * ease;
-      const newY = currentPos.y + (targetPos.y - currentPos.y) * ease;
-      const newZ = currentPos.z + (targetPos.z - currentPos.z) * ease;
+      // Interpolate camera position from outer space to final position
+      cameraRef.current.position.lerpVectors(outerPosition, finalPosition, ease);
       
-      // Interpolate target (where the camera is looking)
-      const newTargetX = currentTarget.x + (finalTarget.x - currentTarget.x) * ease;
-      const newTargetY = currentTarget.y + (finalTarget.y - currentTarget.y) * ease;
-      const newTargetZ = currentTarget.z + (finalTarget.z - currentTarget.z) * ease;
+      // Gradually transition the controls target from Earth center to the specific location
+      const newTarget = new THREE.Vector3();
+      newTarget.lerpVectors(currentTarget, finalTarget, ease);
+      controlsRef.current.target.copy(newTarget);
       
-      try {
-        // Update camera with null checks
-        if (cameraRef.current && cameraRef.current.position) {
-          cameraRef.current.position.set(newX, newY, newZ);
-        }
-        
-        if (controlsRef.current && controlsRef.current.target) {
-          controlsRef.current.target.set(newTargetX, newTargetY, newTargetZ);
-          controlsRef.current.update();
-        }
-      } catch (error) {
-        console.error("Error during camera animation:", error);
-        animationInProgressRef.current = false;
-        if (onComplete) onComplete();
-        return;
-      }
+      // Make sure the camera is looking at the appropriate point during animation
+      cameraRef.current.lookAt(newTarget);
+      controlsRef.current.update();
       
       // Continue animation if not complete
       if (progress < 1 && animationInProgressRef.current) {
@@ -155,7 +145,7 @@ export function useFlyToLocation(
         animationFrameRef.current = null;
         animationInProgressRef.current = false;
         
-        // Restore controls settings with null checks
+        // Restore controls settings
         if (controlsRef.current) {
           controlsRef.current.enableDamping = wasDamping;
           
@@ -164,7 +154,7 @@ export function useFlyToLocation(
             if (controlsRef.current && wasAutoRotating) {
               controlsRef.current.autoRotate = true;
             }
-          }, 200); // Reduced from 300ms to 200ms
+          }, 200);
         }
         
         // Wait for a moment for the view to stabilize before triggering callbacks

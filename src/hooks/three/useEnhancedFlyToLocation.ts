@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { useFlyToLocation } from './useFlyToLocation';
 import { useAutoRotation } from './useAutoRotation';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { toast } from '@/components/ui/use-toast';
 
 /**
  * Hook providing enhanced flying to location with auto rotation management
@@ -19,6 +20,7 @@ export function useEnhancedFlyToLocation(
   const completedCallbackRef = useRef<(() => void) | undefined>(undefined);
   const callbackTimeoutRef = useRef<number | null>(null);
   const stabilizationTimeoutRef = useRef<number | null>(null);
+  const retryTimeoutRef = useRef<number | null>(null);
   
   // Determine which ref to use for tracking flying state
   const isFlyingRef = externalFlyingRef || internalFlyingRef;
@@ -49,6 +51,11 @@ export function useEnhancedFlyToLocation(
       if (stabilizationTimeoutRef.current !== null) {
         window.clearTimeout(stabilizationTimeoutRef.current);
         stabilizationTimeoutRef.current = null;
+      }
+      
+      if (retryTimeoutRef.current !== null) {
+        window.clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
       }
     };
   }, [cancelFlight]);
@@ -94,6 +101,11 @@ export function useEnhancedFlyToLocation(
       stabilizationTimeoutRef.current = null;
     }
     
+    if (retryTimeoutRef.current !== null) {
+      window.clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
     
@@ -103,8 +115,38 @@ export function useEnhancedFlyToLocation(
     // Log the navigation attempt
     console.log(`EnhancedFlyToLocation: Flying to ${latitude}, ${longitude}`);
     
+    // Show toast for navigation
+    toast({
+      title: "Traveling to location",
+      description: "Flying across the globe...",
+      duration: 2500
+    });
+    
     // Temporarily disable auto-rotation for smoother flight
     setAutoRotation(false);
+    
+    // Check if camera and controls are ready
+    if (!camera || !controlsRef.current) {
+      console.warn("Camera or controls not ready yet, will retry in a moment");
+      
+      // Set a retry timer
+      retryTimeoutRef.current = window.setTimeout(() => {
+        retryTimeoutRef.current = null;
+        
+        if (camera && controlsRef.current) {
+          console.log("Retrying flight after camera initialized");
+          enhancedFlyToLocation(longitude, latitude, onComplete);
+        } else {
+          console.error("Camera still not initialized after delay, cannot navigate");
+          // Still call completion callback so the app can proceed
+          if (onComplete) {
+            onComplete();
+          }
+        }
+      }, 1000);
+      
+      return;
+    }
     
     // Call the original flyToLocation with an internal callback
     flyToLocation(longitude, latitude, () => {
@@ -131,7 +173,7 @@ export function useEnhancedFlyToLocation(
         }
       }, 300); // Let the view stabilize after animation
     });
-  }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight]);
+  }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight, camera, controlsRef]);
   
   return {
     enhancedFlyToLocation,

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../../map/LeafletMap';
@@ -78,10 +79,12 @@ const LeafletViewContainer: React.FC<LeafletViewContainerProps> = ({
       transform,
       zIndex,
       pointerEvents,
-      transition: 'opacity 800ms ease-in-out, transform 800ms ease-in-out'
+      transition: 'opacity 800ms ease-in-out, transform 800ms ease-in-out',
+      backgroundColor: isCurrentView ? 'white' : 'transparent'
     };
   };
   
+  // Class for fade-in animation
   const fadeInClass = fadeIn && isCurrentView ? 'animate-fade-in' : '';
   
   return (

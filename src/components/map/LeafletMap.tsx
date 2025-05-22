@@ -1,205 +1,220 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Location } from '@/utils/geo-utils';
-import { useMapInitialization } from '@/hooks/useMapInitialization';
-import { useLocationSync } from '@/hooks/location-sync';
-import MapView from './MapView';
-import { getSavedMarkers, LocationMarker, createMarker } from '@/utils/marker-utils';
-import { toast } from '@/components/ui/use-toast';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
+import { Location } from '@/utils/geo-utils';
+import { useDrawingTools } from '@/hooks/useDrawingTools';
 
 interface LeafletMapProps {
-  selectedLocation?: Location;
-  onMapReady?: (map: L.Map) => void;
-  activeTool?: string | null;
-  onClearAll?: () => void;
-  isMapReady?: boolean;
+  selectedLocation: Location | undefined;
+  onMapReady: (map: any) => void;
+  activeTool: string | null;
+  onClearAll: () => void;
+  isMapReady: boolean;
 }
 
-const LeafletMap: React.FC<LeafletMapProps> = ({
+const LeafletMap = ({
   selectedLocation,
   onMapReady,
-  activeTool = null,
+  activeTool,
   onClearAll,
-  isMapReady: parentIsMapReady = false
-}) => {
-  const { 
-    mapRef,
-    mapInstanceKey,
-    isMapReady: internalMapReady,
-    handleSetMapRef
-  } = useMapInitialization(selectedLocation);
+  isMapReady
+}: LeafletMapProps) => {
+  const [mapKey, setMapKey] = useState<string>('');
+  const [isMapInit, setIsMapInit] = useState(false);
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+  const locationMarkerRef = useRef<L.Marker | null>(null);
+  const { initDrawingControls } = useDrawingTools(mapRef, drawnItemsRef, activeTool);
   
-  // Combine parent and internal map ready states
-  const isMapReady = parentIsMapReady && internalMapReady;
+  // Clear any orphaned Leaflet container classes
+  const cleanupOrphanedMaps = () => {
+    const orphanedContainers = document.querySelectorAll('.leaflet-container');
+    orphanedContainers.forEach(container => {
+      if (!document.body.contains(container.parentElement)) {
+        container.remove();
+      }
+    });
+  };
   
-  // Track last processed location
-  const lastLocationRef = useRef<string | null>(null);
-  const viewStabilizationTimerRef = useRef<number | null>(null);
-  const [viewStable, setViewStable] = useState(false);
-  
-  // Use our enhanced useLocationSync hook to handle location changes
-  useLocationSync(mapRef.current, selectedLocation, isMapReady);
-  
-  const [position, setPosition] = useState<[number, number]>([0, 0]);
-  const [zoom, setZoom] = useState<number>(2);
-  const [markers, setMarkers] = useState<LocationMarker[]>([]);
-  const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
-  const [markerName, setMarkerName] = useState<string>("");
-  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('pin');
-  
-  // Log when props change
+  // Initialize the map
   useEffect(() => {
-    console.log(`LeafletMap: props updated - selectedLocation=${!!selectedLocation}, isMapReady=${isMapReady}`);
-  }, [selectedLocation, isMapReady]);
-  
-  // Load saved markers on component mount
-  useEffect(() => {
-    const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
-  }, []);
-  
-  // Update the initial position when selected location changes
-  useEffect(() => {
-    if (selectedLocation) {
-      // Generate a location identifier to prevent duplicate processing
-      const locationId = `${selectedLocation.id}:${selectedLocation.y}:${selectedLocation.x}`;
-      
-      // Only update if this is a new location
-      if (locationId !== lastLocationRef.current) {
-        console.log(`LeafletMap: Setting position to [${selectedLocation.y}, ${selectedLocation.x}] for ${selectedLocation.label}`);
-        setPosition([selectedLocation.y, selectedLocation.x]);
-        setZoom(14); // Set a good default zoom level
-        lastLocationRef.current = locationId;
+    // Force clear any orphaned map instances
+    cleanupOrphanedMaps();
+
+    if (mapRef.current) {
+      console.log("LeafletMap: Map already initialized, skipping");
+      return;
+    }
+
+    const position: [number, number] = selectedLocation 
+      ? [selectedLocation.y, selectedLocation.x]
+      : [0, 0];
+    
+    const zoom = selectedLocation ? 14 : 2;
+    const uniqueKey = `leaflet-map-${Date.now()}`;
+    
+    console.log(`LeafletMap: Initializing map at position [${position[0]}, ${position[1]}], zoom ${zoom}`);
+    
+    setMapKey(uniqueKey);
+    
+    // Wait for DOM to be ready
+    setTimeout(() => {
+      if (containerRef.current) {
+        console.log("LeafletMap: Container is ready, creating map");
         
-        // Reset view stability
-        setViewStable(false);
+        try {
+          // Clear any previous map instance
+          if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+          }
+          
+          // Create new map instance
+          const map = L.map(containerRef.current, {
+            center: position,
+            zoom: zoom,
+            zoomControl: false,
+            attributionControl: false
+          });
+          
+          mapRef.current = map;
+          
+          // Add tile layer with full opacity
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+            opacity: 1.0, // Ensure full visibility
+          }).addTo(map);
+          
+          // Create the feature group for drawing
+          const featureGroup = new L.FeatureGroup();
+          map.addLayer(featureGroup);
+          drawnItemsRef.current = featureGroup;
+          
+          // Initialize drawing controls
+          initDrawingControls(map, featureGroup);
+          
+          // Add attribution control
+          L.control.attribution({ position: 'bottomright' }).addTo(map);
+
+          // Force invalidate size after a short delay
+          setTimeout(() => {
+            if (map) {
+              console.log("LeafletMap: Forcing map invalidation");
+              map.invalidateSize(true);
+            }
+            
+            // Notify that map is ready
+            setIsMapInit(true);
+            
+            if (onMapReady) {
+              console.log("LeafletMap: Map is ready, calling onMapReady");
+              onMapReady(map);
+            }
+            
+            // Force another invalidation after a longer delay for stability
+            setTimeout(() => {
+              if (map) {
+                map.invalidateSize(true);
+              }
+            }, 500);
+          }, 200);
+        } catch (error) {
+          console.error("LeafletMap: Error initializing map:", error);
+        }
+      } else {
+        console.error("LeafletMap: Container ref is null");
+      }
+    }, 100);
+
+    return () => {
+      // Cleanup
+      if (mapRef.current) {
+        console.log("LeafletMap: Removing map instance");
+        try {
+          mapRef.current.remove();
+        } catch (e) {
+          console.error("Error removing map:", e);
+        }
+        mapRef.current = null;
+      }
+    };
+  }, [mapKey]);
+
+  // Handle location changes
+  useEffect(() => {
+    if (mapRef.current && selectedLocation) {
+      console.log(`LeafletMap: Setting position to [${selectedLocation.y}, ${selectedLocation.x}] for ${selectedLocation.label}`);
+      
+      try {
+        // Set view with animation
+        mapRef.current.setView(
+          [selectedLocation.y, selectedLocation.x], 
+          14, // Higher zoom level for better detail
+          { 
+            animate: true, 
+            duration: 1.0 // Faster animation
+          }
+        );
+        
+        // Add a marker for the location if it doesn't exist
+        if (!locationMarkerRef.current) {
+          locationMarkerRef.current = L.marker([selectedLocation.y, selectedLocation.x])
+            .addTo(mapRef.current)
+            .bindPopup(selectedLocation.label)
+            .openPopup();
+        } else {
+          // Update existing marker
+          locationMarkerRef.current.setLatLng([selectedLocation.y, selectedLocation.x])
+            .bindPopup(selectedLocation.label)
+            .openPopup();
+        }
+        
+        // Force refresh map after position change
+        setTimeout(() => {
+          if (mapRef.current) {
+            mapRef.current.invalidateSize(true);
+          }
+        }, 300);
+      } catch (err) {
+        console.error("Error updating map position:", err);
       }
     }
   }, [selectedLocation]);
-  
-  // When the map is ready, handle stabilization and notify the parent
+
+  // Clear all drawings
   useEffect(() => {
-    if (internalMapReady && mapRef.current) {
-      // Set stability after a short delay to ensure proper rendering
-      if (viewStabilizationTimerRef.current) {
-        window.clearTimeout(viewStabilizationTimerRef.current);
-      }
+    if (onClearAll && mapRef.current && drawnItemsRef.current) {
+      const handleClearAll = () => {
+        console.log("LeafletMap: Clearing all drawings");
+        drawnItemsRef.current.clearLayers();
+      };
       
-      viewStabilizationTimerRef.current = window.setTimeout(() => {
-        setViewStable(true);
-        
-        // Force the map to update its size
-        if (mapRef.current) {
-          mapRef.current.invalidateSize(true);
-        }
-        
-        console.log('LeafletMap: View stabilized, ready for location sync');
-      }, 400);
+      window.addEventListener('clearAllDrawings', handleClearAll);
       
-      // Save map instance to window for positioning calculations
-      (window as any).leafletMapInstance = mapRef.current;
-      
-      // Call the parent's onMapReady callback
-      if (onMapReady) {
-        console.log('LeafletMap: Calling parent onMapReady with map instance');
-        onMapReady(mapRef.current);
-      }
-      
-      // Dispatch a custom event to notify that the Leaflet map is ready
-      const mapReadyEvent = new CustomEvent('leafletMapReady');
-      window.dispatchEvent(mapReadyEvent);
-      
-      // Force the map to update its size
-      mapRef.current.invalidateSize(true);
-      
-      // If we have a selected location, fly to it
-      if (selectedLocation && viewStable) {
-        console.log('LeafletMap: Flying to selected location after stabilization');
-        mapRef.current.setView([selectedLocation.y, selectedLocation.x], 14, {
-          animate: true
-        });
-      }
+      return () => {
+        window.removeEventListener('clearAllDrawings', handleClearAll);
+      };
     }
-    
-    // Cleanup
-    return () => {
-      if (viewStabilizationTimerRef.current) {
-        window.clearTimeout(viewStabilizationTimerRef.current);
-        viewStabilizationTimerRef.current = null;
-      }
-    };
-  }, [internalMapReady, mapRef, onMapReady, selectedLocation, viewStable]);
-
-  const handleMapClick = (latlng: any) => {
-    setTempMarker([latlng.lat, latlng.lng]);
-  };
-
-  const handleLocationSelect = (position: [number, number]) => {
-    if (mapRef.current) {
-      mapRef.current.flyTo(position, 14, {
-        animate: true, 
-        duration: 1
-      });
+  }, [onClearAll]);
+  
+  // Update drawing controls when activeTool changes
+  useEffect(() => {
+    if (mapRef.current && drawnItemsRef.current) {
+      console.log(`LeafletMap: Active tool changed to ${activeTool}`);
+      initDrawingControls(mapRef.current, drawnItemsRef.current);
     }
-  };
-
-  const handleDeleteMarker = (id: string) => {
-    setMarkers(markers.filter(marker => marker.id !== id));
-  };
-
-  const handleSaveMarker = () => {
-    if (!tempMarker) return;
-    
-    // Use the createMarker utility function instead of manually constructing the object
-    const newMarker = createMarker({
-      id: `marker-${Date.now()}`,
-      position: tempMarker,
-      name: markerName || 'Unnamed Location',
-      type: markerType
-    });
-    
-    const updatedMarkers = [...markers, newMarker];
-    setMarkers(updatedMarkers);
-    
-    // Store markers in localStorage
-    localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
-    
-    // Reset temporary marker state
-    setTempMarker(null);
-    setMarkerName('');
-  };
-
-  const handleShapeCreated = (shape: any) => {
-    console.log('Shape created:', shape);
-    // Handle shape creation logic
-  };
-
-  const handleRegionClick = (drawing: any) => {
-    console.log('Region clicked:', drawing);
-    // Handle region click logic
-  };
-
+  }, [activeTool, initDrawingControls]);
+  
   return (
-    <div className="w-full h-full">
-      <MapView 
-        position={position}
-        zoom={zoom}
-        markers={markers}
-        tempMarker={tempMarker}
-        markerName={markerName}
-        markerType={markerType}
-        onMapReady={handleSetMapRef}
-        onLocationSelect={handleLocationSelect}
-        onMapClick={handleMapClick}
-        onDeleteMarker={handleDeleteMarker}
-        onSaveMarker={handleSaveMarker}
-        setMarkerName={setMarkerName}
-        setMarkerType={setMarkerType}
-        onShapeCreated={handleShapeCreated}
-        activeTool={activeTool}
-        onRegionClick={handleRegionClick}
-        onClearAll={onClearAll}
-        isMapReady={internalMapReady}
+    <div className="w-full h-full" style={{ opacity: 1, zIndex: 5 }}>
+      <div 
+        ref={containerRef} 
+        className="w-full h-full" 
+        data-map-key={mapKey}
+        style={{ opacity: 1, visibility: 'visible' }}
       />
     </div>
   );
