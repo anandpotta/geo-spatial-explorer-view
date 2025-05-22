@@ -39,11 +39,10 @@ export function useFlyToLocation(
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-    
-    // Convert lat/long to 3D coordinates
-    // Note: Adjusted phi calculation for correct latitude mapping
+
+    // IMPORTANT: Convert lat/long to radians for correct positioning
     const phi = (90 - latitude) * (Math.PI / 180);
-    const theta = (longitude) * (Math.PI / 180); // Removed +180 to correctly orient
+    const theta = longitude * (Math.PI / 180);
     
     // Calculate the point on the globe's surface
     const targetX = -globeRadius * Math.sin(phi) * Math.cos(theta);
@@ -81,7 +80,7 @@ export function useFlyToLocation(
     
     // Set the target to be slightly closer to the surface for better viewing
     // This makes the camera look at the actual surface location
-    const finalTarget = target.clone().multiplyScalar(0.9);
+    const finalTarget = target.clone().multiplyScalar(0.99);
     
     // Temporarily disable auto-rotation and damping during transition for precision
     const wasAutoRotating = controlsRef.current.autoRotate;

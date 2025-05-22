@@ -17,6 +17,7 @@ export function useEnhancedFlyToLocation(
   // Refs
   const internalFlyingRef = useRef<boolean>(false);
   const completedCallbackRef = useRef<(() => void) | undefined>(undefined);
+  const callbackTimeoutRef = useRef<number | null>(null);
   
   // Determine which ref to use for tracking flying state
   const isFlyingRef = externalFlyingRef || internalFlyingRef;
@@ -38,6 +39,11 @@ export function useEnhancedFlyToLocation(
       cancelFlight();
       isFlyingRef.current = false;
       completedCallbackRef.current = undefined;
+      
+      if (callbackTimeoutRef.current !== null) {
+        window.clearTimeout(callbackTimeoutRef.current);
+        callbackTimeoutRef.current = null;
+      }
     };
   }, [cancelFlight]);
   
@@ -45,17 +51,24 @@ export function useEnhancedFlyToLocation(
   useEffect(() => {
     if (!animationInProgressRef.current && isFlyingRef.current && completedCallbackRef.current) {
       const callback = completedCallbackRef.current;
+      
       // Reset state before calling callback to prevent infinite loops
       isFlyingRef.current = false;
       completedCallbackRef.current = undefined;
       
+      // Clear any existing timeout
+      if (callbackTimeoutRef.current !== null) {
+        window.clearTimeout(callbackTimeoutRef.current);
+      }
+      
       // Call the callback after a small delay to ensure everything is settled
-      setTimeout(() => {
+      callbackTimeoutRef.current = window.setTimeout(() => {
+        callbackTimeoutRef.current = null;
         if (callback) {
-          console.log("Fly animation complete, calling completion callback");
+          console.log("Fly animation complete, calling completion callback from effect");
           callback();
         }
-      }, 100);
+      }, 200);
     }
   }, [animationInProgressRef.current, isFlyingRef]);
   
@@ -63,6 +76,12 @@ export function useEnhancedFlyToLocation(
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
     // Cancel any ongoing flight first
     cancelFlight();
+    
+    // Clear any existing timeout
+    if (callbackTimeoutRef.current !== null) {
+      window.clearTimeout(callbackTimeoutRef.current);
+      callbackTimeoutRef.current = null;
+    }
     
     // Set flying state to true to prevent animation conflicts
     isFlyingRef.current = true;
@@ -86,7 +105,18 @@ export function useEnhancedFlyToLocation(
         setAutoRotation(true);
       }, 500);
       
-      // The main callback will be called through the effect watching animationInProgressRef
+      // Call onComplete directly here as well as relying on the effect
+      // This ensures the callback is definitely triggered
+      if (onComplete && isFlyingRef.current) {
+        console.log("Calling onComplete callback from direct callback");
+        
+        // Add a small delay to ensure processing is complete
+        callbackTimeoutRef.current = window.setTimeout(() => {
+          callbackTimeoutRef.current = null;
+          isFlyingRef.current = false;
+          onComplete();
+        }, 100);
+      }
     });
   }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight]);
   

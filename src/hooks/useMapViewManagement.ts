@@ -20,6 +20,7 @@ export function useMapViewManagement(
   const lastSelectedLocationRef = useRef<Location | undefined>(undefined);
   const flyCompletedRef = useRef(flyCompleted);
   const previousFlyCompletedRef = useRef(flyCompleted);
+  const autoSwitchToLeafletTimerRef = useRef<number | null>(null);
   
   // Debug log for state changes
   console.log(`MapViewManagement: flyCompleted=${flyCompleted}, currentView=${currentView}, transition=${viewTransitionInProgressRef.current}`);
@@ -115,6 +116,12 @@ export function useMapViewManagement(
 
   // Schedule switching to leaflet after cesium fly completes
   useEffect(() => {
+    // Clear any existing auto-switch timer
+    if (autoSwitchToLeafletTimerRef.current !== null) {
+      window.clearTimeout(autoSwitchToLeafletTimerRef.current);
+      autoSwitchToLeafletTimerRef.current = null;
+    }
+    
     // Only proceed if all required conditions are met
     if (
       currentView === 'cesium' && 
@@ -145,9 +152,10 @@ export function useMapViewManagement(
         changeView('leaflet');
         
         // Add a small delay then trigger a Leaflet refresh
-        window.setTimeout(() => {
+        autoSwitchToLeafletTimerRef.current = window.setTimeout(() => {
           console.log("MapViewManagement: Triggering Leaflet refresh after auto view change");
           setLeafletRefreshTrigger(prev => prev + 1);
+          autoSwitchToLeafletTimerRef.current = null;
           
           // Reset the transition flag after transition completes
           window.setTimeout(() => {
@@ -174,6 +182,11 @@ export function useMapViewManagement(
       if (preventRapidChangeTimerRef.current) {
         window.clearTimeout(preventRapidChangeTimerRef.current);
         preventRapidChangeTimerRef.current = null;
+      }
+      
+      if (autoSwitchToLeafletTimerRef.current) {
+        window.clearTimeout(autoSwitchToLeafletTimerRef.current);
+        autoSwitchToLeafletTimerRef.current = null;
       }
     };
   }, []);
