@@ -28,13 +28,30 @@ const MarkersList = ({
   // Generate a unique key for the temp marker that changes when position changes
   const tempMarkerKey = tempMarker ? `temp-marker-${tempMarker[0]}-${tempMarker[1]}-${Date.now()}` : '';
   
+  // Safe delete handler that prevents unwanted marker creation
+  const handleDeleteMarker = (id: string) => {
+    // Prevent event propagation and default behavior
+    onDeleteMarker(id);
+    // Clear any active DOM elements that might trigger marker creation
+    setTimeout(() => {
+      const activePopups = document.querySelectorAll('.leaflet-popup');
+      activePopups.forEach(popup => {
+        try {
+          popup.remove();
+        } catch (e) {
+          console.error('Error removing popup:', e);
+        }
+      });
+    }, 0);
+  };
+  
   return (
     <>
       {Array.isArray(markers) && markers.map((marker) => (
         <UserMarker 
           key={`user-marker-${marker.id}`} 
           marker={marker} 
-          onDelete={onDeleteMarker} 
+          onDelete={handleDeleteMarker} 
         />
       ))}
       

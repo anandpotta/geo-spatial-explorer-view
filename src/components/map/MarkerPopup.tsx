@@ -12,6 +12,7 @@ interface MarkerPopupProps {
 
 const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
   const [isPinned, setIsPinned] = useState(marker.isPinned || false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handlePinToggle = () => {
     const updatedPinnedState = !isPinned;
@@ -26,6 +27,21 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
     
     // Dispatch storage event to notify other components
     window.dispatchEvent(new Event('storage'));
+  };
+  
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    // Prevent event propagation to avoid triggering any map click events
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (isDeleting) return;
+    
+    setIsDeleting(true);
+    
+    // Delay the actual delete operation slightly to ensure the event doesn't propagate
+    setTimeout(() => {
+      onDelete(marker.id);
+    }, 10);
   };
 
   return (
@@ -54,7 +70,7 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onDelete(marker.id)}
+            onClick={handleDeleteClick}
             className="flex items-center gap-1"
           >
             <Trash2 size={16} />

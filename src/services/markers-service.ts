@@ -73,6 +73,13 @@ export async function deleteMarkerApi(id: string): Promise<void> {
     const filteredMarkers = markers.filter((m: LocationMarker) => m.id !== id);
     localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
     
+    // Add a preventMapClick flag to window for a short duration
+    // This will prevent map click from being triggered after deletion
+    window.preventMapClick = true;
+    setTimeout(() => {
+      window.preventMapClick = false;
+    }, 500);
+    
     // Notify components about storage changes
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('markersUpdated'));
@@ -90,5 +97,12 @@ export async function deleteMarkerApi(id: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error deleting marker on server:', error);
+  }
+}
+
+// Add this to the global Window interface
+declare global {
+  interface Window {
+    preventMapClick?: boolean;
   }
 }

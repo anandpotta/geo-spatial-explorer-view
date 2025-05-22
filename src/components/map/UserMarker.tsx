@@ -13,9 +13,10 @@ interface UserMarkerProps {
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
-    if (!markerRef.current) return;
+    if (!markerRef.current || isDeleting) return;
     
     try {
       const updatedMarker = e.target;
@@ -40,7 +41,32 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
-  }, [marker.id]);
+  }, [marker.id, isDeleting]);
+
+  // Handler for deleting a marker safely
+  const handleDelete = useCallback((id: string) => {
+    if (isDeleting) return;
+    
+    setIsDeleting(true);
+    
+    // First close any open popups or tooltips
+    if (markerRef.current) {
+      try {
+        markerRef.current.closeTooltip();
+        markerRef.current.closePopup();
+      } catch (e) {
+        console.error('Error cleaning up marker before deletion:', e);
+      }
+    }
+    
+    // Then delete the marker
+    onDelete(id);
+    
+    // Reset isDeleting state after a short delay
+    setTimeout(() => {
+      setIsDeleting(false);
+    }, 100);
+  }, [onDelete, isDeleting]);
 
   // Set up marker references
   const setMarkerInstance = (marker: L.Marker) => {
@@ -72,7 +98,10 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       ref={setMarkerInstance}
       eventHandlers={{ dragend: handleDragEnd }}
     >
-      <MarkerPopup marker={marker} onDelete={onDelete} />
+      <MarkerPopup 
+        marker={marker} 
+        onDelete={() => handleDelete(marker.id)} 
+      />
 
       <Tooltip 
         direction="top" 
