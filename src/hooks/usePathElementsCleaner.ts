@@ -37,36 +37,46 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
     };
 
     // Handle Leaflet Draw specific clear all action
-    const handleLeafletClearAction = (e: MouseEvent) => {
+    const handleLeafletClearAction = (e: Event) => {
       const target = e.target as HTMLElement;
       
-      // More specific selector targeting the exact leaflet clear all button
+      console.log('Click detected, checking if clear all button', target?.tagName, target?.textContent);
+      
+      // Check if it's the clear all button with more robust detection
       if (target && 
           target.tagName === 'A' && 
-          target.textContent?.trim() === 'Clear all layers' && 
-          target.closest('.leaflet-draw-edit-remove')) {
+          target.textContent?.trim() === 'Clear all layers') {
         
-        console.log('Leaflet draw clear all layers button clicked', target);
-        e.preventDefault();
-        e.stopPropagation();
+        // Check if it's within the remove control
+        const isInRemoveControl = !!target.closest('.leaflet-draw-edit-remove');
         
-        // Dispatch a custom event to show the confirmation dialog
-        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-        return false;
+        if (isInRemoveControl) {
+          console.log('Leaflet draw clear all layers button clicked!', target);
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Dispatch a custom event to show the confirmation dialog
+          console.log('Dispatching leafletClearAllRequest event');
+          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+          return false;
+        }
       }
     };
     
     window.addEventListener('userLoggedOut', handleUserLogout);
     window.addEventListener('userChanged', handleUserChange);
     window.addEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
-    // Use capture phase to intercept the click before leaflet processes it
-    document.addEventListener('click', handleLeafletClearAction, true);
+    
+    // Use both capture and bubbling phase to ensure we catch the event
+    document.addEventListener('click', handleLeafletClearAction as EventListener, true);
+    document.addEventListener('click', handleLeafletClearAction as EventListener, false);
     
     return () => {
       window.removeEventListener('userLoggedOut', handleUserLogout);
       window.removeEventListener('userChanged', handleUserChange);
       window.removeEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
-      document.removeEventListener('click', handleLeafletClearAction, true);
+      document.removeEventListener('click', handleLeafletClearAction as EventListener, true);
+      document.removeEventListener('click', handleLeafletClearAction as EventListener, false);
     };
   }, [clearPathElements]);
   

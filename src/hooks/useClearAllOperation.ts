@@ -14,12 +14,15 @@ export function useClearAllOperation(onClearAll?: () => void) {
     const handleLeafletClearRequest = () => {
       console.log('Leaflet clear all request received, authenticated:', isAuthenticated);
       if (isAuthenticated) {
+        console.log('Showing confirmation dialog for clear all');
         setShowConfirmation(true);
       } else {
         toast.error('Please log in to clear drawings');
       }
     };
     
+    // Ensure this listener gets priority
+    window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
@@ -33,6 +36,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
       return;
     }
     
+    console.log('Showing confirmation for clear all operation');
     setShowConfirmation(true);
   }, [isAuthenticated]);
   
@@ -46,10 +50,11 @@ export function useClearAllOperation(onClearAll?: () => void) {
       });
       
       // Explicitly clear saved paths for current user
-      if (currentUser) {
-        console.log('Clearing saved paths for user', currentUser.id);
-        saveSvgPaths([]);
-      }
+      console.log('Clearing saved paths');
+      saveSvgPaths([]);
+      
+      // Also dispatch the clearAllSvgPaths event to make sure all handlers are notified
+      window.dispatchEvent(new Event('clearAllSvgPaths'));
     } else {
       // Fallback if featureGroup is not available
       console.warn('Feature group not available for clear operation, using localStorage fallback');
@@ -57,6 +62,9 @@ export function useClearAllOperation(onClearAll?: () => void) {
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
+      
+      // Explicitly clear saved paths
+      saveSvgPaths([]);
       
       // Dispatch events to notify components
       window.dispatchEvent(new Event('storage'));
@@ -72,7 +80,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
     }
     
     setShowConfirmation(false);
-  }, [isAuthenticated, onClearAll, currentUser]);
+  }, [isAuthenticated, onClearAll]);
   
   return {
     handleClearAllWrapper,

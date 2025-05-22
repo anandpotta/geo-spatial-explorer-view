@@ -99,39 +99,72 @@ export const clearAllMapSvgElements = (map: any): void => {
     const container = map.getContainer();
     if (!container) return;
     
+    console.log('Clearing all SVG elements from map container');
+    
     // Clear SVG paths
     const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
+    console.log(`Found ${svgLayers.length} SVG layers to process`);
+    
     svgLayers.forEach(svg => {
+      // Clear path elements
       const paths = svg.querySelectorAll('path');
+      console.log(`Removing ${paths.length} path elements`);
       paths.forEach(path => {
         // Check if it's not a tile boundary path before removing
         if (!path.classList.contains('leaflet-tile-boundary')) {
-          path.parentNode?.removeChild(path);
+          path.remove();
         }
       });
       
       // Clear image elements (floor plans, etc.)
       const images = svg.querySelectorAll('image');
+      console.log(`Removing ${images.length} image elements`);
       images.forEach(img => {
-        img.parentNode?.removeChild(img);
+        img.remove();
       });
       
       // Clear clip paths
       const clipPaths = svg.querySelectorAll('clipPath');
+      console.log(`Removing ${clipPaths.length} clip path elements`);
       clipPaths.forEach(clipPath => {
-        clipPath.parentNode?.removeChild(clipPath);
+        clipPath.remove();
       });
       
       // Clear defs elements that might contain clip paths
       const defs = svg.querySelectorAll('defs');
+      console.log(`Removing ${defs.length} defs elements`);
       defs.forEach(def => {
-        def.parentNode?.removeChild(def);
+        def.remove();
+      });
+      
+      // Clear g elements that might contain paths or images
+      const groups = svg.querySelectorAll('g:not(.leaflet-tile-container)');
+      console.log(`Checking ${groups.length} group elements`);
+      groups.forEach(group => {
+        // Only remove groups that contain our custom elements
+        if (group.querySelector('image, clipPath, path:not(.leaflet-tile-boundary)')) {
+          group.remove();
+        }
       });
     });
     
+    // Also clear any paths or images that might be in other containers
+    const otherSvgElements = container.querySelectorAll('svg:not(.leaflet-overlay-pane svg):not(.leaflet-pane svg)');
+    otherSvgElements.forEach(svg => {
+      const nonTilePaths = svg.querySelectorAll('path:not(.leaflet-tile-boundary)');
+      nonTilePaths.forEach(path => path.remove());
+      
+      const images = svg.querySelectorAll('image');
+      images.forEach(img => img.remove());
+    });
+    
     // Trigger events to notify components
+    console.log('Dispatching SVG paths cleared event');
     window.dispatchEvent(new Event('svgPathsCleared'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
+    
+    // Also remove svgPaths from localStorage to prevent reloading
+    localStorage.removeItem('svgPaths');
   } catch (err) {
     console.error('Error clearing SVG elements from map:', err);
   }

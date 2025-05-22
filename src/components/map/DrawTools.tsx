@@ -47,10 +47,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Listen for the leafletClearAllRequest custom event
   useEffect(() => {
     const handleLeafletClearRequest = () => {
-      console.log('Showing clear all confirmation dialog');
+      console.log('DrawTools: Showing clear all confirmation dialog');
       setShowClearDialog(true);
     };
     
+    window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
@@ -59,23 +60,31 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   }, []);
 
   const handleConfirmClear = () => {
+    console.log('DrawTools: Confirming clear all');
     // Close the dialog
     setShowClearDialog(false);
     
     // Clear the feature group
     if (featureGroup) {
+      console.log('Clearing feature group layers');
       featureGroup.clearLayers();
     }
     
     // Clear SVG elements from the DOM
     if (featureGroup && (featureGroup as any)._map) {
+      console.log('Clearing SVG elements from the map');
       clearAllMapSvgElements((featureGroup as any)._map);
     }
     
-    // Clear path elements
+    // Clear path elements and saved paths
+    console.log('Clearing path elements');
     clearPathElements();
     
+    // Save an empty array to prevent reloading of cleared paths
+    localStorage.removeItem('svgPaths');
+    
     // Dispatch events
+    console.log('Dispatching clear events');
     window.dispatchEvent(new Event('clearAllSvgPaths'));
     window.dispatchEvent(new Event('drawingsUpdated'));
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
