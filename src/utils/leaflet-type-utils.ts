@@ -70,12 +70,18 @@ export function isMapPaneReady(map: L.Map | null): boolean {
     // Check if map is valid first
     if (!isMapValid(map)) return false;
     
-    // Check if map pane exists and has position
+    // Check if map pane exists
     const mapPane = map.getPane('mapPane');
     if (!mapPane) return false;
     
-    // Check if _leaflet_pos exists to prevent the specific error
-    return !!(mapPane as any)._leaflet_pos;
+    // Check if _leaflet_pos exists to prevent specific errors
+    if (!(mapPane as any)._leaflet_pos) {
+      // Force create _leaflet_pos if missing to prevent errors
+      (mapPane as any)._leaflet_pos = new L.Point(0, 0);
+      return false;
+    }
+    
+    return true;
   } catch (err) {
     console.warn('Error checking map pane readiness:', err);
     return false;
@@ -105,7 +111,19 @@ export function safeInvalidateSize(map: any): void {
   try {
     // First check if it's a valid map object
     if (isMapValid(map)) {
+      // Ensure map pane exists and has _leaflet_pos
+      const mapPane = map.getPane('mapPane');
+      if (mapPane && !(mapPane as any)._leaflet_pos) {
+        (mapPane as any)._leaflet_pos = new L.Point(0, 0);
+      }
       map.invalidateSize(true);
+      
+      // Force tile refresh by triggering a moveend event
+      setTimeout(() => {
+        if (isMapValid(map)) {
+          map.fire('moveend');
+        }
+      }, 200);
     } else if (typeof map.invalidateSize === 'function') {
       // Fallback if it has the method but didn't pass full validation
       map.invalidateSize(true);
@@ -114,5 +132,34 @@ export function safeInvalidateSize(map: any): void {
     }
   } catch (err) {
     console.warn('Error invalidating map size:', err);
+  }
+}
+
+/**
+ * Ensures map tiles are properly loaded and displayed
+ */
+export function forceMapTileRefresh(map: L.Map | null): void {
+  if (!map || !isMapValid(map)) return;
+  
+  try {
+    // First invalidate size
+    safeInvalidateSize(map);
+    
+    // Get all tile layers
+    map.eachLayer(layer => {
+      if (layer instanceof L.TileLayer) {
+        // Redraw the tile layer
+        layer.redraw();
+        
+        // If available and needed, use _resetView to force complete refresh
+        if ((map as any)._resetView) {
+          const center = map.getCenter();
+          const zoom = map.getZoom();
+          (map as any)._resetView(center, zoom, true);
+        }
+      }
+    });
+  } catch (err) {
+    console.warn('Error during tile refresh:', err);
   }
 }

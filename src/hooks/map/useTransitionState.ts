@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Location } from '@/utils/geo-utils';
 
@@ -9,6 +9,39 @@ export function useTransitionState(
 ) {
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previousViewRef = useRef<'cesium' | 'leaflet' | null>(null);
+  
+  // Track view changes to apply special handling for globe -> leaflet transition
+  useEffect(() => {
+    const isGlobeToMapTransition = previousViewRef.current === 'cesium' && currentView === 'leaflet';
+    
+    if (isGlobeToMapTransition) {
+      console.log('Detected transition from Globe to Leaflet map - applying special handling');
+      // Special handling for Globe -> Leaflet transition
+      setViewTransitionInProgress(true);
+      
+      // Allow more time for transition when going from globe to map
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+      
+      // Use a longer timeout for globe -> map transitions
+      transitionTimeoutRef.current = setTimeout(() => {
+        console.log('Ending globe->map transition');
+        setViewTransitionInProgress(false);
+        transitionTimeoutRef.current = null;
+      }, 1200);
+    }
+    
+    // Update previous view reference
+    previousViewRef.current = currentView;
+    
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, [currentView]);
   
   const startTransition = useCallback(() => {
     console.log('Starting view transition');
@@ -30,7 +63,7 @@ export function useTransitionState(
       console.log('Ending view transition');
       setViewTransitionInProgress(false);
       transitionTimeoutRef.current = null;
-    }, 600);
+    }, 800);
   }, []);
   
   const showViewReadyToast = useCallback(() => {

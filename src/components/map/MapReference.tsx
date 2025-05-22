@@ -1,8 +1,9 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { toast } from 'sonner';
-import { isMapValid, safeInvalidateSize } from '@/utils/leaflet-type-utils';
+import { isMapValid, safeInvalidateSize, forceMapTileRefresh } from '@/utils/leaflet-type-utils';
 
 interface MapReferenceProps {
   onMapReady: (map: L.Map) => void;
@@ -95,6 +96,12 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           // Final invalidateSize for good measure
           safeInvalidateSize(map);
           
+          // Check if map pane is missing _leaflet_pos and fix it
+          const mapPane = map.getPane('mapPane');
+          if (mapPane && !(mapPane as any)._leaflet_pos) {
+            (mapPane as any)._leaflet_pos = new L.Point(0, 0);
+          }
+          
           console.log('Map container verified, calling onMapReady');
           hasCalledOnReady.current = true;
           onMapReady(map);
@@ -104,14 +111,18 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             setIsStable(true);
           }, 300);
           
-          // Just one additional invalidation after a reasonable delay
-          const additionalTimeout = setTimeout(() => {
-            if (map && !(map as L.Map & LeafletMapInternal)._isDestroyed) {
-              safeInvalidateSize(map);
-              console.log('Final map invalidation completed');
-            }
-          }, 1000);
-          timeoutRefs.current.push(additionalTimeout);
+          // Schedule multiple tile refreshes to ensure visibility
+          const refreshTimes = [500, 1000, 2000]; // ms
+          refreshTimes.forEach(delay => {
+            const refreshTimeout = setTimeout(() => {
+              if (map && !(map as L.Map & LeafletMapInternal)._isDestroyed) {
+                safeInvalidateSize(map);
+                forceMapTileRefresh(map);
+                console.log(`Map invalidation and tile refresh at ${delay}ms`);
+              }
+            }, delay);
+            timeoutRefs.current.push(refreshTimeout);
+          });
         } catch (err) {
           console.error('Error during map initialization:', err);
           toast.error("Map initialization issue. Please refresh the page.");
