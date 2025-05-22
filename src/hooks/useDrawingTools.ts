@@ -48,9 +48,9 @@ export function useDrawingTools(
         draw: drawOptions,
         edit: {
           featureGroup: featureGroup,
-          // Specify edit options based on active tool
-          edit: activeTool === 'edit',
-          remove: activeTool === 'delete'
+          // Use empty object for edit options (when active) or false (when not)
+          edit: activeTool === 'edit' ? {} : false,
+          remove: activeTool === 'delete' ? {} : false
         }
       });
       
