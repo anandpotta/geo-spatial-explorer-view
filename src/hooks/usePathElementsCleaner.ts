@@ -36,43 +36,48 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
       }
     };
 
-    // Handle Leaflet Draw specific clear all action
+    // Handle Leaflet Draw specific clear all action with improved detection
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      console.log('Click detected on:', target?.tagName, target?.textContent);
       
-      // Debug info
-      console.log('Click detected, checking if clear all button', target?.tagName, target?.textContent);
-      
-      // First check: if it's an <a> element with text "Clear all layers"
-      if (target && 
-          target.tagName === 'A' && 
-          target.textContent?.trim() === 'Clear all layers') {
-        
-        // Check if it's within the remove control
-        if (target.closest('.leaflet-draw-edit-remove')) {
-          console.log('Leaflet clear all layers button clicked! Intercepting...');
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // Dispatch a custom event to show the confirmation dialog
-          console.log('Dispatching leafletClearAllRequest event');
-          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-          return;
-        }
+      // Check if it's a direct click on the "Clear all layers" text
+      if (target && target.textContent?.trim() === 'Clear all layers') {
+        console.log('Clear all layers text clicked directly!');
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+        return;
       }
       
-      // Second check: if it's a child element within the clear all button
-      if (target && target.parentElement) {
-        const parentLink = target.closest('a');
-        if (parentLink && 
-            parentLink.textContent?.trim() === 'Clear all layers' &&
-            parentLink.closest('.leaflet-draw-edit-remove')) {
-          console.log('Leaflet clear all layers button child element clicked! Intercepting...');
+      // Check if it's a click on the parent <a> element
+      if (target && target.tagName === 'A' && target.textContent?.trim() === 'Clear all layers') {
+        console.log('Clear all layers link clicked directly!');
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+        return;
+      }
+      
+      // Check if it's a click within the parent li that contains the clear all text
+      const parentLi = target?.closest('li');
+      if (parentLi && parentLi.querySelector('a')?.textContent?.trim() === 'Clear all layers') {
+        console.log('Clear all layers parent li clicked!');
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+        return;
+      }
+      
+      // Check for any click within the remove control that might contain "Clear all layers"
+      const removeControl = target?.closest('.leaflet-draw-edit-remove');
+      if (removeControl && removeControl.textContent?.includes('Clear all layers')) {
+        const clearAllLink = removeControl.querySelector('a[title="Clear all layers"]') || 
+                            removeControl.querySelector('a:contains("Clear all layers")');
+        if (clearAllLink) {
+          console.log('Clear all layers found in remove control!');
           e.preventDefault();
           e.stopPropagation();
-          
-          // Dispatch a custom event to show the confirmation dialog
-          console.log('Dispatching leafletClearAllRequest event');
           window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
           return;
         }

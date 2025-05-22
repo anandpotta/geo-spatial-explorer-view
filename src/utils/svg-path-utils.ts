@@ -101,41 +101,47 @@ export const clearAllMapSvgElements = (map: any): void => {
     
     console.log('Clearing all SVG elements from map container');
     
+    // First, try to clear layers from the map itself
+    if (map && map.eachLayer) {
+      console.log('Iterating through map layers to clear user-added layers');
+      map.eachLayer((layer: any) => {
+        // Skip tile layers and base layers
+        if (layer._url || layer.options?.baseLayer) {
+          return;
+        }
+        
+        // Remove user-added layers
+        if (layer.options?.isDrawn || layer.options?.id) {
+          console.log('Removing user-added layer:', layer.options?.id || 'unnamed');
+          map.removeLayer(layer);
+        }
+      });
+    }
+    
     // Clear SVG paths
-    const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
+    const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg, .leaflet-svg-layer');
     console.log(`Found ${svgLayers.length} SVG layers to process`);
     
     svgLayers.forEach(svg => {
       // Clear path elements
-      const paths = svg.querySelectorAll('path');
+      const paths = svg.querySelectorAll('path:not(.leaflet-tile-boundary)');
       console.log(`Removing ${paths.length} path elements`);
-      paths.forEach(path => {
-        // Check if it's not a tile boundary path before removing
-        if (!path.classList.contains('leaflet-tile-boundary')) {
-          path.remove();
-        }
-      });
+      paths.forEach(path => path.remove());
       
       // Clear image elements (floor plans, etc.)
       const images = svg.querySelectorAll('image');
       console.log(`Removing ${images.length} image elements`);
-      images.forEach(img => {
-        img.remove();
-      });
+      images.forEach(img => img.remove());
       
       // Clear clip paths
       const clipPaths = svg.querySelectorAll('clipPath');
       console.log(`Removing ${clipPaths.length} clip path elements`);
-      clipPaths.forEach(clipPath => {
-        clipPath.remove();
-      });
+      clipPaths.forEach(clipPath => clipPath.remove());
       
       // Clear defs elements that might contain clip paths
       const defs = svg.querySelectorAll('defs');
       console.log(`Removing ${defs.length} defs elements`);
-      defs.forEach(def => {
-        def.remove();
-      });
+      defs.forEach(def => def.remove());
       
       // Clear g elements that might contain paths or images
       const groups = svg.querySelectorAll('g:not(.leaflet-tile-container)');
@@ -148,15 +154,22 @@ export const clearAllMapSvgElements = (map: any): void => {
       });
     });
     
-    // Also clear any paths or images that might be in other containers
-    const otherSvgElements = container.querySelectorAll('svg:not(.leaflet-overlay-pane svg):not(.leaflet-pane svg)');
-    otherSvgElements.forEach(svg => {
-      const nonTilePaths = svg.querySelectorAll('path:not(.leaflet-tile-boundary)');
-      nonTilePaths.forEach(path => path.remove());
-      
-      const images = svg.querySelectorAll('image');
-      images.forEach(img => img.remove());
-    });
+    // Clear any elements in the Draw control
+    const drawControl = container.querySelector('.leaflet-draw');
+    if (drawControl) {
+      console.log('Found draw control, clearing any SVG elements inside');
+      const drawSvgs = drawControl.querySelectorAll('svg');
+      drawSvgs.forEach(svg => {
+        const paths = svg.querySelectorAll('path:not(.leaflet-tile-boundary)');
+        paths.forEach(path => path.remove());
+      });
+    }
+    
+    // Clear all elements in the edit feature group if available
+    if (window.featureGroup) {
+      console.log('Clearing feature group');
+      window.featureGroup.clearLayers();
+    }
     
     // Trigger events to notify components
     console.log('Dispatching SVG paths cleared event');
@@ -165,6 +178,12 @@ export const clearAllMapSvgElements = (map: any): void => {
     
     // Also remove svgPaths from localStorage to prevent reloading
     localStorage.removeItem('svgPaths');
+    localStorage.removeItem('savedDrawings');
+    localStorage.removeItem('savedMarkers');
+    localStorage.removeItem('floorPlans');
+    
+    // Dispatch storage event to ensure other components are notified
+    window.dispatchEvent(new Event('storage'));
   } catch (err) {
     console.error('Error clearing SVG elements from map:', err);
   }

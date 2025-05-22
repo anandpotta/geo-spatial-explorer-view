@@ -44,9 +44,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
-  // Listen for the leafletClearAllRequest custom event
+  // Listen for the leafletClearAllRequest custom event with enhanced logging
   useEffect(() => {
     const handleLeafletClearRequest = () => {
+      console.log('DrawTools: Received leafletClearAllRequest event');
       console.log('DrawTools: Showing clear all confirmation dialog');
       setShowClearDialog(true);
     };
@@ -54,10 +55,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     // Remove existing listener to prevent duplicates
     window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     // Add listener with higher priority
-    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest, true);
     
     return () => {
-      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest, true);
     };
   }, []);
 
@@ -114,7 +115,10 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         position="topright"
         onCreated={handleCreated}
         draw={drawOptions}
-        edit={false}
+        edit={{ 
+          featureGroup: featureGroup,
+          remove: true  // Ensure remove option is enabled
+        }}
         featureGroup={featureGroup}
       />
       

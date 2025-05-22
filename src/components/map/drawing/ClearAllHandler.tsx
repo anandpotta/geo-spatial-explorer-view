@@ -37,9 +37,12 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     const authState = localStorage.getItem('geospatial_auth_state');
     const users = localStorage.getItem('geospatial_users');
     
-    // Completely clear localStorage
-    console.log('Clearing localStorage');
-    localStorage.clear();
+    // Completely clear localStorage related to drawings and paths
+    console.log('Clearing localStorage of all drawing data');
+    localStorage.removeItem('savedDrawings');
+    localStorage.removeItem('savedMarkers');
+    localStorage.removeItem('floorPlans');
+    localStorage.removeItem('svgPaths');
     
     // Restore authentication data
     if (authState) {
@@ -48,12 +51,6 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     if (users) {
       localStorage.setItem('geospatial_users', users);
     }
-    
-    // Forcefully clear specific storages that might be causing issues
-    localStorage.removeItem('savedDrawings');
-    localStorage.removeItem('savedMarkers');
-    localStorage.removeItem('floorPlans');
-    localStorage.removeItem('svgPaths');
     
     // Dispatch storage and related events to notify components
     console.log('Dispatching notification events');
@@ -71,6 +68,6 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       onClearAll();
     }
     
-    toast.success('All map data cleared while preserving user accounts');
+    toast.success('All map data cleared');
   }
 }

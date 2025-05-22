@@ -9,37 +9,30 @@ export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated, currentUser } = useAuth();
   const [showConfirmation, setShowConfirmation] = useState(false);
   
-  // Listen for the custom leafletClearAllRequest event
+  // Listen for the custom leafletClearAllRequest event with improved logging
   useEffect(() => {
     const handleLeafletClearRequest = () => {
-      console.log('Leaflet clear all request received, authenticated:', isAuthenticated);
-      if (isAuthenticated) {
-        console.log('Showing confirmation dialog for clear all');
-        setShowConfirmation(true);
-      } else {
-        toast.error('Please log in to clear drawings');
-      }
+      console.log('Leaflet clear all request received!');
+      
+      // Always show the confirmation dialog regardless of authentication
+      console.log('Showing confirmation dialog for clear all');
+      setShowConfirmation(true);
     };
     
     // Remove any existing listeners to avoid duplicates
     window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     // Add listener with higher priority by using capture phase
-    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest, true);
     
     return () => {
-      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest, true);
     };
-  }, [isAuthenticated]);
+  }, []);
   
   const handleClearAllWrapper = useCallback(() => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to clear drawings');
-      return;
-    }
-    
     console.log('Showing confirmation for clear all operation');
     setShowConfirmation(true);
-  }, [isAuthenticated]);
+  }, []);
   
   const confirmClearAll = useCallback(() => {
     console.log('Confirm clear all triggered');
@@ -50,12 +43,15 @@ export function useClearAllOperation(onClearAll?: () => void) {
         onClearAll
       });
       
-      // Explicitly clear saved paths for current user
+      // Explicitly clear saved paths
       console.log('Clearing saved paths');
       saveSvgPaths([]);
       
-      // Also directly remove from localStorage to ensure it's gone
+      // Directly remove from localStorage to ensure it's gone
       localStorage.removeItem('svgPaths');
+      localStorage.removeItem('savedDrawings');
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('floorPlans');
       
       // Also dispatch the clearAllSvgPaths event to make sure all handlers are notified
       window.dispatchEvent(new Event('clearAllSvgPaths'));
@@ -84,7 +80,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
     }
     
     setShowConfirmation(false);
-  }, [isAuthenticated, onClearAll]);
+  }, [onClearAll]);
   
   return {
     handleClearAllWrapper,
