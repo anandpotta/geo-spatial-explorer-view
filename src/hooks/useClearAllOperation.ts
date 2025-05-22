@@ -1,11 +1,12 @@
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
+  const [showConfirmation, setShowConfirmation] = useState(false);
   
   const handleClearAllWrapper = useCallback(() => {
     if (!isAuthenticated) {
@@ -31,6 +32,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));
       window.dispatchEvent(new Event('drawingsUpdated'));
+      window.dispatchEvent(new Event('clearAllSvgPaths'));
       
       if (onClearAll) {
         onClearAll();

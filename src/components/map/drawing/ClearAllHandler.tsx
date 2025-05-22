@@ -1,6 +1,7 @@
 
 import { getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
 import { toast } from 'sonner';
+import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
 
 interface ClearAllHandlerProps {
   featureGroup: L.FeatureGroup;
@@ -12,8 +13,15 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
     // Clear all visible layers from the map
     featureGroup.clearLayers();
     
-    // Force SVG paths to be removed by triggering all relevant events
-    window.dispatchEvent(new Event('clearAllSvgPaths'));
+    // Get the map instance from the featureGroup
+    const map = (featureGroup as any)._map;
+    if (map) {
+      // Force SVG paths to be removed directly from the DOM
+      clearAllMapSvgElements(map);
+    } else {
+      // Fallback if map instance not available
+      window.dispatchEvent(new Event('clearAllSvgPaths'));
+    }
     
     // Clear all markers from storage
     const markers = getSavedMarkers();

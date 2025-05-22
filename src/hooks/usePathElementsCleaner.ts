@@ -1,6 +1,7 @@
 
 import { useEffect } from 'react';
 import { getCurrentUser } from '@/services/auth-service';
+import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
 
 /**
  * Hook to clean up path elements when user logs out or changes
@@ -23,13 +24,26 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
         window.dispatchEvent(new Event('drawingsUpdated'));
       }, 100);
     };
+
+    // Handle direct clear all SVG paths event
+    const handleClearAllSvgPaths = () => {
+      console.log('Clearing all SVG paths');
+      clearPathElements();
+      
+      // Try to access map instance through window featureGroup
+      if (window.featureGroup && (window.featureGroup as any)._map) {
+        clearAllMapSvgElements((window.featureGroup as any)._map);
+      }
+    };
     
     window.addEventListener('userLoggedOut', handleUserLogout);
     window.addEventListener('userChanged', handleUserChange);
+    window.addEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
     
     return () => {
       window.removeEventListener('userLoggedOut', handleUserLogout);
       window.removeEventListener('userChanged', handleUserChange);
+      window.removeEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
     };
   }, [clearPathElements]);
   
