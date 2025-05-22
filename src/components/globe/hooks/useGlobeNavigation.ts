@@ -15,6 +15,9 @@ export function useGlobeNavigation(
   const lastFlyLocationRef = useRef<string | null>(null);
   const flyCompletionTimerRef = useRef<number | null>(null);
   const isUnmountedRef = useRef(false);
+  
+  // Create a dummy ref for useThreeGlobe since we're just accessing the global API
+  const dummyContainerRef = useRef<HTMLDivElement>(null);
 
   // Safe fly completion handler that checks component mount state
   const handleFlyComplete = () => {
@@ -40,8 +43,8 @@ export function useGlobeNavigation(
     }, 200);
   };
 
-  // Get the globe API
-  const globeAPI = useThreeGlobe();
+  // Get the globe API - pass dummyContainerRef to satisfy the function signature
+  const globeAPI = useThreeGlobe(dummyContainerRef);
 
   // Handle location changes
   useEffect(() => {
