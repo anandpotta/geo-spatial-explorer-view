@@ -56,11 +56,11 @@ export function useDrawingTools(
       
       // Only set edit properties when active
       if (activeTool === 'edit') {
-        editOptions.edit = {};
+        editOptions.edit = true; // Changed from {} to true to avoid type issues
       }
       
       if (activeTool === 'delete') {
-        editOptions.remove = {};
+        editOptions.remove = true; // Changed from {} to true to avoid type issues
       }
       
       const drawControl = new L.Control.Draw({

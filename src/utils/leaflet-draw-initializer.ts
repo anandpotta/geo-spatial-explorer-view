@@ -72,54 +72,41 @@ export const initializeLeafletDrawComplete = () => {
   const isInitialized = initializeLeafletDraw();
   setupLeafletDrawIcons();
   
-  // Define proper interfaces to fix TypeScript errors
-  interface DrawControlOptions {
-    featureGroup?: L.FeatureGroup;
-    draw?: any;
-    edit?: any;
-    position?: string;
-  }
-  
-  // Properly type the Draw class to match expected interface
+  // If L.Control.Draw is not available, create a compatible stub version
   if (!isInitialized && L && L.Control && !L.Control.Draw) {
     try {
       console.warn("Creating stub for L.Control.Draw");
       
-      // Create a proper Draw class that extends L.Control with required initialize method
-      L.Control.Draw = class Draw extends L.Control {
-        options: any;
+      // Create a properly typed stub class
+      L.Control.Draw = L.Control.extend({
+        // Use proper type signatures that match Leaflet's expectations
+        options: {},
         
-        constructor(options?: DrawControlOptions) {
-          super();
-          this.initialize(options);
-        }
-        
-        // Required initialize method
-        initialize(options?: DrawControlOptions): this {
+        // Use standard Leaflet initialize pattern returning void
+        initialize: function(options?: any): void {
           L.Util.setOptions(this, options || {});
           console.log("Draw control initialized with options:", options);
-          return this;
-        }
+        },
         
         // Define required methods
-        onAdd(map: L.Map): HTMLElement {
+        onAdd: function(map: L.Map): HTMLElement {
           const container = L.DomUtil.create('div', 'leaflet-draw');
           console.log("Draw control added to map");
           return container;
-        }
+        },
         
-        onRemove(): void {
+        onRemove: function(): void {
           console.log("Draw control removed from map");
-        }
+        },
         
-        setDrawingOptions(options: any): this {
+        setDrawingOptions: function(options: any): any {
           console.log("Setting drawing options:", options);
           if (options && this.options) {
             this.options = { ...this.options, ...options };
           }
           return this;
         }
-      };
+      });
       
     } catch (err) {
       console.error("Failed to create stub for L.Control.Draw:", err);
