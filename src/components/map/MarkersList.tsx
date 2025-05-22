@@ -2,7 +2,6 @@
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
-import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -26,7 +25,7 @@ const MarkersList = ({
   setMarkerType
 }: MarkersListProps) => {
   return (
-    <TooltipProvider>
+    <>
       {Array.isArray(markers) && markers.map((marker) => (
         <UserMarker 
           key={marker.id} 
@@ -45,7 +44,7 @@ const MarkersList = ({
           onSave={onSaveMarker}
         />
       )}
-    </TooltipProvider>
+    </>
   );
 };
 

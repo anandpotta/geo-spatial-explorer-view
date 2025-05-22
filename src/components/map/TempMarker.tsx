@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import NewMarkerForm from './NewMarkerForm';
 
@@ -64,17 +64,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
           }
         }, 100);
 
-        // Add tooltip to new marker
-        const marker = e.target;
-        if (marker) {
-          marker.bindTooltip(`<span class="font-medium">${markerName || 'New Location'}</span>`, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -10],
-            opacity: 0.9,
-            className: 'custom-marker-tooltip'
-          }).openTooltip();
-        }
+        // We no longer need this code as we're using react-leaflet's Tooltip component
       }
     }
   };
@@ -92,7 +82,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         setMarkerType={setMarkerType}
         onSave={onSave}
       />
-      <L.Tooltip 
+      <Tooltip 
         direction="top" 
         offset={[0, -10]} 
         opacity={0.9}
@@ -100,7 +90,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         className="custom-marker-tooltip"
       >
         <span className="font-medium">{markerName || 'New Location'}</span>
-      </L.Tooltip>
+      </Tooltip>
     </Marker>
   );
 };

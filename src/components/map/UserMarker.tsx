@@ -1,10 +1,9 @@
 
 import React, { useCallback, useRef, useEffect } from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
-import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -76,19 +75,15 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       <MarkerPopup marker={marker} onDelete={onDelete} />
 
       {/* Add permanent tooltip showing the marker name */}
-      <TooltipProvider>
-        <Tooltip>
-          <L.Tooltip 
-            direction="top" 
-            offset={[0, -10]} 
-            opacity={0.9}
-            permanent={true}
-            className="custom-marker-tooltip"
-          >
-            <span className="font-medium">{marker.name}</span>
-          </L.Tooltip>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip 
+        direction="top" 
+        offset={[0, -10]} 
+        opacity={0.9}
+        permanent={true}
+        className="custom-marker-tooltip"
+      >
+        <span className="font-medium">{marker.name}</span>
+      </Tooltip>
     </Marker>
   );
 };
