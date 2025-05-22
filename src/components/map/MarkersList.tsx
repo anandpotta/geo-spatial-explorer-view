@@ -2,6 +2,7 @@
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
+import React from 'react';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -24,7 +25,9 @@ const MarkersList = ({
   setMarkerName,
   setMarkerType
 }: MarkersListProps) => {
-  // Safely render markers with proper key management
+  // Generate a unique key for the temp marker that changes when position changes
+  const tempMarkerKey = tempMarker ? `temp-marker-${tempMarker[0]}-${tempMarker[1]}-${Date.now()}` : '';
+  
   return (
     <>
       {Array.isArray(markers) && markers.map((marker) => (
@@ -37,7 +40,7 @@ const MarkersList = ({
       
       {tempMarker && Array.isArray(tempMarker) && (
         <TempMarker 
-          key={`temp-marker-${tempMarker[0]}-${tempMarker[1]}`}
+          key={tempMarkerKey}
           position={tempMarker}
           markerName={markerName}
           setMarkerName={setMarkerName}
@@ -50,4 +53,4 @@ const MarkersList = ({
   );
 };
 
-export default MarkersList;
+export default React.memo(MarkersList);

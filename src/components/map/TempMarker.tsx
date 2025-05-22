@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import NewMarkerForm from './NewMarkerForm';
@@ -22,64 +22,64 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   onSave
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
+  const [markerReady, setMarkerReady] = useState(false);
 
-  // Update tooltip content when markerName changes
+  // Handle cleanup when component unmounts
   useEffect(() => {
-    if (markerRef.current && markerName) {
-      const tooltipElement = markerRef.current.getTooltip();
-      if (tooltipElement) {
-        tooltipElement.setContent(`<span class="font-medium">${markerName || 'New Location'}</span>`);
-      }
-    }
-  }, [markerName]);
-
-  // Create a custom marker with higher z-index to ensure it's on top
-  const markerOptions = {
-    draggable: true,
-    autoPan: true,
-    zIndexOffset: 9999, // Higher z-index to ensure visibility
-  };
-
-  const eventHandlers = {
-    dragend: (e: L.LeafletEvent) => {
-      // Update marker position when dragged
-      const marker = e.target;
-      if (marker && marker.getLatLng) {
-        const position = marker.getLatLng();
-        // Update the position through the global handler
-        if (window.tempMarkerPositionUpdate) {
-          window.tempMarkerPositionUpdate([position.lat, position.lng]);
-          console.log("Marker position updated:", [position.lat, position.lng]);
-        }
-      }
-    },
-    add: (e: L.LeafletEvent) => {
-      // Force popup to open when marker is added to the map
-      setTimeout(() => {
+    return () => {
+      if (markerRef.current) {
         try {
-          const markerElement = document.querySelector('.leaflet-marker-draggable');
-          if (markerElement) {
-            markerElement.dispatchEvent(new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window
-            }));
-          }
+          // Safely close any open UI elements
+          markerRef.current.closeTooltip();
+          markerRef.current.closePopup();
         } catch (error) {
-          console.error("Error dispatching click on marker:", error);
+          console.error("Error cleaning up temp marker:", error);
         }
-      }, 100);
+      }
+    };
+  }, []);
+
+  // Update marker position in parent when dragged
+  const handleDragEnd = (e: L.LeafletEvent) => {
+    const marker = e.target;
+    if (marker && marker.getLatLng) {
+      const position = marker.getLatLng();
+      // Update the position through the global handler if available
+      if (window.tempMarkerPositionUpdate) {
+        window.tempMarkerPositionUpdate([position.lat, position.lng]);
+        console.log("Marker position updated:", [position.lat, position.lng]);
+      }
     }
   };
-  
+
+  // Set up marker references
+  const setMarkerInstance = (marker: L.Marker) => {
+    if (marker) {
+      markerRef.current = marker;
+      setMarkerReady(true);
+    }
+  };
+
   return (
-    <Marker 
+    <Marker
       position={position}
-      ref={markerRef}
+      ref={setMarkerInstance}
       draggable={true}
-      autoPan={true}
-      zIndexOffset={9999}
-      eventHandlers={eventHandlers}
+      eventHandlers={{
+        dragend: handleDragEnd,
+        add: () => {
+          // Wait for marker to be added to DOM before showing popup
+          setTimeout(() => {
+            try {
+              if (markerRef.current) {
+                markerRef.current.openPopup();
+              }
+            } catch (error) {
+              console.error("Error opening popup:", error);
+            }
+          }, 100);
+        }
+      }}
     >
       <NewMarkerForm
         markerName={markerName}
@@ -88,12 +88,11 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         setMarkerType={setMarkerType}
         onSave={onSave}
       />
-      <Tooltip 
-        direction="top" 
-        offset={[0, -10]} 
+      <Tooltip
+        direction="top"
+        offset={[0, -10]}
         opacity={0.9}
         permanent={true}
-        className="custom-marker-tooltip"
       >
         <span className="font-medium">{markerName || 'New Location'}</span>
       </Tooltip>

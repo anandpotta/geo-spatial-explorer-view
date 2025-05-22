@@ -1,6 +1,6 @@
 
-import React, { useCallback, useRef, useEffect } from 'react';
-import { Marker, Tooltip, Popup } from 'react-leaflet';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
+import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
@@ -12,48 +12,46 @@ interface UserMarkerProps {
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
-    const updatedMarker = e.target;
-    const newPosition = updatedMarker.getLatLng();
-    
-    // Update marker position in local storage
-    const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
-    const updatedMarkers = savedMarkers.map((m: LocationMarker) => {
-      if (m.id === marker.id) {
-        return {
-          ...m,
-          position: [newPosition.lat, newPosition.lng] as [number, number]
-        };
-      }
-      return m;
-    });
-    
-    localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
-    
-    // Dispatch event to update other components
-    window.dispatchEvent(new CustomEvent('markersUpdated'));
-  }, [marker.id]);
-
-  // Safe tooltip opening with error handling
-  const safeOpenTooltip = useCallback(() => {
     if (!markerRef.current) return;
     
     try {
-      setTimeout(() => {
-        if (markerRef.current) {
-          markerRef.current.openTooltip();
+      const updatedMarker = e.target;
+      const newPosition = updatedMarker.getLatLng();
+      
+      // Update marker position in local storage
+      const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
+      const updatedMarkers = savedMarkers.map((m: LocationMarker) => {
+        if (m.id === marker.id) {
+          return {
+            ...m,
+            position: [newPosition.lat, newPosition.lng] as [number, number]
+          };
         }
-      }, 100);
+        return m;
+      });
+      
+      localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
+      
+      // Dispatch event to update other components
+      window.dispatchEvent(new CustomEvent('markersUpdated'));
     } catch (error) {
-      console.error('Could not open tooltip safely:', error);
+      console.error('Error updating marker position:', error);
     }
-  }, []);
+  }, [marker.id]);
 
+  // Set up marker references
+  const setMarkerInstance = (marker: L.Marker) => {
+    if (marker && !markerRef.current) {
+      markerRef.current = marker;
+      setIsReady(true);
+    }
+  };
+
+  // Cleanup function to prevent memory leaks
   useEffect(() => {
-    safeOpenTooltip();
-    
-    // Cleanup function to prevent memory leaks
     return () => {
       if (markerRef.current) {
         try {
@@ -64,20 +62,15 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         }
       }
     };
-  }, [safeOpenTooltip]);
-  
-  const eventHandlers = {
-    dragend: handleDragEnd,
-    add: safeOpenTooltip
-  };
+  }, []);
   
   return (
     <Marker 
       position={marker.position} 
       key={`marker-${marker.id}`}
       draggable={true}
-      ref={markerRef}
-      eventHandlers={eventHandlers}
+      ref={setMarkerInstance}
+      eventHandlers={{ dragend: handleDragEnd }}
     >
       <MarkerPopup marker={marker} onDelete={onDelete} />
 
@@ -86,7 +79,6 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         offset={[0, -10]} 
         opacity={0.9}
         permanent={true}
-        className="custom-marker-tooltip"
       >
         <span className="font-medium">{marker.name}</span>
       </Tooltip>

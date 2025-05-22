@@ -31,8 +31,23 @@ export async function fetchMarkers(): Promise<LocationMarker[]> {
 export async function createMarker(marker: LocationMarker): Promise<LocationMarker> {
   // Always save to local storage first
   const markers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
-  markers.push(marker);
+  
+  // Check if marker already exists
+  const existingIndex = markers.findIndex((m: LocationMarker) => m.id === marker.id);
+  
+  if (existingIndex >= 0) {
+    // Update existing marker
+    markers[existingIndex] = marker;
+  } else {
+    // Add new marker
+    markers.push(marker);
+  }
+  
   localStorage.setItem('savedMarkers', JSON.stringify(markers));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('markersUpdated'));
   
   // Then try to sync with backend if online
   try {
@@ -53,9 +68,17 @@ export async function createMarker(marker: LocationMarker): Promise<LocationMark
 
 export async function deleteMarkerApi(id: string): Promise<void> {
   // Always delete from local storage first
-  const markers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
-  const filteredMarkers = markers.filter((m: LocationMarker) => m.id !== id);
-  localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
+  try {
+    const markers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
+    const filteredMarkers = markers.filter((m: LocationMarker) => m.id !== id);
+    localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
+    
+    // Notify components about storage changes
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('markersUpdated'));
+  } catch (error) {
+    console.error('Error deleting marker from local storage:', error);
+  }
   
   // Then try to sync with backend if online
   try {
