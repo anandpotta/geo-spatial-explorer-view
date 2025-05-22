@@ -77,90 +77,40 @@ export const initializeLeafletDrawComplete = () => {
     try {
       console.warn("Creating stub for L.Control.Draw");
       
-      // Instead of using extend, create a new class that inherits all Control methods
-      class DrawControl extends L.Control {
-        options: any;
-        
-        constructor(options?: any) {
-          super(options);
-          this.options = options || {};
-        }
-        
-        initialize(options?: any): void {
-          L.Util.setOptions(this, options || {});
+      // Go back to using Leaflet's extend method which works better with its type system
+      L.Control.Draw = L.Control.extend({
+        // Fix: Add declare to avoid overriding base property
+        initialize: function(options?: any) {
+          // Use setOptions properly
+          L.setOptions(this, options || {});
           console.log("Draw control initialized with options:", options);
-        }
+        },
         
-        onAdd(map: L.Map): HTMLElement {
+        onAdd: function(map: any): HTMLElement {
           const container = L.DomUtil.create('div', 'leaflet-draw');
           console.log("Draw control added to map");
           return container;
-        }
+        },
         
-        onRemove(): void {
+        onRemove: function(): void {
           console.log("Draw control removed from map");
-        }
+        },
         
-        setDrawingOptions(options: any): any {
+        setDrawingOptions: function(options: any): any {
           console.log("Setting drawing options:", options);
           if (options && this.options) {
             this.options = { ...this.options, ...options };
           }
           return this;
         }
-        
-        // These methods are already inherited from L.Control
-        // but we'll define them here to satisfy TypeScript
-        getPosition(): string {
-          return this.options.position || 'topright';
-        }
-        
-        setPosition(position: string): this {
-          this.options.position = position;
-          return this;
-        }
-        
-        getContainer(): HTMLElement | null {
-          return this._container || null;
-        }
-        
-        addTo(map: L.Map): this {
-          this.remove();
-          this._map = map;
-          
-          const container = this.onAdd(map);
-          const pos = this.getPosition();
-          const corner = map._controlCorners[pos];
-          
-          container.classList.add('leaflet-control');
-          if (pos.indexOf('bottom') !== -1) {
-            corner.insertBefore(container, corner.firstChild);
-          } else {
-            corner.appendChild(container);
-          }
-          
-          this._container = container;
-          return this;
-        }
-        
-        remove(): this {
-          if (!this._map) {
-            return this;
-          }
-          
-          if (this._container) {
-            this._container.remove();
-          }
-          
-          this.onRemove();
-          this._map = undefined as any;
-          
-          return this;
-        }
-      }
+      }) as any;
       
-      // Assign our custom class to L.Control.Draw
-      L.Control.Draw = DrawControl;
+      // Ensure the prototype is properly set up
+      L.Control.Draw.prototype.options = {
+        position: 'topright',
+        draw: {},
+        edit: undefined
+      };
       
     } catch (err) {
       console.error("Failed to create stub for L.Control.Draw:", err);
