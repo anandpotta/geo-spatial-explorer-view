@@ -8,20 +8,18 @@ export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
   const [showConfirmation, setShowConfirmation] = useState(false);
   
-  // Listen for the custom leafletClearAllRequest event
+  // Centralized handler for all clear all actions with a single point of entry
   useEffect(() => {
-    const handleLeafletClearRequest = () => {
-      console.log('Received leaflet clear all request event');
-      if (isAuthenticated) {
-        setShowConfirmation(true);
-      } else {
+    const handleClearAllRequest = (e: MouseEvent | Event) => {
+      console.log('Handling clear all request');
+      
+      // If not authenticated, block the action
+      if (!isAuthenticated) {
         toast.error('Please log in to clear drawings');
+        return;
       }
-    };
-    
-    // Centralized handler for all clear all actions
-    const handleClearAllClick = (e: MouseEvent | Event) => {
-      // Handle click event
+      
+      // For click events on Leaflet draw clear all button
       if (e instanceof MouseEvent) {
         const target = e.target as HTMLElement;
         
@@ -40,28 +38,24 @@ export function useClearAllOperation(onClearAll?: () => void) {
             console.log('Leaflet draw clear all layers button clicked');
             e.preventDefault();
             e.stopPropagation();
-            
-            // Show confirmation if authenticated
-            if (isAuthenticated) {
-              setShowConfirmation(true);
-            } else {
-              toast.error('Please log in to clear drawings');
-            }
-            
-            // Prevent other handlers from running
-            return false;
+          } else {
+            // Not our target button
+            return;
           }
         }
       }
+      
+      // Show confirmation dialog
+      setShowConfirmation(true);
     };
     
     // Use capture phase to intercept early
-    document.addEventListener('click', handleClearAllClick, true);
-    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+    document.addEventListener('click', handleClearAllRequest, true);
+    window.addEventListener('leafletClearAllRequest', handleClearAllRequest);
     
     return () => {
-      document.removeEventListener('click', handleClearAllClick, true);
-      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+      document.removeEventListener('click', handleClearAllRequest, true);
+      window.removeEventListener('leafletClearAllRequest', handleClearAllRequest);
     };
   }, [isAuthenticated]);
   

@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for working with SVG paths
  */
@@ -142,22 +143,19 @@ export const clearAllMapSvgElements = (map: any): void => {
         });
       });
       
+      // Clear all leaflet-zoom-animated elements
+      pane.querySelectorAll('.leaflet-zoom-animated').forEach(element => {
+        // Remove all children of these elements
+        while (element.firstChild) {
+          element.removeChild(element.firstChild);
+        }
+      });
+      
       // Clear marker images directly
       pane.querySelectorAll('.leaflet-marker-icon, .leaflet-marker-shadow').forEach(marker => {
         if (marker.parentNode) {
           marker.parentNode.removeChild(marker);
         }
-      });
-      
-      // Clear any zoom-animated elements that might contain paths
-      pane.querySelectorAll('.leaflet-zoom-animated').forEach(element => {
-        // Only remove children, keep the container
-        Array.from(element.children).forEach(child => {
-          // Type check to fix TypeScript error
-          if (child instanceof Element) {
-            element.removeChild(child);
-          }
-        });
       });
     });
     
@@ -175,6 +173,14 @@ export const clearAllMapSvgElements = (map: any): void => {
       Array.from(markerPane.children).forEach(child => {
         markerPane.removeChild(child);
       });
+    }
+    
+    // Clean up any vector panes that might contain SVG elements
+    const vectorPane = container.querySelector('.leaflet-vector-pane');
+    if (vectorPane) {
+      Array.from(vectorPane.children).forEach(child => {
+        vectorPane.removeChild(child);
+      }); 
     }
     
     // Reset all paths in the map object directly
@@ -203,6 +209,8 @@ export const clearAllMapSvgElements = (map: any): void => {
         if (map._resetView && map.getCenter && map.getZoom) {
           map._resetView(map.getCenter(), map.getZoom(), true);
         }
+        map.fire('moveend');
+        map.fire('zoomend');
       } catch (e) {
         console.error('Error refreshing map after clearing elements:', e);
       }

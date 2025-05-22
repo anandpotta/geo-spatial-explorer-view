@@ -23,7 +23,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         // Force SVG paths to be removed directly from the DOM
         clearAllMapSvgElements(map);
         
-        // Force removal of any remaining markers
+        // Force removal of any remaining markers and elements
         try {
           // Clear marker pane
           const markerPane = map._panes?.markerPane;
@@ -90,13 +90,19 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
           console.error('Error clearing map panes:', err);
         }
         
-        // Force complete refresh of the map DOM
+        // Force multiple refresh methods for the map
         setTimeout(() => {
           try {
             // Redraw and invalidate the map
             map.invalidateSize({ pan: false });
             map._resetView(map.getCenter(), map.getZoom(), true);
             console.log('Map view reset and invalidated');
+            
+            // Additional refresh commands
+            map.fire('moveend');
+            map.fire('zoomend');
+            window.dispatchEvent(new Event('resize'));
+            window.dispatchEvent(new Event('mapRefresh'));
           } catch (e) {
             console.error('Error refreshing map view:', e);
           }

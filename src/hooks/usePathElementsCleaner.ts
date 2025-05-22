@@ -35,9 +35,6 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
         clearAllMapSvgElements((window.featureGroup as any)._map);
       }
     };
-
-    // We've removed the duplicate handler for leaflet-draw-edit-remove here
-    // Clear button handling is now fully centralized in useClearAllOperation.ts
     
     window.addEventListener('userLoggedOut', handleUserLogout);
     window.addEventListener('userChanged', handleUserChange);
