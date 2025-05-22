@@ -16,6 +16,7 @@ export function useLocationSync(
   const transitionInProgressRef = useRef(false);
   const isUnmountedRef = useRef(false);
   const initialPositioningAttemptsRef = useRef(0);
+  const maxInitializationAttempts = 5; // Maximum number of attempts to initialize the map
 
   // Clear all timeouts on unmount or when dependencies change
   useEffect(() => {
@@ -42,15 +43,17 @@ export function useLocationSync(
     return timeoutId;
   };
 
-  // Define processLocationChange function
+  // Define processLocationChange function with improved error handling and retry logic
   function processLocationChange(map: L.Map, locationId: string, location: Location) {
     if (isUnmountedRef.current || !map) return;
+    
+    // Log detailed information for better debugging
+    console.log(`useLocationSync: Starting location change to ${location.label} [${location.y}, ${location.x}]`);
     
     // Set transition state
     transitionInProgressRef.current = true;
     
     // Update location reference and set fly in progress
-    console.log(`useLocationSync: Flying to location ${location.label} at [${location.y}, ${location.x}]`);
     processedLocationRef.current = locationId;
     flyInProgressRef.current = true;
 
@@ -59,13 +62,14 @@ export function useLocationSync(
       safeSetTimeout(() => {
         if (!map || isUnmountedRef.current) return;
         
-        console.log("useLocationSync: Invalidating map size");
+        console.log("useLocationSync: Invalidating map size before positioning");
         map.invalidateSize(true);
         
         // Position the map at the selected location
         const newPosition: [number, number] = [location.y, location.x];
         
         // Use flyTo with animation for smoother experience
+        console.log(`useLocationSync: Flying to [${newPosition[0]}, ${newPosition[1]}]`);
         map.flyTo(newPosition, 14, {
           animate: true,
           duration: 1.5,
@@ -81,6 +85,7 @@ export function useLocationSync(
           }
 
           try {
+            console.log("useLocationSync: Adding marker at location");
             // Clear existing markers to prevent cluttering
             map.eachLayer((layer) => {
               if (layer instanceof L.Marker) {
@@ -101,6 +106,7 @@ export function useLocationSync(
               transitionInProgressRef.current = false;
               if (!isUnmountedRef.current) {
                 setHasInitialPositioning(true);
+                console.log("useLocationSync: Initial positioning complete");
               }
             }, 300);
             
@@ -151,6 +157,23 @@ export function useLocationSync(
               setHasInitialPositioning(true);
             } catch (err) {
               console.error("Error in initial positioning:", err);
+              
+              // If initial positioning fails, we'll retry with a slight delay
+              if (initialPositioningAttemptsRef.current < maxInitializationAttempts) {
+                initialPositioningAttemptsRef.current++;
+                safeSetTimeout(() => {
+                  if (map && selectedLocation && !isUnmountedRef.current) {
+                    try {
+                      console.log(`useLocationSync: Retry ${initialPositioningAttemptsRef.current} for initial positioning`);
+                      map.invalidateSize(true);
+                      map.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
+                      setHasInitialPositioning(true);
+                    } catch (innerErr) {
+                      console.error(`Error in retry ${initialPositioningAttemptsRef.current}:`, innerErr);
+                    }
+                  }
+                }, 500);
+              }
             }
           }
         }
@@ -158,16 +181,11 @@ export function useLocationSync(
     }
   }, [map, isMapReady, selectedLocation, hasInitialPositioning]);
 
+  // Handle location changes with improved logic
   useEffect(() => {
-    if (!selectedLocation || !map || !isMapReady) return;
+    if (!selectedLocation || !map) return;
     
-    console.log(`useLocationSync: Syncing to location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
-
-    // Prevent operations during active transitions
-    if (transitionInProgressRef.current) {
-      console.log('useLocationSync: View transition in progress, skipping location update');
-      return;
-    }
+    console.log(`useLocationSync: Syncing to location ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
 
     // Create a location identifier to track changes
     const locationId = `${selectedLocation.id}:${selectedLocation.y}:${selectedLocation.x}`;
@@ -178,50 +196,41 @@ export function useLocationSync(
       return;
     }
 
-    // Skip if fly is already in progress
-    if (flyInProgressRef.current) {
-      console.log('useLocationSync: Fly already in progress, will try again later');
-      
-      // Queue the operation by setting a timeout
-      const timer = safeSetTimeout(() => {
-        if (locationId === processedLocationRef.current) {
-          console.log('useLocationSync: Skipping deferred update - location already processed');
-          return;
-        }
-        
-        // Only process if component is still mounted
-        if (!isUnmountedRef.current) {
+    // If map is ready, proceed with location change
+    if (isMapReady) {
+      console.log('useLocationSync: Map is ready, processing location change');
+      processLocationChange(map, locationId, selectedLocation);
+    } else {
+      // If map is not ready yet, set a retry timer
+      console.log('useLocationSync: Map not ready, setting retry timer');
+      safeSetTimeout(() => {
+        if (map && !isUnmountedRef.current) {
+          console.log('useLocationSync: Retrying after delay');
+          // Try to ensure map is properly initialized
+          map.invalidateSize(true);
           processLocationChange(map, locationId, selectedLocation);
         }
-      }, 1200);
-      
-      return;
+      }, 800);
     }
-
-    // Multiple retry attempts for initial positioning
-    if (!hasInitialPositioning) {
-      initialPositioningAttemptsRef.current++;
-      
-      if (initialPositioningAttemptsRef.current > 3) {
-        console.log(`useLocationSync: Multiple attempts (${initialPositioningAttemptsRef.current}) to position map, forcing approach`);
-        // Force a delay and retry with basic approach
-        safeSetTimeout(() => {
-          if (map && !isUnmountedRef.current) {
-            try {
-              console.log("useLocationSync: Forcing basic positioning approach");
-              map.invalidateSize(true);
-              map.setView([selectedLocation.y, selectedLocation.x], 14, { animate: false });
-              setHasInitialPositioning(true);
-            } catch (err) {
-              console.error("Error in force positioning:", err);
-            }
-          }
-        }, 800);
-        return;
-      }
-    }
-
-    // Process the location change
-    processLocationChange(map, locationId, selectedLocation);
   }, [selectedLocation, map, isMapReady, hasInitialPositioning]);
+  
+  // Listen for global reset events
+  useEffect(() => {
+    const handleReset = () => {
+      console.log('useLocationSync: Reset event received');
+      processedLocationRef.current = null;
+      flyInProgressRef.current = false;
+      transitionInProgressRef.current = false;
+      setHasInitialPositioning(false);
+      initialPositioningAttemptsRef.current = 0;
+    };
+    
+    window.addEventListener('mapViewChange', handleReset);
+    
+    return () => {
+      window.removeEventListener('mapViewChange', handleReset);
+    };
+  }, []);
+
+  return { hasInitialPositioning };
 }

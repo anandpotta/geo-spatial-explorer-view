@@ -1,8 +1,9 @@
 
 /**
  * Preserves authentication data during clear operations
+ * @returns A function to restore preserved authentication data
  */
-export function preserveAuthData() {
+export function preserveAuthData(): () => boolean {
   // Store authentication data before clear operation
   const authToken = localStorage.getItem('authToken');
   const userProfile = localStorage.getItem('userProfile');

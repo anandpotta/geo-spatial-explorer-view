@@ -1,12 +1,6 @@
 
 import { toast } from 'sonner';
-import { 
-  clearSvgPaths,
-  clearAllMarkers,
-  clearAllDrawings,
-  preserveAuthData,
-  forceMapRefresh
-} from '@/utils/clear-operations';
+import { clearMapData } from '@/utils/clear-operations/clear-map-refreshes';
 
 interface ClearAllHandlerProps {
   featureGroup: L.FeatureGroup;
@@ -16,32 +10,11 @@ interface ClearAllHandlerProps {
 export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProps) {
   if (featureGroup) {
     try {
-      // Clear all visible layers from the map
-      featureGroup.clearLayers();
-      
-      // Clear SVG paths
-      clearSvgPaths();
-      
-      // Clear markers
-      clearAllMarkers();
-      
-      // Preserve authentication data and get restore function
-      const restoreAuth = preserveAuthData();
-      
-      // Clear everything from localStorage
-      localStorage.clear();
-      
-      // Restore authentication data
-      restoreAuth();
-      
-      // Clear drawings
-      clearAllDrawings();
-      
-      // Force map refresh
-      forceMapRefresh();
+      // Use our centralized clear function
+      const success = clearMapData(featureGroup);
       
       // Call the callback if provided
-      if (onClearAll) {
+      if (success && onClearAll) {
         onClearAll();
       }
       

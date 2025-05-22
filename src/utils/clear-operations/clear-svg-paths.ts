@@ -1,20 +1,12 @@
 
-import { toast } from 'sonner';
-
 /**
- * Clears all SVG paths from the application
+ * Clears all SVG paths from storage and memory
  */
-export function clearSvgPaths() {
-  try {
-    // Force SVG paths to be removed by triggering all relevant events
-    window.dispatchEvent(new Event('clearAllSvgPaths'));
-    
-    // Clear SVG paths from storage
-    localStorage.removeItem('svgPaths');
-    
-    return true;
-  } catch (error) {
-    console.error('Error clearing SVG paths:', error);
-    return false;
-  }
+export function clearSvgPaths(): void {
+  // Remove SVG paths from storage
+  localStorage.removeItem('svgPaths');
+  
+  // Dispatch an event for components to clear their paths
+  window.dispatchEvent(new CustomEvent('clearAllSvgPaths'));
+  console.log('SVG paths cleared');
 }

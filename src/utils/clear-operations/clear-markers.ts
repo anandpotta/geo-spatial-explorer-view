@@ -1,36 +1,26 @@
 
-import { getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
+let allMarkers: any[] = [];
 
 /**
- * Clears all markers from storage and the map
+ * Clears all markers from the map and storage
  */
-export function clearAllMarkers() {
-  try {
-    // Get all markers from storage
-    const markers = getSavedMarkers();
-    
-    // Delete each marker
-    markers.forEach(marker => {
-      deleteMarker(marker.id);
-    });
-    
-    // Clean up all marker tooltips
-    const tooltips = document.querySelectorAll('.marker-tooltip');
-    tooltips.forEach(tooltip => {
-      if (tooltip.parentNode) {
-        tooltip.parentNode.removeChild(tooltip);
-      }
-    });
-    
-    // Clear markers from storage
-    localStorage.removeItem('savedMarkers');
-    
-    // Dispatch event to notify components
-    window.dispatchEvent(new Event('markersUpdated'));
-    
-    return true;
-  } catch (error) {
-    console.error('Error clearing markers:', error);
-    return false;
-  }
+export function clearAllMarkers(): void {
+  // Remove markers from the storage
+  localStorage.removeItem('savedMarkers');
+  
+  // Clear the in-memory markers array
+  allMarkers = [];
+  
+  // Dispatch an event to notify components
+  window.dispatchEvent(new Event('markersUpdated'));
+  console.log('All markers cleared');
+}
+
+/**
+ * Refreshes markers after view transition
+ */
+export function refreshMarkers(): void {
+  // Force update of marker components
+  window.dispatchEvent(new Event('markersRefreshed'));
+  window.dispatchEvent(new Event('storage')); // For components listening to storage events
 }
