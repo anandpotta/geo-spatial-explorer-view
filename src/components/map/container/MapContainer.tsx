@@ -145,11 +145,12 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        // Add important props to ensure proper rendering
-        whenCreated={(mapInstance) => {
+        // Changed whenCreated to whenReady which is supported by react-leaflet
+        whenReady={(mapInstance) => {
           console.log('Map instance created');
           // Manually check for _leaflet_pos
-          const mapPane = mapInstance.getPane('mapPane');
+          const map = mapInstance.target;
+          const mapPane = map.getPane('mapPane');
           if (mapPane && !(mapPane as any)._leaflet_pos) {
             (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
           }

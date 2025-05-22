@@ -1,6 +1,18 @@
 
 import L from 'leaflet';
 
+// Define a more specific type that includes internal properties
+interface LeafletMapInternal extends L.Map {
+  _isDestroyed?: boolean;
+  _panes?: {
+    mapPane?: {
+      _leaflet_pos?: any;
+    };
+  };
+  _size?: L.Point;
+  // We won't access _onResize directly anymore
+}
+
 /**
  * Safely checks if a map instance is valid and ready for use
  */
@@ -137,13 +149,21 @@ export function safeInvalidateSize(map: any): void {
       } catch (innerErr) {
         console.warn('Error during invalidateSize, trying alternate method:', innerErr);
         
-        // Fallback: manually trigger resize
-        if (typeof map._onResize === 'function') {
-          try {
-            map._onResize();
-          } catch (resizeErr) {
-            console.warn('Error during _onResize fallback:', resizeErr);
+        // Fallback: manually trigger resize without using private _onResize
+        try {
+          // Use internal event to trigger a resize instead of calling _onResize directly
+          map.fire('resize');
+          
+          // Force redraw by toggling visibility briefly
+          const container = map.getContainer();
+          if (container) {
+            const wasVisible = container.style.display !== 'none';
+            container.style.display = 'none';
+            void container.offsetHeight; // Force reflow
+            container.style.display = wasVisible ? 'block' : 'none';
           }
+        } catch (resizeErr) {
+          console.warn('Error during resize fallback:', resizeErr);
         }
       }
       
@@ -240,13 +260,12 @@ export function forceMapTileRefresh(map: L.Map | null): void {
         map.fire('moveend');
         map.fire('zoomend');
         
-        // If available and needed, use _resetView to force complete refresh
-        if ((map as any)._resetView) {
-          try {
-            (map as any)._resetView(center, zoom, true);
-          } catch (err) {
-            console.warn('Error in _resetView:', err);
-          }
+        // If needed, trigger a view reset without using private properties
+        try {
+          // Use public methods to reset the view
+          map.setView(center, zoom, { animate: false, reset: true });
+        } catch (err) {
+          console.warn('Error resetting view:', err);
         }
       }
     }, 100);
