@@ -36,46 +36,17 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
       }
     };
 
-    // Handle Leaflet Draw specific clear all action
-    const handleLeafletClearAction = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      
-      // Enhanced check for clear all layers button
-      if (target && target.tagName === 'A') {
-        // Check if this is the clear all button in Leaflet draw actions
-        const isDrawActionsParent = 
-          target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions');
-        
-        const isClearAllButton = 
-          target.textContent?.includes('Clear all') || 
-          target.textContent?.includes('Delete') ||
-          target.textContent?.trim() === 'Clear All';
-        
-        if (isDrawActionsParent && isClearAllButton) {
-          console.log('Leaflet draw clear all layers button clicked');
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // Dispatch a custom event to show the confirmation dialog
-          window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
-          
-          // Return false to prevent the original action
-          return false;
-        }
-      }
-    };
+    // We'll remove this handler to prevent duplicate confirmation dialogs
+    // The clear button handling is now fully managed by useClearAllOperation.ts
     
     window.addEventListener('userLoggedOut', handleUserLogout);
     window.addEventListener('userChanged', handleUserChange);
     window.addEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
-    // Capture all click events to detect Leaflet clear action
-    document.addEventListener('click', handleLeafletClearAction, true);
     
     return () => {
       window.removeEventListener('userLoggedOut', handleUserLogout);
       window.removeEventListener('userChanged', handleUserChange);
       window.removeEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
-      document.removeEventListener('click', handleLeafletClearAction, true);
     };
   }, [clearPathElements]);
   
