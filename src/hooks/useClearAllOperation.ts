@@ -25,7 +25,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
       return;
     }
     
-    const featureGroup = window.featureGroup;
+    const featureGroup = (window as any).featureGroup;
     if (featureGroup) {
       handleClearAll({
         featureGroup,
