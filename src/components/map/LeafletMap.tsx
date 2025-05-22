@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
+import 'leaflet-draw/dist/leaflet.css';
+import 'leaflet-draw'; // Ensure leaflet-draw is imported
 import { Location } from '@/utils/geo-utils';
 import { useDrawingTools } from '@/hooks/useDrawingTools';
 
@@ -20,23 +22,24 @@ const LeafletMap = ({
   onClearAll,
   isMapReady
 }: LeafletMapProps) => {
-  const [mapKey, setMapKey] = useState<string>('');
+  const [mapKey] = useState<string>(`leaflet-map-${Date.now()}`);
   const [isMapInit, setIsMapInit] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
   const locationMarkerRef = useRef<L.Marker | null>(null);
+  const initCompletedRef = useRef<boolean>(false);
   const { initDrawingControls } = useDrawingTools(mapRef, drawnItemsRef, activeTool);
   
-  // Clear any orphaned Leaflet container classes
-  const cleanupOrphanedMaps = () => {
+  // Clean up any orphaned Leaflet container classes
+  const cleanupOrphanedMaps = useCallback(() => {
     const orphanedContainers = document.querySelectorAll('.leaflet-container');
     orphanedContainers.forEach(container => {
       if (!document.body.contains(container.parentElement)) {
         container.remove();
       }
     });
-  };
+  }, []);
   
   // Initialize the map
   useEffect(() => {
@@ -53,24 +56,15 @@ const LeafletMap = ({
       : [0, 0];
     
     const zoom = selectedLocation ? 14 : 2;
-    const uniqueKey = `leaflet-map-${Date.now()}`;
     
     console.log(`LeafletMap: Initializing map at position [${position[0]}, ${position[1]}], zoom ${zoom}`);
     
-    setMapKey(uniqueKey);
-    
     // Wait for DOM to be ready
     setTimeout(() => {
-      if (containerRef.current) {
+      if (containerRef.current && !mapRef.current) {
         console.log("LeafletMap: Container is ready, creating map");
         
         try {
-          // Clear any previous map instance
-          if (mapRef.current) {
-            mapRef.current.remove();
-            mapRef.current = null;
-          }
-          
           // Create new map instance
           const map = L.map(containerRef.current, {
             center: position,
@@ -93,9 +87,6 @@ const LeafletMap = ({
           map.addLayer(featureGroup);
           drawnItemsRef.current = featureGroup;
           
-          // Initialize drawing controls
-          initDrawingControls(map, featureGroup);
-          
           // Add attribution control
           L.control.attribution({ position: 'bottomright' }).addTo(map);
 
@@ -114,6 +105,16 @@ const LeafletMap = ({
               onMapReady(map);
             }
             
+            // Initialize drawing controls after map is ready
+            if (drawnItemsRef.current) {
+              setTimeout(() => {
+                if (!initCompletedRef.current) {
+                  initDrawingControls(map, featureGroup);
+                  initCompletedRef.current = true;
+                }
+              }, 300);
+            }
+            
             // Force another invalidation after a longer delay for stability
             setTimeout(() => {
               if (map) {
@@ -125,7 +126,7 @@ const LeafletMap = ({
           console.error("LeafletMap: Error initializing map:", error);
         }
       } else {
-        console.error("LeafletMap: Container ref is null");
+        console.error("LeafletMap: Container ref is null or map already initialized");
       }
     }, 100);
 
@@ -139,9 +140,10 @@ const LeafletMap = ({
           console.error("Error removing map:", e);
         }
         mapRef.current = null;
+        initCompletedRef.current = false;
       }
     };
-  }, [mapKey]);
+  }, [selectedLocation, cleanupOrphanedMaps, onMapReady]);
 
   // Handle location changes
   useEffect(() => {
@@ -189,7 +191,7 @@ const LeafletMap = ({
     if (onClearAll && mapRef.current && drawnItemsRef.current) {
       const handleClearAll = () => {
         console.log("LeafletMap: Clearing all drawings");
-        drawnItemsRef.current.clearLayers();
+        drawnItemsRef.current?.clearLayers();
       };
       
       window.addEventListener('clearAllDrawings', handleClearAll);
@@ -202,7 +204,7 @@ const LeafletMap = ({
   
   // Update drawing controls when activeTool changes
   useEffect(() => {
-    if (mapRef.current && drawnItemsRef.current) {
+    if (mapRef.current && drawnItemsRef.current && initCompletedRef.current) {
       console.log(`LeafletMap: Active tool changed to ${activeTool}`);
       initDrawingControls(mapRef.current, drawnItemsRef.current);
     }

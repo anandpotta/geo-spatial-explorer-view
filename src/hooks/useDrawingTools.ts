@@ -1,6 +1,7 @@
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import L from 'leaflet';
+import 'leaflet-draw'; // Explicitly import leaflet-draw
 
 /**
  * Hook to manage drawing tools for the Leaflet map
@@ -32,6 +33,12 @@ export function useDrawingTools(
         drawControlRef.current = null;
       }
       
+      // Ensure L.Control.Draw is available
+      if (!L.Control.Draw) {
+        console.error("L.Control.Draw not available. Make sure leaflet-draw is imported correctly.");
+        return null;
+      }
+      
       // Configure drawing options based on active tool
       const drawOptions: any = {
         polyline: activeTool === 'polyline',
@@ -49,8 +56,8 @@ export function useDrawingTools(
         edit: {
           featureGroup: featureGroup,
           // Use empty objects for edit/remove options when active
-          edit: activeTool === 'edit' ? {} as any : false,
-          remove: activeTool === 'delete' ? {} as any : false
+          edit: activeTool === 'edit' ? {} : false,
+          remove: activeTool === 'delete' ? {} : false
         }
       });
       
@@ -72,6 +79,7 @@ export function useDrawingTools(
       return drawControl;
     } catch (error) {
       console.error("Error initializing drawing controls:", error);
+      return null;
     }
   }, [activeTool]);
   

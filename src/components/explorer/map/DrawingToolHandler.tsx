@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
+import { initializeLeafletDrawComplete } from '@/utils/leaflet-draw-initializer';
 import L from 'leaflet';
+import 'leaflet-draw';
 
 interface DrawingToolHandlerProps {
   currentView: 'cesium' | 'leaflet';
@@ -22,6 +24,11 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   // Track previous tool to handle deactivation
   const [previousTool, setPreviousTool] = useState<string | null>(null);
   
+  // Initialize Leaflet Draw
+  useEffect(() => {
+    initializeLeafletDrawComplete();
+  }, []);
+  
   // Effect to handle tool changes
   useEffect(() => {
     if (currentView === 'leaflet' && leafletMapRef.current) {
@@ -33,7 +40,7 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
       
       setPreviousTool(activeTool);
     }
-  }, [activeTool, currentView]);
+  }, [activeTool, currentView, leafletMapRef]);
 
   // Enable edit mode on all drawable layers
   const enableEditMode = () => {
