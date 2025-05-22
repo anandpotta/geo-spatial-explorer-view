@@ -34,7 +34,11 @@ export function useGlobeNavigation(
     selectedLocation, 
     globeAPI, 
     isFlying, 
-    flyToLocation
+    // Modify the flyToLocation wrapper to return a boolean to match expected signature
+    (location, api) => {
+      flyToLocation(location, api);
+      return true; // Return true to indicate the navigation was initiated
+    }
   );
 
   // Track location changes for debugging

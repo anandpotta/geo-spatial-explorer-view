@@ -68,15 +68,14 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     onFlyComplete
   );
 
-  // Expose flyToLocation for direct access
+  // Instead of trying to set a new method on globeAPI, use the existing flyToLocation method
+  // This resolves the TypeScript error where flyToSelectedLocation doesn't exist on the type
   useEffect(() => {
-    if (globeAPI && isInitialized) {
-      globeAPI.flyToSelectedLocation = (location: Location) => {
-        console.log(`Manual flyToLocation called for ${location.label} [${location.y}, ${location.x}]`);
-        globeAPI.flyToLocation(location.x, location.y, onFlyComplete);
-      };
+    if (globeAPI && isInitialized && selectedLocation) {
+      console.log(`Manual flyToLocation called for ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
+      globeAPI.flyToLocation(selectedLocation.x, selectedLocation.y, onFlyComplete);
     }
-  }, [globeAPI, isInitialized, onFlyComplete]);
+  }, [globeAPI, isInitialized, selectedLocation, onFlyComplete]);
 
   return (
     <div 

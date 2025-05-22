@@ -72,26 +72,33 @@ export const initializeLeafletDrawComplete = () => {
   const isInitialized = initializeLeafletDraw();
   setupLeafletDrawIcons();
   
+  // Define proper interfaces to fix TypeScript errors
+  interface DrawControlOptions {
+    featureGroup?: L.FeatureGroup;
+    draw?: any;
+    edit?: any;
+    position?: string;
+  }
+  
   // Properly type the Draw class to match expected interface
   if (!isInitialized && L && L.Control && !L.Control.Draw) {
     try {
       console.warn("Creating stub for L.Control.Draw");
       
-      // Define missing members before creating the class
-      interface DrawControlOptions {
-        featureGroup?: L.FeatureGroup;
-        draw?: any;
-        edit?: any;
-        position?: string;
-      }
-      
-      // Create a proper Draw class
+      // Create a proper Draw class that extends L.Control with required initialize method
       L.Control.Draw = class Draw extends L.Control {
+        options: any;
+        
         constructor(options?: DrawControlOptions) {
           super();
-          // Use L.setOptions instead of direct assignment
+          this.initialize(options);
+        }
+        
+        // Required initialize method
+        initialize(options?: DrawControlOptions): this {
           L.Util.setOptions(this, options || {});
           console.log("Draw control initialized with options:", options);
+          return this;
         }
         
         // Define required methods
@@ -112,13 +119,6 @@ export const initializeLeafletDrawComplete = () => {
           }
           return this;
         }
-      };
-      
-      // Make sure initialize is properly defined
-      (L.Control.Draw.prototype as any).initialize = function(options: any) {
-        L.Util.setOptions(this, options);
-        console.log("Draw control initialized with options via initialize");
-        return this;
       };
       
     } catch (err) {
