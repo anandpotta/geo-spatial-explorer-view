@@ -119,13 +119,33 @@ export function safeInvalidateSize(map: any): void {
         (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
       }
       
-      // Check for panes object
+      // Check for panes object - additional safety
       if ((map as any)._panes && (map as any)._panes.mapPane && !(map as any)._panes.mapPane._leaflet_pos) {
         console.log('Creating missing _leaflet_pos on _panes.mapPane');
         (map as any)._panes.mapPane._leaflet_pos = { x: 0, y: 0 };
       }
       
-      map.invalidateSize(true);
+      // Check for size property
+      if (!(map as any)._size) {
+        console.log('Creating missing _size property');
+        (map as any)._size = new L.Point(0, 0);
+      }
+      
+      // Use a try-catch within the function too for extra safety
+      try {
+        map.invalidateSize(true);
+      } catch (innerErr) {
+        console.warn('Error during invalidateSize, trying alternate method:', innerErr);
+        
+        // Fallback: manually trigger resize
+        if (typeof map._onResize === 'function') {
+          try {
+            map._onResize();
+          } catch (resizeErr) {
+            console.warn('Error during _onResize fallback:', resizeErr);
+          }
+        }
+      }
       
       // Force tile refresh by triggering a moveend event
       setTimeout(() => {
@@ -161,29 +181,107 @@ export function forceMapTileRefresh(map: L.Map | null): void {
       (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
     }
     
-    // Get all tile layers
+    // Also check for _panes object
+    if ((map as any)._panes && (map as any)._panes.mapPane && !(map as any)._panes.mapPane._leaflet_pos) {
+      console.log('Creating _leaflet_pos for _panes.mapPane during tile refresh');
+      (map as any)._panes.mapPane._leaflet_pos = { x: 0, y: 0 };
+    }
+    
+    // Get current view state
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    
+    // Add a slight jitter to force tile reload
+    const jitteredCenter = L.latLng(
+      center.lat + (Math.random() - 0.5) * 0.0001,
+      center.lng + (Math.random() - 0.5) * 0.0001
+    );
+    
+    try {
+      // First try to slightly move the view to force tile refresh
+      map.setView(jitteredCenter, zoom, { animate: false });
+      
+      // Then set it back
+      setTimeout(() => {
+        if (isMapValid(map)) {
+          map.setView(center, zoom, { animate: false });
+        }
+      }, 50);
+    } catch (e) {
+      console.warn('Error during view jitter:', e);
+    }
+    
+    // Get all tile layers and redraw them
     map.eachLayer(layer => {
       if (layer instanceof L.TileLayer) {
-        // Redraw the tile layer
-        layer.redraw();
-        
-        // If available and needed, use _resetView to force complete refresh
-        if ((map as any)._resetView) {
-          const center = map.getCenter();
-          const zoom = map.getZoom();
-          (map as any)._resetView(center, zoom, true);
+        try {
+          // Try to access the container of the layer
+          const container = (layer as any)._container;
+          if (container && container.style) {
+            // Force a reflow by toggling a style property
+            const opacity = container.style.opacity || '1';
+            container.style.opacity = '0.99';
+            setTimeout(() => {
+              if (container.style) container.style.opacity = opacity;
+            }, 20);
+          }
+          
+          // Redraw the tile layer
+          layer.redraw();
+        } catch (err) {
+          console.warn('Error redrawing tile layer:', err);
         }
       }
     });
     
-    // Trigger move events to ensure tiles update
+    // Try to force tile loading by firing events
     setTimeout(() => {
       if (isMapValid(map)) {
-        map.fire('move');
         map.fire('moveend');
+        map.fire('zoomend');
+        
+        // If available and needed, use _resetView to force complete refresh
+        if ((map as any)._resetView) {
+          try {
+            (map as any)._resetView(center, zoom, true);
+          } catch (err) {
+            console.warn('Error in _resetView:', err);
+          }
+        }
       }
     }, 100);
   } catch (err) {
     console.warn('Error during tile refresh:', err);
+  }
+}
+
+/**
+ * Properly disposes of a map instance
+ */
+export function safeDisposeMap(map: L.Map | null): void {
+  if (!map) return;
+  
+  try {
+    if (isMapValid(map)) {
+      // Mark as destroyed first to prevent further operations
+      (map as any)._isDestroyed = true;
+      
+      // Remove all event listeners
+      map.off();
+      
+      // Remove all layers
+      map.eachLayer(layer => {
+        try {
+          map.removeLayer(layer);
+        } catch (e) {
+          console.warn('Error removing layer during disposal:', e);
+        }
+      });
+      
+      // Finally remove the map
+      map.remove();
+    }
+  } catch (err) {
+    console.warn('Error during map disposal:', err);
   }
 }

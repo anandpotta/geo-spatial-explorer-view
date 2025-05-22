@@ -11,6 +11,7 @@ export function useTransitionState(
   const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previousViewRef = useRef<'cesium' | 'leaflet' | null>(null);
   const transitionCountRef = useRef(0);
+  const mapRefreshCountRef = useRef(0);
   
   // Track view changes to apply special handling for globe -> leaflet transition
   useEffect(() => {
@@ -32,18 +33,19 @@ export function useTransitionState(
         console.log('Ending globe->map transition');
         setViewTransitionInProgress(false);
         transitionTimeoutRef.current = null;
-      }, 1500); // Increased from 1200 for more reliable transitions
+      }, 2000); // Increased from 1500 for more reliable transitions
       
       // Add another delayed tile refresh trigger for map view
       const currentTransitionCount = transitionCountRef.current;
       
-      // Multiple delayed triggers to ensure tiles load
-      [800, 1500, 2200].forEach(delay => {
+      // Multiple delayed triggers to ensure tiles load - more frequent and more of them
+      [400, 800, 1200, 1600, 2000, 2500, 3000, 4000, 5000].forEach(delay => {
         setTimeout(() => {
           // Only proceed if this is still the most recent transition
           if (transitionCountRef.current === currentTransitionCount) {
+            mapRefreshCountRef.current++;
             document.dispatchEvent(new CustomEvent('leaflet-refresh-needed'));
-            console.log(`Dispatched leaflet-refresh-needed event (delay: ${delay}ms)`);
+            console.log(`Dispatched leaflet-refresh-needed event (delay: ${delay}ms, count: ${mapRefreshCountRef.current})`);
           }
         }, delay);
       });
@@ -63,6 +65,7 @@ export function useTransitionState(
     console.log('Starting view transition');
     setViewTransitionInProgress(true);
     transitionCountRef.current++;
+    mapRefreshCountRef.current = 0;
     
     // Clear any existing transition timeout
     if (transitionTimeoutRef.current) {
@@ -85,8 +88,16 @@ export function useTransitionState(
       if (currentView === 'leaflet') {
         document.dispatchEvent(new CustomEvent('leaflet-refresh-needed'));
         console.log('Dispatched leaflet-refresh-needed event after transition end');
+        
+        // Add multiple refresh attempts
+        [500, 1000, 1500].forEach(delay => {
+          setTimeout(() => {
+            document.dispatchEvent(new CustomEvent('leaflet-refresh-needed'));
+            console.log(`Additional tile refresh (delay: ${delay}ms)`);
+          }, delay);
+        });
       }
-    }, 1000); // Increased from 800 for smoother transitions
+    }, 1200); // Increased from 1000 for smoother transitions
   }, [currentView]);
   
   const showViewReadyToast = useCallback(() => {
