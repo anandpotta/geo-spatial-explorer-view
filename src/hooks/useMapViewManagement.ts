@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Location } from '@/utils/geo-utils';
@@ -22,9 +21,29 @@ export function useMapViewManagement(
   const previousFlyCompletedRef = useRef(flyCompleted);
   const autoSwitchToLeafletTimerRef = useRef<number | null>(null);
   const pendingSwapRef = useRef(false);
+  const locationHistoryRef = useRef<Array<{id: string, coords: [number, number]}>>([]);
   
   // Debug log for state changes
   console.log(`MapViewManagement: flyCompleted=${flyCompleted}, currentView=${currentView}, transition=${viewTransitionInProgressRef.current}`);
+  
+  // Track location changes to debug issues
+  useEffect(() => {
+    if (selectedLocation) {
+      const locationId = selectedLocation.id;
+      // Track a history of locations for debugging
+      locationHistoryRef.current.push({
+        id: locationId,
+        coords: [selectedLocation.y, selectedLocation.x]
+      });
+      
+      // Keep only the last 5 entries
+      if (locationHistoryRef.current.length > 5) {
+        locationHistoryRef.current.shift();
+      }
+      
+      console.log(`MapViewManagement: Location updated to ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
+    }
+  }, [selectedLocation]);
   
   // Update the ref when flyCompleted changes
   useEffect(() => {
@@ -33,13 +52,22 @@ export function useMapViewManagement(
     flyCompletedRef.current = flyCompleted;
     
     // Log when flyCompleted changes
-    if (wasCompleted !== flyCompleted && flyCompleted) {
-      console.log("MapViewManagement: Detected flyCompleted transition to true");
+    if (wasCompleted !== flyCompleted) {
+      console.log(`MapViewManagement: flyCompleted changed from ${wasCompleted} to ${flyCompleted}`);
       
-      // Flag a pending swap when flyCompleted becomes true
-      pendingSwapRef.current = true;
+      if (flyCompleted) {
+        console.log("MapViewManagement: flyCompleted is now true - flagging pending swap");
+        // Flag a pending swap when flyCompleted becomes true
+        pendingSwapRef.current = true;
+        
+        // If we have a selected location, make sure it's tracked
+        if (selectedLocation) {
+          lastSelectedLocationRef.current = selectedLocation;
+          console.log(`MapViewManagement: Updating last selected location to ${selectedLocation.label}`);
+        }
+      }
     }
-  }, [flyCompleted]);
+  }, [flyCompleted, selectedLocation]);
 
   // Handle actual view change with state updates
   const changeView = (view: MapView) => {
@@ -145,6 +173,12 @@ export function useMapViewManagement(
       viewChangeInProgressRef.current = true;
       viewTransitionInProgressRef.current = true;
       
+      // Record the current location before switching
+      if (selectedLocation) {
+        lastSelectedLocationRef.current = selectedLocation;
+        console.log(`MapViewManagement: Setting last location before view switch - ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
+      }
+      
       // Clear any existing pending view change
       if (pendingViewChangeTimerRef.current) {
         window.clearTimeout(pendingViewChangeTimerRef.current);
@@ -157,7 +191,13 @@ export function useMapViewManagement(
         
         // Force map refresh to ensure proper positioning
         setMapKey(Date.now());
-        lastSelectedLocationRef.current = selectedLocation;
+        
+        // Ensure the current location is available
+        if (selectedLocation) {
+          lastSelectedLocationRef.current = selectedLocation;
+        }
+        
+        // Change the view
         changeView('leaflet');
         
         // Add a small delay then trigger a Leaflet refresh
@@ -177,10 +217,10 @@ export function useMapViewManagement(
               // Force another refresh after all transitions complete
               setLeafletRefreshTrigger(prev => prev + 1);
               console.log("MapViewManagement: Forced additional refresh after transitions complete");
-            }, 800); // Reduced from 1000ms to 800ms
-          }, 400); // Reduced from 500ms to 400ms
-        }, 500); // Reduced from 700ms to 500ms
-      }, 400); // Reduced from 500ms to 400ms for more responsive UI
+            }, 800);
+          }, 400);
+        }, 500);
+      }, 400);
     }
   }, [currentView, selectedLocation, flyCompleted]);
 

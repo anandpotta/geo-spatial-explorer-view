@@ -68,6 +68,16 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     onFlyComplete
   );
 
+  // Expose flyToLocation for direct access
+  useEffect(() => {
+    if (globeAPI && isInitialized) {
+      globeAPI.flyToSelectedLocation = (location: Location) => {
+        console.log(`Manual flyToLocation called for ${location.label} [${location.y}, ${location.x}]`);
+        globeAPI.flyToLocation(location.x, location.y, onFlyComplete);
+      };
+    }
+  }, [globeAPI, isInitialized, onFlyComplete]);
+
   return (
     <div 
       ref={containerRef} 

@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useThreeGlobe } from '@/hooks/useThreeGlobe';
 import { useFlyHandler } from './navigation/useFlyHandler';
@@ -13,6 +13,7 @@ export function useGlobeNavigation(
 ) {
   // Create a dummy ref for useThreeGlobe since we're just accessing the global API
   const dummyContainerRef = useRef<HTMLDivElement>(null);
+  const [previousLocation, setPreviousLocation] = useState<string | null>(null);
 
   // Get the globe API - pass dummyContainerRef to satisfy the function signature
   const globeAPI = useThreeGlobe(dummyContainerRef);
@@ -35,6 +36,19 @@ export function useGlobeNavigation(
     isFlying, 
     flyToLocation
   );
+
+  // Track location changes for debugging
+  useEffect(() => {
+    if (selectedLocation) {
+      const locationId = `${selectedLocation.id}:${selectedLocation.x}:${selectedLocation.y}`;
+      
+      // Log only if this is a new location
+      if (locationId !== previousLocation) {
+        console.log(`Globe navigation: Location changed to ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
+        setPreviousLocation(locationId);
+      }
+    }
+  }, [selectedLocation, previousLocation]);
 
   // Handle location changes
   useEffect(() => {
@@ -59,17 +73,19 @@ export function useGlobeNavigation(
       globeAPIAvailable: !!globeAPI,
       isInitialized,
       globalInitialized: globeAPI?.isInitialized,
-      hasFlightMethod: !!globeAPI?.flyToLocation
+      hasFlightMethod: !!globeAPI?.flyToLocation,
+      coordinates: [selectedLocation.y, selectedLocation.x]
     });
     
     // Validate the location
     if (!validateLocation(selectedLocation)) {
+      console.error("Invalid location data:", selectedLocation);
       return;
     }
     
     // Try to navigate - if the API looks ready
     if (isInitialized && globeAPI.flyToLocation) {
-      console.log(`ThreeGlobe: Attempting to fly to ${selectedLocation.label}`);
+      console.log(`ThreeGlobe: Attempting to fly to ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
       flyToLocation(selectedLocation, globeAPI);
     } else {
       console.log("Globe API not fully ready or not initialized yet");

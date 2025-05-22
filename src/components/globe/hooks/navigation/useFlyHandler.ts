@@ -1,116 +1,95 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Location } from '@/utils/geo-utils';
-import { createMarkerPosition } from '@/utils/globe-utils';
 import { toast } from '@/components/ui/use-toast';
 
-/**
- * Custom hook to handle flying to a location on the globe
- */
-export function useFlyHandler(
-  onFlyComplete?: () => void
-) {
+export function useFlyHandler(onFlyComplete?: () => void) {
   const [isFlying, setIsFlying] = useState(false);
-  const [selectedLocationLabel, setSelectedLocationLabel] = useState<string>('');
+  const [selectedLocationLabel, setSelectedLocationLabel] = useState<string | null>(null);
   const lastFlyLocationRef = useRef<string | null>(null);
-  const flyCompletionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const flyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUnmountedRef = useRef(false);
-  const navigationAttemptsRef = useRef<number>(0);
-  const maxNavigationAttempts = 5;
-
-  // Safe fly completion handler that checks component mount state
-  const handleFlyComplete = useCallback(() => {
-    if (isUnmountedRef.current) return;
-    
-    console.log("ThreeGlobe: Fly animation complete, notifying parent");
-    setIsFlying(false);
-    
-    // Reset navigation attempts on successful completion
-    navigationAttemptsRef.current = 0;
-    
-    // Cancel any pending completion timer
-    if (flyCompletionTimerRef.current !== null) {
-      clearTimeout(flyCompletionTimerRef.current);
+  
+  // Function to fly to a specified location
+  const flyToLocation = useCallback((
+    location: Location, 
+    globeAPI: any
+  ) => {
+    // Skip if already flying to this location
+    if (isFlying && location.id === lastFlyLocationRef.current) {
+      console.log(`Already flying to ${location.label}, skipping duplicate request`);
+      return;
     }
     
-    // Set a small delay to ensure animation is fully complete
-    flyCompletionTimerRef.current = setTimeout(() => {
-      if (isUnmountedRef.current) return;
-      
-      if (onFlyComplete) {
-        console.log("ThreeGlobe: Calling onFlyComplete callback with slight delay");
-        onFlyComplete();
-      }
-      flyCompletionTimerRef.current = null;
-    }, 200);
-  }, [onFlyComplete]);
-
-  // Navigate to a location
-  const flyToLocation = useCallback((location: Location, api: any): boolean => {
-    if (!location || !api || !api.flyToLocation) {
-      console.log("Cannot navigate: missing location or globe API");
-      return false;
+    // Validate that the flyToLocation method exists on the API
+    if (!globeAPI || typeof globeAPI.flyToLocation !== 'function') {
+      console.error('Globe API missing flyToLocation method');
+      return;
     }
     
-    // Increment navigation attempts
-    navigationAttemptsRef.current++;
-    
-    // Check if we've tried too many times
-    if (navigationAttemptsRef.current > maxNavigationAttempts) {
-      console.log(`Exceeded max navigation attempts (${maxNavigationAttempts}) for ${location.label}`);
-      toast({
-        title: "Navigation Aborted",
-        description: "Too many navigation attempts, please try again later",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
+    // Start flight
     setIsFlying(true);
     setSelectedLocationLabel(location.label);
     lastFlyLocationRef.current = location.id;
     
-    // Show a toast to inform the user about navigation
-    toast({
-      title: "Navigating to location",
-      description: `Flying to ${location.label}`,
-      duration: 3000
-    });
+    console.log(`Flying to ${location.label} at coordinates [${location.y}, ${location.x}]`);
     
-    // Clear any previous markers first
-    if (api.clearMarkers) {
-      api.clearMarkers();
-      console.log("Cleared all markers from the globe");
+    try {
+      // Call API method to fly to location
+      globeAPI.flyToLocation(location.x, location.y, () => {
+        if (isUnmountedRef.current) return;
+        
+        console.log(`Fly to ${location.label} completed`);
+        
+        // Clear flying state
+        setIsFlying(false);
+        setSelectedLocationLabel(null);
+        
+        // Call completion callback if provided
+        if (onFlyComplete) {
+          console.log("Calling onFlyComplete callback");
+          onFlyComplete();
+        }
+        
+        // Show toast notification
+        toast({
+          title: "Navigation Complete",
+          description: `Arrived at ${location.label}`,
+          duration: 3000
+        });
+      });
+    } catch (err) {
+      console.error("Error during flyToLocation:", err);
+      setIsFlying(false);
+      setSelectedLocationLabel(null);
     }
     
-    // Calculate marker position 
-    const markerPosition = createMarkerPosition(location, 1.01); // Slightly above globe surface
+    // Add a safety timeout to avoid getting stuck in flying state
+    if (flyTimeoutRef.current) {
+      clearTimeout(flyTimeoutRef.current);
+    }
     
-    // Fly to the location - Y is latitude, X is longitude
-    console.log(`EnhancedFlyToLocation: Flying to coordinates [${location.y}, ${location.x}]`);
-    
-    // Make the actual call to fly to location
-    api.flyToLocation(location.x, location.y, handleFlyComplete);
-    
-    // Add marker after a slight delay
-    setTimeout(() => {
-      if (!isUnmountedRef.current && api.addMarker) {
-        console.log(`Adding marker for ${location.label}`);
-        api.addMarker(location.id, markerPosition, location.label);
+    flyTimeoutRef.current = setTimeout(() => {
+      if (isUnmountedRef.current) return;
+      
+      if (isFlying) {
+        console.log("Fly timeout triggered - forcing completion");
+        setIsFlying(false);
+        setSelectedLocationLabel(null);
+        
+        if (onFlyComplete) {
+          onFlyComplete();
+        }
       }
-    }, 300);
-    
-    return true;
-  }, [handleFlyComplete]);
+    }, 8000); // 8 second safety timeout
+  }, [isFlying, onFlyComplete]);
 
-  // Clean up function for component unmount
   const cleanup = useCallback(() => {
     isUnmountedRef.current = true;
-    lastFlyLocationRef.current = null;
-    navigationAttemptsRef.current = 0;
     
-    if (flyCompletionTimerRef.current !== null) {
-      clearTimeout(flyCompletionTimerRef.current);
+    if (flyTimeoutRef.current) {
+      clearTimeout(flyTimeoutRef.current);
+      flyTimeoutRef.current = null;
     }
   }, []);
 

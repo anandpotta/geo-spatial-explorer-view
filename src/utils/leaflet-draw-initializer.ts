@@ -77,38 +77,47 @@ export const initializeLeafletDrawComplete = () => {
     try {
       console.warn("Creating stub for L.Control.Draw");
       
-      // Create a class that extends L.Control
+      // Define missing members before creating the class
+      interface DrawControlOptions {
+        featureGroup?: L.FeatureGroup;
+        draw?: any;
+        edit?: any;
+        position?: string;
+      }
+      
+      // Create a proper Draw class
       L.Control.Draw = class Draw extends L.Control {
-        options: any;
-        
-        constructor(options: any) {
+        constructor(options?: DrawControlOptions) {
           super();
-          this.options = options || {};
+          // Use L.setOptions instead of direct assignment
+          L.Util.setOptions(this, options || {});
           console.log("Draw control initialized with options:", options);
         }
         
-        // Define methods using prototype approach to avoid TypeScript errors
-        onAdd(map: L.Map) {
+        // Define required methods
+        onAdd(map: L.Map): HTMLElement {
           const container = L.DomUtil.create('div', 'leaflet-draw');
           console.log("Draw control added to map");
           return container;
         }
         
-        onRemove() {
+        onRemove(): void {
           console.log("Draw control removed from map");
         }
         
-        setDrawingOptions(options: any) {
+        setDrawingOptions(options: any): this {
           console.log("Setting drawing options:", options);
-          this.options = { ...this.options, ...options };
+          if (options && this.options) {
+            this.options = { ...this.options, ...options };
+          }
           return this;
         }
       };
       
-      // Add initialize method to prototype
+      // Make sure initialize is properly defined
       (L.Control.Draw.prototype as any).initialize = function(options: any) {
-        L.setOptions(this, options);
-        console.log("Draw control initialized");
+        L.Util.setOptions(this, options);
+        console.log("Draw control initialized with options via initialize");
         return this;
       };
       

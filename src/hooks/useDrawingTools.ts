@@ -49,24 +49,24 @@ export function useDrawingTools(
         circlemarker: false
       };
       
-      // Create drawing control with proper edit options
-      const editOptions: any = {
+      // Create drawing control with properly typed edit options
+      const edit: any = {
         featureGroup: featureGroup
       };
       
       // Only set edit properties when active
       if (activeTool === 'edit') {
-        editOptions.edit = true;
+        edit.edit = {};
       }
       
       if (activeTool === 'delete') {
-        editOptions.remove = true;
+        edit.remove = {};
       }
       
       const drawControl = new L.Control.Draw({
         position: 'topright',
         draw: drawOptions,
-        edit: editOptions
+        edit: edit
       });
       
       // Add to map
