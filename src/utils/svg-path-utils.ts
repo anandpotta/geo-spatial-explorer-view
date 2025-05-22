@@ -152,6 +152,26 @@ export const clearAllMapSvgElements = (map: any): void => {
       });
     });
     
+    // Clear the vector layers
+    const vectorPane = container.querySelector('.leaflet-vector-pane');
+    if (vectorPane) {
+      while (vectorPane.firstChild) {
+        vectorPane.removeChild(vectorPane.firstChild);
+      }
+    }
+    
+    // Reset all paths in the map object directly
+    if (map._pathRoot) {
+      while (map._pathRoot.firstChild) {
+        map._pathRoot.removeChild(map._pathRoot.firstChild);
+      }
+    }
+    
+    // Force a map redraw
+    if (typeof map._updatePathViewport === 'function') {
+      map._updatePathViewport();
+    }
+    
     // Trigger events to notify components
     console.log('Dispatching SVG paths cleared events');
     window.dispatchEvent(new Event('svgPathsCleared'));
@@ -160,4 +180,3 @@ export const clearAllMapSvgElements = (map: any): void => {
     console.error('Error clearing SVG elements from map:', err);
   }
 };
-

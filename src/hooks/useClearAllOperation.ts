@@ -19,8 +19,6 @@ export function useClearAllOperation(onClearAll?: () => void) {
       }
     };
     
-    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
-    
     // Handle Leaflet Draw specific clear all action
     const handleLeafletClearAction = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -56,6 +54,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
     
     // Capture all click events to detect Leaflet clear action
     document.addEventListener('click', handleLeafletClearAction, true);
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
       window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
