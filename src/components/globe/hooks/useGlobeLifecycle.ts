@@ -15,7 +15,11 @@ export function useGlobeLifecycle(
   // Use the globe hook
   const globeAPI = useThreeGlobe(containerRef, () => {
     console.log("GlobeLifecycle: Three.js globe initialized event received");
-    setIsInitialized(true);
+    
+    // Only set initialized if not already true to prevent infinite loops
+    if (!isInitialized) {
+      setIsInitialized(true);
+    }
     
     // Clear any pending timeout
     if (initTimeoutRef.current) {
@@ -33,9 +37,14 @@ export function useGlobeLifecycle(
   
   // Setup initialization timeout with progressive backoff
   useEffect(() => {
+    // Skip setting up initialization if already initialized
+    if (isInitialized) {
+      return;
+    }
+    
     // Reset the initialization flag when retrying
     if (initAttemptRef.current > 0) {
-      setIsInitialized(false);
+      // We don't set isInitialized here to avoid infinite loops
       readyFiredRef.current = false;
     }
     
@@ -65,9 +74,9 @@ export function useGlobeLifecycle(
     };
   }, [containerRef.current, isInitialized, onError]);
   
-  // Check if globe is ready on textures loaded
+  // Check if globe is ready on textures loaded - only run once
   useEffect(() => {
-    if (globeAPI && globeAPI.globe && !isInitialized) {
+    if (globeAPI && globeAPI.globe && !isInitialized && !readyFiredRef.current) {
       console.log("GlobeLifecycle: Globe object detected, setting initialized flag");
       setIsInitialized(true);
       

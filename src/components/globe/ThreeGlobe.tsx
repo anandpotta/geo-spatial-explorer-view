@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useGlobeLifecycle } from './hooks/useGlobeLifecycle';
 import { useGlobeNavigation } from './hooks/useGlobeNavigation';
@@ -38,8 +38,8 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     }
   }, [selectedLocation]);
   
-  // Handle globe initialization errors
-  const handleGlobeError = (error: Error) => {
+  // Handle globe initialization errors with useCallback to prevent recreating on every render
+  const handleGlobeError = useCallback((error: Error) => {
     console.error("ThreeGlobe initialization error:", error);
     
     if (initRetries < 2) {
@@ -54,17 +54,17 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
       // After retries, report the error to parent
       onError(error);
     }
-  };
+  }, [initRetries, onError]);
   
-  // Handle successful initialization
-  const handleGlobeReady = (viewer?: any) => {
+  // Handle successful initialization with useCallback
+  const handleGlobeReady = useCallback((viewer?: any) => {
     console.log("ThreeGlobe: Globe initialized successfully", !!viewer);
     setWaitingForInit(false);
     
     if (onMapReady) {
       onMapReady(viewer);
     }
-  };
+  }, [onMapReady]);
   
   // Use custom hooks to handle globe lifecycle and navigation
   const { isInitialized, globeAPI } = useGlobeLifecycle(
@@ -79,20 +79,23 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     onFlyComplete
   );
 
-  // Only attempt to fly when globe is properly initialized
+  // Only attempt to fly when globe is properly initialized - with useCallback to prevent recreation
+  const initiateFlightIfReady = useCallback(() => {
+    if (!globeAPI || !isInitialized || !selectedLocation) return;
+    
+    console.log(`ThreeGlobe: Flying to location ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
+    globeAPI.flyToLocation(selectedLocation.x, selectedLocation.y, onFlyComplete);
+  }, [globeAPI, isInitialized, selectedLocation, onFlyComplete]);
+  
+  // Use effect with proper dependencies
   useEffect(() => {
     if (!globeAPI || !isInitialized || !selectedLocation) return;
     
     // Add a small delay to ensure the scene is fully rendered
-    const timer = setTimeout(() => {
-      if (globeAPI && isInitialized && selectedLocation) {
-        console.log(`ThreeGlobe: Flying to location ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
-        globeAPI.flyToLocation(selectedLocation.x, selectedLocation.y, onFlyComplete);
-      }
-    }, 300);
+    const timer = setTimeout(initiateFlightIfReady, 300);
     
     return () => clearTimeout(timer);
-  }, [globeAPI, isInitialized, selectedLocation, onFlyComplete]);
+  }, [initiateFlightIfReady, globeAPI, isInitialized, selectedLocation]);
 
   return (
     <div 
