@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useGlobeLifecycle } from './hooks/useGlobeLifecycle';
 import { useGlobeNavigation } from './hooks/useGlobeNavigation';
@@ -18,6 +18,20 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
 }) => {
   // Container reference for the Three.js canvas
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Track selected location for change detection
+  const prevLocationRef = useRef<string | null>(null);
+  
+  // Log when selected location changes
+  useEffect(() => {
+    if (selectedLocation) {
+      const locationId = selectedLocation.id;
+      if (prevLocationRef.current !== locationId) {
+        console.log(`ThreeGlobe: Location selection changed to ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
+        prevLocationRef.current = locationId;
+      }
+    }
+  }, [selectedLocation]);
   
   // Use custom hooks to handle globe lifecycle and navigation
   const { isInitialized } = useGlobeLifecycle(containerRef, onMapReady);

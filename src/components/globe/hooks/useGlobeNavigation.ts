@@ -15,6 +15,7 @@ export function useGlobeNavigation(
   const lastFlyLocationRef = useRef<string | null>(null);
   const flyCompletionTimerRef = useRef<number | null>(null);
   const isUnmountedRef = useRef(false);
+  const initializationTimerRef = useRef<number | null>(null);
   
   // Create a dummy ref for useThreeGlobe since we're just accessing the global API
   const dummyContainerRef = useRef<HTMLDivElement>(null);
@@ -46,22 +47,99 @@ export function useGlobeNavigation(
   // Get the globe API - pass dummyContainerRef to satisfy the function signature
   const globeAPI = useThreeGlobe(dummyContainerRef);
 
+  // Set up an initialization timer to retry initialization if needed
+  useEffect(() => {
+    console.log("ThreeGlobe: Setting up initialization check timer");
+    
+    initializationTimerRef.current = window.setTimeout(() => {
+      if (globeAPI && !isFlying && selectedLocation) {
+        console.log("ThreeGlobe: Initialization check - attempting navigation if needed");
+        
+        // Force attempt navigation after delay if globe is available but not marked as initialized
+        const locationId = selectedLocation.id;
+        if (locationId !== lastFlyLocationRef.current && globeAPI.flyToLocation) {
+          console.log(`ThreeGlobe: Forced navigation attempt to ${selectedLocation.label}`);
+          handleLocationNavigation(selectedLocation, globeAPI);
+        }
+      }
+    }, 3000); // Wait 3 seconds before trying forced navigation
+    
+    return () => {
+      if (initializationTimerRef.current !== null) {
+        clearTimeout(initializationTimerRef.current);
+      }
+    };
+  }, [selectedLocation, globeAPI, isFlying]);
+
+  // Separate function to handle location navigation to avoid code duplication
+  const handleLocationNavigation = (location: Location, api: any) => {
+    if (!location || !api || !api.flyToLocation) {
+      console.log("Cannot navigate: missing location or globe API");
+      return false;
+    }
+    
+    setIsFlying(true);
+    setSelectedLocationLabel(location.label);
+    lastFlyLocationRef.current = location.id;
+    
+    // Show a toast to inform the user about navigation
+    toast({
+      title: "Navigating to location",
+      description: `Flying to ${location.label}`,
+      duration: 3000
+    });
+    
+    // Clear any previous markers first
+    if (api.clearMarkers) {
+      api.clearMarkers();
+      console.log("Cleared all markers from the globe");
+    }
+    
+    // Calculate marker position 
+    const markerPosition = createMarkerPosition(location, 1.01); // Slightly above globe surface
+    
+    // Fly to the location - Y is latitude, X is longitude
+    console.log(`EnhancedFlyToLocation: Flying to coordinates [${location.y}, ${location.x}]`);
+    
+    // Make the actual call to fly to location
+    api.flyToLocation(location.x, location.y, handleFlyComplete);
+    
+    // Add marker after a slight delay
+    setTimeout(() => {
+      if (!isUnmountedRef.current && api.addMarker) {
+        console.log(`Adding marker for ${location.label}`);
+        api.addMarker(location.id, markerPosition, location.label);
+      }
+    }, 300);
+    
+    return true;
+  };
+
   // Handle location changes
   useEffect(() => {
-    if (!selectedLocation || !globeAPI || !isInitialized) {
-      console.log("Globe navigation: Missing requirements", { 
-        hasLocation: !!selectedLocation, 
-        hasGlobeAPI: !!globeAPI, 
-        isInitialized 
-      });
+    if (!selectedLocation) {
+      console.log("Globe navigation: No location selected");
       return;
     }
     
-    // Make sure the globe API is initialized
-    if (!globeAPI.isInitialized) {
-      console.log("Globe API not fully initialized yet, skipping navigation");
+    if (!globeAPI) {
+      console.log("Globe navigation: Globe API not available yet");
       return;
     }
+    
+    // If we're already flying to this location, don't start another flight
+    const locationId = selectedLocation.id;
+    if (locationId === lastFlyLocationRef.current && isFlying) {
+      console.log(`ThreeGlobe: Already flying to ${selectedLocation.label}, skipping duplicate navigation`);
+      return;
+    }
+    
+    console.log(`ThreeGlobe: Received navigation request to ${selectedLocation.label}`, {
+      globeAPIAvailable: !!globeAPI,
+      isInitialized,
+      globalInitialized: globeAPI?.isInitialized,
+      hasFlightMethod: !!globeAPI?.flyToLocation
+    });
     
     // Validate the coordinates first
     if (typeof selectedLocation.x !== 'number' || 
@@ -77,46 +155,25 @@ export function useGlobeNavigation(
       return;
     }
     
-    // Prevent duplicate fly operations for the same location
-    const locationId = selectedLocation.id;
-    if (locationId === lastFlyLocationRef.current && isFlying) {
-      console.log("ThreeGlobe: Skipping duplicate location selection:", locationId);
-      return;
+    // Try to navigate - if the API looks ready
+    if (globeAPI.flyToLocation) {
+      console.log(`ThreeGlobe: Attempting to fly to ${selectedLocation.label}`);
+      handleLocationNavigation(selectedLocation, globeAPI);
+    } else {
+      console.log("Globe API not fully ready - flyToLocation method missing");
+      
+      // Set a retry timer for this specific location
+      setTimeout(() => {
+        if (isUnmountedRef.current) return;
+        
+        // Only retry if we haven't navigated to this location yet
+        if (lastFlyLocationRef.current !== locationId && globeAPI && globeAPI.flyToLocation) {
+          console.log(`ThreeGlobe: Retry navigation to ${selectedLocation.label}`);
+          handleLocationNavigation(selectedLocation, globeAPI);
+        }
+      }, 1500);
     }
-    
-    console.log(`ThreeGlobe: Flying to location: ${selectedLocation.label} at coordinates [${selectedLocation.x}, ${selectedLocation.y}]`);
-    setIsFlying(true);
-    setSelectedLocationLabel(selectedLocation.label);
-    lastFlyLocationRef.current = locationId;
-    
-    // Show a toast to inform the user about navigation
-    toast({
-      title: "Navigating to location",
-      description: `Flying to ${selectedLocation.label}`,
-      duration: 3000
-    });
-    
-    // Clear any previous markers first
-    if (globeAPI.clearMarkers) {
-      globeAPI.clearMarkers();
-      console.log("Cleared all markers from the globe");
-    }
-    
-    // Calculate marker position 
-    const markerPosition = createMarkerPosition(selectedLocation, 1.01); // Slightly above globe surface
-    
-    // Fly to the location - Y is latitude, X is longitude
-    console.log(`EnhancedFlyToLocation: Flying to coordinates [${selectedLocation.y}, ${selectedLocation.x}]`);
-    globeAPI.flyToLocation(selectedLocation.x, selectedLocation.y, handleFlyComplete);
-    
-    // Add marker after a slight delay
-    setTimeout(() => {
-      if (!isUnmountedRef.current && globeAPI.addMarker) {
-        console.log(`Adding marker for ${selectedLocation.label}`);
-        globeAPI.addMarker(selectedLocation.id, markerPosition, selectedLocation.label);
-      }
-    }, 300);
-  }, [selectedLocation, globeAPI, isFlying, isInitialized, globeAPI?.isInitialized]);
+  }, [selectedLocation, globeAPI, isFlying, isInitialized]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -126,6 +183,10 @@ export function useGlobeNavigation(
       
       if (flyCompletionTimerRef.current !== null) {
         clearTimeout(flyCompletionTimerRef.current);
+      }
+      
+      if (initializationTimerRef.current !== null) {
+        clearTimeout(initializationTimerRef.current);
       }
       
       // Ensure any ongoing flights are canceled
@@ -140,3 +201,4 @@ export function useGlobeNavigation(
     selectedLocationLabel
   };
 }
+
