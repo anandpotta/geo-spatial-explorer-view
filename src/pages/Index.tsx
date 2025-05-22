@@ -31,9 +31,11 @@ const Index = () => {
     console.log('Map is ready');
     
     // If we have a location and we're in leaflet view, trigger a refresh
-    if (selectedLocation && currentView === 'leaflet') {
+    if (selectedLocation && currentView === 'leaflet' && leafletMapRef.current) {
       setTimeout(() => {
-        leafletRefreshTrigger + 1;
+        if (leafletMapRef.current && leafletMapRef.current.invalidateSize) {
+          leafletMapRef.current.invalidateSize(true);
+        }
       }, 300);
     }
   };
@@ -63,6 +65,7 @@ const Index = () => {
         onLocationSelect={handleLocationSelect}
         handleCesiumViewerRef={handleCesiumViewerRef}
         handleLeafletMapRef={handleLeafletMapRef}
+        flyCompleted={flyCompleted}
         key={`${mapKey}-${currentView}-${leafletRefreshTrigger}`} // Force recreation with current view and refresh trigger
       />
     </div>

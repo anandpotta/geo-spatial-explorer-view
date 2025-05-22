@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import LeafletMap from '../../../map/LeafletMap';
 
@@ -24,6 +24,30 @@ const LeafletViewContainer: React.FC<LeafletViewContainerProps> = ({
   mapKey,
   onClearAll
 }) => {
+  const [isMapReady, setIsMapReady] = useState(false);
+  
+  // Reset map ready state when mapKey changes
+  useEffect(() => {
+    setIsMapReady(false);
+  }, [mapKey]);
+  
+  // Handle map ready event
+  const handleMapReady = (map: any) => {
+    setIsMapReady(true);
+    if (onMapReady) {
+      onMapReady(map);
+    }
+    
+    // Force map invalidation after a short delay to ensure proper rendering
+    if (map) {
+      setTimeout(() => {
+        if (map.invalidateSize) {
+          map.invalidateSize(true);
+        }
+      }, 300);
+    }
+  };
+  
   // Get styles for the container
   const getStyles = (): React.CSSProperties => {
     const oppositeIsCurrentView = !isCurrentView;
@@ -68,10 +92,11 @@ const LeafletViewContainer: React.FC<LeafletViewContainerProps> = ({
     >
       <LeafletMap 
         selectedLocation={selectedLocation} 
-        onMapReady={onMapReady}
+        onMapReady={handleMapReady}
         activeTool={activeTool}
         key={`leaflet-${mapKey}`}
         onClearAll={onClearAll}
+        isMapReady={isMapReady}
       />
     </div>
   );

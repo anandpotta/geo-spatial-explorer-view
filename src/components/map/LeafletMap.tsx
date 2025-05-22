@@ -9,17 +9,19 @@ import L from 'leaflet';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
-  onMapReady: (map: any) => void;
+  onMapReady?: (map: L.Map) => void;
   activeTool?: string | null;
   onClearAll?: () => void;
+  isMapReady?: boolean; // Add this new prop
 }
 
-const LeafletMap = ({ 
-  selectedLocation, 
+const LeafletMap: React.FC<LeafletMapProps> = ({
+  selectedLocation,
   onMapReady,
-  activeTool,
-  onClearAll
-}: LeafletMapProps) => {
+  activeTool = null,
+  onClearAll,
+  isMapReady: parentIsMapReady = false // Add this new prop with default value
+}) => {
   const { 
     mapRef,
     mapInstanceKey,
@@ -33,7 +35,7 @@ const LeafletMap = ({
   const [viewStable, setViewStable] = useState(false);
   
   // Use our enhanced useLocationSync hook to handle location changes
-  useLocationSync(mapRef.current, selectedLocation, isMapReady && viewStable);
+  useLocationSync(mapRef.current, selectedLocation, parentIsMapReady);
   
   const [position, setPosition] = useState<[number, number]>([0, 0]);
   const [zoom, setZoom] = useState<number>(2);

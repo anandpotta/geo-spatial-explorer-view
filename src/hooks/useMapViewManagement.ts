@@ -17,6 +17,7 @@ export function useMapViewManagement(
   const viewTransitionInProgressRef = useRef(false);
   const viewChangeInProgressRef = useRef(false);
   const preventRapidChangeTimerRef = useRef<number | null>(null);
+  const lastSelectedLocationRef = useRef<Location | undefined>(undefined);
 
   // Handle actual view change with state updates
   const changeView = (view: MapView) => {
@@ -72,6 +73,7 @@ export function useMapViewManagement(
     // Force map refresh when switching to leaflet with location
     if (view === 'leaflet' && selectedLocation) {
       setMapKey(Date.now());
+      lastSelectedLocationRef.current = selectedLocation;
       
       // Trigger leaflet refresh after a small delay
       setTimeout(() => {
@@ -109,6 +111,7 @@ export function useMapViewManagement(
         
         // Force map refresh to ensure proper positioning
         setMapKey(Date.now());
+        lastSelectedLocationRef.current = selectedLocation;
         changeView('leaflet');
         
         // Add a small delay then trigger a Leaflet refresh
@@ -144,6 +147,7 @@ export function useMapViewManagement(
     mapKey,
     leafletRefreshTrigger,
     viewChangeInProgressRef,
-    handleViewChange
+    handleViewChange,
+    lastSelectedLocationRef
   };
 }
