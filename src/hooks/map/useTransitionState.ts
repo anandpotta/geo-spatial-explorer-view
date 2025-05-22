@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Location } from '@/utils/geo-utils';
 
@@ -8,16 +8,32 @@ export function useTransitionState(
   selectedLocation?: Location
 ) {
   const [viewTransitionInProgress, setViewTransitionInProgress] = useState(false);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const startTransition = () => {
+  const startTransition = useCallback(() => {
+    console.log('Starting view transition');
     setViewTransitionInProgress(true);
-  };
+    
+    // Clear any existing transition timeout
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+  }, []);
   
-  const endTransition = () => {
-    setViewTransitionInProgress(false);
-  };
+  const endTransition = useCallback(() => {
+    // Use a timeout to ensure the transition has enough time to complete
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+    
+    transitionTimeoutRef.current = setTimeout(() => {
+      console.log('Ending view transition');
+      setViewTransitionInProgress(false);
+      transitionTimeoutRef.current = null;
+    }, 600);
+  }, []);
   
-  const showViewReadyToast = () => {
+  const showViewReadyToast = useCallback(() => {
     if (!viewTransitionInProgress) {
       if (currentView === 'cesium') {
         toast({
@@ -43,12 +59,21 @@ export function useTransitionState(
         }
       }
     }
-  };
+  }, [currentView, selectedLocation, viewTransitionInProgress]);
+
+  // Cleanup on unmount
+  const cleanup = useCallback(() => {
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+  }, []);
 
   return {
     viewTransitionInProgress,
     startTransition,
     endTransition,
-    showViewReadyToast
+    showViewReadyToast,
+    cleanup
   };
 }

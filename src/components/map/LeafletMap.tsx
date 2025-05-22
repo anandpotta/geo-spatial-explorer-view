@@ -38,6 +38,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const mapInitializedRef = useRef(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const forceTileRefreshRef = useRef<NodeJS.Timeout | null>(null);
+  const onMapReadyCalledRef = useRef(false);
+  const mapReadyRetryCountRef = useRef(0);
+  const maxMapReadyRetries = 5;
   
   // Ensure the map resizes properly when container changes
   useEffect(() => {
@@ -109,25 +112,38 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           
           // If there's an existing tile layer, remove and re-add it
           if (tileLayerRef.current) {
-            const currentZoom = map.getZoom();
-            const currentCenter = map.getCenter();
-            
-            map.removeLayer(tileLayerRef.current);
-            
-            // Create and add a new tile layer
-            const newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '&copy; OpenStreetMap contributors',
-              maxZoom: 19
-            }).addTo(map);
-            
-            tileLayerRef.current = newTileLayer;
-            
-            // Reset view to ensure tiles load properly
-            setTimeout(() => {
-              if (map && isMapValid(map)) {
-                map.setView(currentCenter, currentZoom, { animate: false });
-              }
-            }, 100);
+            try {
+              const currentZoom = map.getZoom();
+              const currentCenter = map.getCenter();
+              
+              map.removeLayer(tileLayerRef.current);
+              
+              // Create and add a new tile layer
+              const newTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19
+              }).addTo(map);
+              
+              tileLayerRef.current = newTileLayer;
+              
+              // Reset view to ensure tiles load properly
+              setTimeout(() => {
+                if (map && isMapValid(map)) {
+                  try {
+                    // Check if map panes are initialized before setting view
+                    if (map.getPane('mapPane') && (map.getPane('mapPane') as any)._leaflet_pos) {
+                      map.setView(currentCenter, currentZoom, { animate: false });
+                    } else {
+                      console.log('Map panes not ready for setView');
+                    }
+                  } catch (e) {
+                    console.error('Error in setView:', e);
+                  }
+                }
+              }, 100);
+            } catch (e) {
+              console.error('Error refreshing tiles:', e);
+            }
           }
         }
       } catch (error) {
@@ -146,6 +162,68 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       clearInterval(periodicRefreshInterval);
     };
   }, [mapRef.current, isMapReady]);
+  
+  // Monitor map readiness and call onMapReady callback
+  useEffect(() => {
+    const triggerMapReady = () => {
+      if (!mapRef.current || onMapReadyCalledRef.current) {
+        return;
+      }
+      
+      try {
+        // Check if map is valid before calling onMapReady
+        if (isMapValid(mapRef.current)) {
+          console.log('Map is valid, calling onMapReady');
+          
+          // Mark as ready
+          onMapReadyCalledRef.current = true;
+          
+          // Call onMapReady callback
+          if (onMapReady) {
+            setTimeout(() => {
+              if (mapRef.current && isMapValid(mapRef.current)) {
+                console.log('Calling onMapReady from LeafletMap');
+                onMapReady(mapRef.current);
+              }
+            }, 100);
+          }
+        } else {
+          // If map is not valid yet and we haven't exceeded max retries, try again
+          if (mapReadyRetryCountRef.current < maxMapReadyRetries) {
+            mapReadyRetryCountRef.current++;
+            console.log(`Map not valid yet, retry ${mapReadyRetryCountRef.current}/${maxMapReadyRetries}`);
+            
+            // Try to invalidate the map size
+            if (mapRef.current) {
+              try {
+                mapRef.current.invalidateSize(true);
+              } catch (e) {
+                console.warn('Error invalidating map size:', e);
+              }
+            }
+            
+            // Try again after a delay
+            setTimeout(triggerMapReady, 500);
+          } else {
+            console.warn('Max map ready retries reached');
+          }
+        }
+      } catch (err) {
+        console.error('Error checking map validity:', err);
+      }
+    };
+    
+    // Start monitoring map readiness when map ref changes
+    if (mapRef.current && !onMapReadyCalledRef.current) {
+      mapReadyRetryCountRef.current = 0;
+      setTimeout(triggerMapReady, 300);
+    }
+    
+    return () => {
+      // Reset when component unmounts or map ref changes
+      mapReadyRetryCountRef.current = 0;
+    };
+  }, [mapRef.current, onMapReady]);
   
   // Force tile refreshes periodically when preloaded to ensure they load properly
   useEffect(() => {
@@ -193,16 +271,33 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       mapInitializedRef.current = true;
       console.log("Initializing Leaflet map with preload =", preload);
       
+      // Create map without trying to center or zoom yet
       const map = L.map(element, {
-        center: selectedLocation ? [selectedLocation.y, selectedLocation.x] : [0, 0],
-        zoom: selectedLocation ? 16 : 2,
         zoomControl: false,
         attributionControl: true,
         minZoom: 1,
         maxZoom: 19,
         fadeAnimation: true,
-        zoomAnimation: true
+        zoomAnimation: true,
+        markerZoomAnimation: true
       });
+      
+      // Set initial view after map creation
+      try {
+        if (selectedLocation) {
+          map.setView([selectedLocation.y, selectedLocation.x], 16);
+        } else {
+          map.setView([0, 0], 2);
+        }
+      } catch (e) {
+        console.warn('Error setting initial view:', e);
+        // Default fallback
+        try {
+          map.setView([0, 0], 2);
+        } catch (e2) {
+          console.error('Error setting fallback view:', e2);
+        }
+      }
       
       // Add tile layer with optimizations for initial loading
       const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -223,6 +318,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       // Store the map reference
       handleSetMapRef(map);
       
+      // Reset flags
+      onMapReadyCalledRef.current = false;
+      
       // Force a map redraw after initialization
       setTimeout(() => {
         if (map && isMapValid(map)) {
@@ -235,50 +333,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       // Notify that map is ready sooner
       setLoading(false);
       
-      // Trigger onMapReady callback only once
-      if (!isReadyRef.current) {
-        isReadyRef.current = true;
-        
-        // Small delay to ensure map is properly rendered
-        setTimeout(() => {
-          if (onMapReady) {
-            console.log('Calling onMapReady from LeafletMap');
-            onMapReady(map);
-          }
-          
-          // Additional invalidate after onMapReady for better rendering
-          if (map && isMapValid(map)) {
-            map.invalidateSize(true);
-            
-            // Force tile loading by triggering pan
-            setTimeout(() => {
-              try {
-                const center = map.getCenter();
-                map.panTo([center.lat + 0.0001, center.lng + 0.0001]);
-                setTimeout(() => map.panTo(center), 100);
-                toast.success("Map tiles loaded", { id: "map-tiles-loaded", duration: 2000 });
-              } catch (err) {
-                console.error("Error during map pan:", err);
-              }
-            }, 500);
-          }
-        }, preload ? 100 : 50);
+      // Additional invalidate after initialization
+      if (map && isMapValid(map)) {
+        map.invalidateSize(true);
       }
-      
-      // Safely check if map is still valid before final invalidation
-      const invalidateMapSafely = () => {
-        if (map && isMapValid(map)) {
-          try {
-            map.invalidateSize(true);
-            console.log('Final map invalidation completed');
-          } catch (err) {
-            console.log('Map container removed before final invalidation');
-          }
-        }
-      };
-      
-      // Final map invalidation for proper sizing with delay to ensure DOM is ready
-      setTimeout(invalidateMapSafely, 300);
     } catch (err) {
       console.error("Map initialization error:", err);
       setMapError(`Failed to initialize map: ${err.message}`);
@@ -292,6 +350,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       isReadyRef.current = false;
       mapInitializedRef.current = false;
       tileLayerRef.current = null;
+      onMapReadyCalledRef.current = false;
       
       // Clear any refresh timers
       if (forceTileRefreshRef.current) {

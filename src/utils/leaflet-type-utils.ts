@@ -17,6 +17,11 @@ export function isMapValid(map: any): map is L.Map {
       return false;
     }
     
+    // Check if the map has been destroyed
+    if ((map as any)._isDestroyed === true) {
+      return false;
+    }
+    
     // For maximum safety, check that map has core Leaflet methods
     return typeof map.setView === 'function' && 
            typeof map.addLayer === 'function' && 
@@ -51,5 +56,38 @@ export function getMapFromLayer(layer: L.Layer | null): L.Map | null {
   } catch (err) {
     console.error("Error getting map from layer:", err);
     return null;
+  }
+}
+
+/**
+ * Checks if the map pane is initialized and ready for operations
+ */
+export function isMapPaneReady(map: L.Map | null): boolean {
+  if (!map) return false;
+  
+  try {
+    // Check if map is valid first
+    if (!isMapValid(map)) return false;
+    
+    // Check if map pane exists and has position
+    const mapPane = map.getPane('mapPane');
+    return !!(mapPane && (mapPane as any)._leaflet_pos);
+  } catch (err) {
+    console.warn('Error checking map pane readiness:', err);
+    return false;
+  }
+}
+
+/**
+ * Safe operation wrapper to protect against Leaflet errors
+ */
+export function safeMapOperation<T>(map: L.Map | null, operation: (map: L.Map) => T, fallback: T): T {
+  if (!map || !isMapValid(map)) return fallback;
+  
+  try {
+    return operation(map);
+  } catch (err) {
+    console.warn(`Map operation failed: ${err.message}`);
+    return fallback;
   }
 }
