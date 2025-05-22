@@ -50,16 +50,23 @@ export function useDrawingTools(
       };
       
       // Create drawing control with proper edit options
-      // Fixed: Use objects for edit/remove instead of boolean values
+      const editOptions: any = {
+        featureGroup: featureGroup
+      };
+      
+      // Only set edit properties when active
+      if (activeTool === 'edit') {
+        editOptions.edit = true;
+      }
+      
+      if (activeTool === 'delete') {
+        editOptions.remove = true;
+      }
+      
       const drawControl = new L.Control.Draw({
         position: 'topright',
         draw: drawOptions,
-        edit: {
-          featureGroup: featureGroup,
-          // Use proper edit options objects rather than boolean values
-          edit: activeTool === 'edit' ? {} : false,
-          remove: activeTool === 'delete' ? {} : false
-        }
+        edit: editOptions
       });
       
       // Add to map

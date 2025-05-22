@@ -76,27 +76,18 @@ export const initializeLeafletDrawComplete = () => {
   if (!isInitialized && L && L.Control && !L.Control.Draw) {
     try {
       console.warn("Creating stub for L.Control.Draw");
-      // Use proper type definition with required methods to satisfy TypeScript
+      
+      // Create a class that extends L.Control
       L.Control.Draw = class Draw extends L.Control {
+        options: any;
+        
         constructor(options: any) {
-          super(options);
-          this.options = options;
+          super();
+          this.options = options || {};
           console.log("Draw control initialized with options:", options);
         }
         
-        // Required methods to match L.Control.Draw interface
-        initialize(options: any) {
-          L.Control.prototype.initialize.call(this, options);
-          console.log("Draw control initialized");
-          return this;
-        }
-        
-        setDrawingOptions(options: any) {
-          console.log("Setting drawing options:", options);
-          this.options = { ...this.options, ...options };
-          return this;
-        }
-        
+        // Define methods using prototype approach to avoid TypeScript errors
         onAdd(map: L.Map) {
           const container = L.DomUtil.create('div', 'leaflet-draw');
           console.log("Draw control added to map");
@@ -106,7 +97,21 @@ export const initializeLeafletDrawComplete = () => {
         onRemove() {
           console.log("Draw control removed from map");
         }
+        
+        setDrawingOptions(options: any) {
+          console.log("Setting drawing options:", options);
+          this.options = { ...this.options, ...options };
+          return this;
+        }
       };
+      
+      // Add initialize method to prototype
+      (L.Control.Draw.prototype as any).initialize = function(options: any) {
+        L.setOptions(this, options);
+        console.log("Draw control initialized");
+        return this;
+      };
+      
     } catch (err) {
       console.error("Failed to create stub for L.Control.Draw:", err);
     }
