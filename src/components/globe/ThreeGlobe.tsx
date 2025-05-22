@@ -1,9 +1,10 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useGlobeLifecycle } from './hooks/useGlobeLifecycle';
 import { useGlobeNavigation } from './hooks/useGlobeNavigation';
 import { GlobeToastNotification } from './GlobeToastNotification';
+import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
@@ -23,6 +24,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   
   // Track selected location for change detection
   const prevLocationRef = useRef<string | null>(null);
+  const [initRetries, setInitRetries] = useState(0);
   
   // Log when selected location changes
   useEffect(() => {
@@ -35,11 +37,34 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     }
   }, [selectedLocation]);
   
+  // Handle globe initialization errors
+  const handleGlobeError = (error: Error) => {
+    console.error("ThreeGlobe initialization error:", error);
+    
+    if (initRetries < 2) {
+      // Try to reinitialize the globe
+      setInitRetries(prev => prev + 1);
+      toast({
+        title: "Globe Initialization",
+        description: "Attempting to reinitialize globe...",
+        duration: 3000
+      });
+    } else if (onError) {
+      // After retries, report the error to parent
+      onError(error);
+    }
+  };
+  
   // Use custom hooks to handle globe lifecycle and navigation
-  const { isInitialized } = useGlobeLifecycle(containerRef, onMapReady, onError);
+  const { isInitialized, globeAPI } = useGlobeLifecycle(
+    containerRef, 
+    onMapReady, 
+    handleGlobeError
+  );
+  
   const { isFlying, selectedLocationLabel } = useGlobeNavigation(
     selectedLocation, 
-    isInitialized, 
+    isInitialized && !!globeAPI, 
     onFlyComplete
   );
 
@@ -52,6 +77,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         overflow: 'hidden',
         backgroundColor: 'black'
       }}
+      key={`globe-container-${initRetries}`}
     >
       {/* Canvas will be added here by Three.js */}
       {isFlying && <GlobeToastNotification locationLabel={selectedLocationLabel} />}

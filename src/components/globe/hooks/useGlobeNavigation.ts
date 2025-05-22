@@ -16,6 +16,8 @@ export function useGlobeNavigation(
   const flyCompletionTimerRef = useRef<number | null>(null);
   const isUnmountedRef = useRef(false);
   const initializationTimerRef = useRef<number | null>(null);
+  const navigationAttemptsRef = useRef<number>(0);
+  const maxNavigationAttempts = 5;
   
   // Create a dummy ref for useThreeGlobe since we're just accessing the global API
   const dummyContainerRef = useRef<HTMLDivElement>(null);
@@ -26,6 +28,9 @@ export function useGlobeNavigation(
     
     console.log("ThreeGlobe: Fly animation complete, notifying parent");
     setIsFlying(false);
+    
+    // Reset navigation attempts on successful completion
+    navigationAttemptsRef.current = 0;
     
     // Cancel any pending completion timer
     if (flyCompletionTimerRef.current !== null) {
@@ -62,7 +67,7 @@ export function useGlobeNavigation(
           handleLocationNavigation(selectedLocation, globeAPI);
         }
       }
-    }, 3000); // Wait 3 seconds before trying forced navigation
+    }, 2000); // Wait 2 seconds before trying forced navigation
     
     return () => {
       if (initializationTimerRef.current !== null) {
@@ -75,6 +80,20 @@ export function useGlobeNavigation(
   const handleLocationNavigation = (location: Location, api: any) => {
     if (!location || !api || !api.flyToLocation) {
       console.log("Cannot navigate: missing location or globe API");
+      return false;
+    }
+    
+    // Increment navigation attempts
+    navigationAttemptsRef.current++;
+    
+    // Check if we've tried too many times
+    if (navigationAttemptsRef.current > maxNavigationAttempts) {
+      console.log(`Exceeded max navigation attempts (${maxNavigationAttempts}) for ${location.label}`);
+      toast({
+        title: "Navigation Aborted",
+        description: "Too many navigation attempts, please try again later",
+        variant: "destructive"
+      });
       return false;
     }
     
@@ -156,11 +175,11 @@ export function useGlobeNavigation(
     }
     
     // Try to navigate - if the API looks ready
-    if (globeAPI.flyToLocation) {
+    if (isInitialized && globeAPI.flyToLocation) {
       console.log(`ThreeGlobe: Attempting to fly to ${selectedLocation.label}`);
       handleLocationNavigation(selectedLocation, globeAPI);
     } else {
-      console.log("Globe API not fully ready - flyToLocation method missing");
+      console.log("Globe API not fully ready or not initialized yet");
       
       // Set a retry timer for this specific location
       setTimeout(() => {
@@ -171,7 +190,7 @@ export function useGlobeNavigation(
           console.log(`ThreeGlobe: Retry navigation to ${selectedLocation.label}`);
           handleLocationNavigation(selectedLocation, globeAPI);
         }
-      }, 1500);
+      }, 1000);
     }
   }, [selectedLocation, globeAPI, isFlying, isInitialized]);
 
@@ -180,6 +199,7 @@ export function useGlobeNavigation(
     return () => {
       isUnmountedRef.current = true;
       lastFlyLocationRef.current = null;
+      navigationAttemptsRef.current = 0;
       
       if (flyCompletionTimerRef.current !== null) {
         clearTimeout(flyCompletionTimerRef.current);
@@ -201,4 +221,3 @@ export function useGlobeNavigation(
     selectedLocationLabel
   };
 }
-

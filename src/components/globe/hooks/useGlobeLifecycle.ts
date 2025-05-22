@@ -10,6 +10,8 @@ export function useGlobeLifecycle(
   const [isInitialized, setIsInitialized] = useState(false);
   const initCallbackFiredRef = useRef(false);
   const errorRef = useRef<Error | null>(null);
+  const initTimeoutRef = useRef<number | null>(null);
+  const globeAPIRef = useRef<any>(null);
 
   // Handle initialization completion
   const handleInitialized = useCallback(() => {
@@ -19,9 +21,15 @@ export function useGlobeLifecycle(
     setIsInitialized(true);
     initCallbackFiredRef.current = true;
     
+    // Clear any timeout to prevent error from being thrown
+    if (initTimeoutRef.current !== null) {
+      clearTimeout(initTimeoutRef.current);
+      initTimeoutRef.current = null;
+    }
+    
     // Call onMapReady with the globe API instance if provided
-    if (onMapReady) {
-      onMapReady(globeAPI);
+    if (onMapReady && globeAPIRef.current) {
+      onMapReady(globeAPIRef.current);
     }
   }, [onMapReady]);
   
@@ -38,10 +46,17 @@ export function useGlobeLifecycle(
   // Get globe API with initialization callback
   const globeAPI = useThreeGlobe(containerRef, handleInitialized);
   
+  // Store the reference to globeAPI for use in callbacks
+  useEffect(() => {
+    if (globeAPI) {
+      globeAPIRef.current = globeAPI;
+    }
+  }, [globeAPI]);
+  
   // Effect to detect errors during initialization
   useEffect(() => {
     // Check if there was a critical error in the globe
-    const initTimeoutId = setTimeout(() => {
+    initTimeoutRef.current = setTimeout(() => {
       if (!isInitialized && !initCallbackFiredRef.current && !errorRef.current) {
         const error = new Error('Globe initialization timed out');
         console.error(error);
@@ -50,10 +65,13 @@ export function useGlobeLifecycle(
           onError(error);
         }
       }
-    }, 10000); // 10 second timeout
+    }, 15000); // Increase timeout to 15 seconds for slower devices
     
     return () => {
-      clearTimeout(initTimeoutId);
+      if (initTimeoutRef.current !== null) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
     };
   }, [isInitialized, onError]);
 
