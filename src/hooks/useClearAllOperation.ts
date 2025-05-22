@@ -1,5 +1,5 @@
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
@@ -8,12 +8,33 @@ export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
   const [showConfirmation, setShowConfirmation] = useState(false);
   
+  // Listen for the custom leafletClearAllRequest event
+  useEffect(() => {
+    const handleLeafletClearRequest = () => {
+      if (isAuthenticated) {
+        setShowConfirmation(true);
+      } else {
+        toast.error('Please log in to clear drawings');
+      }
+    };
+    
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+    
+    return () => {
+      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
+    };
+  }, [isAuthenticated]);
+  
   const handleClearAllWrapper = useCallback(() => {
     if (!isAuthenticated) {
       toast.error('Please log in to clear drawings');
       return;
     }
     
+    setShowConfirmation(true);
+  }, [isAuthenticated]);
+  
+  const confirmClearAll = useCallback(() => {
     const featureGroup = window.featureGroup;
     if (featureGroup) {
       handleClearAll({
@@ -40,9 +61,14 @@ export function useClearAllOperation(onClearAll?: () => void) {
       
       toast.success('All map data cleared');
     }
+    
+    setShowConfirmation(false);
   }, [isAuthenticated, onClearAll]);
   
   return {
-    handleClearAllWrapper
+    handleClearAllWrapper,
+    showConfirmation,
+    setShowConfirmation,
+    confirmClearAll
   };
 }

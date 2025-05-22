@@ -11,6 +11,7 @@ import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
 import { getDrawOptions } from './drawing/DrawOptionsConfiguration';
 import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { toast } from 'sonner';
 
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
@@ -43,27 +44,17 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
-  // Hook to detect when the "Clear all layers" button in the Leaflet draw control is clicked
+  // Listen for the leafletClearAllRequest custom event
   useEffect(() => {
-    const handleClearAllClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      
-      // Check if the clicked element is the "Clear all layers" button
-      if (target && target.tagName === 'A' && 
-          target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions') &&
-          target.textContent?.includes('Clear all')) {
-        
-        e.preventDefault();
-        e.stopPropagation();
-        setShowClearDialog(true);
-      }
+    const handleLeafletClearRequest = () => {
+      console.log('Showing clear all confirmation dialog');
+      setShowClearDialog(true);
     };
     
-    // Add click event listener to the document to catch all clicks
-    document.addEventListener('click', handleClearAllClick, true);
+    window.addEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     
     return () => {
-      document.removeEventListener('click', handleClearAllClick, true);
+      window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
     };
   }, []);
 
@@ -93,6 +84,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     if (onClearAll) {
       onClearAll();
     }
+    
+    toast.success('All shapes and layers cleared');
   };
 
   // Get draw options from configuration

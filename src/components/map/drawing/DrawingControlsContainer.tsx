@@ -1,10 +1,12 @@
 
 import { DrawingData } from '@/utils/drawing-utils';
 import DrawingControls from '../DrawingControls';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 import { useSvgPathManagement } from '@/hooks/useSvgPathManagement';
 import { useDrawingFileUpload } from '@/hooks/useDrawingFileUpload';
+import { useClearAllOperation } from '@/hooks/useClearAllOperation';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 interface DrawingControlsContainerProps {
   onShapeCreated: (shape: any) => void;
@@ -24,6 +26,14 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   const drawingControlsRef = useRef<DrawingControlsRef>(null);
   const { svgPaths, setSvgPaths } = useSvgPathManagement();
   const { handleUploadToDrawing } = useDrawingFileUpload();
+  
+  // Use the enhanced useClearAllOperation hook with confirmation dialog
+  const {
+    handleClearAllWrapper,
+    showConfirmation,
+    setShowConfirmation,
+    confirmClearAll
+  } = useClearAllOperation(onClearAll);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => {
@@ -46,16 +56,33 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   };
   
   return (
-    <DrawingControls 
-      ref={drawingControlsRef}
-      onCreated={onShapeCreated}
-      activeTool={activeTool}
-      onRegionClick={onRegionClick}
-      onClearAll={onClearAll}
-      onRemoveShape={onRemoveShape}
-      onUploadToDrawing={handleUploadToDrawing}
-      onPathsUpdated={handlePathsUpdated}
-    />
+    <>
+      <DrawingControls 
+        ref={drawingControlsRef}
+        onCreated={onShapeCreated}
+        activeTool={activeTool}
+        onRegionClick={onRegionClick}
+        onClearAll={handleClearAllWrapper}
+        onRemoveShape={onRemoveShape}
+        onUploadToDrawing={handleUploadToDrawing}
+        onPathsUpdated={handlePathsUpdated}
+      />
+      
+      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to clear all drawings and shapes? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClearAll}>Clear All</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 });
 

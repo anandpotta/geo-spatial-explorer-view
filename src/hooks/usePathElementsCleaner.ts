@@ -35,15 +35,37 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
         clearAllMapSvgElements((window.featureGroup as any)._map);
       }
     };
+
+    // Handle Leaflet Draw specific clear all action
+    const handleLeafletClearAction = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Check if the clicked element is the "Clear all layers" button in Leaflet draw
+      if (target && 
+          target.tagName === 'A' && 
+          target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions') &&
+          target.textContent?.includes('Clear all')) {
+        
+        console.log('Leaflet draw clear all layers button clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Dispatch a custom event to show the confirmation dialog
+        window.dispatchEvent(new CustomEvent('leafletClearAllRequest'));
+      }
+    };
     
     window.addEventListener('userLoggedOut', handleUserLogout);
     window.addEventListener('userChanged', handleUserChange);
     window.addEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
+    // Capture all click events to detect Leaflet clear action
+    document.addEventListener('click', handleLeafletClearAction, true);
     
     return () => {
       window.removeEventListener('userLoggedOut', handleUserLogout);
       window.removeEventListener('userChanged', handleUserChange);
       window.removeEventListener('clearAllSvgPaths', handleClearAllSvgPaths);
+      document.removeEventListener('click', handleLeafletClearAction, true);
     };
   }, [clearPathElements]);
   
