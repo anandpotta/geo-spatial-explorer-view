@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MapContainer as LeafletMapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
 import { safeInvalidateSize, forceMapTileRefresh } from '@/utils/leaflet-type-utils';
+import MapPosHandler from './MapPosHandler';
 // Import CSS directly from node_modules
 import 'leaflet/dist/leaflet.css';
 
@@ -145,15 +146,10 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        // Changed whenCreated to whenReady which is supported by react-leaflet
-        whenReady={(mapInstance) => {
+        // Fixed: Use whenReady without parameters
+        whenReady={() => {
           console.log('Map instance created');
-          // Manually check for _leaflet_pos
-          const map = mapInstance.target;
-          const mapPane = map.getPane('mapPane');
-          if (mapPane && !(mapPane as any)._leaflet_pos) {
-            (mapPane as any)._leaflet_pos = { x: 0, y: 0 };
-          }
+          // No longer trying to access map instance directly here
         }}
       >
         <TileLayer 
@@ -167,6 +163,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         />
         <AttributionControl position="bottomright" prefix={false} />
         <MapInitializer />
+        <MapPosHandler />
         
         {children}
       </LeafletMapContainer>

@@ -260,10 +260,10 @@ export function forceMapTileRefresh(map: L.Map | null): void {
         map.fire('moveend');
         map.fire('zoomend');
         
-        // If needed, trigger a view reset without using private properties
+        // Fixed: Use valid options for setView without the 'reset' property
         try {
-          // Use public methods to reset the view
-          map.setView(center, zoom, { animate: false, reset: true });
+          // Use public methods to reset the view without the invalid 'reset' option
+          map.setView(center, zoom, { animate: false });
         } catch (err) {
           console.warn('Error resetting view:', err);
         }
