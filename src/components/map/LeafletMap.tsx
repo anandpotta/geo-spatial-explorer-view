@@ -196,7 +196,12 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             // Try to invalidate the map size
             if (mapRef.current) {
               try {
-                mapRef.current.invalidateSize(true);
+                // Fix for the TypeScript error - check map type before calling invalidateSize
+                if ('invalidateSize' in mapRef.current) {
+                  mapRef.current.invalidateSize(true);
+                } else {
+                  console.warn('invalidateSize method not available on map object');
+                }
               } catch (e) {
                 console.warn('Error invalidating map size:', e);
               }

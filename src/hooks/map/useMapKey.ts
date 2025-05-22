@@ -7,6 +7,7 @@ export function useMapKey() {
   
   const regenerateMapKey = useCallback(() => {
     console.log('Regenerating map key');
+    // Create a new unique key by using the current timestamp
     setMapKey(Date.now());
     setMapReady(false);
   }, []);

@@ -9,6 +9,7 @@ export function isMapValid(map: any): map is L.Map {
   
   // Check if map instance exists and has required methods
   if (typeof map.getContainer !== 'function') return false;
+  if (typeof map.invalidateSize !== 'function') return false;
   
   try {
     // Check if the container element exists in the DOM
