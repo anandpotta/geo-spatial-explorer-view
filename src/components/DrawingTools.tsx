@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import MapControls from './drawing/MapControls';
 import ClearConfirmationDialog from './drawing/ConfirmationDialog';
@@ -107,7 +108,9 @@ const DrawingTools = ({
       localStorage.clear();
       
       // Restore authentication data
-      restoreAuth();
+      if (restoreAuth && typeof restoreAuth === 'function') {
+        restoreAuth();
+      }
       
       // Forcefully clear specific storages that might be causing issues
       localStorage.removeItem('savedDrawings');
