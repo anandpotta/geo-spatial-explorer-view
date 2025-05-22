@@ -106,9 +106,6 @@ export function useFlyToLocation(
     // Set the target to be slightly closer to the surface for better viewing
     const finalTarget = target.clone().multiplyScalar(0.99);
     
-    // Calculate final camera position near the globe surface
-    const finalPosition = new THREE.Vector3().copy(directionToTarget).multiplyScalar(finalDistance);
-    
     // Temporarily disable auto-rotation and damping during transition for precision
     const wasAutoRotating = controlsRef.current.autoRotate;
     const wasDamping = controlsRef.current.enableDamping;
@@ -223,7 +220,7 @@ export function useFlyToLocation(
             console.log("Fly animation complete, calling completion callback");
             onComplete();
           }
-        }, 100); // Add a small buffer for stability
+        }, 300); // Increased from 100ms to 300ms for better stability
       }
     };
     

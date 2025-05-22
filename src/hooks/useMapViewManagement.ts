@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Location } from '@/utils/geo-utils';
 
@@ -22,6 +23,7 @@ export function useMapViewManagement(
   const autoSwitchToLeafletTimerRef = useRef<number | null>(null);
   const pendingSwapRef = useRef(false);
   const locationHistoryRef = useRef<Array<{id: string, coords: [number, number]}>>([]);
+  const pendingViewChangeRef = useRef<MapView | null>(null);
   
   // Debug log for state changes
   console.log(`MapViewManagement: flyCompleted=${flyCompleted}, currentView=${currentView}, transition=${viewTransitionInProgressRef.current}`);
@@ -42,6 +44,9 @@ export function useMapViewManagement(
       }
       
       console.log(`MapViewManagement: Location updated to ${selectedLocation.label} [${selectedLocation.y}, ${selectedLocation.x}]`);
+      
+      // Store the current selected location
+      lastSelectedLocationRef.current = selectedLocation;
     }
   }, [selectedLocation]);
   
@@ -69,8 +74,8 @@ export function useMapViewManagement(
     }
   }, [flyCompleted, selectedLocation]);
 
-  // Handle actual view change with state updates
-  const changeView = (view: MapView) => {
+  // Debounced change view implementation
+  const changeView = useCallback((view: MapView) => {
     console.log(`MapViewManagement: Changing view to ${view}`);
     setCurrentView(view);
     viewChangeInProgressRef.current = true;
@@ -84,10 +89,10 @@ export function useMapViewManagement(
       viewChangeInProgressRef.current = false;
       preventRapidChangeTimerRef.current = null;
     }, 1000); // Reduced from 1500ms to 1000ms for faster responsiveness
-  };
+  }, []);
 
   // Public method to handle view change requests
-  const handleViewChange = (view: MapView) => {
+  const handleViewChange = useCallback((view: MapView) => {
     // Don't change if it's already the current view
     if (view === currentView) {
       return;
@@ -95,9 +100,11 @@ export function useMapViewManagement(
     
     // Prevent rapid view changes
     if (viewTransitionInProgressRef.current || viewChangeInProgressRef.current) {
+      pendingViewChangeRef.current = view; // Store the pending view change
+      
       toast({
-        title: "Please wait",
-        description: "View transition already in progress",
+        title: "View Change Queued",
+        description: "View transition already in progress, change will apply when ready",
         duration: 2000,
       });
       return;
@@ -122,12 +129,12 @@ export function useMapViewManagement(
     changeView(view);
     
     // Force map refresh when switching to leaflet with location
-    if (view === 'leaflet' && selectedLocation) {
+    if (view === 'leaflet' && lastSelectedLocationRef.current) {
       setMapKey(Date.now());
-      lastSelectedLocationRef.current = selectedLocation;
       
       // Log the location for debugging
-      console.log(`MapViewManagement: Switching to leaflet view with location ${selectedLocation.label} at [${selectedLocation.y}, ${selectedLocation.x}]`);
+      const location = lastSelectedLocationRef.current;
+      console.log(`MapViewManagement: Switching to leaflet view with location ${location.label} at [${location.y}, ${location.x}]`);
       
       // Trigger leaflet refresh after a small delay to ensure it's fully mounted
       setTimeout(() => {
@@ -140,11 +147,16 @@ export function useMapViewManagement(
     setTimeout(() => {
       viewTransitionInProgressRef.current = false;
       
-      if (onViewChangeComplete) {
+      // Check if there's a pending view change
+      if (pendingViewChangeRef.current) {
+        const pendingView = pendingViewChangeRef.current;
+        pendingViewChangeRef.current = null;
+        handleViewChange(pendingView); // Process the pending view change
+      } else if (onViewChangeComplete) {
         onViewChangeComplete();
       }
     }, 1000); // Reduced from 1500ms to 1000ms
-  };
+  }, [currentView, flyCompletedRef, selectedLocation, changeView, lastSelectedLocationRef, onViewChangeComplete]);
 
   // Schedule switching to leaflet after cesium fly completes
   useEffect(() => {
@@ -222,7 +234,7 @@ export function useMapViewManagement(
         }, 500);
       }, 400);
     }
-  }, [currentView, selectedLocation, flyCompleted]);
+  }, [currentView, selectedLocation, flyCompleted, changeView]);
 
   // Clear any pending timers on unmount
   useEffect(() => {

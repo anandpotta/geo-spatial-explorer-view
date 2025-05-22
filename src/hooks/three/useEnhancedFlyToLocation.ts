@@ -21,6 +21,8 @@ export function useEnhancedFlyToLocation(
   const callbackTimeoutRef = useRef<number | null>(null);
   const stabilizationTimeoutRef = useRef<number | null>(null);
   const retryTimeoutRef = useRef<number | null>(null);
+  const maxRetries = 5;
+  const retryCount = useRef<number>(0);
   
   // Determine which ref to use for tracking flying state
   const isFlyingRef = externalFlyingRef || internalFlyingRef;
@@ -57,6 +59,8 @@ export function useEnhancedFlyToLocation(
         window.clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
       }
+      
+      retryCount.current = 0;
     };
   }, [cancelFlight]);
   
@@ -87,92 +91,121 @@ export function useEnhancedFlyToLocation(
   
   // Wrap the flyToLocation to handle auto-rotation and flying state
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
-    // Cancel any ongoing flight first
-    cancelFlight();
+    // Reset retry counter
+    retryCount.current = 0;
     
-    // Clear any existing timeouts
-    if (callbackTimeoutRef.current !== null) {
-      window.clearTimeout(callbackTimeoutRef.current);
-      callbackTimeoutRef.current = null;
-    }
-    
-    if (stabilizationTimeoutRef.current !== null) {
-      window.clearTimeout(stabilizationTimeoutRef.current);
-      stabilizationTimeoutRef.current = null;
-    }
-    
-    if (retryTimeoutRef.current !== null) {
-      window.clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
-    
-    // Set flying state to true to prevent animation conflicts
-    isFlyingRef.current = true;
-    
-    // Store the callback for later
-    completedCallbackRef.current = onComplete;
-    
-    // Log the navigation attempt
-    console.log(`EnhancedFlyToLocation: Flying to ${latitude}, ${longitude}`);
-    
-    // Show toast for navigation
-    toast({
-      title: "Traveling to location",
-      description: "Flying across the globe...",
-      duration: 2500
-    });
-    
-    // Temporarily disable auto-rotation for smoother flight
-    setAutoRotation(false);
-    
-    // Check if camera and controls are ready
-    if (!camera || !controlsRef.current) {
-      console.warn("Camera or controls not ready yet, will retry in a moment");
+    const attemptFlight = () => {
+      // Cancel any ongoing flight first
+      cancelFlight();
       
-      // Set a retry timer
-      retryTimeoutRef.current = window.setTimeout(() => {
+      // Clear any existing timeouts
+      if (callbackTimeoutRef.current !== null) {
+        window.clearTimeout(callbackTimeoutRef.current);
+        callbackTimeoutRef.current = null;
+      }
+      
+      if (stabilizationTimeoutRef.current !== null) {
+        window.clearTimeout(stabilizationTimeoutRef.current);
+        stabilizationTimeoutRef.current = null;
+      }
+      
+      if (retryTimeoutRef.current !== null) {
+        window.clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
+      }
+      
+      // Set flying state to true to prevent animation conflicts
+      isFlyingRef.current = true;
+      
+      // Store the callback for later
+      completedCallbackRef.current = onComplete;
+      
+      // Log the navigation attempt
+      console.log(`EnhancedFlyToLocation: Flying to ${latitude}, ${longitude}`);
+      
+      // Show toast for navigation
+      toast({
+        title: "Traveling to location",
+        description: "Flying across the globe...",
+        duration: 2500
+      });
+      
+      // Temporarily disable auto-rotation for smoother flight
+      setAutoRotation(false);
+      
+      // Check if camera and controls are ready
+      if (!camera || !controlsRef.current) {
+        console.warn("Camera or controls not ready yet, will retry in a moment");
         
-        if (camera && controlsRef.current) {
-          console.log("Retrying flight after camera initialized");
-          enhancedFlyToLocation(longitude, latitude, onComplete);
+        // Retry logic with exponential backoff
+        if (retryCount.current < maxRetries) {
+          retryCount.current++;
+          const delay = 500 * Math.pow(1.5, retryCount.current - 1); // Exponential backoff
+          
+          toast({
+            title: "Initializing navigation",
+            description: `Preparing flight (attempt ${retryCount.current})...`,
+            duration: 2000
+          });
+          
+          // Set a retry timer
+          retryTimeoutRef.current = window.setTimeout(() => {
+            retryTimeoutRef.current = null;
+            
+            // Try again
+            attemptFlight();
+          }, delay);
+          
+          return;
         } else {
-          console.error("Camera still not initialized after delay, cannot navigate");
+          console.error("Camera still not initialized after multiple retries, cannot navigate");
+          toast({
+            title: "Navigation Error",
+            description: "Couldn't initialize camera for navigation",
+            variant: "destructive"
+          });
+          
+          // Reset flying state
+          isFlyingRef.current = false;
+          
           // Still call completion callback so the app can proceed
           if (onComplete) {
             onComplete();
           }
+          return;
         }
-      }, 1000);
+      }
       
-      return;
-    }
-    
-    // Call the original flyToLocation with an internal callback
-    flyToLocation(longitude, latitude, () => {
-      // This will be called when the flight animation completes
-      console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
-      
-      // Add a stabilization period after flight completes before callback
-      stabilizationTimeoutRef.current = window.setTimeout(() => {
-        stabilizationTimeoutRef.current = null;
+      // Call the original flyToLocation with an internal callback
+      flyToLocation(longitude, latitude, () => {
+        // This will be called when the flight animation completes
+        console.log(`EnhancedFlyToLocation: Flight completed to ${latitude}, ${longitude}`);
         
-        // Re-enable auto-rotation with a smooth start
-        setAutoRotation(true);
-        
-        // Call onComplete directly here as well as relying on the effect
-        if (onComplete && isFlyingRef.current) {
-          console.log("Calling onComplete callback from direct callback");
+        // Add a stabilization period after flight completes before callback
+        stabilizationTimeoutRef.current = window.setTimeout(() => {
+          stabilizationTimeoutRef.current = null;
           
-          // Add a small delay to ensure processing is complete
-          callbackTimeoutRef.current = window.setTimeout(() => {
-            callbackTimeoutRef.current = null;
-            isFlyingRef.current = false;
-            onComplete();
-          }, 150);
-        }
-      }, 300); // Let the view stabilize after animation
-    });
+          // Re-enable auto-rotation with a smooth start
+          setAutoRotation(true);
+          
+          // Call onComplete directly here as well as relying on the effect
+          if (onComplete && isFlyingRef.current) {
+            console.log("Calling onComplete callback from direct callback");
+            
+            // Add a small delay to ensure processing is complete
+            callbackTimeoutRef.current = window.setTimeout(() => {
+              callbackTimeoutRef.current = null;
+              isFlyingRef.current = false;
+              completedCallbackRef.current = undefined;
+              onComplete();
+            }, 150);
+          }
+        }, 300); // Let the view stabilize after animation
+      });
+    };
+    
+    // Start the flight attempt
+    attemptFlight();
   }, [flyToLocation, setAutoRotation, isFlyingRef, cancelFlight, camera, controlsRef]);
   
   return {

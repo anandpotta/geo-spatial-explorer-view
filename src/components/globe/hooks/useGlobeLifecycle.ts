@@ -1,6 +1,6 @@
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useThreeGlobe } from '@/hooks/useThreeGlobe';
+import { useState, useEffect, useRef } from 'react';
+import { useThreeGlobe } from '@/hooks/three/useThreeGlobe';
 
 export function useGlobeLifecycle(
   containerRef: React.RefObject<HTMLDivElement>,
@@ -8,75 +8,69 @@ export function useGlobeLifecycle(
   onError?: (error: Error) => void
 ) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const initCallbackFiredRef = useRef(false);
-  const errorRef = useRef<Error | null>(null);
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const globeAPIRef = useRef<any>(null);
-
-  // Handle initialization completion
-  const handleInitialized = useCallback(() => {
-    if (initCallbackFiredRef.current) return;
-    
-    console.log('Globe initialization complete');
+  const initAttemptRef = useRef(0);
+  const readyFiredRef = useRef(false);
+  
+  // Use the globe hook
+  const globeAPI = useThreeGlobe(containerRef, () => {
+    console.log("GlobeLifecycle: Three.js globe initialized event received");
     setIsInitialized(true);
-    initCallbackFiredRef.current = true;
     
-    // Clear any timeout to prevent error from being thrown
-    if (initTimeoutRef.current !== null) {
+    // Clear any pending timeout
+    if (initTimeoutRef.current) {
       clearTimeout(initTimeoutRef.current);
       initTimeoutRef.current = null;
     }
     
-    // Call onMapReady with the globe API instance if provided
-    if (onMapReady && globeAPIRef.current) {
-      onMapReady(globeAPIRef.current);
+    // Call the ready callback only once
+    if (!readyFiredRef.current && onMapReady) {
+      readyFiredRef.current = true;
+      console.log("GlobeLifecycle: Firing onMapReady callback with globeAPI");
+      onMapReady(globeAPI);
     }
-  }, [onMapReady]);
+  });
   
-  // Handle errors that occur during initialization
-  const handleError = useCallback((error: Error) => {
-    console.error('Globe initialization error:', error);
-    errorRef.current = error;
+  // Setup initialization timeout
+  useEffect(() => {
+    // Reset the initialization flag when retrying
+    if (initAttemptRef.current > 0) {
+      setIsInitialized(false);
+      readyFiredRef.current = false;
+    }
     
-    if (onError) {
-      onError(error);
-    }
-  }, [onError]);
-
-  // Get globe API with initialization callback
-  const globeAPI = useThreeGlobe(containerRef, handleInitialized);
-  
-  // Store the reference to globeAPI for use in callbacks
-  useEffect(() => {
-    if (globeAPI) {
-      globeAPIRef.current = globeAPI;
-    }
-  }, [globeAPI]);
-  
-  // Effect to detect errors during initialization
-  useEffect(() => {
-    // Check if there was a critical error in the globe
+    initAttemptRef.current += 1;
+    console.log(`GlobeLifecycle: Setting up initialization check (attempt ${initAttemptRef.current})`);
+    
+    // Set a timeout to check if the globe initializes
     initTimeoutRef.current = setTimeout(() => {
-      if (!isInitialized && !initCallbackFiredRef.current && !errorRef.current) {
-        const error = new Error('Globe initialization timed out');
-        console.error(error);
+      if (!isInitialized) {
+        console.error("Globe initialization timed out");
         
         if (onError) {
-          onError(error);
+          onError(new Error("Globe initialization timed out"));
         }
       }
-    }, 15000); // Increase timeout to 15 seconds for slower devices
+    }, 10000); // Give it 10 seconds to initialize
     
     return () => {
-      if (initTimeoutRef.current !== null) {
+      // Clean up the timeout if the component unmounts
+      if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current);
         initTimeoutRef.current = null;
       }
     };
-  }, [isInitialized, onError]);
-
-  return {
-    isInitialized,
-    globeAPI
-  };
+  }, [containerRef.current, isInitialized, onError]);
+  
+  // Manual check if globe is ready but callback wasn't fired
+  useEffect(() => {
+    if (isInitialized && globeAPI && !readyFiredRef.current && onMapReady) {
+      console.log("GlobeLifecycle: Globe is initialized but callback wasn't fired, firing now");
+      readyFiredRef.current = true;
+      onMapReady(globeAPI);
+    }
+  }, [isInitialized, globeAPI, onMapReady]);
+  
+  // Return the state and API
+  return { isInitialized, globeAPI };
 }

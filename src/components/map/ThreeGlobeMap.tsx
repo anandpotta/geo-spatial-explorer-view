@@ -21,55 +21,37 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
   const viewerInitializedRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const globeInstanceRef = useRef<any>(null);
-  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const readyCallbackFiredRef = useRef<boolean>(false);
   const errorRecoveryAttemptsRef = useRef<number>(0);
-  
-  // Set a timeout to force loading to complete if it takes too long
-  useEffect(() => {
-    loadingTimerRef.current = setTimeout(() => {
-      if (isLoading) {
-        console.log("ThreeGlobeMap: Force completing loading after timeout");
-        setIsLoading(false);
-      }
-    }, 5000); // 5 second timeout
-    
-    return () => {
-      if (loadingTimerRef.current) {
-        clearTimeout(loadingTimerRef.current);
-      }
-      
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current);
-      }
-    };
-  }, [isLoading]);
   
   // Track location changes to prevent duplicate processing
   useEffect(() => {
     if (selectedLocation) {
       const locationId = selectedLocation.id;
       if (locationId === lastLocationRef.current) {
-        console.log('Skipping duplicate location selection:', locationId);
+        console.log('ThreeGlobeMap: Skipping duplicate location selection:', locationId);
         return;
       }
       lastLocationRef.current = locationId;
       
       // Add a small delay to ensure the globe is fully initialized
       if (globeInstanceRef.current && viewerInitializedRef.current) {
-        console.log("Globe is ready, can navigate to:", selectedLocation.label);
+        console.log("ThreeGlobeMap: Globe is ready, can navigate to:", selectedLocation.label);
+      } else {
+        console.log("ThreeGlobeMap: Globe not ready yet, waiting for initialization");
       }
     }
   }, [selectedLocation]);
   
   // Handle map ready state
   const handleMapReady = (viewer?: any) => {
-    if (viewerInitializedRef.current) {
-      console.log('Globe is already initialized, skipping duplicate ready event');
+    if (readyCallbackFiredRef.current) {
+      console.log('ThreeGlobeMap: Ready callback already fired, ignoring duplicate event');
       return;
     }
     
-    console.log("ThreeGlobeMap: Globe is ready");
+    console.log("ThreeGlobeMap: Globe is ready, hiding loading indicator");
+    readyCallbackFiredRef.current = true;
     viewerInitializedRef.current = true;
     setIsLoading(false);
     
@@ -92,9 +74,18 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
     if (onMapReady && globeInstanceRef.current) {
       console.log("ThreeGlobeMap: Calling parent onMapReady");
       // Add a short delay to ensure everything is fully initialized
-      initTimeoutRef.current = setTimeout(() => {
-        onMapReady(globeInstanceRef.current);
+      setTimeout(() => {
+        if (onMapReady) onMapReady(globeInstanceRef.current);
       }, 500);
+    }
+  };
+  
+  // Handle successful flight completion
+  const handleFlyComplete = () => {
+    console.log("ThreeGlobeMap: Flight complete, notifying parent");
+    
+    if (onFlyComplete) {
+      onFlyComplete();
     }
   };
   
@@ -105,29 +96,23 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
       viewerInitializedRef.current = false;
       lastLocationRef.current = null;
       globeInstanceRef.current = null;
-      
-      if (loadingTimerRef.current) {
-        clearTimeout(loadingTimerRef.current);
-      }
-      
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current);
-      }
+      readyCallbackFiredRef.current = false;
     };
   }, []);
   
   // Handle errors that might occur
   const handleError = (error: Error) => {
-    console.error("Globe error:", error);
+    console.error("ThreeGlobeMap: Globe error:", error);
     
     // Try to recover by reinitializing the globe
     if (errorRecoveryAttemptsRef.current < 2) {
       errorRecoveryAttemptsRef.current++;
-      console.log(`Attempting to recover from globe error (attempt ${errorRecoveryAttemptsRef.current})`);
+      console.log(`ThreeGlobeMap: Attempting to recover from globe error (attempt ${errorRecoveryAttemptsRef.current})`);
       
       // Reset state
       viewerInitializedRef.current = false;
       globeInstanceRef.current = null;
+      readyCallbackFiredRef.current = false;
       
       // Force re-initialization
       setInitKey(prev => prev + 1);
@@ -146,6 +131,12 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         description: "Could not initialize the 3D globe view",
         variant: "destructive"
       });
+      
+      // Still notify parent that the map is ready so the app can proceed
+      if (onMapReady && !readyCallbackFiredRef.current) {
+        readyCallbackFiredRef.current = true;
+        onMapReady(null);
+      }
     }
   };
   
@@ -174,6 +165,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
               onClick={() => {
                 setMapError(null);
                 errorRecoveryAttemptsRef.current = 0;
+                readyCallbackFiredRef.current = false;
                 setInitKey(prev => prev + 1);
               }}
             >
@@ -188,7 +180,7 @@ const ThreeGlobeMap: React.FC<ThreeGlobeMapProps> = ({
         key={`globe-${initKey}`}
         selectedLocation={selectedLocation}
         onMapReady={handleMapReady}
-        onFlyComplete={onFlyComplete}
+        onFlyComplete={handleFlyComplete}
         onError={handleError}
       />
     </div>
