@@ -30,7 +30,10 @@ const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMa
   const handleCloseTooltip = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    e.stopImmediatePropagation();
+    // Access the native event to call stopImmediatePropagation
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
     console.log('Close tooltip clicked');
     setShowTooltip(false);
   };
@@ -38,7 +41,10 @@ const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMa
   const handleRemoveMarker = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    e.stopImmediatePropagation();
+    // Access the native event to call stopImmediatePropagation
+    if (e.nativeEvent) {
+      e.nativeEvent.stopImmediatePropagation();
+    }
     console.log('Remove marker clicked');
     if (onClose) {
       onClose();
