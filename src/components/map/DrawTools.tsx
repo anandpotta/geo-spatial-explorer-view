@@ -63,11 +63,14 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       // Apply patch to ensure all needed methods exist in a type-safe way
       if (!featureGroup.eachLayer) {
         const eachLayerFn = function(this: L.FeatureGroup, cb: (layer: L.Layer) => void) {
-          if (this._layers) {
-            Object.keys(this._layers).forEach(key => {
-              cb(this._layers[key as keyof typeof this._layers] as L.Layer);
+          // Use type assertion to access internal _layers property
+          const layers = (this as any)._layers;
+          if (layers) {
+            Object.keys(layers).forEach(key => {
+              cb(layers[key]);
             });
           }
+          return this; // Return this for chaining
         };
         
         // Explicitly cast the function to avoid TypeScript errors

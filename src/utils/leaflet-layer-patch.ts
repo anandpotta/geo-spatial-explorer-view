@@ -53,9 +53,11 @@ export function ensureFeatureGroupMethods(featureGroup: L.FeatureGroup): L.Featu
   // Add eachLayer method if it doesn't exist or fix it if it's broken
   if (!featureGroup.eachLayer) {
     const eachLayerFn = function(this: L.FeatureGroup, cb: (layer: L.Layer) => void) {
-      if (this._layers) {
-        Object.keys(this._layers).forEach(key => {
-          cb(this._layers[key as keyof typeof this._layers] as L.Layer);
+      // Use type assertion to access internal _layers property
+      const layers = (this as any)._layers;
+      if (layers) {
+        Object.keys(layers).forEach(key => {
+          cb(layers[key]);
         });
       }
       return this; // Return this to maintain method chaining
