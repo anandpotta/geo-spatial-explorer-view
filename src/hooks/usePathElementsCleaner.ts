@@ -32,10 +32,24 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
       
       // Try to access map instance through window featureGroup
       if (window.featureGroup && (window.featureGroup as any)._map) {
+        console.log('Found map reference, clearing SVG paths from DOM');
         clearAllMapSvgElements((window.featureGroup as any)._map);
+        
+        // Force redraw of the map after cleaning up
+        setTimeout(() => {
+          const map = (window.featureGroup as any)._map;
+          if (map) {
+            try {
+              // Force map refresh
+              map.invalidateSize();
+            } catch (e) {
+              console.error('Error refreshing map after path cleanup:', e);
+            }
+          }
+        }, 100);
       }
     };
-
+    
     // We'll remove this handler to prevent duplicate confirmation dialogs
     // The clear button handling is now fully managed by useClearAllOperation.ts
     

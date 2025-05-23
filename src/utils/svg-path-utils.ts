@@ -1,182 +1,217 @@
+// This file contains utility functions for working with SVG paths in the map
+
+import L from 'leaflet';
 
 /**
- * Utility functions for working with SVG paths
+ * Extract all SVG paths from the map's overlay pane
  */
-
-/**
- * Extracts path data from SVG elements in a container
- */
-export const extractSvgPaths = (container: HTMLElement | null): string[] => {
-  if (!container) return [];
-  
-  const paths: string[] = [];
-  try {
-    // Find all path elements
-    const pathElements = container.querySelectorAll('path');
-    pathElements.forEach(path => {
-      const pathData = path.getAttribute('d');
-      if (pathData) {
-        paths.push(pathData);
-      }
-    });
-  } catch (err) {
-    console.error('Error extracting SVG paths:', err);
-  }
-  
-  return paths;
-};
-
-/**
- * Gets a Leaflet layer's SVG path data
- */
-export const getLeafletLayerPath = (layer: any): string | null => {
-  if (!layer) return null;
+export function extractSvgPaths(map: L.Map): SVGPathElement[] {
+  if (!map) return [];
   
   try {
-    // Direct access to path element
-    if (layer._path) {
-      return layer._path.getAttribute('d') || null;
-    }
-    
-    // For feature groups, check each sublayer
-    if (typeof layer.eachLayer === 'function') {
-      let pathData: string | null = null;
-      layer.eachLayer((subLayer: any) => {
-        if (!pathData && subLayer._path) {
-          pathData = subLayer._path.getAttribute('d') || null;
-        }
-      });
-      return pathData;
-    }
-  } catch (err) {
-    console.error('Error getting layer path data:', err);
-  }
-  
-  return null;
-};
-
-/**
- * Finds all SVG path elements on the map
- */
-export const findAllPathsInMap = (map: any): SVGPathElement[] => {
-  if (!map || !map.getContainer) return [];
-  
-  try {
+    // Get the overlay pane which contains the SVG elements
     const container = map.getContainer();
     if (!container) return [];
     
-    // Find all SVG path elements
-    const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
-    const paths: SVGPathElement[] = [];
+    const overlayPane = container.querySelector('.leaflet-overlay-pane');
+    if (!overlayPane) return [];
     
-    svgLayers.forEach(svg => {
-      const pathsInSvg = svg.querySelectorAll('path');
-      pathsInSvg.forEach(path => paths.push(path));
-    });
-    
-    return paths;
+    // Get all path elements
+    return Array.from(overlayPane.querySelectorAll('path')) as SVGPathElement[];
   } catch (err) {
-    console.error('Error finding SVG paths in map:', err);
+    console.error('Error extracting SVG paths:', err);
     return [];
   }
-};
+}
 
 /**
- * Get path data from all paths on the map
+ * Clear all SVG elements from the map's overlay pane
+ * This is a more aggressive approach than just using clearLayers() 
+ * as it directly removes elements from the DOM
  */
-export const getAllMapPathData = (map: any): string[] => {
-  const paths = findAllPathsInMap(map);
-  return paths.map(path => path.getAttribute('d') || '').filter(Boolean);
-};
+export function clearAllMapSvgElements(map: L.Map): void {
+  if (!map) return;
+  
+  console.log('Clearing all SVG elements from map');
+  
+  try {
+    // Get the container and overlay pane
+    const container = map.getContainer();
+    if (!container) return;
+    
+    // Clear SVG elements from overlay pane
+    const overlayPane = container.querySelector('.leaflet-overlay-pane');
+    if (overlayPane) {
+      // Find all SVGs in the overlay pane
+      const svgElements = Array.from(overlayPane.querySelectorAll('svg'));
+      
+      svgElements.forEach(svg => {
+        // Remove all path elements within each SVG
+        const paths = Array.from(svg.querySelectorAll('path'));
+        paths.forEach(path => {
+          path.remove();
+        });
+        
+        // Clean up empty g elements
+        const gElements = Array.from(svg.querySelectorAll('g'));
+        gElements.forEach(g => {
+          if (!g.hasChildNodes()) {
+            g.remove();
+          }
+        });
+        
+        // If the SVG is now empty (no child nodes), remove it
+        if (!svg.hasChildNodes()) {
+          svg.remove();
+        }
+      });
+    }
+    
+    // Also check the marker pane for any remnant elements
+    const markerPane = container.querySelector('.leaflet-marker-pane');
+    if (markerPane) {
+      // Keep removing first child until pane is empty
+      while (markerPane.firstChild) {
+        markerPane.removeChild(markerPane.firstChild);
+      }
+    }
+    
+    // Force a rerender of the map
+    if (typeof map.invalidateSize === 'function') {
+      map.invalidateSize();
+    }
+    
+    console.log('Completed SVG element cleanup');
+  } catch (err) {
+    console.error('Error clearing SVG elements:', err);
+  }
+}
 
 /**
- * Clear all SVG paths and image elements from the map
+ * Convert SVG path data to a format that can be stored and restored
  */
-export const clearAllMapSvgElements = (map: any): void => {
-  if (!map || !map.getContainer) return;
+export function serializeSvgPath(path: SVGPathElement): string | null {
+  if (!path) return null;
+  
+  try {
+    const d = path.getAttribute('d');
+    if (!d) return null;
+    
+    // Get style attributes
+    const stroke = path.getAttribute('stroke') || '#3388ff';
+    const strokeWidth = path.getAttribute('stroke-width') || '3';
+    const strokeOpacity = path.getAttribute('stroke-opacity') || '1';
+    const fill = path.getAttribute('fill') || '#3388ff';
+    const fillOpacity = path.getAttribute('fill-opacity') || '0.2';
+    const className = path.getAttribute('class') || '';
+    
+    // Create a serializable object
+    const pathData = {
+      id: path.id || `path-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      d,
+      stroke,
+      strokeWidth,
+      strokeOpacity,
+      fill,
+      fillOpacity,
+      className
+    };
+    
+    return JSON.stringify(pathData);
+  } catch (err) {
+    console.error('Error serializing SVG path:', err);
+    return null;
+  }
+}
+
+/**
+ * Create an SVG path element from serialized data
+ */
+export function deserializeSvgPath(serializedPath: string): SVGPathElement | null {
+  if (!serializedPath) return null;
+  
+  try {
+    const pathData = JSON.parse(serializedPath);
+    if (!pathData || !pathData.d) return null;
+    
+    // Create a new path element
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    
+    // Set attributes
+    path.setAttribute('d', pathData.d);
+    path.setAttribute('stroke', pathData.stroke || '#3388ff');
+    path.setAttribute('stroke-width', pathData.strokeWidth || '3');
+    path.setAttribute('stroke-opacity', pathData.strokeOpacity || '1');
+    path.setAttribute('fill', pathData.fill || '#3388ff');
+    path.setAttribute('fill-opacity', pathData.fillOpacity || '0.2');
+    
+    if (pathData.className) {
+      path.setAttribute('class', pathData.className);
+    }
+    
+    if (pathData.id) {
+      path.id = pathData.id;
+    }
+    
+    return path;
+  } catch (err) {
+    console.error('Error deserializing SVG path:', err);
+    return null;
+  }
+}
+
+/**
+ * Add an SVG path to the map
+ */
+export function addSvgPathToMap(map: L.Map, pathElement: SVGPathElement): void {
+  if (!map || !pathElement) return;
   
   try {
     const container = map.getContainer();
     if (!container) return;
     
-    console.log('Clearing all SVG elements from map container');
+    const overlayPane = container.querySelector('.leaflet-overlay-pane');
+    if (!overlayPane) return;
     
-    // Clear SVG paths
-    const svgLayers = container.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
-    svgLayers.forEach(svg => {
-      // Clear all paths that aren't tile boundaries
-      const paths = svg.querySelectorAll('path');
-      paths.forEach(path => {
-        // Check if it's not a tile boundary path before removing
-        if (!path.classList.contains('leaflet-tile-boundary')) {
-          if (path.parentNode) {
-            path.parentNode.removeChild(path);
-          }
-        }
-      });
-      
-      // Clear image elements (floor plans, etc.)
-      const images = svg.querySelectorAll('image');
-      images.forEach(img => {
-        if (img.parentNode) {
-          img.parentNode.removeChild(img);
-        }
-      });
-      
-      // Clear clip paths
-      const clipPaths = svg.querySelectorAll('clipPath');
-      clipPaths.forEach(clipPath => {
-        if (clipPath.parentNode) {
-          clipPath.parentNode.removeChild(clipPath);
-        }
-      });
-      
-      // Clear defs elements that might contain clip paths
-      const defs = svg.querySelectorAll('defs');
-      defs.forEach(def => {
-        if (def.parentNode) {
-          def.parentNode.removeChild(def);
-        }
-      });
-    });
-    
-    // Remove any other custom overlays
-    const overlayPanes = container.querySelectorAll('.leaflet-overlay-pane, .leaflet-marker-pane');
-    overlayPanes.forEach(pane => {
-      // Preserve the pane itself but clear contents except SVG elements (already handled)
-      Array.from(pane.children).forEach(child => {
-        // Add type checking to fix the TypeScript error
-        if (child instanceof Element && child.tagName !== 'SVG') {
-          pane.removeChild(child);
-        }
-      });
-    });
-    
-    // Clear the vector layers
-    const vectorPane = container.querySelector('.leaflet-vector-pane');
-    if (vectorPane) {
-      while (vectorPane.firstChild) {
-        vectorPane.removeChild(vectorPane.firstChild);
-      }
+    // Find or create an SVG element
+    let svg = overlayPane.querySelector('svg');
+    if (!svg) {
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svg.setAttribute('pointer-events', 'none');
+      svg.setAttribute('class', 'leaflet-zoom-animated');
+      overlayPane.appendChild(svg);
     }
     
-    // Reset all paths in the map object directly
-    if (map._pathRoot) {
-      while (map._pathRoot.firstChild) {
-        map._pathRoot.removeChild(map._pathRoot.firstChild);
-      }
+    // Find or create a group element
+    let g = svg.querySelector('g');
+    if (!g) {
+      g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      svg.appendChild(g);
     }
     
-    // Force a map redraw
-    if (typeof map._updatePathViewport === 'function') {
-      map._updatePathViewport();
-    }
+    // Add the path to the group
+    g.appendChild(pathElement);
     
-    // Trigger events to notify components
-    console.log('Dispatching SVG paths cleared events');
-    window.dispatchEvent(new Event('svgPathsCleared'));
-    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: { cleared: true } }));
   } catch (err) {
-    console.error('Error clearing SVG elements from map:', err);
+    console.error('Error adding SVG path to map:', err);
   }
-};
+}
+
+/**
+ * Restore SVG paths from serialized data
+ */
+export function restoreSvgPaths(map: L.Map, serializedPaths: string[]): void {
+  if (!map || !serializedPaths || !serializedPaths.length) return;
+  
+  try {
+    serializedPaths.forEach(serializedPath => {
+      const path = deserializeSvgPath(serializedPath);
+      if (path) {
+        addSvgPathToMap(map, path);
+      }
+    });
+  } catch (err) {
+    console.error('Error restoring SVG paths:', err);
+  }
+}

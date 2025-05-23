@@ -24,6 +24,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         
         // Force removal of any remaining markers
         try {
+          // Clean up marker pane
           const markerPane = map._panes.markerPane;
           if (markerPane) {
             while (markerPane.firstChild) {
@@ -34,12 +35,22 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
           // Also clear the overlay pane which may contain SVG elements
           const overlayPane = map._panes.overlayPane;
           if (overlayPane) {
-            while (overlayPane.firstChild) {
-              overlayPane.removeChild(overlayPane.firstChild);
-            }
+            Array.from(overlayPane.querySelectorAll('svg')).forEach(svg => {
+              // Remove all path elements within SVGs
+              Array.from(svg.querySelectorAll('path')).forEach(path => {
+                path.remove();
+              });
+              
+              // Clean empty g elements
+              Array.from(svg.querySelectorAll('g')).forEach(g => {
+                if (!g.hasChildNodes()) {
+                  g.remove();
+                }
+              });
+            });
           }
         } catch (err) {
-          console.error('Error clearing marker pane:', err);
+          console.error('Error cleaning up map panes:', err);
         }
       } else {
         // Fallback if map instance not available
@@ -91,6 +102,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       setTimeout(() => {
         if (map && map.fire) {
           try {
+            // Trigger draw events to reset the toolbar state
             map.fire('draw:editstart');
             map.fire('draw:editstop');
             console.log('Fired edit events to refresh toolbar state');

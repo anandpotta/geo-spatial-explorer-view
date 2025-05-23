@@ -3,6 +3,7 @@ import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
+import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
@@ -74,6 +75,14 @@ export function useClearAllOperation(onClearAll?: () => void) {
   const confirmClearAll = useCallback(() => {
     console.log('Confirming clear all operation');
     const featureGroup = window.featureGroup;
+    
+    // First ensure we clear all SVG paths from the DOM directly
+    if (featureGroup && (featureGroup as any)._map) {
+      // Direct SVG path removal using DOM manipulation
+      clearAllMapSvgElements((featureGroup as any)._map);
+    }
+    
+    // Then proceed with normal layer clearing
     if (featureGroup) {
       handleClearAll({
         featureGroup,
@@ -92,6 +101,11 @@ export function useClearAllOperation(onClearAll?: () => void) {
       window.dispatchEvent(new Event('markersUpdated'));
       window.dispatchEvent(new Event('drawingsUpdated'));
       window.dispatchEvent(new Event('clearAllSvgPaths'));
+      
+      // Force a clean reload of the map visualization
+      setTimeout(() => {
+        window.dispatchEvent(new Event('mapRefresh'));
+      }, 100);
       
       if (onClearAll) {
         onClearAll();
