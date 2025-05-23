@@ -2,12 +2,62 @@
 // This file provides compatibility with newer versions of react-leaflet-draw
 // by ensuring that we can still pass certain props like featureGroup to EditControl
 import { EditControl as OriginalEditControl } from "react-leaflet-draw";
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useEffect } from 'react';
+import L from 'leaflet';
+
+// Apply patches to leaflet-draw to fix known issues
+const applyLeafletDrawPatches = () => {
+  // Fix for the "type is not defined" error in readableArea
+  try {
+    if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
+      // Patch the readableArea function to provide a fallback for the missing type variable
+      const originalReadableArea = L.Draw.Polygon.prototype._getTooltipText;
+      if (originalReadableArea) {
+        L.Draw.Polygon.prototype._getTooltipText = function() {
+          try {
+            return originalReadableArea.apply(this, arguments);
+          } catch (err) {
+            // Fallback when error occurs in readableArea
+            return {
+              text: 'Click to continue drawing shape',
+              subtext: ''
+            };
+          }
+        };
+      }
+      
+      // Also patch Rectangle to use the same safe implementation
+      if (L.Draw.Rectangle && L.Draw.Rectangle.prototype) {
+        const originalRectTooltip = L.Draw.Rectangle.prototype._getTooltipText;
+        if (originalRectTooltip) {
+          L.Draw.Rectangle.prototype._getTooltipText = function() {
+            try {
+              return originalRectTooltip.apply(this, arguments);
+            } catch (err) {
+              // Fallback when error occurs in tooltip text generation
+              return {
+                text: 'Click and drag to draw rectangle',
+                subtext: ''
+              };
+            }
+          };
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to apply Leaflet Draw patches:', error);
+  }
+};
 
 // Create a wrapper component that forwards the ref and handles the featureGroup prop
 export const EditControl = forwardRef((props: any, ref: any) => {
   // Extract featureGroup from props to ensure it's correctly passed
   const { featureGroup, edit, ...otherProps } = props;
+  
+  // Apply patches when component mounts
+  useEffect(() => {
+    applyLeafletDrawPatches();
+  }, []);
   
   // Format the edit options properly based on what was passed
   let editOptions;

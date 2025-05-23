@@ -12,7 +12,9 @@ export const getDrawOptions = () => {
         fillColor: '#33c3f061',
         fillOpacity: 1,
         stroke: true
-      }
+      },
+      showArea: false, // Disable area calculation to prevent the error
+      metric: true
     },
     polygon: {
       allowIntersection: false,
