@@ -30,8 +30,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false }) => 
       disabled={disabled}
       variant="outline"
       size="sm"
-      className="bg-white hover:bg-gray-50 border border-gray-300 shadow-md cursor-pointer relative z-10"
-      style={{ pointerEvents: disabled ? 'none' : 'auto' }}
+      className="bg-white hover:bg-gray-50 border border-gray-300 shadow-md cursor-pointer relative z-20 pointer-events-auto"
     >
       <Download className="mr-2 h-4 w-4" />
       Download GeoJSON
