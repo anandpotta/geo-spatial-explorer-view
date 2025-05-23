@@ -43,3 +43,26 @@ export function safelyAddLayerToFeatureGroup(featureGroup: L.FeatureGroup, layer
     console.error('Error adding layer to feature group:', err);
   }
 }
+
+/**
+ * Ensures that a feature group has a properly typed eachLayer method
+ */
+export function ensureFeatureGroupMethods(featureGroup: L.FeatureGroup): L.FeatureGroup {
+  if (!featureGroup) return featureGroup;
+  
+  // Add eachLayer method if it doesn't exist or fix it if it's broken
+  if (!featureGroup.eachLayer) {
+    const eachLayerFn = function(this: L.FeatureGroup, cb: (layer: L.Layer) => void) {
+      if (this._layers) {
+        Object.keys(this._layers).forEach(key => {
+          cb(this._layers[key as keyof typeof this._layers] as L.Layer);
+        });
+      }
+      return this; // Return this to maintain method chaining
+    };
+    
+    (featureGroup as any).eachLayer = eachLayerFn;
+  }
+  
+  return featureGroup;
+}

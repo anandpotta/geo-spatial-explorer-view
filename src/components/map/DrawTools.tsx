@@ -60,14 +60,19 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   useEffect(() => {
     // Add safety mechanism to prevent errors when feature group is not initialized
     if (featureGroup && !initializedRef.current) {
-      // Apply patch to ensure all needed methods exist
-      featureGroup.eachLayer = featureGroup.eachLayer || function(cb) {
-        if (this._layers) {
-          Object.keys(this._layers).forEach(key => {
-            cb(this._layers[key]);
-          });
-        }
-      };
+      // Apply patch to ensure all needed methods exist in a type-safe way
+      if (!featureGroup.eachLayer) {
+        const eachLayerFn = function(this: L.FeatureGroup, cb: (layer: L.Layer) => void) {
+          if (this._layers) {
+            Object.keys(this._layers).forEach(key => {
+              cb(this._layers[key as keyof typeof this._layers] as L.Layer);
+            });
+          }
+        };
+        
+        // Explicitly cast the function to avoid TypeScript errors
+        (featureGroup as any).eachLayer = eachLayerFn;
+      }
       
       // Mark as initialized
       initializedRef.current = true;

@@ -2,6 +2,7 @@
 import React, { ForwardedRef } from 'react';
 import DrawTools from '../DrawTools';
 import L from 'leaflet';
+import { ensureFeatureGroupMethods } from '@/utils/leaflet-layer-patch';
 
 interface DrawToolsWrapperProps {
   onCreated: (shape: any) => void;
@@ -22,13 +23,16 @@ const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
     return null;
   }
   
+  // Ensure the featureGroup has all required methods before passing it to DrawTools
+  const patchedFeatureGroup = ensureFeatureGroupMethods(featureGroup);
+  
   return (
     <DrawTools 
-      ref={ref}
       onCreated={onCreated} 
       activeTool={activeTool} 
       onClearAll={onClearAll}
-      featureGroup={featureGroup}
+      featureGroup={patchedFeatureGroup}
+      ref={ref}
     />
   );
 });
