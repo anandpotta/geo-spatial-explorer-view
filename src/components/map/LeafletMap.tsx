@@ -137,6 +137,7 @@ const LeafletMap = ({
       onRegionClick={mapState.handleRegionClick}
       onClearAll={handleClearAllWrapper}
       isMapReady={isMapReady}
+      selectedLocation={selectedLocation}
     />
   );
 };

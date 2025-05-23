@@ -8,6 +8,7 @@ import MapContainer from './container/MapContainer';
 import MapReference from './MapReference';
 import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
+import SelectedLocationMarker from './SelectedLocationMarker';
 import MapEvents from './MapEvents';
 import L from 'leaflet';
 
@@ -34,6 +35,7 @@ interface MapViewProps {
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
   isMapReady?: boolean;
+  selectedLocation?: { x: number; y: number; label?: string };
 }
 
 const MapView = ({
@@ -54,7 +56,8 @@ const MapView = ({
   activeTool,
   onRegionClick,
   onClearAll,
-  isMapReady = false
+  isMapReady = false,
+  selectedLocation
 }: MapViewProps) => {
   const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
   const drawingControlsRef = useRef(null);
@@ -94,6 +97,14 @@ const MapView = ({
         mapKey={mapKey}
       >
         <MapReference onMapReady={onMapReady} />
+        
+        {/* Show red marker for selected location */}
+        {selectedLocation && (
+          <SelectedLocationMarker
+            position={[selectedLocation.y, selectedLocation.x]}
+            label={selectedLocation.label || 'Selected Location'}
+          />
+        )}
         
         <DrawingControlsContainer
           ref={drawingControlsRef}
