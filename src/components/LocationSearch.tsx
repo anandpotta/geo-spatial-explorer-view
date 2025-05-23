@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
@@ -7,10 +8,9 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;
-  disabled?: boolean;
 }
 
-const LocationSearch = ({ onLocationSelect, disabled = false }: LocationSearchProps) => {
+const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +38,7 @@ const LocationSearch = ({ onLocationSelect, disabled = false }: LocationSearchPr
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (query.length >= 3 && !disabled) {
+      if (query.length >= 3) {
         setIsLoading(true);
         try {
           const locations = await searchLocations(query);
@@ -78,11 +78,9 @@ const LocationSearch = ({ onLocationSelect, disabled = false }: LocationSearchPr
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query, isOfflineMode, toast, disabled]);
+  }, [query, isOfflineMode, toast]);
 
   const handleSelect = (location: Location) => {
-    if (disabled) return;
-    
     console.log('Location selected in search component:', location);
     setSelectedLocation(location);
     setQuery(location.label);
@@ -98,8 +96,6 @@ const LocationSearch = ({ onLocationSelect, disabled = false }: LocationSearchPr
   };
 
   const handleClear = () => {
-    if (disabled) return;
-    
     setQuery('');
     setSelectedLocation(null);
     setResults([]);
@@ -108,8 +104,6 @@ const LocationSearch = ({ onLocationSelect, disabled = false }: LocationSearchPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (disabled) return;
-    
     if (selectedLocation) {
       onLocationSelect(selectedLocation);
       
@@ -163,10 +157,9 @@ const LocationSearch = ({ onLocationSelect, disabled = false }: LocationSearchPr
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pr-8 pl-10 w-full"
-              disabled={disabled}
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-            {query && !disabled && (
+            {query && (
               <button 
                 type="button" 
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -176,12 +169,12 @@ const LocationSearch = ({ onLocationSelect, disabled = false }: LocationSearchPr
               </button>
             )}
           </div>
-          <Button type="submit" size="icon" variant="default" disabled={disabled}>
+          <Button type="submit" size="icon" variant="default">
             {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
           </Button>
         </div>
         
-        {showResults && results.length > 0 && !disabled && (
+        {showResults && results.length > 0 && (
           <ul className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
             {results.map((location) => (
               <li 
