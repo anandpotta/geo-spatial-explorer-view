@@ -1,4 +1,9 @@
 
+
+.selected-location-tooltip {
+  margin-top: 0px !important;
+}
+
 .selected-location-tooltip .leaflet-tooltip {
   background: transparent !important;
   border: none !important;
@@ -34,3 +39,4 @@
   white-space: nowrap;
   display: inline-block;
 }
+
