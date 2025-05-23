@@ -1,3 +1,4 @@
+
 import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
@@ -86,22 +87,6 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         try {
           markerRef.current.closeTooltip();
           markerRef.current.closePopup();
-          
-          // Additional cleanup to prevent marker icon duplication
-          const icon = markerRef.current.getIcon();
-          if (icon) {
-            const iconEls = document.querySelectorAll(`.leaflet-marker-icon[src$="marker-icon.png"]`);
-            // Only remove redundant icons (keeping the one we need)
-            if (iconEls.length > 1) {
-              Array.from(iconEls).slice(0, iconEls.length - 1).forEach(iconEl => {
-                try {
-                  iconEl.remove();
-                } catch (e) {
-                  console.error('Error removing duplicate marker icon:', e);
-                }
-              });
-            }
-          }
         } catch (error) {
           console.error('Error cleaning up marker:', error);
         }
