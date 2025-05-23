@@ -14,6 +14,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
 
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     if (!markerRef.current || isDeleting) return;
@@ -38,6 +39,9 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       
       // Dispatch event to update other components
       window.dispatchEvent(new CustomEvent('markersUpdated'));
+      
+      // Update tooltip key to force re-render
+      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
@@ -104,6 +108,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       />
 
       <Tooltip 
+        key={tooltipKey}
         direction="top" 
         offset={[0, -10]} 
         opacity={0.9}

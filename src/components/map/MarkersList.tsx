@@ -2,7 +2,7 @@
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -27,6 +27,17 @@ const MarkersList = ({
 }: MarkersListProps) => {
   // Generate a unique key for the temp marker that changes when position changes
   const tempMarkerKey = tempMarker ? `temp-marker-${tempMarker[0]}-${tempMarker[1]}-${Date.now()}` : '';
+  
+  // Use useMemo to deduplicate markers by ID
+  const uniqueMarkers = useMemo(() => {
+    const markerMap = new Map<string, LocationMarker>();
+    if (Array.isArray(markers)) {
+      markers.forEach(marker => {
+        markerMap.set(marker.id, marker);
+      });
+    }
+    return Array.from(markerMap.values());
+  }, [markers]);
   
   // Safe delete handler that prevents unwanted marker creation
   const handleDeleteMarker = (id: string) => {
@@ -56,7 +67,7 @@ const MarkersList = ({
   
   return (
     <>
-      {Array.isArray(markers) && markers.map((marker) => (
+      {uniqueMarkers.map((marker) => (
         <UserMarker 
           key={`user-marker-${marker.id}`} 
           marker={marker} 

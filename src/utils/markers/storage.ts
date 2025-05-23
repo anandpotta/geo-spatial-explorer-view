@@ -35,7 +35,13 @@ export function getSavedMarkers(): LocationMarker[] {
       markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
     }
     
-    return markers;
+    // Deduplicate markers by ID
+    const uniqueMarkers = new Map<string, LocationMarker>();
+    markers.forEach((marker: LocationMarker) => {
+      uniqueMarkers.set(marker.id, marker);
+    });
+    
+    return Array.from(uniqueMarkers.values());
   } catch (e) {
     console.error('Failed to parse saved markers', e);
     return [];
@@ -67,7 +73,11 @@ export function saveMarker(marker: LocationMarker): void {
     savedMarkers.push(markerWithUser);
   }
   
-  localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
+  // Deduplicate markers before saving
+  const uniqueMarkers = new Map<string, LocationMarker>();
+  savedMarkers.forEach(m => uniqueMarkers.set(m.id, m));
+  
+  localStorage.setItem('savedMarkers', JSON.stringify(Array.from(uniqueMarkers.values())));
   
   // Notify components about storage changes
   window.dispatchEvent(new Event('storage'));
@@ -76,7 +86,7 @@ export function saveMarker(marker: LocationMarker): void {
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
   if (isOnline && isBackendAvailable) {
-    syncMarkersWithBackend(savedMarkers)
+    syncMarkersWithBackend(Array.from(uniqueMarkers.values()))
       .catch(err => {
         if (navigator.onLine) {
           console.warn('Failed to sync markers, will retry later:', err);

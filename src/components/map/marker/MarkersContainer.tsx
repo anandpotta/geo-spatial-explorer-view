@@ -1,7 +1,7 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 
 interface MarkersContainerProps {
   markers: LocationMarker[];
@@ -24,9 +24,20 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
+  // Deduplicate markers
+  const uniqueMarkers = useMemo(() => {
+    const markerMap = new Map<string, LocationMarker>();
+    if (Array.isArray(markers)) {
+      markers.forEach(marker => {
+        markerMap.set(marker.id, marker);
+      });
+    }
+    return Array.from(markerMap.values());
+  }, [markers]);
+
   return (
     <MarkersList
-      markers={markers}
+      markers={uniqueMarkers}
       tempMarker={tempMarker}
       markerName={markerName}
       markerType={markerType}
