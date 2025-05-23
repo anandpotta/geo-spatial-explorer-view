@@ -1,0 +1,16 @@
+
+.selected-location-tooltip .leaflet-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.selected-location-tooltip .leaflet-tooltip-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.selected-location-tooltip .leaflet-tooltip:before {
+  display: none !important;
+}

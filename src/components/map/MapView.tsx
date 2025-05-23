@@ -36,6 +36,7 @@ interface MapViewProps {
   onClearAll?: () => void;
   isMapReady?: boolean;
   selectedLocation?: { x: number; y: number; label?: string };
+  onClearSelectedLocation?: () => void;
 }
 
 const MapView = ({
@@ -57,7 +58,8 @@ const MapView = ({
   onRegionClick,
   onClearAll,
   isMapReady = false,
-  selectedLocation
+  selectedLocation,
+  onClearSelectedLocation
 }: MapViewProps) => {
   // Generate a stable ID unique to this component instance
   const instanceId = useId();
@@ -106,6 +108,7 @@ const MapView = ({
           <SelectedLocationMarker
             position={[selectedLocation.y, selectedLocation.x]}
             label={selectedLocation.label || 'Selected Location'}
+            onClose={onClearSelectedLocation}
           />
         )}
         

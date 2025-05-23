@@ -13,7 +13,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
   
   if (featureGroup) {
     try {
-      // Clear all visible layers from the map
+      // Clear all visible layers from the map except selected location markers
       featureGroup.clearLayers();
       
       // Get the map instance from the featureGroup
@@ -22,14 +22,29 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         // Force SVG paths to be removed directly from the DOM
         clearAllMapSvgElements(map);
         
-        // Force removal of any remaining markers
+        // Force removal of any remaining markers except red location markers
         try {
-          // Clean up marker pane
+          // Clean up marker pane but preserve red markers
           const markerPane = map._panes?.markerPane as HTMLElement | undefined;
           if (markerPane) {
-            while (markerPane.firstChild) {
-              markerPane.removeChild(markerPane.firstChild);
-            }
+            // Remove only non-red markers (preserve selected location markers)
+            const markers = markerPane.querySelectorAll('.leaflet-marker-icon');
+            markers.forEach((marker: Element) => {
+              const imgElement = marker as HTMLImageElement;
+              // Check if this is NOT a red marker (selected location marker)
+              if (!imgElement.src?.includes('marker-icon-2x-red.png')) {
+                marker.parentNode?.removeChild(marker);
+              }
+            });
+            
+            // Also clean up shadows for non-red markers
+            const shadows = markerPane.querySelectorAll('.leaflet-marker-shadow');
+            shadows.forEach((shadow: Element, index: number) => {
+              const correspondingMarker = markers[index] as HTMLImageElement;
+              if (correspondingMarker && !correspondingMarker.src?.includes('marker-icon-2x-red.png')) {
+                shadow.parentNode?.removeChild(shadow);
+              }
+            });
           }
           
           // Also clear the overlay pane which may contain SVG elements
@@ -58,18 +73,21 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         window.dispatchEvent(new Event('clearAllSvgPaths'));
       }
       
-      // Clear all markers from storage
+      // Clear all user-created markers from storage (but not selected location markers)
       const markers = getSavedMarkers();
       markers.forEach(marker => {
         deleteMarker(marker.id);
       });
       
-      // Preserve authentication data
+      // Preserve authentication data and selected location data
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
       
-      // Completely clear localStorage
-      localStorage.clear();
+      // Clear only drawing-related storage, preserve location selection
+      localStorage.removeItem('savedDrawings');
+      localStorage.removeItem('savedMarkers');
+      localStorage.removeItem('floorPlans');
+      localStorage.removeItem('svgPaths');
       
       // Restore authentication data
       if (authState) {
@@ -78,12 +96,6 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       if (users) {
         localStorage.setItem('geospatial_users', users);
       }
-      
-      // Forcefully clear specific storages that might be causing issues
-      localStorage.removeItem('savedDrawings');
-      localStorage.removeItem('savedMarkers');
-      localStorage.removeItem('floorPlans');
-      localStorage.removeItem('svgPaths');
       
       // Dispatch storage and related events to notify components
       console.log('Dispatching events for clear all operation');
@@ -114,7 +126,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
             const zoom = map.getZoom();
             map._resetView(center, zoom, true);
             
-            // Final cleanup attempt for any remaining paths
+            // Final cleanup attempt for any remaining paths (but preserve red markers)
             document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
               try {
                 path.remove();
@@ -128,7 +140,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         }
       }, 100);
       
-      toast.success('All map data cleared while preserving user accounts');
+      toast.success('All drawings cleared while preserving selected locations');
     } catch (error) {
       console.error('Error in clear all operation:', error);
       toast.error('Error clearing map data. Please try refreshing the page.');

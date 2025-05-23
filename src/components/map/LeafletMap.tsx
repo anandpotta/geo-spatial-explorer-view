@@ -19,6 +19,7 @@ interface LeafletMapProps {
   activeTool?: string | null;
   onLocationSelect?: (location: Location) => void;
   onClearAll?: () => void;
+  onClearSelectedLocation?: () => void;
 }
 
 const LeafletMap = ({ 
@@ -26,7 +27,8 @@ const LeafletMap = ({
   onMapReady, 
   activeTool, 
   onLocationSelect, 
-  onClearAll 
+  onClearAll,
+  onClearSelectedLocation 
 }: LeafletMapProps) => {
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
   const [instanceKey, setInstanceKey] = useState<number>(Date.now());
@@ -105,7 +107,7 @@ const LeafletMap = ({
     }
   }, [handleSetMapRef, onMapReady, isMapReferenceSet]);
 
-  // Clear all layers and reset state
+  // Clear all layers and reset state (but preserve selected location)
   const handleClearAllWrapper = useCallback(() => {
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
@@ -152,6 +154,7 @@ const LeafletMap = ({
       onClearAll={handleClearAllWrapper}
       isMapReady={isMapReady}
       selectedLocation={selectedLocation}
+      onClearSelectedLocation={onClearSelectedLocation}
     />
   );
 };
