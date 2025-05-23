@@ -4,7 +4,6 @@ import { MapContainer, TileLayer } from 'react-leaflet';
 import MapEvents from './MapEvents';
 import MapReference from './MapReference';
 import MarkersContainer from './marker/MarkersContainer';
-import DrawingControls from './DrawingControls';
 import 'leaflet/dist/leaflet.css';
 import { LocationMarker } from '@/utils/geo-utils';
 
@@ -89,7 +88,6 @@ const MapView = ({
           setMarkerName={setMarkerName}
           setMarkerType={setMarkerType}
         />
-        <DrawingControls />
       </MapContainer>
     </div>
   );
