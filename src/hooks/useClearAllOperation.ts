@@ -78,17 +78,21 @@ export function useClearAllOperation(onClearAll?: () => void) {
     const featureGroup = window.featureGroup;
     
     // First ensure we clear all SVG paths from the DOM directly
-    // Get all map instances from document
+    // Get all map instances from document - using a safer approach
     const mapContainers = document.querySelectorAll('.leaflet-container');
-    mapContainers.forEach(container => {
-      const mapInstance = (container as any)._leaflet_id ? 
-        (L as any).maps[(container as any)._leaflet_id] : null;
-      
-      if (mapInstance) {
-        console.log('Found map instance, clearing SVG paths directly');
-        clearAllMapSvgElements(mapInstance);
-      }
-    });
+    if (mapContainers && mapContainers.length > 0) {
+      mapContainers.forEach(container => {
+        // Safely check if the container has the _leaflet_id property
+        const leafletId = (container as any)._leaflet_id;
+        if (leafletId && (L as any).maps) {
+          const mapInstance = (L as any).maps[leafletId];
+          if (mapInstance) {
+            console.log('Found map instance, clearing SVG paths directly');
+            clearAllMapSvgElements(mapInstance);
+          }
+        }
+      });
+    }
     
     // If featureGroup exists, also clear through it
     if (featureGroup && (featureGroup as any)._map) {
@@ -147,15 +151,22 @@ export function useClearAllOperation(onClearAll?: () => void) {
     
     setShowConfirmation(false);
     
-    // Final cleanup: directly remove all paths from any possible map containers
+    // Final cleanup: safely remove all paths from any possible map containers
     setTimeout(() => {
-      document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
-        try {
-          path.remove();
-        } catch (e) {
-          console.error('Error removing path:', e);
+      try {
+        const paths = document.querySelectorAll('.leaflet-overlay-pane path');
+        if (paths && paths.length > 0) {
+          paths.forEach(path => {
+            try {
+              path.remove();
+            } catch (e) {
+              console.error('Error removing path:', e);
+            }
+          });
         }
-      });
+      } catch (e) {
+        console.error('Error in final path cleanup:', e);
+      }
     }, 200);
     
   }, [onClearAll]);
