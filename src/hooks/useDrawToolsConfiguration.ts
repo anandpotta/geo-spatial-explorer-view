@@ -35,6 +35,32 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
         }
       }
       
+      // Enhance the Circle draw handler to ensure SVG rendering
+      if (L.Draw && L.Draw.Circle) {
+        const circleProto = L.Draw.Circle.prototype as any;
+        
+        // Make sure Circle uses SVG renderer
+        if (circleProto && circleProto._fireCreatedEvent) {
+          const originalFireCreatedEvent = circleProto._fireCreatedEvent;
+          circleProto._fireCreatedEvent = function() {
+            try {
+              // Force SVG renderer for the circle
+              if (this.options && this.options.shapeOptions) {
+                this.options.shapeOptions.renderer = L.svg();
+                this.options.shapeOptions.stroke = true;
+                this.options.shapeOptions.opacity = 1;
+              }
+              
+              // Call original method
+              return originalFireCreatedEvent.apply(this, arguments);
+            } catch (err) {
+              console.error('Error in circle creation:', err);
+              return originalFireCreatedEvent.apply(this, arguments);
+            }
+          };
+        }
+      }
+      
       // Patch metric calculation for area display
       if (typeof L.GeometryUtil !== 'undefined' && L.GeometryUtil.readableArea) {
         const originalReadableArea = L.GeometryUtil.readableArea;
@@ -82,6 +108,25 @@ export const patchLeafletDraw = () => {
           return Math.round(area) + ' m²';
         }
       };
+    }
+    
+    // Ensure circles are rendered as SVG paths
+    if (L.Draw && L.Draw.Circle) {
+      // Store original Circle class initialization
+      const originalInitialize = L.Draw.Circle.prototype.initialize;
+      if (originalInitialize) {
+        L.Draw.Circle.prototype.initialize = function() {
+          // Call the original initialization
+          originalInitialize.apply(this, arguments);
+          
+          // Force SVG renderer and stroke options
+          if (this.options && this.options.shapeOptions) {
+            this.options.shapeOptions.renderer = L.svg();
+            this.options.shapeOptions.stroke = true;
+            this.options.shapeOptions.opacity = 1;
+          }
+        };
+      }
     }
   }
 };

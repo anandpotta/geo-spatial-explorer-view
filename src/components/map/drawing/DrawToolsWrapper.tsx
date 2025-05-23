@@ -4,6 +4,7 @@ import DrawTools from '../DrawTools';
 import L from 'leaflet';
 import { ensureFeatureGroupMethods } from '@/utils/leaflet-layer-patch';
 import { patchLeafletDraw } from '@/hooks/useDrawToolsConfiguration';
+import { configureSvgRenderer } from '@/utils/draw-tools-utils'; 
 
 interface DrawToolsWrapperProps {
   onCreated: (shape: any) => void;
@@ -24,6 +25,9 @@ const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
     // Apply leaflet-draw patches to fix type errors
     patchLeafletDraw();
     
+    // Configure SVG renderer to improve path rendering
+    const cleanup = configureSvgRenderer();
+    
     // Patch the GeometryUtil.readableArea method to prevent "type is not defined" error
     if (L.GeometryUtil && L.GeometryUtil.readableArea) {
       const originalReadableArea = L.GeometryUtil.readableArea;
@@ -39,6 +43,23 @@ const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
         }
       };
     }
+    
+    // Explicitly configure Circle to use SVG renderer
+    if (L.Draw && L.Draw.Circle) {
+      const circleProto = L.Draw.Circle.prototype as any;
+      if (circleProto && circleProto.options) {
+        circleProto.options.shapeOptions = {
+          ...circleProto.options.shapeOptions,
+          renderer: L.svg(),
+          stroke: true,
+          opacity: 1
+        };
+      }
+    }
+    
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, []);
   
   if (!featureGroup) {

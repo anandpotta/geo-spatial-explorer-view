@@ -11,7 +11,8 @@ export const getDrawOptions = () => {
         opacity: 1,
         fillColor: '#33c3f061',
         fillOpacity: 1,
-        stroke: true
+        stroke: true,
+        renderer: L.svg() // Explicitly use SVG renderer
       },
       showArea: false, // Disable area calculation to prevent the error
       metric: true
@@ -30,7 +31,8 @@ export const getDrawOptions = () => {
         fillOpacity: 1,
         stroke: true,
         lineCap: 'round',
-        lineJoin: 'round'
+        lineJoin: 'round',
+        renderer: L.svg() // Explicitly use SVG renderer
       },
       showArea: false,
       metric: true,
@@ -43,7 +45,8 @@ export const getDrawOptions = () => {
         opacity: 1,
         fillColor: '#33c3f061',
         fillOpacity: 1,
-        stroke: true
+        stroke: true,
+        renderer: L.svg() // Explicitly use SVG renderer for circles
       }
     },
     circlemarker: false,
@@ -51,3 +54,6 @@ export const getDrawOptions = () => {
     polyline: false
   };
 };
+
+// Add L import to the file
+import L from 'leaflet';

@@ -4,7 +4,7 @@ import L from 'leaflet';
 /**
  * Configures the SVG renderer for Leaflet drawing tools to prevent flickering
  */
-export const configureSvgRenderer = (): () => void => {
+export const configureSvgRenderer = (): (() => void) => {
   // Store original _updateStyle method if it exists
   const originalUpdateStyle = (L.SVG.prototype as any)._updateStyle;
 
@@ -32,13 +32,42 @@ export const configureSvgRenderer = (): () => void => {
       if (!layer._path.classList.contains('leaflet-drawing')) {
         layer._path.classList.add('leaflet-drawing');
       }
+      
+      // Store the layer type as an attribute for easier selection
+      if (layer._latlng && !layer._path.hasAttribute('data-shape-type')) {
+        // It's a circle
+        layer._path.setAttribute('data-shape-type', 'circle');
+      } else if (layer._latlngs && !layer._path.hasAttribute('data-shape-type')) {
+        // It's a polygon/rectangle
+        layer._path.setAttribute('data-shape-type', 'polygon');
+      }
     }
   };
 
+  // Specific patch for Circle to ensure SVG rendering
+  if (L.Circle && L.Circle.prototype) {
+    // Ensure Circle creates SVG paths by making it use the SVG renderer
+    const originalCircleInitialize = L.Circle.prototype.initialize;
+    if (originalCircleInitialize) {
+      L.Circle.prototype.initialize = function() {
+        // Call original initialization
+        originalCircleInitialize.apply(this, arguments);
+        
+        // Force SVG renderer
+        this.options.renderer = L.svg();
+        this.options.stroke = true;
+        this.options.opacity = 1;
+      };
+    }
+  }
+
   // Return a cleanup function
   return () => {
-    // Restore original method when component unmounts
+    // Restore original methods when component unmounts
     (L.SVG.prototype as any)._updateStyle = originalUpdateStyle;
+    if (L.Circle && L.Circle.prototype) {
+      L.Circle.prototype.initialize = originalCircleInitialize;
+    }
   };
 };
 
@@ -121,4 +150,37 @@ export const enhancePathPreservation = (map: L.Map): () => void => {
   return () => {
     observer.disconnect();
   };
+};
+
+/**
+ * Ensures that circles are rendered as SVG paths
+ */
+export const ensureCircleSvgRendering = (map: L.Map): void => {
+  if (!map) return;
+  
+  // Override the Circle class to use SVG renderer
+  if (L.Circle) {
+    // Force SVG renderer for all circles
+    const originalCircleInitialize = L.Circle.prototype.initialize;
+    if (originalCircleInitialize) {
+      L.Circle.prototype.initialize = function() {
+        // Call original initialization
+        originalCircleInitialize.apply(this, arguments);
+        
+        // Explicitly set renderer to SVG
+        this.options.renderer = L.svg();
+      };
+    }
+  }
+  
+  // Additionally, ensure the Draw.Circle class uses SVG
+  if (L.Draw && L.Draw.Circle) {
+    const circleProto = L.Draw.Circle.prototype as any;
+    if (circleProto) {
+      // Force SVG renderer in options
+      if (circleProto.options && circleProto.options.shapeOptions) {
+        circleProto.options.shapeOptions.renderer = L.svg();
+      }
+    }
+  }
 };
