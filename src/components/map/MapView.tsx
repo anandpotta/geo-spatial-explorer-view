@@ -1,4 +1,3 @@
-
 import { useState, useRef, useId } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';

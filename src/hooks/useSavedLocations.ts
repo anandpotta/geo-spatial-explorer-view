@@ -1,119 +1,39 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import { LocationMarker, getSavedMarkers } from '@/utils/markers/index';
 
 export const useSavedLocations = () => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
-
-  const loadMarkers = () => {
-    const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
-  };
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null);
 
   useEffect(() => {
-    loadMarkers();
-    
-    const handleStorage = () => {
-      loadMarkers();
+    const loadSavedMarkers = () => {
+      try {
+        const savedMarkers = getSavedMarkers();
+        setMarkers(savedMarkers);
+      } catch (error) {
+        console.error('Error loading saved markers:', error);
+      } finally {
+        setLoading(false);
+      }
     };
+
+    loadSavedMarkers();
     
-    const handleMarkersUpdated = () => {
-      loadMarkers();
+    // Listen for storage events or custom marker update events
+    const handleStorageUpdate = () => {
+      loadSavedMarkers();
     };
-    
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
+
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('markersUpdated', handleStorageUpdate);
     
     return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('markersUpdated', handleStorageUpdate);
     };
   }, []);
 
-  const handleDelete = (id: string, event?: React.MouseEvent) => {
-    // Prevent event propagation to avoid triggering parent elements
-    if (event) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
-    
-    // Store the element that triggered the deletion for focus return
-    if (event?.currentTarget) {
-      returnFocusRef.current = event.currentTarget as HTMLElement;
-    }
-    
-    const marker = markers.find(m => m.id === id);
-    if (marker) {
-      setMarkerToDelete(marker);
-      setIsDeleteDialogOpen(true);
-    }
-  };
-
-  const confirmDelete = () => {
-    if (markerToDelete) {
-      deleteMarker(markerToDelete.id);
-      loadMarkers(); // Reload markers immediately after deletion
-      setIsDeleteDialogOpen(false);
-      setMarkerToDelete(null);
-      toast.success("Location removed");
-      
-      // Reset focus to document.body as a fallback
-      document.body.focus();
-      
-      // Wait for next frame before trying to return focus
-      requestAnimationFrame(() => {
-        try {
-          if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
-            returnFocusRef.current.focus();
-          } else {
-            document.body.focus();
-          }
-        } catch (e) {
-          console.error("Error restoring focus:", e);
-          document.body.focus();
-        } finally {
-          returnFocusRef.current = null;
-        }
-      });
-    }
-  };
-
-  const cancelDelete = () => {
-    setIsDeleteDialogOpen(false);
-    setMarkerToDelete(null);
-    
-    // Reset focus to document.body as a fallback
-    document.body.focus();
-    
-    // Wait for next frame before trying to return focus
-    requestAnimationFrame(() => {
-      try {
-        if (returnFocusRef.current && document.body.contains(returnFocusRef.current)) {
-          returnFocusRef.current.focus();
-        } else {
-          document.body.focus();
-        }
-      } catch (e) {
-        console.error("Error restoring focus:", e);
-        document.body.focus();
-      } finally {
-        returnFocusRef.current = null;
-      }
-    });
-  };
-
-  return {
-    markers,
-    isDeleteDialogOpen,
-    setIsDeleteDialogOpen,
-    markerToDelete,
-    setMarkerToDelete,
-    handleDelete,
-    confirmDelete,
-    cancelDelete
-  };
+  return { markers, loading, selectedLocation, setSelectedLocation };
 };
