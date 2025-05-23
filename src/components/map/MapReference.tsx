@@ -16,6 +16,7 @@ interface LeafletMapInternal extends L.Map {
     };
   };
   _mapContainerId?: string;
+  _leaflet_id?: number;
 }
 
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
@@ -88,7 +89,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
               
               // One additional invalidation after a delay
               const additionalTimeout = setTimeout(() => {
-                if (map && !isUnmountingRef.current && !map.remove['_leaflet_id']) {
+                if (map && !isUnmountingRef.current && map._leaflet_id !== undefined) {
                   try {
                     map.invalidateSize(true);
                     console.log('Final map invalidation completed');

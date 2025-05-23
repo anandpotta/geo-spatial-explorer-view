@@ -27,7 +27,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenCreated={(map) => {
+        whenReady={(map) => {
           // Set a custom property on the map to identify it
           (map as any)._mapContainerId = mapContainerId;
         }}

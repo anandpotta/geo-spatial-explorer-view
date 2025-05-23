@@ -5,6 +5,11 @@ import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 import { toast } from 'sonner';
 
+// Extended interface for Leaflet map with internal properties
+interface LeafletMapWithInternal extends L.Map {
+  _leaflet_id?: number;
+}
+
 export function useMapInitialization(selectedLocation?: { x: number, y: number }) {
   const mapRef = useRef<L.Map | null>(null);
   const [mapInstanceKey, setMapInstanceKey] = useState<number>(Date.now());
@@ -205,7 +210,8 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         recoveryAttemptRef.current = 0;
         
         // Add a custom property to mark this container as used
-        (container as any)._leafletMapId = map._leaflet_id;
+        const mapWithInternal = map as LeafletMapWithInternal;
+        (container as any)._leafletMapId = mapWithInternal._leaflet_id;
         
         setTimeout(() => {
           if (mapRef.current && !isCleaningUpRef.current) {
