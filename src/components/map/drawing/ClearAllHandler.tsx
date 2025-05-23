@@ -25,7 +25,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         // Force removal of any remaining markers
         try {
           // Clean up marker pane
-          const markerPane = map._panes.markerPane;
+          const markerPane = map._panes?.markerPane as HTMLElement | undefined;
           if (markerPane) {
             while (markerPane.firstChild) {
               markerPane.removeChild(markerPane.firstChild);
@@ -33,7 +33,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
           }
           
           // Also clear the overlay pane which may contain SVG elements
-          const overlayPane = map._panes.overlayPane;
+          const overlayPane = map._panes?.overlayPane as HTMLElement | undefined;
           if (overlayPane) {
             Array.from(overlayPane.querySelectorAll('svg')).forEach(svg => {
               // Remove all path elements within SVGs
