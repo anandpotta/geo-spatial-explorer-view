@@ -100,6 +100,9 @@ export function useClearAllOperation(onClearAll?: () => void) {
     console.log('Confirming clear all operation');
     const featureGroup = window.featureGroup;
     
+    // Preserve selected location data before clearing
+    const selectedLocation = localStorage.getItem('selectedLocation');
+    
     // First ensure we clear all SVG paths from the DOM directly
     // Get all map instances from document - using a safer approach
     const mapContainers = document.querySelectorAll('.leaflet-container');
@@ -112,6 +115,23 @@ export function useClearAllOperation(onClearAll?: () => void) {
           if (mapInstance) {
             console.log('Found map instance, clearing SVG paths directly');
             clearAllMapSvgElements(mapInstance);
+            
+            // Preserve red markers and their tooltips after clearing
+            setTimeout(() => {
+              // Ensure red markers remain visible
+              const redMarkers = container.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
+              redMarkers.forEach(marker => {
+                (marker as HTMLElement).style.display = '';
+                (marker as HTMLElement).style.visibility = 'visible';
+              });
+              
+              // Ensure selected location tooltips remain visible
+              const selectedTooltips = container.querySelectorAll('.selected-location-tooltip');
+              selectedTooltips.forEach(tooltip => {
+                (tooltip as HTMLElement).style.display = '';
+                (tooltip as HTMLElement).style.visibility = 'visible';
+              });
+            }, 50);
           }
         }
       });
@@ -131,7 +151,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
       // Fallback if featureGroup is not available
       console.warn('Feature group not available for clear operation, using localStorage fallback');
       
-      // Preserve authentication data
+      // Preserve authentication data and selected location
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
       
@@ -141,12 +161,15 @@ export function useClearAllOperation(onClearAll?: () => void) {
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
       
-      // Restore authentication data
+      // Restore authentication data and selected location
       if (authState) {
         localStorage.setItem('geospatial_auth_state', authState);
       }
       if (users) {
         localStorage.setItem('geospatial_users', users);
+      }
+      if (selectedLocation) {
+        localStorage.setItem('selectedLocation', selectedLocation);
       }
       
       // Dispatch events to notify components
@@ -175,7 +198,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
     // Reset the confirmation dialog state
     setShowConfirmation(false);
     
-    // Final cleanup: safely remove all paths from any possible map containers
+    // Final cleanup: safely remove all paths from any possible map containers (preserve red markers)
     setTimeout(() => {
       try {
         const paths = document.querySelectorAll('.leaflet-overlay-pane path');
@@ -188,6 +211,24 @@ export function useClearAllOperation(onClearAll?: () => void) {
             }
           });
         }
+        
+        // Final preservation step for red markers and tooltips
+        const allContainers = document.querySelectorAll('.leaflet-container');
+        allContainers.forEach(container => {
+          // Ensure red markers remain visible
+          const redMarkers = container.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
+          redMarkers.forEach(marker => {
+            (marker as HTMLElement).style.display = '';
+            (marker as HTMLElement).style.visibility = 'visible';
+          });
+          
+          // Ensure selected location tooltips remain visible
+          const selectedTooltips = container.querySelectorAll('.selected-location-tooltip');
+          selectedTooltips.forEach(tooltip => {
+            (tooltip as HTMLElement).style.display = '';
+            (tooltip as HTMLElement).style.visibility = 'visible';
+          });
+        });
       } catch (e) {
         console.error('Error in final path cleanup:', e);
       }

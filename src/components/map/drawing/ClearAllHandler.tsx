@@ -47,6 +47,19 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
             });
           }
           
+          // Preserve selected location tooltips
+          const tooltipPane = map._panes?.tooltipPane as HTMLElement | undefined;
+          if (tooltipPane) {
+            // Remove only tooltips that are NOT from red markers
+            const tooltips = tooltipPane.querySelectorAll('.leaflet-tooltip');
+            tooltips.forEach((tooltip: Element) => {
+              // Check if this tooltip belongs to a selected location marker
+              if (!tooltip.classList.contains('selected-location-tooltip')) {
+                tooltip.parentNode?.removeChild(tooltip);
+              }
+            });
+          }
+          
           // Also clear the overlay pane which may contain SVG elements
           const overlayPane = map._panes?.overlayPane as HTMLElement | undefined;
           if (overlayPane) {
@@ -82,6 +95,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       // Preserve authentication data and selected location data
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
+      const selectedLocation = localStorage.getItem('selectedLocation');
       
       // Clear only drawing-related storage, preserve location selection
       localStorage.removeItem('savedDrawings');
@@ -89,12 +103,15 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
       
-      // Restore authentication data
+      // Restore authentication data and selected location
       if (authState) {
         localStorage.setItem('geospatial_auth_state', authState);
       }
       if (users) {
         localStorage.setItem('geospatial_users', users);
+      }
+      if (selectedLocation) {
+        localStorage.setItem('selectedLocation', selectedLocation);
       }
       
       // Dispatch storage and related events to notify components
@@ -126,13 +143,28 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
             const zoom = map.getZoom();
             map._resetView(center, zoom, true);
             
-            // Final cleanup attempt for any remaining paths (but preserve red markers)
+            // Final cleanup attempt for any remaining paths (but preserve red markers and tooltips)
             document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
               try {
                 path.remove();
               } catch (e) {
                 console.error('Error removing path:', e);
               }
+            });
+            
+            // Ensure red markers and their tooltips are preserved
+            const redMarkers = document.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
+            redMarkers.forEach(marker => {
+              // Make sure red markers remain visible
+              (marker as HTMLElement).style.display = '';
+              (marker as HTMLElement).style.visibility = 'visible';
+            });
+            
+            // Ensure selected location tooltips remain visible
+            const selectedTooltips = document.querySelectorAll('.selected-location-tooltip');
+            selectedTooltips.forEach(tooltip => {
+              (tooltip as HTMLElement).style.display = '';
+              (tooltip as HTMLElement).style.visibility = 'visible';
             });
           } catch (e) {
             console.error('Error refreshing edit toolbar:', e);
