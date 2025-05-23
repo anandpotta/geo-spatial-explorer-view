@@ -72,27 +72,45 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     }, 100);
   }, [onDelete, isDeleting]);
 
-  // Set up marker references
-  const setMarkerInstance = (marker: L.Marker) => {
-    if (marker && !markerRef.current) {
-      markerRef.current = marker;
-      setIsReady(true);
-    }
-  };
-
-  // Cleanup function to prevent memory leaks
+  // Set up marker references and handle cleanup when unmounting
   useEffect(() => {
+    // Cleanup function for when the marker is unmounted
     return () => {
       if (markerRef.current) {
         try {
+          // First close tooltips and popups
           markerRef.current.closeTooltip();
           markerRef.current.closePopup();
+          
+          // Clean up any leftover DOM elements that might be causing duplicates
+          const markerId = `marker-${marker.id}`;
+          const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"]`);
+          duplicateIcons.forEach(icon => {
+            if (icon.parentNode) {
+              icon.parentNode.removeChild(icon);
+            }
+          });
         } catch (error) {
           console.error('Error cleaning up marker:', error);
         }
       }
     };
-  }, []);
+  }, [marker.id]);
+
+  // Set up marker references
+  const setMarkerInstance = (marker: L.Marker) => {
+    if (marker && !markerRef.current) {
+      markerRef.current = marker;
+      
+      // Add a custom data attribute to help identify this marker's DOM elements
+      const element = marker.getElement();
+      if (element) {
+        element.setAttribute('data-marker-id', `marker-${marker.id}`);
+      }
+      
+      setIsReady(true);
+    }
+  };
   
   return (
     <Marker 
@@ -101,6 +119,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       draggable={true}
       ref={setMarkerInstance}
       eventHandlers={{ dragend: handleDragEnd }}
+      attribution={`marker-${marker.id}`}
     >
       <MarkerPopup 
         marker={marker} 

@@ -24,7 +24,7 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
-  // Deduplicate markers
+  // Deduplicate markers by ID to prevent duplicates
   const uniqueMarkers = useMemo(() => {
     const markerMap = new Map<string, LocationMarker>();
     if (Array.isArray(markers)) {
@@ -34,11 +34,26 @@ const MarkersContainer = memo(({
     }
     return Array.from(markerMap.values());
   }, [markers]);
+  
+  // Check if temp marker position matches any existing marker position
+  const isTemporaryMarkerDuplicate = useMemo(() => {
+    if (!tempMarker) return false;
+    
+    return uniqueMarkers.some(marker => {
+      const [lat1, lng1] = marker.position;
+      const [lat2, lng2] = tempMarker;
+      
+      // Use a small threshold for floating point comparison
+      const threshold = 0.00001;
+      return Math.abs(lat1 - lat2) < threshold && Math.abs(lng1 - lng2) < threshold;
+    });
+  }, [tempMarker, uniqueMarkers]);
 
   return (
     <MarkersList
       markers={uniqueMarkers}
-      tempMarker={tempMarker}
+      // Only pass tempMarker if it's not a duplicate of an existing marker
+      tempMarker={isTemporaryMarkerDuplicate ? null : tempMarker}
       markerName={markerName}
       markerType={markerType}
       onDeleteMarker={onDeleteMarker}

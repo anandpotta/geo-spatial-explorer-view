@@ -35,7 +35,7 @@ export function getSavedMarkers(): LocationMarker[] {
       markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
     }
     
-    // Deduplicate markers by ID
+    // Deduplicate markers by ID - this helps prevent duplicates
     const uniqueMarkers = new Map<string, LocationMarker>();
     markers.forEach((marker: LocationMarker) => {
       uniqueMarkers.set(marker.id, marker);
@@ -62,18 +62,21 @@ export function saveMarker(marker: LocationMarker): void {
     userId: currentUser.id
   };
   
+  // Get existing markers and deduplicate before saving
   const savedMarkers = getSavedMarkers();
   
   // Check if marker with same ID exists and update it
   const existingIndex = savedMarkers.findIndex(m => m.id === markerWithUser.id);
   
   if (existingIndex >= 0) {
+    // Update existing marker
     savedMarkers[existingIndex] = markerWithUser;
   } else {
+    // Add new marker
     savedMarkers.push(markerWithUser);
   }
   
-  // Deduplicate markers before saving
+  // Deduplicate markers before saving to ensure no duplicates
   const uniqueMarkers = new Map<string, LocationMarker>();
   savedMarkers.forEach(m => uniqueMarkers.set(m.id, m));
   

@@ -49,6 +49,15 @@ const MarkersList = ({
     
     // Clear any active DOM elements that might trigger marker creation
     setTimeout(() => {
+      // Remove any leftover marker icons that might be causing duplicates
+      const markerId = `marker-${id}`;
+      const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+      duplicateIcons.forEach(icon => {
+        if (icon.parentNode) {
+          icon.parentNode.removeChild(icon);
+        }
+      });
+      
       const activePopups = document.querySelectorAll('.leaflet-popup');
       activePopups.forEach(popup => {
         try {

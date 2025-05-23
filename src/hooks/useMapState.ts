@@ -106,6 +106,9 @@ export function useMapState(selectedLocation?: Location) {
       userId: currentUser.id
     };
     
+    // Clear the temporary marker BEFORE saving to prevent duplicate rendering
+    setTempMarker(null);
+    
     // Save the marker
     saveMarker(newMarker);
     
@@ -131,11 +134,10 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Clear the temporary marker to allow placing a new one
-    setTempMarker(null);
+    // Clear and reset UI state
     setMarkerName('');
     
-    // Update the markers state with the new marker
+    // Update the markers state with the new marker - use getSavedMarkers to ensure deduplication
     setMarkers(getSavedMarkers());
     
     toast.success("Location saved successfully");
