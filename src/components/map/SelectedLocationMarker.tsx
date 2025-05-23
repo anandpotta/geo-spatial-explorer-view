@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { X } from 'lucide-react';
@@ -22,8 +22,21 @@ const redMarkerIcon = new L.Icon({
 });
 
 const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMarkerProps) => {
+  const [showTooltip, setShowTooltip] = useState(true);
+  
   // Truncate label to max 24 characters
   const truncatedLabel = label.length > 24 ? `${label.substring(0, 24)}...` : label;
+  
+  const handleCloseTooltip = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowTooltip(false);
+  };
+
+  const handleMarkerMouseOver = () => {
+    if (!showTooltip) {
+      setShowTooltip(true);
+    }
+  };
   
   return (
     <Marker 
@@ -31,23 +44,35 @@ const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMa
       icon={redMarkerIcon}
       draggable={false}
       title={label}
+      eventHandlers={{
+        mouseover: handleMarkerMouseOver
+      }}
     >
-      <Tooltip permanent direction="top" offset={[0, -40]} className="selected-location-tooltip">
-        <div className="flex items-center gap-1 px-2 py-1 bg-white rounded shadow-md border text-xs">
-          <span className="text-gray-800 font-medium location-text" title={label}>
-            {truncatedLabel}
-          </span>
-          {onClose && (
+      {showTooltip && (
+        <Tooltip permanent direction="top" offset={[0, -40]} className="selected-location-tooltip">
+          <div className="flex items-center gap-1 px-2 py-1 bg-white rounded shadow-md border text-xs">
+            <span className="text-gray-800 font-medium location-text" title={label}>
+              {truncatedLabel}
+            </span>
             <button
-              onClick={onClose}
+              onClick={handleCloseTooltip}
               className="p-0.5 hover:bg-gray-100 rounded transition-colors ml-1"
-              title="Remove marker"
+              title="Close tooltip"
             >
               <X size={10} className="text-gray-500" />
             </button>
-          )}
-        </div>
-      </Tooltip>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                title="Remove marker"
+              >
+                <X size={10} className="text-red-500" />
+              </button>
+            )}
+          </div>
+        </Tooltip>
+      )}
     </Marker>
   );
 };
