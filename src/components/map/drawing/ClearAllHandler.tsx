@@ -13,67 +13,80 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
   
   if (featureGroup) {
     try {
-      // Clear all visible layers from the map except selected location markers
-      featureGroup.clearLayers();
+      // Store reference to selected location data BEFORE clearing
+      const selectedLocation = localStorage.getItem('selectedLocation');
       
       // Get the map instance from the featureGroup
       const map = (featureGroup as any)._map;
+      
+      // Before clearing, collect all red marker elements and their positions
+      const redMarkerElements: Array<{element: HTMLElement, parent: Element}> = [];
+      const redMarkerTooltips: Array<{element: HTMLElement, parent: Element}> = [];
+      
+      if (map) {
+        // Collect red markers before clearing
+        const redMarkers = document.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
+        redMarkers.forEach(marker => {
+          if (marker.parentNode) {
+            redMarkerElements.push({
+              element: marker.cloneNode(true) as HTMLElement,
+              parent: marker.parentNode as Element
+            });
+          }
+        });
+        
+        // Collect selected location tooltips before clearing
+        const selectedTooltips = document.querySelectorAll('.selected-location-tooltip');
+        selectedTooltips.forEach(tooltip => {
+          if (tooltip.parentNode) {
+            redMarkerTooltips.push({
+              element: tooltip.cloneNode(true) as HTMLElement,
+              parent: tooltip.parentNode as Element
+            });
+          }
+        });
+      }
+      
+      // Clear all visible layers from the map
+      featureGroup.clearLayers();
+      
       if (map) {
         // Force SVG paths to be removed directly from the DOM
         clearAllMapSvgElements(map);
         
-        // Force removal of any remaining markers except red location markers
+        // Clear all drawing-related elements but preserve infrastructure
         try {
-          // Clean up marker pane but preserve red markers
+          // Clean up marker pane
           const markerPane = map._panes?.markerPane as HTMLElement | undefined;
           if (markerPane) {
-            // Remove only non-red markers (preserve selected location markers)
-            const markers = markerPane.querySelectorAll('.leaflet-marker-icon');
-            markers.forEach((marker: Element) => {
-              const imgElement = marker as HTMLImageElement;
-              // Check if this is NOT a red marker (selected location marker)
-              if (!imgElement.src?.includes('marker-icon-2x-red.png')) {
-                marker.parentNode?.removeChild(marker);
-              }
-            });
-            
-            // Also clean up shadows for non-red markers
-            const shadows = markerPane.querySelectorAll('.leaflet-marker-shadow');
-            shadows.forEach((shadow: Element, index: number) => {
-              const correspondingMarker = markers[index] as HTMLImageElement;
-              if (correspondingMarker && !correspondingMarker.src?.includes('marker-icon-2x-red.png')) {
-                shadow.parentNode?.removeChild(shadow);
-              }
+            // Remove all marker-related elements
+            const allMarkers = markerPane.querySelectorAll('.leaflet-marker-icon, .leaflet-marker-shadow');
+            allMarkers.forEach((element: Element) => {
+              element.remove();
             });
           }
           
-          // Preserve selected location tooltips
+          // Clean up tooltip pane
           const tooltipPane = map._panes?.tooltipPane as HTMLElement | undefined;
           if (tooltipPane) {
-            // Remove only tooltips that are NOT from red markers
+            // Remove all tooltips
             const tooltips = tooltipPane.querySelectorAll('.leaflet-tooltip');
             tooltips.forEach((tooltip: Element) => {
-              // Check if this tooltip belongs to a selected location marker
-              if (!tooltip.classList.contains('selected-location-tooltip')) {
-                tooltip.parentNode?.removeChild(tooltip);
-              }
+              tooltip.remove();
             });
           }
           
-          // Also clear the overlay pane which may contain SVG elements
+          // Clean up overlay pane (SVG elements)
           const overlayPane = map._panes?.overlayPane as HTMLElement | undefined;
           if (overlayPane) {
-            // First try removing paths directly
+            // Remove all paths
             Array.from(overlayPane.querySelectorAll('path')).forEach(path => {
               path.remove();
             });
             
-            // Then try emptying the SVG elements
+            // Clean SVG elements
             Array.from(overlayPane.querySelectorAll('svg')).forEach(svg => {
-              // Empty the SVG content
               svg.innerHTML = '';
-              
-              // Add back an empty group element
               const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
               svg.appendChild(g);
             });
@@ -81,9 +94,26 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         } catch (err) {
           console.error('Error cleaning up map panes:', err);
         }
-      } else {
-        // Fallback if map instance not available
-        window.dispatchEvent(new Event('clearAllSvgPaths'));
+        
+        // Restore red markers after clearing
+        setTimeout(() => {
+          redMarkerElements.forEach(({element, parent}) => {
+            try {
+              parent.appendChild(element);
+            } catch (e) {
+              console.error('Error restoring red marker:', e);
+            }
+          });
+          
+          // Restore red marker tooltips
+          redMarkerTooltips.forEach(({element, parent}) => {
+            try {
+              parent.appendChild(element);
+            } catch (e) {
+              console.error('Error restoring red marker tooltip:', e);
+            }
+          });
+        }, 50);
       }
       
       // Clear all user-created markers from storage (but not selected location markers)
@@ -95,7 +125,6 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
       // Preserve authentication data and selected location data
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
-      const selectedLocation = localStorage.getItem('selectedLocation');
       
       // Clear only drawing-related storage, preserve location selection
       localStorage.removeItem('savedDrawings');
@@ -128,7 +157,7 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
         onClearAll();
       }
       
-      // Force update of the edit toolbar if it exists
+      // Force update of the edit toolbar and final cleanup
       setTimeout(() => {
         if (map && map.fire) {
           try {
@@ -143,28 +172,13 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
             const zoom = map.getZoom();
             map._resetView(center, zoom, true);
             
-            // Final cleanup attempt for any remaining paths (but preserve red markers and tooltips)
+            // Final cleanup attempt for any remaining drawing paths
             document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
               try {
                 path.remove();
               } catch (e) {
                 console.error('Error removing path:', e);
               }
-            });
-            
-            // Ensure red markers and their tooltips are preserved
-            const redMarkers = document.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
-            redMarkers.forEach(marker => {
-              // Make sure red markers remain visible
-              (marker as HTMLElement).style.display = '';
-              (marker as HTMLElement).style.visibility = 'visible';
-            });
-            
-            // Ensure selected location tooltips remain visible
-            const selectedTooltips = document.querySelectorAll('.selected-location-tooltip');
-            selectedTooltips.forEach(tooltip => {
-              (tooltip as HTMLElement).style.display = '';
-              (tooltip as HTMLElement).style.visibility = 'visible';
             });
           } catch (e) {
             console.error('Error refreshing edit toolbar:', e);
