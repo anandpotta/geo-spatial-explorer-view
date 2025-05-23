@@ -9,13 +9,14 @@ import L from 'leaflet';
 const applyLeafletDrawPatches = () => {
   // Fix for the "type is not defined" error in readableArea
   try {
-    if (L.Draw && L.Draw.Polygon && L.Draw.Polygon.prototype) {
+    if (L.Draw && L.Draw.Polygon) {
       // Patch the readableArea function to provide a fallback for the missing type variable
-      const originalReadableArea = L.Draw.Polygon.prototype._getTooltipText;
-      if (originalReadableArea) {
-        L.Draw.Polygon.prototype._getTooltipText = function() {
+      const polygonProto = L.Draw.Polygon.prototype as any;
+      if (polygonProto && polygonProto._getTooltipText) {
+        const originalPolygonTooltip = polygonProto._getTooltipText;
+        polygonProto._getTooltipText = function() {
           try {
-            return originalReadableArea.apply(this, arguments);
+            return originalPolygonTooltip.apply(this, arguments);
           } catch (err) {
             // Fallback when error occurs in readableArea
             return {
@@ -27,10 +28,11 @@ const applyLeafletDrawPatches = () => {
       }
       
       // Also patch Rectangle to use the same safe implementation
-      if (L.Draw.Rectangle && L.Draw.Rectangle.prototype) {
-        const originalRectTooltip = L.Draw.Rectangle.prototype._getTooltipText;
-        if (originalRectTooltip) {
-          L.Draw.Rectangle.prototype._getTooltipText = function() {
+      if (L.Draw.Rectangle) {
+        const rectangleProto = L.Draw.Rectangle.prototype as any;
+        if (rectangleProto && rectangleProto._getTooltipText) {
+          const originalRectTooltip = rectangleProto._getTooltipText;
+          rectangleProto._getTooltipText = function() {
             try {
               return originalRectTooltip.apply(this, arguments);
             } catch (err) {

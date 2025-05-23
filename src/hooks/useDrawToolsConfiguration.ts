@@ -10,9 +10,10 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
       // Apply patches for Leaflet Draw Rectangle functionality
       if (L.Draw && L.Draw.Rectangle) {
         // Fix for area calculation in Rectangle
-        const originalGetTooltipText = L.Draw.Rectangle.prototype._getTooltipText;
-        if (originalGetTooltipText) {
-          L.Draw.Rectangle.prototype._getTooltipText = function() {
+        const rectangleProto = L.Draw.Rectangle.prototype as any;
+        if (rectangleProto && rectangleProto._getTooltipText) {
+          const originalGetTooltipText = rectangleProto._getTooltipText;
+          rectangleProto._getTooltipText = function() {
             try {
               // Try original method
               return originalGetTooltipText.apply(this, arguments);
@@ -20,7 +21,7 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
               console.log('Patched error in Rectangle tooltip:', err);
               // Fallback to simplified tooltip
               const tooltipText = {
-                text: this._initialLabelText,
+                text: this._initialLabelText || 'Click and drag to draw rectangle',
                 subtext: ''
               };
               
@@ -64,12 +65,12 @@ export const patchLeafletDraw = () => {
     
     // Fix "type is not defined" error in readableArea
     if (L.GeometryUtil) {
-      // Add safe readableArea method
-      L.GeometryUtil.safeReadableArea = function(area, isMetric, precision) {
+      // Override the readableArea method with a safe implementation
+      const originalReadableArea = L.GeometryUtil.readableArea;
+      L.GeometryUtil.readableArea = function(area, isMetric, precision) {
         try {
           // Try to use original implementation but with safety
-          const areaStr = L.GeometryUtil.readableArea(area, isMetric, precision);
-          return areaStr;
+          return originalReadableArea.call(this, area, isMetric, precision);
         } catch (err) {
           // Fallback implementation
           if (!isMetric) {
