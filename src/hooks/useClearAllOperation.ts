@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
 import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
+import L from 'leaflet';
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();

@@ -1,4 +1,3 @@
-
 // This file contains utility functions for working with SVG paths in the map
 
 import L from 'leaflet';
@@ -128,10 +127,10 @@ export function clearAllMapSvgElements(map: L.Map): void {
       setTimeout(() => {
         try {
           map.invalidateSize(true);
-          // Also redraw the view
+          // Also redraw the view using public API
           const center = map.getCenter();
           const zoom = map.getZoom();
-          map._resetView(center, zoom, true);
+          map.setView(center, zoom, { reset: true });
         } catch (err) {
           console.error('Error during map invalidation:', err);
         }
