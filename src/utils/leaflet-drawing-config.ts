@@ -14,7 +14,9 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
     geoJSONOptions.stroke = true;
     geoJSONOptions.weight = geoJSONOptions.weight || 4;
     geoJSONOptions.opacity = 1;
-    geoJSONOptions.color = '#33C3F0'; // Sky blue color
+    geoJSONOptions.color = '#33C3F0';
+    geoJSONOptions.fillColor = '#33c3f061';
+    geoJSONOptions.fillOpacity = 1;
     
     // Create layer with corrected options
     const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
@@ -27,7 +29,9 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
         l.options.stroke = true;
         l.options.weight = options.weight || 4;
         l.options.opacity = 1;
-        l.options.color = '#33C3F0'; // Sky blue color
+        l.options.color = '#33C3F0';
+        l.options.fillColor = '#33c3f061';
+        l.options.fillOpacity = 1;
       }
       
       // Store SVG path data if available
@@ -54,14 +58,15 @@ export const createDrawingLayer = (drawing: any, options: L.PathOptions) => {
 };
 
 export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
-  color: color || '#33C3F0', // Using sky blue color
-  weight: 4, // Increased stroke width
-  opacity: 1, // Full opacity for stroke
-  fillOpacity: 0.3,
-  renderer: L.svg(), // Force SVG renderer
-  stroke: true, // Explicitly enable stroke
-  lineCap: 'round', // Round line caps
-  lineJoin: 'round' // Round line joins
+  color: color || '#33C3F0',
+  weight: 4,
+  opacity: 1,
+  fillColor: '#33c3f061',
+  fillOpacity: 1,
+  renderer: L.svg(),
+  stroke: true,
+  lineCap: 'round',
+  lineJoin: 'round'
 });
 
 export const getCoordinatesFromLayer = (layer: any, layerType: string): Array<[number, number]> => {

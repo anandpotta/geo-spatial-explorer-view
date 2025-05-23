@@ -9,7 +9,8 @@ export const getDrawOptions = () => {
         color: '#33C3F0',
         weight: 4,
         opacity: 1,
-        fillOpacity: 0.3,
+        fillColor: '#33c3f061',
+        fillOpacity: 1,
         stroke: true
       }
     },
@@ -23,21 +24,23 @@ export const getDrawOptions = () => {
         color: '#33C3F0',
         weight: 4,
         opacity: 1,
-        fillOpacity: 0.3,
+        fillColor: '#33c3f061',
+        fillOpacity: 1,
         stroke: true,
         lineCap: 'round',
         lineJoin: 'round'
       },
       showArea: false,
       metric: true,
-      smoothFactor: 1 // Lower value for less smoothing (more accurate paths)
+      smoothFactor: 1
     },
     circle: {
       shapeOptions: {
         color: '#33C3F0',
         weight: 4,
         opacity: 1,
-        fillOpacity: 0.3,
+        fillColor: '#33c3f061',
+        fillOpacity: 1,
         stroke: true
       }
     },

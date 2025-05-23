@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getDrawingIdsWithFloorPlans } from '@/utils/floor-plan-utils';
@@ -13,14 +14,15 @@ export const prepareLayerOptions = async (drawing: DrawingData): Promise<L.PathO
   const options = getDefaultDrawingOptions(drawing.properties?.color || '#33C3F0');
   if (hasFloorPlanApplied) {
     options.fillColor = '#3b82f6';
-    options.fillOpacity = 1; // Always use full opacity for images
+    options.fillOpacity = 1;
     options.color = '#33C3F0';
   }
   
   // Always ensure opacity is set to visible values
   options.opacity = 1;
   if (!hasFloorPlanApplied) {
-    options.fillOpacity = options.fillOpacity || 0.2;
+    options.fillColor = '#33c3f061';
+    options.fillOpacity = 1;
   }
   
   // Add custom option to store drawing ID that will be used by Leaflet internals
@@ -33,15 +35,16 @@ export const prepareLayerOptions = async (drawing: DrawingData): Promise<L.PathO
  * Get default drawing options for layers
  */
 export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
-  color: color || '#33C3F0', // Using sky blue color by default
-  weight: 4, // Increase stroke width for better visibility
-  opacity: 1, // Use full opacity for the stroke
-  fillOpacity: 0.3,
-  renderer: L.svg(), // Force SVG renderer
-  className: 'leaflet-interactive-drawing', // Add a custom class for easier selection
-  stroke: true, // Ensure stroke is enabled
-  lineCap: 'round', // Round line caps
-  lineJoin: 'round' // Round line joins
+  color: color || '#33C3F0',
+  weight: 4,
+  opacity: 1,
+  fillColor: '#33c3f061',
+  fillOpacity: 1,
+  renderer: L.svg(),
+  className: 'leaflet-interactive-drawing',
+  stroke: true,
+  lineCap: 'round',
+  lineJoin: 'round'
 });
 
 /**
