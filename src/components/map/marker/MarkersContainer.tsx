@@ -1,4 +1,3 @@
-
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
 import { memo, useMemo } from 'react';
@@ -24,14 +23,22 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
-  // Deduplicate markers
+  // Deduplicate markers by ID - we need to ensure we don't render duplicate markers
   const uniqueMarkers = useMemo(() => {
-    const markerMap = new Map<string, LocationMarker>();
-    if (Array.isArray(markers)) {
-      markers.forEach(marker => {
-        markerMap.set(marker.id, marker);
-      });
+    // First ensure we have a valid array of markers
+    if (!Array.isArray(markers)) {
+      return [];
     }
+    
+    // Use a Map to keep only one marker per ID
+    const markerMap = new Map<string, LocationMarker>();
+    markers.forEach(marker => {
+      if (marker && marker.id) {
+        markerMap.set(marker.id, marker);
+      }
+    });
+    
+    // Convert back to array
     return Array.from(markerMap.values());
   }, [markers]);
 

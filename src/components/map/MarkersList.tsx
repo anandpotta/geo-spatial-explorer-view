@@ -39,6 +39,18 @@ const MarkersList = ({
     return Array.from(markerMap.values());
   }, [markers]);
   
+  // Check if there's a temp marker at the same position as an existing marker
+  // If there is, don't render the temp marker
+  const shouldShowTempMarker = useMemo(() => {
+    if (!tempMarker) return false;
+    
+    // Check if any existing marker has the same position
+    return !uniqueMarkers.some(marker => 
+      marker.position[0] === tempMarker[0] && 
+      marker.position[1] === tempMarker[1]
+    );
+  }, [tempMarker, uniqueMarkers]);
+  
   // Safe delete handler that prevents unwanted marker creation
   const handleDeleteMarker = (id: string) => {
     // Set global flag to prevent map click events temporarily
@@ -75,7 +87,7 @@ const MarkersList = ({
         />
       ))}
       
-      {tempMarker && Array.isArray(tempMarker) && (
+      {shouldShowTempMarker && tempMarker && Array.isArray(tempMarker) && (
         <TempMarker 
           key={tempMarkerKey}
           position={tempMarker}
