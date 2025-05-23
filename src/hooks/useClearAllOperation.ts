@@ -6,16 +6,34 @@ import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
 import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
 import L from 'leaflet';
 
+// Global state to track if a confirmation dialog is already showing
+// This prevents multiple dialogs from appearing simultaneously
+let isConfirmationDialogOpen = false;
+
 export function useClearAllOperation(onClearAll?: () => void) {
   const { isAuthenticated } = useAuth();
   const [showConfirmation, setShowConfirmation] = useState(false);
+  
+  // Update global state when local state changes
+  useEffect(() => {
+    isConfirmationDialogOpen = showConfirmation;
+    return () => {
+      // When component unmounts, reset global flag if this was the component showing dialog
+      if (showConfirmation) {
+        isConfirmationDialogOpen = false;
+      }
+    };
+  }, [showConfirmation]);
   
   // Listen for the custom leafletClearAllRequest event
   useEffect(() => {
     const handleLeafletClearRequest = () => {
       console.log('Received leaflet clear all request event');
       if (isAuthenticated) {
-        setShowConfirmation(true);
+        // Only show dialog if no other dialog is currently open
+        if (!isConfirmationDialogOpen) {
+          setShowConfirmation(true);
+        }
       } else {
         toast.error('Please log in to clear drawings');
       }
@@ -41,9 +59,11 @@ export function useClearAllOperation(onClearAll?: () => void) {
           e.preventDefault();
           e.stopPropagation();
           
-          // Instead of dispatching an event, directly show confirmation
+          // Only show dialog if no other dialog is currently open
           if (isAuthenticated) {
-            setShowConfirmation(true);
+            if (!isConfirmationDialogOpen) {
+              setShowConfirmation(true);
+            }
           } else {
             toast.error('Please log in to clear drawings');
           }
@@ -70,7 +90,10 @@ export function useClearAllOperation(onClearAll?: () => void) {
       return;
     }
     
-    setShowConfirmation(true);
+    // Only show dialog if no other dialog is currently open
+    if (!isConfirmationDialogOpen) {
+      setShowConfirmation(true);
+    }
   }, [isAuthenticated]);
   
   const confirmClearAll = useCallback(() => {
@@ -149,6 +172,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
       toast.success('All map data cleared');
     }
     
+    // Reset the confirmation dialog state
     setShowConfirmation(false);
     
     // Final cleanup: safely remove all paths from any possible map containers
