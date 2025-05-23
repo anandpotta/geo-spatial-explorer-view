@@ -25,6 +25,103 @@ export function useClearAllOperation(onClearAll?: () => void) {
     };
   }, [showConfirmation]);
   
+  // Helper function to preserve red markers more reliably
+  const preserveRedMarkers = () => {
+    const redMarkerData: Array<{
+      src: string;
+      style: string;
+      className: string;
+      parentHTML: string;
+      position: { left: string; top: string; transform: string };
+    }> = [];
+    
+    const redTooltipData: Array<{
+      innerHTML: string;
+      className: string;
+      style: string;
+      position: { left: string; top: string; transform: string };
+    }> = [];
+    
+    // Collect red marker data
+    const redMarkers = document.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
+    redMarkers.forEach(marker => {
+      const markerElement = marker as HTMLElement;
+      const computedStyle = window.getComputedStyle(markerElement);
+      
+      redMarkerData.push({
+        src: (marker as HTMLImageElement).src,
+        style: markerElement.getAttribute('style') || '',
+        className: markerElement.className,
+        parentHTML: markerElement.parentElement?.outerHTML || '',
+        position: {
+          left: computedStyle.left,
+          top: computedStyle.top,
+          transform: computedStyle.transform
+        }
+      });
+    });
+    
+    // Collect red marker tooltip data
+    const selectedTooltips = document.querySelectorAll('.selected-location-tooltip');
+    selectedTooltips.forEach(tooltip => {
+      const tooltipElement = tooltip as HTMLElement;
+      const computedStyle = window.getComputedStyle(tooltipElement);
+      
+      redTooltipData.push({
+        innerHTML: tooltipElement.innerHTML,
+        className: tooltipElement.className,
+        style: tooltipElement.getAttribute('style') || '',
+        position: {
+          left: computedStyle.left,
+          top: computedStyle.top,
+          transform: computedStyle.transform
+        }
+      });
+    });
+    
+    return { redMarkerData, redTooltipData };
+  };
+  
+  // Helper function to restore red markers
+  const restoreRedMarkers = (redMarkerData: any[], redTooltipData: any[]) => {
+    // Find the marker pane
+    const markerPanes = document.querySelectorAll('.leaflet-marker-pane');
+    const tooltipPanes = document.querySelectorAll('.leaflet-tooltip-pane');
+    
+    // Restore red markers
+    if (markerPanes.length > 0 && redMarkerData.length > 0) {
+      const markerPane = markerPanes[0] as HTMLElement;
+      
+      redMarkerData.forEach(data => {
+        const img = document.createElement('img');
+        img.src = data.src;
+        img.className = data.className;
+        img.setAttribute('style', data.style);
+        
+        // Create a wrapper div if needed
+        const wrapper = document.createElement('div');
+        wrapper.className = 'leaflet-marker-icon leaflet-zoom-animated leaflet-interactive';
+        wrapper.appendChild(img);
+        
+        markerPane.appendChild(wrapper);
+      });
+    }
+    
+    // Restore red marker tooltips
+    if (tooltipPanes.length > 0 && redTooltipData.length > 0) {
+      const tooltipPane = tooltipPanes[0] as HTMLElement;
+      
+      redTooltipData.forEach(data => {
+        const tooltip = document.createElement('div');
+        tooltip.className = data.className;
+        tooltip.innerHTML = data.innerHTML;
+        tooltip.setAttribute('style', data.style);
+        
+        tooltipPane.appendChild(tooltip);
+      });
+    }
+  };
+  
   // Listen for the custom leafletClearAllRequest event
   useEffect(() => {
     const handleLeafletClearRequest = () => {
@@ -39,13 +136,12 @@ export function useClearAllOperation(onClearAll?: () => void) {
       }
     };
     
-    // Handle Leaflet Draw specific clear all action
+    // Enhanced handler for Leaflet Draw specific clear all action
     const handleLeafletClearAction = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       
-      // Enhanced check for clear all layers button
+      // Check if this is the clear all button in Leaflet draw actions
       if (target && target.tagName === 'A') {
-        // Check if this is the clear all button in Leaflet draw actions
         const isDrawActionsParent = 
           target.parentElement?.parentElement?.classList.contains('leaflet-draw-actions');
         
@@ -55,20 +151,24 @@ export function useClearAllOperation(onClearAll?: () => void) {
           target.textContent?.trim() === 'Clear All';
         
         if (isDrawActionsParent && isClearAllButton) {
-          console.log('Leaflet draw clear all layers button clicked');
+          console.log('Intercepting Leaflet draw clear all layers button');
           e.preventDefault();
           e.stopPropagation();
           
-          // Only show dialog if no other dialog is currently open
           if (isAuthenticated) {
             if (!isConfirmationDialogOpen) {
+              // Preserve red markers before showing confirmation
+              const preservedData = preserveRedMarkers();
+              
+              // Store preserved data temporarily
+              (window as any).preservedRedMarkers = preservedData;
+              
               setShowConfirmation(true);
             }
           } else {
             toast.error('Please log in to clear drawings');
           }
           
-          // Return false to prevent the original action
           return false;
         }
       }
@@ -92,6 +192,10 @@ export function useClearAllOperation(onClearAll?: () => void) {
     
     // Only show dialog if no other dialog is currently open
     if (!isConfirmationDialogOpen) {
+      // Preserve red markers before showing confirmation
+      const preservedData = preserveRedMarkers();
+      (window as any).preservedRedMarkers = preservedData;
+      
       setShowConfirmation(true);
     }
   }, [isAuthenticated]);
@@ -100,38 +204,22 @@ export function useClearAllOperation(onClearAll?: () => void) {
     console.log('Confirming clear all operation');
     const featureGroup = window.featureGroup;
     
+    // Get preserved red marker data
+    const preservedData = (window as any).preservedRedMarkers || { redMarkerData: [], redTooltipData: [] };
+    
     // Preserve selected location data before clearing
     const selectedLocation = localStorage.getItem('selectedLocation');
     
     // First ensure we clear all SVG paths from the DOM directly
-    // Get all map instances from document - using a safer approach
     const mapContainers = document.querySelectorAll('.leaflet-container');
     if (mapContainers && mapContainers.length > 0) {
       mapContainers.forEach(container => {
-        // Safely check if the container has the _leaflet_id property
         const leafletId = (container as any)._leaflet_id;
         if (leafletId && (L as any).maps) {
           const mapInstance = (L as any).maps[leafletId];
           if (mapInstance) {
             console.log('Found map instance, clearing SVG paths directly');
             clearAllMapSvgElements(mapInstance);
-            
-            // Preserve red markers and their tooltips after clearing
-            setTimeout(() => {
-              // Ensure red markers remain visible
-              const redMarkers = container.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
-              redMarkers.forEach(marker => {
-                (marker as HTMLElement).style.display = '';
-                (marker as HTMLElement).style.visibility = 'visible';
-              });
-              
-              // Ensure selected location tooltips remain visible
-              const selectedTooltips = container.querySelectorAll('.selected-location-tooltip');
-              selectedTooltips.forEach(tooltip => {
-                (tooltip as HTMLElement).style.display = '';
-                (tooltip as HTMLElement).style.visibility = 'visible';
-              });
-            }, 50);
           }
         }
       });
@@ -139,10 +227,8 @@ export function useClearAllOperation(onClearAll?: () => void) {
     
     // If featureGroup exists, also clear through it
     if (featureGroup && (featureGroup as any)._map) {
-      // Direct SVG path removal using DOM manipulation
       clearAllMapSvgElements((featureGroup as any)._map);
       
-      // Also use the normal layer clearing mechanism
       handleClearAll({
         featureGroup,
         onClearAll
@@ -155,7 +241,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
       const authState = localStorage.getItem('geospatial_auth_state');
       const users = localStorage.getItem('geospatial_users');
       
-      // Forcefully clear specific storages that might be causing issues
+      // Clear specific storages
       localStorage.removeItem('savedDrawings');
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('floorPlans');
@@ -178,16 +264,6 @@ export function useClearAllOperation(onClearAll?: () => void) {
       window.dispatchEvent(new Event('drawingsUpdated'));
       window.dispatchEvent(new Event('clearAllSvgPaths'));
       
-      // Force a clean reload of the map visualization
-      setTimeout(() => {
-        window.dispatchEvent(new Event('mapRefresh'));
-        
-        // Direct access to map objects in window
-        if ((window as any).leafletMap) {
-          clearAllMapSvgElements((window as any).leafletMap);
-        }
-      }, 100);
-      
       if (onClearAll) {
         onClearAll();
       }
@@ -198,41 +274,26 @@ export function useClearAllOperation(onClearAll?: () => void) {
     // Reset the confirmation dialog state
     setShowConfirmation(false);
     
-    // Final cleanup: safely remove all paths from any possible map containers (preserve red markers)
+    // Restore red markers after clearing operations
     setTimeout(() => {
       try {
-        const paths = document.querySelectorAll('.leaflet-overlay-pane path');
-        if (paths && paths.length > 0) {
-          paths.forEach(path => {
-            try {
-              path.remove();
-            } catch (e) {
-              console.error('Error removing path:', e);
-            }
-          });
+        restoreRedMarkers(preservedData.redMarkerData, preservedData.redTooltipData);
+        
+        // Also restore selected location if it exists
+        if (selectedLocation) {
+          localStorage.setItem('selectedLocation', selectedLocation);
+          // Trigger location marker restoration
+          window.dispatchEvent(new Event('storage'));
         }
         
-        // Final preservation step for red markers and tooltips
-        const allContainers = document.querySelectorAll('.leaflet-container');
-        allContainers.forEach(container => {
-          // Ensure red markers remain visible
-          const redMarkers = container.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
-          redMarkers.forEach(marker => {
-            (marker as HTMLElement).style.display = '';
-            (marker as HTMLElement).style.visibility = 'visible';
-          });
-          
-          // Ensure selected location tooltips remain visible
-          const selectedTooltips = container.querySelectorAll('.selected-location-tooltip');
-          selectedTooltips.forEach(tooltip => {
-            (tooltip as HTMLElement).style.display = '';
-            (tooltip as HTMLElement).style.visibility = 'visible';
-          });
-        });
+        // Clean up temporary data
+        delete (window as any).preservedRedMarkers;
+        
+        console.log('Red markers restored after clear all operation');
       } catch (e) {
-        console.error('Error in final path cleanup:', e);
+        console.error('Error restoring red markers:', e);
       }
-    }, 200);
+    }, 300);
     
   }, [onClearAll]);
   
