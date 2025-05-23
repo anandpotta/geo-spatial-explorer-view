@@ -22,6 +22,9 @@ const redMarkerIcon = new L.Icon({
 });
 
 const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMarkerProps) => {
+  // Truncate label to max 24 characters
+  const truncatedLabel = label.length > 24 ? `${label.substring(0, 24)}...` : label;
+  
   return (
     <Marker 
       position={position} 
@@ -31,7 +34,9 @@ const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMa
     >
       <Tooltip permanent direction="top" offset={[0, -40]} className="selected-location-tooltip">
         <div className="flex items-center gap-1 px-2 py-1 bg-white rounded shadow-md border text-xs">
-          <span className="text-gray-800 font-medium">{label}</span>
+          <span className="text-gray-800 font-medium location-text" title={label}>
+            {truncatedLabel}
+          </span>
           {onClose && (
             <button
               onClick={onClose}

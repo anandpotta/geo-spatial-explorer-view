@@ -5,14 +5,32 @@
   box-shadow: none !important;
   padding: 0 !important;
   white-space: nowrap !important;
+  margin-top: 0px !important;
 }
 
 .selected-location-tooltip .leaflet-tooltip-content {
   margin: 0 !important;
   padding: 0 !important;
   min-width: auto !important;
+  max-width: 200px !important;
 }
 
 .selected-location-tooltip .leaflet-tooltip:before {
   display: none !important;
+}
+
+.leaflet-tooltip-top {
+  margin-top: -36px !important;
+}
+
+.leaflet-tooltip-pane {
+  margin-top: -6px !important;
+}
+
+.location-text {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
