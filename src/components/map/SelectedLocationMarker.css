@@ -10,6 +10,7 @@
   padding: 0 !important;
   white-space: nowrap !important;
   margin-top: 0px !important;
+  pointer-events: auto !important;
 }
 
 .selected-location-tooltip .leaflet-tooltip-content {
@@ -17,6 +18,7 @@
   padding: 0 !important;
   min-width: auto !important;
   max-width: 200px !important;
+  pointer-events: auto !important;
 }
 
 .selected-location-tooltip .leaflet-tooltip:before {
@@ -41,4 +43,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   display: inline-block;
+}
+
+/* Ensure buttons are clickable */
+.selected-location-tooltip button {
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+  position: relative !important;
+}
+
+.selected-location-tooltip button:hover {
+  background-color: rgba(0, 0, 0, 0.1) !important;
 }

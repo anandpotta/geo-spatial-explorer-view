@@ -28,8 +28,21 @@ const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMa
   const truncatedLabel = label.length > 24 ? `${label.substring(0, 24)}...` : label;
   
   const handleCloseTooltip = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
+    console.log('Close tooltip clicked');
     setShowTooltip(false);
+  };
+
+  const handleRemoveMarker = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    console.log('Remove marker clicked');
+    if (onClose) {
+      onClose();
+    }
   };
 
   const handleMarkerMouseOver = () => {
@@ -55,17 +68,21 @@ const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMa
               {truncatedLabel}
             </span>
             <button
+              onMouseDown={handleCloseTooltip}
               onClick={handleCloseTooltip}
-              className="p-0.5 hover:bg-gray-100 rounded transition-colors ml-1"
+              className="p-0.5 hover:bg-gray-100 rounded transition-colors ml-1 cursor-pointer z-50"
               title="Close tooltip"
+              style={{ pointerEvents: 'auto' }}
             >
               <X size={10} className="text-gray-500" />
             </button>
             {onClose && (
               <button
-                onClick={onClose}
-                className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                onMouseDown={handleRemoveMarker}
+                onClick={handleRemoveMarker}
+                className="p-0.5 hover:bg-gray-100 rounded transition-colors cursor-pointer z-50"
                 title="Remove marker"
+                style={{ pointerEvents: 'auto' }}
               >
                 <X size={10} className="text-red-500" />
               </button>
