@@ -3,16 +3,20 @@ import { useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { LocationMarker } from '@/utils/markers/types';
 import { Button } from '@/components/ui/button';
-import { MapPin, MapPinOff, Trash2 } from 'lucide-react';
+import { MapPin, MapPinOff, Trash2, Edit2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface MarkerPopupProps {
   marker: LocationMarker;
   onDelete: (id: string) => void;
+  onRename?: (id: string, newName: string) => void;
 }
 
-const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
+const MarkerPopup = ({ marker, onDelete, onRename }: MarkerPopupProps) => {
   const [isPinned, setIsPinned] = useState(marker.isPinned || false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(marker.name);
 
   const handlePinToggle = () => {
     const updatedPinnedState = !isPinned;
@@ -44,39 +48,97 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
     }, 10);
   };
 
+  const handleRenameClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleRenameSave = () => {
+    if (onRename && editName.trim() !== '' && editName !== marker.name) {
+      onRename(marker.id, editName.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleRenameCancel = () => {
+    setEditName(marker.name);
+    setIsEditing(false);
+  };
+
   return (
     <Popup>
       <div className="p-2">
-        <h3 className="font-medium mb-2">{marker.name}</h3>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePinToggle}
-            className="flex items-center gap-1"
-          >
-            {isPinned ? (
-              <>
-                <MapPinOff size={16} />
-                Unpin
-              </>
-            ) : (
-              <>
-                <MapPin size={16} />
-                Pin
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDeleteClick}
-            className="flex items-center gap-1"
-          >
-            <Trash2 size={16} />
-            Delete
-          </Button>
-        </div>
+        {isEditing ? (
+          <div className="space-y-2">
+            <Input 
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="w-full mb-2"
+              autoFocus
+              placeholder="Location name"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleRenameSave}
+                className="flex-1"
+                disabled={!editName.trim() || editName === marker.name}
+              >
+                Save
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRenameCancel}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <h3 className="font-medium mb-2">{marker.name}</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePinToggle}
+                className="flex items-center gap-1"
+              >
+                {isPinned ? (
+                  <>
+                    <MapPinOff size={16} />
+                    Unpin
+                  </>
+                ) : (
+                  <>
+                    <MapPin size={16} />
+                    Pin
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRenameClick}
+                className="flex items-center gap-1"
+              >
+                <Edit2 size={16} />
+                Rename
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeleteClick}
+                className="flex items-center gap-1"
+              >
+                <Trash2 size={16} />
+                Delete
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Popup>
   );

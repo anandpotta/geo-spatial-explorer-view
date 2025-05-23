@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { MapPin, Trash2 } from "lucide-react";
@@ -13,6 +13,12 @@ interface MarkerMenuItemProps {
 
 const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [displayName, setDisplayName] = useState(marker.name);
+  
+  // Update display name when marker name changes
+  useEffect(() => {
+    setDisplayName(marker.name);
+  }, [marker.name]);
   
   const handleSelect = (e: React.MouseEvent) => {
     // Don't select if we're trying to delete
@@ -21,7 +27,7 @@ const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => 
     e.stopPropagation();
     e.preventDefault();
     
-    console.log("Marker selected:", marker.name, marker.position);
+    console.log("Marker selected:", displayName, marker.position);
     onSelect(marker.position);
   };
   
@@ -47,7 +53,7 @@ const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => 
         onClick={handleSelect}
       >
         <MapPin className="mr-2 h-4 w-4" />
-        {marker.name}
+        {displayName}
       </div>
       <Button
         variant="ghost"
@@ -57,7 +63,7 @@ const MarkerMenuItem = ({ marker, onSelect, onDelete }: MarkerMenuItemProps) => 
         tabIndex={0}
       >
         <Trash2 className="h-4 w-4" />
-        <span className="sr-only">Delete {marker.name}</span>
+        <span className="sr-only">Delete {displayName}</span>
       </Button>
     </DropdownMenuItem>
   );
