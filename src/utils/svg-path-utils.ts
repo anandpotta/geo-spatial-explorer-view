@@ -1,3 +1,4 @@
+
 // This file contains utility functions for working with SVG paths in the map
 
 import L from 'leaflet';
@@ -49,22 +50,60 @@ export function clearAllMapSvgElements(map: L.Map): void {
         // Remove all path elements within each SVG
         const paths = Array.from(svg.querySelectorAll('path'));
         paths.forEach(path => {
-          path.remove();
+          try {
+            if (path.parentNode) {
+              path.parentNode.removeChild(path);
+            } else {
+              path.remove();
+            }
+          } catch (err) {
+            console.error('Error removing path:', err);
+          }
         });
         
         // Clean up empty g elements
         const gElements = Array.from(svg.querySelectorAll('g'));
         gElements.forEach(g => {
           if (!g.hasChildNodes()) {
-            g.remove();
+            try {
+              g.remove();
+            } catch (err) {
+              console.error('Error removing empty g element:', err);
+            }
           }
         });
         
         // If the SVG is now empty (no child nodes), remove it
-        if (!svg.hasChildNodes()) {
-          svg.remove();
+        if (svg.childNodes.length === 0) {
+          try {
+            svg.remove();
+          } catch (err) {
+            console.error('Error removing empty SVG:', err);
+          }
         }
       });
+      
+      // As a fallback, also try to clear the innerHTML
+      if (svgElements.length > 0) {
+        try {
+          // Force clear the entire overlay pane content and recreate fresh SVGs
+          const originalHTML = overlayPane.innerHTML;
+          overlayPane.innerHTML = '';
+          
+          // Create a new empty SVG element to replace the cleared content
+          const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          newSvg.setAttribute('pointer-events', 'none');
+          newSvg.setAttribute('class', 'leaflet-zoom-animated');
+          overlayPane.appendChild(newSvg);
+          
+          // Add an empty g element
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          newSvg.appendChild(g);
+        } catch (err) {
+          console.error('Error with innerHTML fallback:', err);
+        }
+      }
     }
     
     // Also check the marker pane for any remnant elements
@@ -76,9 +115,27 @@ export function clearAllMapSvgElements(map: L.Map): void {
       }
     }
     
+    // Clear shadow pane
+    const shadowPane = container.querySelector('.leaflet-shadow-pane');
+    if (shadowPane) {
+      while (shadowPane.firstChild) {
+        shadowPane.removeChild(shadowPane.firstChild);
+      }
+    }
+    
     // Force a rerender of the map
     if (typeof map.invalidateSize === 'function') {
-      map.invalidateSize();
+      setTimeout(() => {
+        try {
+          map.invalidateSize(true);
+          // Also redraw the view
+          const center = map.getCenter();
+          const zoom = map.getZoom();
+          map._resetView(center, zoom, true);
+        } catch (err) {
+          console.error('Error during map invalidation:', err);
+        }
+      }, 50);
     }
     
     console.log('Completed SVG element cleanup');

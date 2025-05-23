@@ -77,13 +77,24 @@ export function useClearAllOperation(onClearAll?: () => void) {
     const featureGroup = window.featureGroup;
     
     // First ensure we clear all SVG paths from the DOM directly
+    // Get all map instances from document
+    const mapContainers = document.querySelectorAll('.leaflet-container');
+    mapContainers.forEach(container => {
+      const mapInstance = (container as any)._leaflet_id ? 
+        (L as any).maps[(container as any)._leaflet_id] : null;
+      
+      if (mapInstance) {
+        console.log('Found map instance, clearing SVG paths directly');
+        clearAllMapSvgElements(mapInstance);
+      }
+    });
+    
+    // If featureGroup exists, also clear through it
     if (featureGroup && (featureGroup as any)._map) {
       // Direct SVG path removal using DOM manipulation
       clearAllMapSvgElements((featureGroup as any)._map);
-    }
-    
-    // Then proceed with normal layer clearing
-    if (featureGroup) {
+      
+      // Also use the normal layer clearing mechanism
       handleClearAll({
         featureGroup,
         onClearAll
@@ -91,10 +102,24 @@ export function useClearAllOperation(onClearAll?: () => void) {
     } else {
       // Fallback if featureGroup is not available
       console.warn('Feature group not available for clear operation, using localStorage fallback');
+      
+      // Preserve authentication data
+      const authState = localStorage.getItem('geospatial_auth_state');
+      const users = localStorage.getItem('geospatial_users');
+      
+      // Forcefully clear specific storages that might be causing issues
       localStorage.removeItem('savedDrawings');
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
+      
+      // Restore authentication data
+      if (authState) {
+        localStorage.setItem('geospatial_auth_state', authState);
+      }
+      if (users) {
+        localStorage.setItem('geospatial_users', users);
+      }
       
       // Dispatch events to notify components
       window.dispatchEvent(new Event('storage'));
@@ -105,6 +130,11 @@ export function useClearAllOperation(onClearAll?: () => void) {
       // Force a clean reload of the map visualization
       setTimeout(() => {
         window.dispatchEvent(new Event('mapRefresh'));
+        
+        // Direct access to map objects in window
+        if ((window as any).leafletMap) {
+          clearAllMapSvgElements((window as any).leafletMap);
+        }
       }, 100);
       
       if (onClearAll) {
@@ -115,6 +145,18 @@ export function useClearAllOperation(onClearAll?: () => void) {
     }
     
     setShowConfirmation(false);
+    
+    // Final cleanup: directly remove all paths from any possible map containers
+    setTimeout(() => {
+      document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
+        try {
+          path.remove();
+        } catch (e) {
+          console.error('Error removing path:', e);
+        }
+      });
+    }, 200);
+    
   }, [onClearAll]);
   
   return {

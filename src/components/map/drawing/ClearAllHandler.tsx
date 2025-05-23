@@ -35,18 +35,19 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
           // Also clear the overlay pane which may contain SVG elements
           const overlayPane = map._panes?.overlayPane as HTMLElement | undefined;
           if (overlayPane) {
+            // First try removing paths directly
+            Array.from(overlayPane.querySelectorAll('path')).forEach(path => {
+              path.remove();
+            });
+            
+            // Then try emptying the SVG elements
             Array.from(overlayPane.querySelectorAll('svg')).forEach(svg => {
-              // Remove all path elements within SVGs
-              Array.from(svg.querySelectorAll('path')).forEach(path => {
-                path.remove();
-              });
+              // Empty the SVG content
+              svg.innerHTML = '';
               
-              // Clean empty g elements
-              Array.from(svg.querySelectorAll('g')).forEach(g => {
-                if (!g.hasChildNodes()) {
-                  g.remove();
-                }
-              });
+              // Add back an empty group element
+              const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              svg.appendChild(g);
             });
           }
         } catch (err) {
@@ -108,8 +109,19 @@ export function handleClearAll({ featureGroup, onClearAll }: ClearAllHandlerProp
             console.log('Fired edit events to refresh toolbar state');
             
             // Force a map invalidation and redraw
-            map.invalidateSize();
-            map._resetView(map.getCenter(), map.getZoom(), true);
+            map.invalidateSize(true);
+            const center = map.getCenter();
+            const zoom = map.getZoom();
+            map._resetView(center, zoom, true);
+            
+            // Final cleanup attempt for any remaining paths
+            document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
+              try {
+                path.remove();
+              } catch (e) {
+                console.error('Error removing path:', e);
+              }
+            });
           } catch (e) {
             console.error('Error refreshing edit toolbar:', e);
           }

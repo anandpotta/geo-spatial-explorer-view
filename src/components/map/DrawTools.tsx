@@ -39,9 +39,25 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     setShowConfirmation, 
     confirmClearAll 
   } = useClearAllOperation(() => {
-    if (onClearAll) {
-      onClearAll();
+    // Perform additional SVG cleanup when clear all is confirmed
+    if (featureGroup && (featureGroup as any)._map) {
+      clearAllMapSvgElements((featureGroup as any)._map);
     }
+    
+    // Manual cleanup of any remaining SVG paths
+    setTimeout(() => {
+      document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
+        try {
+          path.remove();
+        } catch (e) {
+          console.error('Error removing path:', e);
+        }
+      });
+      
+      if (onClearAll) {
+        onClearAll();
+      }
+    }, 100);
   });
   
   // Initialize configuration and event handlers using custom hooks
@@ -77,10 +93,44 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         (featureGroup as any).eachLayer = eachLayerFn;
       }
       
+      // Store map reference globally to help with cleanup operations
+      if ((featureGroup as any)._map) {
+        (window as any).leafletMap = (featureGroup as any)._map;
+      }
+      
       // Mark as initialized
       initializedRef.current = true;
     }
   }, [featureGroup]);
+
+  // Monitor edit control and enhance its clear all functionality
+  useEffect(() => {
+    if (editControlRef.current) {
+      const originalClear = editControlRef.current?._layerGroup?.clearLayers;
+      
+      if (originalClear && typeof originalClear === 'function') {
+        // Enhance the clear layers function to also clear SVG elements
+        (editControlRef.current._layerGroup as any).clearLayers = function() {
+          // Call original function
+          originalClear.apply(this);
+          
+          // Then do manual DOM cleanup
+          if ((this as any)._map) {
+            clearAllMapSvgElements((this as any)._map);
+            
+            // Manual cleanup
+            document.querySelectorAll('.leaflet-overlay-pane path').forEach(path => {
+              try {
+                path.remove();
+              } catch (e) {
+                console.error('Error removing path:', e);
+              }
+            });
+          }
+        };
+      }
+    }
+  }, [editControlRef.current]);
 
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
