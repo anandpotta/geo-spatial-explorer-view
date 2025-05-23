@@ -17,14 +17,15 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     // If edit is boolean true, create a proper object structure
     editOptions = { 
       featureGroup: featureGroup,
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
+      edit: {
+        selectedPathOptions: {
+          maintainColor: true,
+          opacity: 0.7
+        }
       }
     };
   } else if (edit === false) {
-    // If edit is boolean false, we need to use null instead
-    // react-leaflet-draw expects null or an object, not boolean false
+    // If edit is boolean false, disable edit entirely
     editOptions = null;
   } else if (edit && typeof edit === 'object') {
     // If edit is an object, merge with featureGroup but don't overwrite featureGroup
@@ -41,14 +42,42 @@ export const EditControl = forwardRef((props: any, ref: any) => {
       };
     }
   } else {
-    // Default case if edit is undefined or null
+    // Default case if edit is undefined or null - create empty object but don't enable editing
     editOptions = {
       featureGroup: featureGroup,
+      edit: false, // Explicitly disable editing
       selectedPathOptions: {
         maintainColor: true,
         opacity: 0.7
       }
     };
+  }
+  
+  // Add a patching function to ensure all layers have properly initialized edit handlers
+  // This is necessary because react-leaflet-draw may try to access edit methods on layers that don't have them
+  if (featureGroup) {
+    try {
+      // Safety guard to ensure we don't try to access properties on undefined
+      setTimeout(() => {
+        // Check if featureGroup exists and has layers
+        if (featureGroup && featureGroup.getLayers) {
+          const layers = featureGroup.getLayers();
+          
+          // Patch each layer to ensure it has the necessary edit methods
+          layers.forEach(layer => {
+            // Only add if not already present
+            if (layer && !layer.enableEdit) {
+              layer.enableEdit = function() { return this; };
+            }
+            if (layer && !layer.disableEdit) {
+              layer.disableEdit = function() { return this; };
+            }
+          });
+        }
+      }, 0);
+    } catch (err) {
+      console.error('Error patching layers for edit capability:', err);
+    }
   }
   
   // Create the element with React.createElement to properly pass the ref

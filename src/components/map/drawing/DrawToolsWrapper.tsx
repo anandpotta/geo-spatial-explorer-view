@@ -17,6 +17,11 @@ const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
   onClearAll,
   featureGroup
 }, ref) => {
+  if (!featureGroup) {
+    console.warn('DrawToolsWrapper: featureGroup is not defined');
+    return null;
+  }
+  
   return (
     <DrawTools 
       ref={ref}

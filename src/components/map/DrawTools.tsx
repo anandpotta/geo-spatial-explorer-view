@@ -27,6 +27,7 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
+  const initializedRef = useRef<boolean>(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
@@ -55,8 +56,37 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
+  // Effect to initialize feature group
+  useEffect(() => {
+    // Add safety mechanism to prevent errors when feature group is not initialized
+    if (featureGroup && !initializedRef.current) {
+      // Apply patch to ensure all needed methods exist
+      featureGroup.eachLayer = featureGroup.eachLayer || function(cb) {
+        if (this._layers) {
+          Object.keys(this._layers).forEach(key => {
+            cb(this._layers[key]);
+          });
+        }
+      };
+      
+      // Mark as initialized
+      initializedRef.current = true;
+    }
+  }, [featureGroup]);
+
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
+  
+  // Configure edit options safely
+  const editOptions = {
+    featureGroup,
+    edit: {
+      // Disable features that might cause issues
+      selectedPathOptions: { maintainColor: true },
+      moveMarkers: false
+    },
+    remove: true
+  };
 
   return (
     <>
@@ -65,10 +95,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         position="topright"
         onCreated={handleCreated}
         draw={drawOptions}
-        edit={{
-          featureGroup,
-          remove: true
-        }}
+        edit={editOptions}
         featureGroup={featureGroup}
       />
       

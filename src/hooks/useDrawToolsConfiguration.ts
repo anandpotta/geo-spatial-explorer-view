@@ -2,6 +2,7 @@
 import L from 'leaflet';
 import { useEffect } from 'react';
 import { configureSvgRenderer, optimizePolygonDrawing, enhancePathPreservation } from '@/utils/draw-tools-utils';
+import { patchLayerWithEditMethods } from '@/utils/leaflet-layer-patch';
 
 /**
  * Hook to handle SVG configuration and optimizations for drawing tools
@@ -23,6 +24,24 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     
     // Set up path preservation
     const cleanupPathPreservation = enhancePathPreservation(map);
+    
+    // Patch existing layers with edit methods to prevent errors
+    if (featureGroup.getLayers) {
+      const layers = featureGroup.getLayers();
+      layers.forEach(layer => {
+        patchLayerWithEditMethods(layer);
+      });
+    }
+    
+    // Observer for new layers
+    const addLayerHandler = (e: any) => {
+      if (e.layer) {
+        patchLayerWithEditMethods(e.layer);
+      }
+    };
+    
+    // Listen for new layers to patch them
+    featureGroup.on('layeradd', addLayerHandler);
     
     // Apply additional anti-flickering CSS to the map container
     const mapContainer = map.getContainer();
@@ -84,6 +103,9 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
     return () => {
       cleanupSvgRenderer();
       cleanupPathPreservation();
+      
+      // Remove event listeners
+      featureGroup.off('layeradd', addLayerHandler);
       
       // Restore original marker drag handler if it was modified
       if (originalOnMarkerDrag && L.Edit && (L.Edit as any).Poly) {
