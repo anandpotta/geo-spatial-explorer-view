@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
-import { saveMarker, deleteMarker, getSavedMarkers } from '@/utils/marker-utils';
+import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -171,6 +170,17 @@ export function useMapState(selectedLocation?: Location) {
     toast.success("Location removed");
   };
 
+  const handleRenameMarker = (id: string, newName: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to manage locations');
+      return;
+    }
+    
+    renameMarker(id, newName);
+    // Update the markers state
+    setMarkers(getSavedMarkers());
+  };
+
   const handleRegionClick = (drawing: DrawingData) => {
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
@@ -201,6 +211,7 @@ export function useMapState(selectedLocation?: Location) {
     setActiveTool,
     handleSaveMarker,
     handleDeleteMarker,
+    handleRenameMarker,
     handleRegionClick
   };
 }

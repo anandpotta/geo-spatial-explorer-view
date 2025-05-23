@@ -7,6 +7,7 @@ export {
   saveMarker, 
   getSavedMarkers, 
   deleteMarker,
+  renameMarker,
   createMarker,
   syncMarkersWithBackend,
   fetchMarkersFromBackend,

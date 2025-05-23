@@ -1,4 +1,3 @@
-
 import { LocationMarker } from './types';
 import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
@@ -96,6 +95,49 @@ export function saveMarker(marker: LocationMarker): void {
         }
       });
   }
+}
+
+export function renameMarker(id: string, newName: string): void {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot rename marker: No user is logged in');
+    toast.error('Please log in to manage your markers');
+    return;
+  }
+  
+  const savedMarkers = getSavedMarkers();
+  const markerIndex = savedMarkers.findIndex(marker => marker.id === id);
+  
+  if (markerIndex === -1) {
+    console.error('Marker not found');
+    toast.error('Location not found');
+    return;
+  }
+  
+  // Update the marker name
+  savedMarkers[markerIndex] = {
+    ...savedMarkers[markerIndex],
+    name: newName
+  };
+  
+  localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('markersUpdated'));
+  
+  // Only attempt to sync if we're online
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    syncMarkersWithBackend(savedMarkers)
+      .catch(err => {
+        if (navigator.onLine) {
+          console.warn('Failed to sync renamed marker, will retry later:', err);
+        }
+      });
+  }
+  
+  toast.success('Location renamed successfully');
 }
 
 export function deleteMarker(id: string): void {

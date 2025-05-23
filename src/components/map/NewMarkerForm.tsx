@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save } from 'lucide-react';
+import { Save, Edit2 } from 'lucide-react';
 
 interface NewMarkerFormProps {
   markerName: string;
@@ -11,6 +11,9 @@ interface NewMarkerFormProps {
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
   onSave: () => void;
+  isEditing?: boolean;
+  existingMarkerId?: string;
+  onRename?: (id: string, newName: string) => void;
 }
 
 const NewMarkerForm = ({
@@ -18,7 +21,10 @@ const NewMarkerForm = ({
   setMarkerName,
   markerType,
   setMarkerType,
-  onSave
+  onSave,
+  isEditing = false,
+  existingMarkerId,
+  onRename
 }: NewMarkerFormProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -36,7 +42,12 @@ const NewMarkerForm = ({
   const handleSaveButtonClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onSave();
+    
+    if (isEditing && existingMarkerId && onRename) {
+      onRename(existingMarkerId, markerName);
+    } else {
+      onSave();
+    }
   };
 
   return (
@@ -51,42 +62,53 @@ const NewMarkerForm = ({
           className="mb-2"
           autoFocus
         />
-        <div className="flex mb-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'pin' ? 'default' : 'outline'}
-            className="flex-1"
-            onClick={() => setMarkerType('pin')}
-          >
-            Pin
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'area' ? 'default' : 'outline'}
-            className="flex-1"
-            onClick={() => setMarkerType('area')}
-          >
-            Area
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'building' ? 'default' : 'outline'}
-            className="flex-1"
-            onClick={() => setMarkerType('building')}
-          >
-            Building
-          </Button>
-        </div>
+        {!isEditing && (
+          <div className="flex mb-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'pin' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={() => setMarkerType('pin')}
+            >
+              Pin
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'area' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={() => setMarkerType('area')}
+            >
+              Area
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'building' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={() => setMarkerType('building')}
+            >
+              Building
+            </Button>
+          </div>
+        )}
         <Button 
           onClick={handleSaveButtonClick}
           disabled={!markerName.trim()}
           className="w-full"
         >
-          <Save className="h-4 w-4 mr-2" />
-          Save Location
+          {isEditing ? (
+            <>
+              <Edit2 className="h-4 w-4 mr-2" />
+              Rename Location
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save Location
+            </>
+          )}
         </Button>
       </div>
     </Popup>
