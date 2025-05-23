@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useId } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';
 import { useFloorPlanState } from '@/hooks/useFloorPlanState';
@@ -59,7 +59,10 @@ const MapView = ({
   isMapReady = false,
   selectedLocation
 }: MapViewProps) => {
-  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
+  // Generate a stable ID unique to this component instance
+  const instanceId = useId();
+  // Use both instance ID and a timestamp for the map key to ensure uniqueness
+  const [mapKey, setMapKey] = useState<string>(`${instanceId}-${Date.now()}`);
   const drawingControlsRef = useRef(null);
   const {
     showFloorPlan,

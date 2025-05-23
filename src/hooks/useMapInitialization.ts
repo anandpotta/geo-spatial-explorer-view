@@ -1,10 +1,9 @@
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import L from 'leaflet';
 import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
-import { getSavedMarkers } from '@/utils/marker-utils';
-import { toast } from 'sonner';
 import { isMapValid } from '@/utils/leaflet-type-utils';
+import { toast } from 'sonner';
 
 export function useMapInitialization(selectedLocation?: { x: number, y: number }) {
   const mapRef = useRef<L.Map | null>(null);
@@ -17,6 +16,32 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
   const isCleaningUpRef = useRef(false);
+  
+  // Reset the map instance with a new key
+  const resetMapInstance = useCallback(() => {
+    if (isCleaningUpRef.current) return;
+    
+    // Clean up the existing map first
+    if (mapRef.current) {
+      try {
+        console.log('Removing existing map instance before reset');
+        mapRef.current.remove();
+        mapRef.current = null;
+      } catch (err) {
+        console.warn('Error removing map during reset:', err);
+      }
+    }
+    
+    // Generate a new key to force recreation
+    setMapInstanceKey(Date.now());
+    mapAttachedRef.current = false;
+    validityChecksRef.current = 0;
+    recoveryAttemptRef.current = 0;
+    initialFlyComplete.current = false;
+    setIsMapReady(false);
+    
+    console.log('Map instance reset with new key:', mapInstanceKey);
+  }, [mapInstanceKey]);
   
   useEffect(() => {
     setupLeafletIcons();
@@ -57,64 +82,52 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
           console.log('Attempting to remove map instance');
           
           // Clear the reference immediately to prevent reuse
+          const currentMap = mapRef.current;
           mapRef.current = null;
           containerRef.current = null;
           mapAttachedRef.current = false;
           setIsMapReady(false);
           
-          // Check if container is still valid and attached
-          if (container && document.body.contains(container)) {
-            // Check if the map is still attached to this container
-            if (map.getContainer() === container) {
-              console.log('Map container verified, removing map instance');
-              map.remove();
-            } else {
-              console.log('Map container mismatch, skipping removal');
+          // Check if map is still valid before trying to remove
+          if (currentMap && typeof currentMap.remove === 'function') {
+            // Use a try-catch to safely remove the map
+            try {
+              currentMap.remove();
+              console.log('Map instance successfully removed');
+            } catch (err) {
+              console.warn('Error during map removal:', err);
             }
-          } else {
-            console.log('Container already detached, skipping map removal');
           }
         } catch (err) {
           console.warn('Error during map cleanup:', err);
-          // Don't throw, just log the error
         }
       }
     };
   }, [mapInstanceKey]);
 
-  // Set up an interval to check map validity less frequently
+  // Check map validity less frequently
   useEffect(() => {
-    // Only set up the validation check if needed and not cleaning up
-    if (isMapReady || isCleaningUpRef.current) {
-      return;
-    }
+    if (isMapReady || isCleaningUpRef.current) return;
     
     const checkMapValidity = () => {
       if (!mapRef.current || isCleaningUpRef.current) return;
       
       try {
-        // Use utility function for map validation
         const isValid = isMapValid(mapRef.current);
-        
-        // Only increment when checking
         validityChecksRef.current += 1;
         
-        // If map is valid but not marked as ready
         if (isValid && !isMapReady && mapAttachedRef.current && !isCleaningUpRef.current) {
           console.log('Map is now valid, marking as ready');
           setIsMapReady(true);
           
-          // Clear interval once map is valid
           if (validityCheckIntervalRef.current) {
             clearInterval(validityCheckIntervalRef.current);
             validityCheckIntervalRef.current = null;
           }
         }
-        // If map becomes invalid after being ready
         else if (!isValid && isMapReady && !isCleaningUpRef.current) {
           console.warn('Map is no longer valid, attempting recovery');
           
-          // Try recovery but limit attempts
           if (recoveryAttemptRef.current < 2) {
             recoveryAttemptRef.current += 1;
             
@@ -124,18 +137,24 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
                   mapRef.current.invalidateSize(true);
                 } catch (err) {
                   console.error("Map recovery failed:", err);
+                  
+                  // If recovery fails twice, reset the map entirely
+                  if (recoveryAttemptRef.current >= 2) {
+                    resetMapInstance();
+                  }
                 }
               }
             }, 1000);
+          } else {
+            // Reset the map if too many recovery attempts fail
+            resetMapInstance();
           }
         }
       } catch (err) {
-        // Only log errors, don't change state unnecessarily
         console.warn("Map validation error:", err.message);
       }
     };
     
-    // Check validity less frequently (10 seconds) and only when needed
     validityCheckIntervalRef.current = setInterval(checkMapValidity, 10000);
     
     return () => {
@@ -144,37 +163,50 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         validityCheckIntervalRef.current = null;
       }
     };
-  }, [isMapReady]);
+  }, [isMapReady, resetMapInstance]);
 
   const handleSetMapRef = (map: L.Map) => {
     console.log('Map reference provided');
     
-    // Prevent setting if we're cleaning up
     if (isCleaningUpRef.current) {
       console.log('Cleanup in progress, ignoring map reference');
       return;
     }
     
-    if (mapRef.current) {
-      console.log('Map reference already exists, skipping assignment');
+    if (mapRef.current === map) {
+      console.log('Same map reference provided, skipping');
       return;
+    }
+    
+    // If we already have a map reference, clean it up first
+    if (mapRef.current && mapRef.current !== map) {
+      console.log('New map reference provided, cleaning up old reference');
+      try {
+        mapRef.current.remove();
+      } catch (err) {
+        console.warn('Error removing old map:', err);
+      }
     }
     
     try {
       const container = map.getContainer();
+      
+      // Verify the container exists and is in the DOM
       if (container && document.body.contains(container)) {
         console.log('Map container verified, storing reference');
         
-        // Store both map and container references
+        // Store references
         mapRef.current = map;
         containerRef.current = container;
         mapAttachedRef.current = true;
         
-        // Reset counters when we get a valid map
+        // Reset counters
         validityChecksRef.current = 0;
         recoveryAttemptRef.current = 0;
         
-        // Single invalidation to ensure the map is properly sized
+        // Add a custom property to mark this container as used
+        (container as any)._leafletMapId = map._leaflet_id;
+        
         setTimeout(() => {
           if (mapRef.current && !isCleaningUpRef.current) {
             try {
@@ -182,7 +214,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
               console.log('Initial map invalidation completed');
               setIsMapReady(true);
               
-              // Handle initial location navigation once the map is ready
+              // Handle initial location navigation
               if (selectedLocation && !initialFlyComplete.current) {
                 initialFlyComplete.current = true;
                 try {
@@ -216,5 +248,6 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     setIsMapReady,
     setMapInstanceKey,
     handleSetMapRef,
+    resetMapInstance
   };
 }

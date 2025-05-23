@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { useMapState } from '@/hooks/useMapState';
@@ -29,11 +29,15 @@ const LeafletMap = ({
   onClearAll 
 }: LeafletMapProps) => {
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
+  const [instanceKey, setInstanceKey] = useState<number>(Date.now());
   
   // Initialize Leaflet icons
   useEffect(() => {
     setupLeafletIcons();
   }, []);
+  
+  // Generate a unique instance ID for this component instance to avoid container reuse
+  const uniqueInstanceId = useMemo(() => `leaflet-map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, []);
   
   // Custom hooks
   const mapState = useMapState(selectedLocation);
@@ -41,10 +45,19 @@ const LeafletMap = ({
     mapRef, 
     mapInstanceKey, 
     isMapReady, 
-    handleSetMapRef 
+    handleSetMapRef,
+    resetMapInstance 
   } = useMapInitialization(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
+
+  // Reset map if there are errors
+  const forceReset = useCallback(() => {
+    console.log("Forcing map reset");
+    setInstanceKey(Date.now());
+    resetMapInstance();
+    setIsMapReferenceSet(false);
+  }, [resetMapInstance]);
 
   // Handle markers updates
   useEffect(() => {
@@ -60,7 +73,7 @@ const LeafletMap = ({
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('storage', handleMarkersUpdated);
     };
-  }, []);
+  }, [mapState]);
 
   // Handle selected location changes
   useEffect(() => {
@@ -80,8 +93,9 @@ const LeafletMap = ({
     }
   }, [selectedLocation, isMapReady, isMapReferenceSet]);
 
-  // Custom map reference handler that sets our local state
-  const handleMapRefWrapper = (map: L.Map) => {
+  // Custom map reference handler
+  const handleMapRefWrapper = useCallback((map: L.Map) => {
+    console.log('Map ref wrapper called');
     handleSetMapRef(map);
     setIsMapReferenceSet(true);
     
@@ -89,10 +103,10 @@ const LeafletMap = ({
     if (onMapReady && !isMapReferenceSet) {
       onMapReady(map);
     }
-  };
+  }, [handleSetMapRef, onMapReady, isMapReferenceSet]);
 
   // Clear all layers and reset state
-  const handleClearAllWrapper = () => {
+  const handleClearAllWrapper = useCallback(() => {
     mapState.setTempMarker(null);
     mapState.setMarkerName('');
     mapState.setMarkerType('building');
@@ -105,7 +119,7 @@ const LeafletMap = ({
     }
     
     handleClearAll();
-  };
+  }, [mapState, onClearAll, handleClearAll]);
 
   if (mapState.showFloorPlan) {
     return (
@@ -118,7 +132,7 @@ const LeafletMap = ({
 
   return (
     <MapView
-      key={`map-view-${mapInstanceKey}`}
+      key={`map-view-${uniqueInstanceId}-${mapInstanceKey}-${instanceKey}`}
       position={mapState.position}
       zoom={mapState.zoom}
       markers={mapState.markers}
