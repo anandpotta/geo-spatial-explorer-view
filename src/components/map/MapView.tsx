@@ -1,11 +1,19 @@
 
-import { useRef, useEffect } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
-import MapEvents from './MapEvents';
+import { useState, useRef } from 'react';
+import { LocationMarker } from '@/utils/marker-utils';
+import FloorPlanView from './FloorPlanView';
+import { useFloorPlanState } from '@/hooks/useFloorPlanState';
+import MapHeader from './header/MapHeader';
+import MapContainer from './container/MapContainer';
 import MapReference from './MapReference';
+import DrawingControlsContainer from './drawing/DrawingControlsContainer';
 import MarkersContainer from './marker/MarkersContainer';
+import MapEvents from './MapEvents';
+import L from 'leaflet';
+
+// Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
-import { LocationMarker } from '@/utils/geo-utils';
+import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface MapViewProps {
   position: [number, number];
@@ -15,12 +23,17 @@ interface MapViewProps {
   markerName: string;
   markerType: 'pin' | 'area' | 'building';
   onMapReady: (map: L.Map) => void;
-  onSaveMarker: () => void;
+  onLocationSelect: (position: [number, number]) => void;
+  onMapClick: (latlng: L.LatLng) => void;
   onDeleteMarker: (id: string) => void;
-  onRenameMarker: (id: string, newName: string) => void;
+  onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  setTempMarker: (pos: [number, number] | null) => void;
+  onShapeCreated: (shape: any) => void;
+  activeTool: string | null;
+  onRegionClick: (drawing: any) => void;
+  onClearAll?: () => void;
+  isMapReady?: boolean;
 }
 
 const MapView = ({
@@ -31,86 +44,78 @@ const MapView = ({
   markerName,
   markerType,
   onMapReady,
-  onSaveMarker,
+  onLocationSelect,
+  onMapClick,
   onDeleteMarker,
-  onRenameMarker,
+  onSaveMarker,
   setMarkerName,
   setMarkerType,
-  setTempMarker
+  onShapeCreated,
+  activeTool,
+  onRegionClick,
+  onClearAll,
+  isMapReady = false
 }: MapViewProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isUnmountingRef = useRef(false);
-  
-  // Clean up any stale map elements when the component unmounts
-  useEffect(() => {
-    isUnmountingRef.current = false;
-    
-    return () => {
-      console.log("MapView is unmounting - cleaning up any stale map elements");
-      isUnmountingRef.current = true;
-      
-      // Use setTimeout to ensure cleanup happens after React's cleanup
-      setTimeout(() => {
-        const container = containerRef.current;
-        if (container && document.body.contains(container)) {
-          console.log("Found container, cleaning up child elements safely");
-          
-          try {
-            // More gentle cleanup - only remove elements we can safely remove
-            const leafletElements = container.querySelectorAll('.leaflet-container, .leaflet-pane, .leaflet-layer');
-            leafletElements.forEach(element => {
-              try {
-                if (element.parentNode && element.parentNode.contains(element)) {
-                  element.parentNode.removeChild(element);
-                }
-              } catch (err) {
-                // Ignore individual cleanup errors
-                console.log('Individual element cleanup skipped:', err.message);
-              }
-            });
-          } catch (err) {
-            console.log('Container cleanup completed with warnings:', err.message);
-          }
-        }
-      }, 0);
-    };
-  }, []);
-  
+  const [mapKey, setMapKey] = useState<string>(`map-${Date.now()}`);
+  const drawingControlsRef = useRef(null);
+  const {
+    showFloorPlan,
+    setShowFloorPlan,
+    selectedDrawing,
+    handleRegionClick
+  } = useFloorPlanState();
+
+  const handleLocationSelect = (position: [number, number]) => {
+    console.log("Location selected in MapView:", position);
+    if (onLocationSelect) {
+      onLocationSelect(position);
+    }
+  };
+
+  if (showFloorPlan) {
+    return (
+      <FloorPlanView 
+        onBack={() => setShowFloorPlan(false)} 
+        drawing={selectedDrawing}
+      />
+    );
+  }
+
   return (
-    <div 
-      ref={containerRef} 
-      className="w-full h-full bg-gray-100 relative"
-      data-testid="map-view"
-    >
-      {!isUnmountingRef.current && (
-        <MapContainer
-          center={position}
-          zoom={zoom}
-          scrollWheelZoom={true}
-          style={{ height: '100%', width: '100%' }}
-          attributionControl={false}
-          zoomControl={false}
-          doubleClickZoom={false}
-        >
-          <MapReference onMapReady={onMapReady} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapEvents setTempMarker={setTempMarker} />
-          <MarkersContainer
-            markers={markers}
-            tempMarker={tempMarker}
-            markerName={markerName}
-            markerType={markerType}
-            onDeleteMarker={onDeleteMarker}
-            onRenameMarker={onRenameMarker}
-            onSaveMarker={onSaveMarker}
-            setMarkerName={setMarkerName}
-            setMarkerType={setMarkerType}
-          />
-        </MapContainer>
-      )}
+    <div className="w-full h-full relative">
+      <MapHeader 
+        onLocationSelect={handleLocationSelect} 
+        isMapReady={isMapReady} 
+      />
+      
+      <MapContainer
+        position={position}
+        zoom={zoom}
+        mapKey={mapKey}
+      >
+        <MapReference onMapReady={onMapReady} />
+        
+        <DrawingControlsContainer
+          ref={drawingControlsRef}
+          onShapeCreated={onShapeCreated}
+          activeTool={activeTool}
+          onRegionClick={handleRegionClick}
+          onClearAll={onClearAll}
+        />
+        
+        <MarkersContainer
+          markers={markers}
+          tempMarker={tempMarker}
+          markerName={markerName}
+          markerType={markerType}
+          onDeleteMarker={onDeleteMarker}
+          onSaveMarker={onSaveMarker}
+          setMarkerName={setMarkerName}
+          setMarkerType={setMarkerType}
+        />
+        
+        <MapEvents onMapClick={onMapClick} />
+      </MapContainer>
     </div>
   );
 };

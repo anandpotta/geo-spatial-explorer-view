@@ -4,10 +4,10 @@ import { useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
 interface MapEventsProps {
-  setTempMarker: (pos: [number, number] | null) => void;
+  onMapClick: (latlng: L.LatLng) => void;
 }
 
-const MapEvents = ({ setTempMarker }: MapEventsProps) => {
+const MapEvents = ({ onMapClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
       // Don't trigger click if we're in the process of deleting a marker
@@ -34,7 +34,7 @@ const MapEvents = ({ setTempMarker }: MapEventsProps) => {
         return;
       }
       
-      setTempMarker([e.latlng.lat, e.latlng.lng]);
+      onMapClick(e.latlng);
     }
   });
   

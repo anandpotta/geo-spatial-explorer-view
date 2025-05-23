@@ -152,7 +152,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
             Saved Locations <MoreHorizontal className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56 bg-white">
+        <DropdownMenuContent className="w-56">
           <LocationsList
             markers={markers}
             onSelect={handleSelectLocation}

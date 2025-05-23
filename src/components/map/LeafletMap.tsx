@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -125,12 +126,17 @@ const LeafletMap = ({
       markerName={mapState.markerName}
       markerType={mapState.markerType}
       onMapReady={handleMapRefWrapper}
+      onLocationSelect={handleLocationSelect}
+      onMapClick={handleMapClick}
       onDeleteMarker={mapState.handleDeleteMarker}
-      onRenameMarker={mapState.handleRenameMarker}
       onSaveMarker={mapState.handleSaveMarker}
       setMarkerName={mapState.setMarkerName}
       setMarkerType={mapState.setMarkerType}
-      setTempMarker={mapState.setTempMarker}
+      onShapeCreated={handleShapeCreated}
+      activeTool={activeTool || mapState.activeTool}
+      onRegionClick={mapState.handleRegionClick}
+      onClearAll={handleClearAllWrapper}
+      isMapReady={isMapReady}
     />
   );
 };

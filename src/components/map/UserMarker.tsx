@@ -1,50 +1,143 @@
 
-import { Marker } from 'react-leaflet';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
+import { Marker, Tooltip } from 'react-leaflet';
+import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
-import { useBuildingIcon, useAreaIcon, usePinIcon } from '@/hooks/useMarkerIcons';
 
 interface UserMarkerProps {
   marker: LocationMarker;
   onDelete: (id: string) => void;
-  onRename?: (id: string, newName: string) => void;
 }
 
-const UserMarker = ({ marker, onDelete, onRename }: UserMarkerProps) => {
-  const buildingIcon = useBuildingIcon();
-  const areaIcon = useAreaIcon();
-  const pinIcon = usePinIcon();
-  
-  const getIcon = () => {
-    switch (marker.type) {
-      case 'building':
-        return buildingIcon;
-      case 'area':
-        return areaIcon;
-      case 'pin':
-      default:
-        return pinIcon;
+const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
+  const markerRef = useRef<L.Marker | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
+  // Create a custom marker ID for DOM element tracking
+  const markerId = `marker-${marker.id}`;
+
+  const handleDragEnd = useCallback((e: L.LeafletEvent) => {
+    if (!markerRef.current || isDeleting) return;
+    
+    try {
+      const updatedMarker = e.target;
+      const newPosition = updatedMarker.getLatLng();
+      
+      // Update marker position in local storage
+      const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
+      const updatedMarkers = savedMarkers.map((m: LocationMarker) => {
+        if (m.id === marker.id) {
+          return {
+            ...m,
+            position: [newPosition.lat, newPosition.lng] as [number, number]
+          };
+        }
+        return m;
+      });
+      
+      localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
+      
+      // Dispatch event to update other components
+      window.dispatchEvent(new CustomEvent('markersUpdated'));
+      
+      // Update tooltip key to force re-render
+      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
+    } catch (error) {
+      console.error('Error updating marker position:', error);
+    }
+  }, [marker.id, isDeleting]);
+
+  // Handler for deleting a marker safely
+  const handleDelete = useCallback((id: string) => {
+    if (isDeleting) return;
+    
+    setIsDeleting(true);
+    
+    // First close any open popups or tooltips
+    if (markerRef.current) {
+      try {
+        markerRef.current.closeTooltip();
+        markerRef.current.closePopup();
+      } catch (e) {
+        console.error('Error cleaning up marker before deletion:', e);
+      }
+    }
+    
+    // Then delete the marker
+    onDelete(id);
+    
+    // Reset isDeleting state after a short delay
+    setTimeout(() => {
+      setIsDeleting(false);
+    }, 100);
+  }, [onDelete, isDeleting]);
+
+  // Set up marker references and handle cleanup when unmounting
+  useEffect(() => {
+    // Cleanup function for when the marker is unmounted
+    return () => {
+      if (markerRef.current) {
+        try {
+          // First close tooltips and popups
+          markerRef.current.closeTooltip();
+          markerRef.current.closePopup();
+          
+          // Clean up any leftover DOM elements that might be causing duplicates
+          const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+          duplicateIcons.forEach(icon => {
+            if (icon.parentNode) {
+              icon.parentNode.removeChild(icon);
+            }
+          });
+        } catch (error) {
+          console.error('Error cleaning up marker:', error);
+        }
+      }
+    };
+  }, [markerId]);
+
+  // Set up marker references
+  const setMarkerInstance = (marker: L.Marker) => {
+    if (marker && !markerRef.current) {
+      markerRef.current = marker;
+      
+      // Add a custom data attribute to help identify this marker's DOM elements
+      const element = marker.getElement();
+      if (element) {
+        element.setAttribute('data-marker-id', markerId);
+      }
+      
+      setIsReady(true);
     }
   };
-
+  
   return (
     <Marker 
       position={marker.position} 
-      icon={getIcon()}
       key={`marker-${marker.id}`}
-      eventHandlers={{
-        add: (e) => {
-          // Add a data attribute to help with cleanup
-          const element = e.target.getElement();
-          if (element) {
-            element.setAttribute('data-marker-id', `marker-${marker.id}`);
-          }
-        }
-      }}
+      draggable={true}
+      ref={setMarkerInstance}
+      eventHandlers={{ dragend: handleDragEnd }}
+      attribution={`marker-${marker.id}`}
     >
-      <MarkerPopup marker={marker} onDelete={onDelete} onRename={onRename} />
+      <MarkerPopup 
+        marker={marker} 
+        onDelete={() => handleDelete(marker.id)} 
+      />
+
+      <Tooltip 
+        key={tooltipKey}
+        direction="top" 
+        offset={[0, -10]} 
+        opacity={0.9}
+        permanent={true}
+      >
+        <span className="font-medium">{marker.name}</span>
+      </Tooltip>
     </Marker>
   );
 };
 
-export default UserMarker;
+export default React.memo(UserMarker);

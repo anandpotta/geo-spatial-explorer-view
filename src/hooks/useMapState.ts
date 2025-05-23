@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -178,9 +177,8 @@ export function useMapState(selectedLocation?: Location) {
     }
     
     renameMarker(id, newName);
-    // Update the markers state with the refreshed data
+    // Update the markers state
     setMarkers(getSavedMarkers());
-    toast.success("Location renamed");
   };
 
   const handleRegionClick = (drawing: DrawingData) => {

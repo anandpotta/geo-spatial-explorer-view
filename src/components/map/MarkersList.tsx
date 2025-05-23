@@ -10,7 +10,6 @@ interface MarkersListProps {
   markerName: string;
   markerType: 'pin' | 'area' | 'building';
   onDeleteMarker: (id: string) => void;
-  onRenameMarker?: (id: string, newName: string) => void;
   onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
@@ -22,7 +21,6 @@ const MarkersList = ({
   markerName,
   markerType,
   onDeleteMarker,
-  onRenameMarker,
   onSaveMarker,
   setMarkerName,
   setMarkerType
@@ -83,8 +81,7 @@ const MarkersList = ({
         <UserMarker 
           key={`user-marker-${marker.id}`} 
           marker={marker} 
-          onDelete={handleDeleteMarker}
-          onRename={onRenameMarker} 
+          onDelete={handleDeleteMarker} 
         />
       ))}
       
