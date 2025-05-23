@@ -4,11 +4,13 @@
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+  white-space: nowrap !important;
 }
 
 .selected-location-tooltip .leaflet-tooltip-content {
   margin: 0 !important;
   padding: 0 !important;
+  min-width: auto !important;
 }
 
 .selected-location-tooltip .leaflet-tooltip:before {

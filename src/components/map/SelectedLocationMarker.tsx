@@ -22,8 +22,6 @@ const redMarkerIcon = new L.Icon({
 });
 
 const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMarkerProps) => {
-  const [lat, lng] = position;
-  
   return (
     <Marker 
       position={position} 
@@ -32,20 +30,15 @@ const SelectedLocationMarker = ({ position, label, onClose }: SelectedLocationMa
       title={label}
     >
       <Tooltip permanent direction="top" offset={[0, -40]} className="selected-location-tooltip">
-        <div className="flex items-center gap-2 p-2 bg-white rounded shadow-lg border">
-          <div className="flex-1">
-            <div className="font-semibold text-sm text-gray-800">{label}</div>
-            <div className="text-xs text-gray-600">
-              Lat: {lat.toFixed(6)}, Lng: {lng.toFixed(6)}
-            </div>
-          </div>
+        <div className="flex items-center gap-1 px-2 py-1 bg-white rounded shadow-md border text-xs">
+          <span className="text-gray-800 font-medium">{label}</span>
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded transition-colors"
+              className="p-0.5 hover:bg-gray-100 rounded transition-colors ml-1"
               title="Remove marker"
             >
-              <X size={12} className="text-gray-500" />
+              <X size={10} className="text-gray-500" />
             </button>
           )}
         </div>
