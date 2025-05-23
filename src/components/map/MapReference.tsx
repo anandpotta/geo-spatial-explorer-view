@@ -23,27 +23,36 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
   const [isStable, setIsStable] = useState(false);
   const isUnmountingRef = useRef(false);
+  const mapReadyCalledRef = useRef(false);
   
   // Clear all timeouts when unmounting
   useEffect(() => {
     isUnmountingRef.current = false;
+    mapReadyCalledRef.current = false;
     
     return () => {
+      console.log("MapReference unmounting, clearing timeouts");
       isUnmountingRef.current = true;
-      timeoutRefs.current.forEach(clearTimeout);
+      timeoutRefs.current.forEach(timeout => {
+        try {
+          clearTimeout(timeout);
+        } catch (err) {
+          // Ignore timeout clearing errors
+        }
+      });
       timeoutRefs.current = [];
     };
   }, []);
   
   useEffect(() => {
     // Only call onMapReady once per instance and if not unmounting
-    if (map && onMapReady && !hasCalledOnReady.current && !isUnmountingRef.current) {
+    if (map && onMapReady && !hasCalledOnReady.current && !isUnmountingRef.current && !mapReadyCalledRef.current) {
       console.log('Map is ready, will call onMapReady after initialization');
       
       // Wait until the map is fully initialized before calling onMapReady
       const timeout = setTimeout(() => {
-        if (isUnmountingRef.current) {
-          console.log('Component unmounting, skipping map ready callback');
+        if (isUnmountingRef.current || mapReadyCalledRef.current) {
+          console.log('Component unmounting or already called, skipping map ready callback');
           return;
         }
         
@@ -53,6 +62,7 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           if (map && container && document.body.contains(container)) {
             // Mark as called immediately to prevent duplicate calls
             hasCalledOnReady.current = true;
+            mapReadyCalledRef.current = true;
             
             // Check if map is valid before trying to invalidate size
             try {
@@ -62,7 +72,8 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
               // Only invalidate size if map is properly initialized
               if (internalMap && 
                   internalMap._panes && 
-                  internalMap._panes.mapPane) {
+                  internalMap._panes.mapPane && 
+                  !isUnmountingRef.current) {
                 console.log('Map panes initialized, calling invalidateSize');
                 map.invalidateSize(true);
               } else {
@@ -77,11 +88,12 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
             
             // Mark map as stable after initial setup
             if (!isUnmountingRef.current) {
-              setTimeout(() => {
+              const stabilizeTimeout = setTimeout(() => {
                 if (!isUnmountingRef.current) {
                   setIsStable(true);
                 }
               }, 500);
+              timeoutRefs.current.push(stabilizeTimeout);
               
               // Just one additional invalidation after a reasonable delay
               const additionalTimeout = setTimeout(() => {
@@ -99,13 +111,14 @@ const MapReference = ({ onMapReady }: MapReferenceProps) => {
           } else {
             console.log('Map container not ready or not attached to DOM');
             // Retry in case the map container wasn't ready yet
-            if (!isUnmountingRef.current) {
+            if (!isUnmountingRef.current && !mapReadyCalledRef.current) {
               const retryTimeout = setTimeout(() => {
-                if (map && !hasCalledOnReady.current && !isUnmountingRef.current) {
+                if (map && !hasCalledOnReady.current && !isUnmountingRef.current && !mapReadyCalledRef.current) {
                   try {
                     const retryContainer = map.getContainer();
                     if (retryContainer && document.body.contains(retryContainer)) {
                       hasCalledOnReady.current = true;
+                      mapReadyCalledRef.current = true;
                       onMapReady(map);
                       map.invalidateSize(true);
                     }
