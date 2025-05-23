@@ -15,6 +15,8 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [isReady, setIsReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
+  // Create a custom marker ID for DOM element tracking
+  const markerId = `marker-${marker.id}`;
 
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     if (!markerRef.current || isDeleting) return;
@@ -83,8 +85,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
           markerRef.current.closePopup();
           
           // Clean up any leftover DOM elements that might be causing duplicates
-          const markerId = `marker-${marker.id}`;
-          const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"]`);
+          const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
           duplicateIcons.forEach(icon => {
             if (icon.parentNode) {
               icon.parentNode.removeChild(icon);
@@ -95,7 +96,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         }
       }
     };
-  }, [marker.id]);
+  }, [markerId]);
 
   // Set up marker references
   const setMarkerInstance = (marker: L.Marker) => {
@@ -105,7 +106,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       // Add a custom data attribute to help identify this marker's DOM elements
       const element = marker.getElement();
       if (element) {
-        element.setAttribute('data-marker-id', `marker-${marker.id}`);
+        element.setAttribute('data-marker-id', markerId);
       }
       
       setIsReady(true);
