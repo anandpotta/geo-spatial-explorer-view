@@ -40,7 +40,7 @@ export function generateGeoJSON(): GeoJSONExport {
         name: marker.name,
         type: 'marker',
         markerType: marker.type,
-        createdAt: marker.createdAt || new Date().toISOString()
+        createdAt: marker.createdAt instanceof Date ? marker.createdAt.toISOString() : (marker.createdAt || new Date().toISOString())
       }
     });
   });
@@ -58,7 +58,7 @@ export function generateGeoJSON(): GeoJSONExport {
           name: drawing.properties?.name || `Unnamed ${drawing.type}`,
           type: 'drawing',
           color: drawing.properties?.color,
-          createdAt: drawing.properties?.createdAt || new Date().toISOString(),
+          createdAt: drawing.properties?.createdAt instanceof Date ? drawing.properties.createdAt.toISOString() : (drawing.properties?.createdAt || new Date().toISOString()),
           drawingType: drawing.type
         }
       });
