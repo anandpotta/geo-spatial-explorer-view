@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -34,7 +35,8 @@ export const setupLeafletIcons = () => {
     const positions = new Map();
     
     iconEls.forEach(iconEl => {
-      const position = `${iconEl.style.left}-${iconEl.style.top}`;
+      const htmlIconEl = iconEl as HTMLElement; // Cast to HTMLElement to access style property
+      const position = `${htmlIconEl.style.left}-${htmlIconEl.style.top}`;
       if (positions.has(position)) {
         try {
           iconEl.remove();
@@ -48,7 +50,8 @@ export const setupLeafletIcons = () => {
     
     // Clean up any orphaned shadows
     shadowEls.forEach(shadowEl => {
-      const position = `${shadowEl.style.left}-${shadowEl.style.top}`;
+      const htmlShadowEl = shadowEl as HTMLElement; // Cast to HTMLElement to access style property
+      const position = `${htmlShadowEl.style.left}-${htmlShadowEl.style.top}`;
       if (!positions.has(position)) {
         try {
           shadowEl.remove();
