@@ -44,7 +44,7 @@ const MarkersList = ({
     // Set global flag to prevent map click events temporarily
     window.preventMapClick = true;
     
-    // Prevent event propagation and default behavior
+    // Call the delete handler
     onDeleteMarker(id);
     
     // Clear any active DOM elements that might trigger marker creation
@@ -58,6 +58,7 @@ const MarkersList = ({
         }
       });
       
+      // Clean up any active popups
       const activePopups = document.querySelectorAll('.leaflet-popup');
       activePopups.forEach(popup => {
         try {

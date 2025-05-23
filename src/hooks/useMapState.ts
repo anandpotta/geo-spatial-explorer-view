@@ -144,6 +144,19 @@ export function useMapState(selectedLocation?: Location) {
     
     // Ensure drawings remain visible by dispatching a custom event
     window.dispatchEvent(new Event('drawingsUpdated'));
+    
+    // Clean up any leftover temporary marker DOM elements after a slight delay
+    setTimeout(() => {
+      if (tempMarker) {
+        const markerId = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
+        const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+        tempIcons.forEach(icon => {
+          if (icon.parentNode) {
+            icon.parentNode.removeChild(icon);
+          }
+        });
+      }
+    }, 100);
   };
 
   const handleDeleteMarker = (id: string) => {
