@@ -1,11 +1,14 @@
 
 import { useState, useEffect } from 'react';
-import { LocationMarker, getSavedMarkers } from '@/utils/markers/index';
+import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/markers/index';
+import { toast } from 'sonner';
 
 export const useSavedLocations = () => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
 
   useEffect(() => {
     const loadSavedMarkers = () => {
@@ -35,5 +38,43 @@ export const useSavedLocations = () => {
     };
   }, []);
 
-  return { markers, loading, selectedLocation, setSelectedLocation };
+  const handleDelete = (id: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    
+    const marker = markers.find(m => m.id === id);
+    if (marker) {
+      setMarkerToDelete(marker);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (markerToDelete) {
+      deleteMarker(markerToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setMarkerToDelete(null);
+      toast.success('Location deleted successfully');
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setMarkerToDelete(null);
+  };
+
+  return { 
+    markers, 
+    loading, 
+    selectedLocation, 
+    setSelectedLocation,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    markerToDelete,
+    handleDelete,
+    confirmDelete,
+    cancelDelete
+  };
 };
