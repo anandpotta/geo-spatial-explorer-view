@@ -27,9 +27,9 @@ const MapContainer: React.FC<MapContainerProps> = ({ position, zoom, mapKey, chi
         fadeAnimation={true}
         markerZoomAnimation={true}
         preferCanvas={true}
-        whenReady={(map) => {
-          // Set a custom property on the map to identify it
-          (map as any)._mapContainerId = mapContainerId;
+        whenReady={() => {
+          // Map ready callback - the map instance will be available through useMap hook in child components
+          console.log(`Map container ${mapContainerId} is ready`);
         }}
       >
         <TileLayer 
