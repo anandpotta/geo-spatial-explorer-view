@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { downloadGeoJSON } from '@/utils/geojson-export';
 import { toast } from 'sonner';
+import { Download } from 'lucide-react';
 
 interface DownloadButtonProps {
   disabled?: boolean;
@@ -29,8 +30,10 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false }) => 
       disabled={disabled}
       variant="outline"
       size="sm"
-      className="bg-white/90 hover:bg-white border border-gray-300"
+      className="bg-white hover:bg-gray-50 border border-gray-300 shadow-md cursor-pointer relative z-10"
+      style={{ pointerEvents: disabled ? 'none' : 'auto' }}
     >
+      <Download className="mr-2 h-4 w-4" />
       Download GeoJSON
     </Button>
   );

@@ -40,8 +40,8 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
   };
 
   return (
-    <div className="absolute top-4 right-4 z-[1000] flex gap-2" data-map-header="true">
-      <DownloadButton disabled={!isMapReady || !isVisible} />
+    <div className="absolute top-4 right-4 z-[1001] flex gap-2 pointer-events-auto" data-map-header="true">
+      <DownloadButton disabled={!isMapReady} />
       <SavedLocationsDropdown 
         onLocationSelect={handleLocationSelect} 
         isMapReady={isMapReady && isVisible}
