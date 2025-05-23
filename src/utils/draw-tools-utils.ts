@@ -44,29 +44,32 @@ export const configureSvgRenderer = (): (() => void) => {
     }
   };
 
+  // Store the original Circle initialize method for cleanup
+  let originalCircleInitialize: any = null;
+
   // Specific patch for Circle to ensure SVG rendering
-  if (L.Circle && L.Circle.prototype) {
-    // Ensure Circle creates SVG paths by making it use the SVG renderer
-    const originalCircleInitialize = L.Circle.prototype.initialize;
-    if (originalCircleInitialize) {
-      L.Circle.prototype.initialize = function() {
-        // Call original initialization
-        originalCircleInitialize.apply(this, arguments);
-        
-        // Force SVG renderer
-        this.options.renderer = L.svg();
-        this.options.stroke = true;
-        this.options.opacity = 1;
-      };
-    }
+  if (L.Circle && (L.Circle.prototype as any).initialize) {
+    // Store original initialization method
+    originalCircleInitialize = (L.Circle.prototype as any).initialize;
+    
+    // Override the initialize method
+    (L.Circle.prototype as any).initialize = function() {
+      // Call original initialization
+      originalCircleInitialize.apply(this, arguments);
+      
+      // Force SVG renderer
+      this.options.renderer = L.svg();
+      this.options.stroke = true;
+      this.options.opacity = 1;
+    };
   }
 
   // Return a cleanup function
   return () => {
     // Restore original methods when component unmounts
     (L.SVG.prototype as any)._updateStyle = originalUpdateStyle;
-    if (L.Circle && L.Circle.prototype) {
-      L.Circle.prototype.initialize = originalCircleInitialize;
+    if (originalCircleInitialize && L.Circle && (L.Circle.prototype as any).initialize) {
+      (L.Circle.prototype as any).initialize = originalCircleInitialize;
     }
   };
 };
@@ -159,23 +162,22 @@ export const ensureCircleSvgRendering = (map: L.Map): void => {
   if (!map) return;
   
   // Override the Circle class to use SVG renderer
-  if (L.Circle) {
+  if (L.Circle && (L.Circle.prototype as any).initialize) {
     // Force SVG renderer for all circles
-    const originalCircleInitialize = L.Circle.prototype.initialize;
-    if (originalCircleInitialize) {
-      L.Circle.prototype.initialize = function() {
-        // Call original initialization
-        originalCircleInitialize.apply(this, arguments);
-        
-        // Explicitly set renderer to SVG
-        this.options.renderer = L.svg();
-      };
-    }
+    const originalCircleInitialize = (L.Circle.prototype as any).initialize;
+    
+    (L.Circle.prototype as any).initialize = function() {
+      // Call original initialization
+      originalCircleInitialize.apply(this, arguments);
+      
+      // Explicitly set renderer to SVG
+      this.options.renderer = L.svg();
+    };
   }
   
   // Additionally, ensure the Draw.Circle class uses SVG
-  if (L.Draw && L.Draw.Circle) {
-    const circleProto = L.Draw.Circle.prototype as any;
+  if (L.Draw && (L.Draw as any).Circle) {
+    const circleProto = (L.Draw as any).Circle.prototype;
     if (circleProto) {
       // Force SVG renderer in options
       if (circleProto.options && circleProto.options.shapeOptions) {
