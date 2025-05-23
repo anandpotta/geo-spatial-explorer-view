@@ -23,6 +23,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [markerReady, setMarkerReady] = useState(false);
+  const markerId = `temp-marker-${position[0]}-${position[1]}`;
 
   // Handle cleanup when component unmounts
   useEffect(() => {
@@ -32,12 +33,20 @@ const TempMarker: React.FC<TempMarkerProps> = ({
           // Safely close any open UI elements
           markerRef.current.closeTooltip();
           markerRef.current.closePopup();
+          
+          // Clean up any DOM elements
+          const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+          tempIcons.forEach(icon => {
+            if (icon.parentNode) {
+              icon.parentNode.removeChild(icon);
+            }
+          });
         } catch (error) {
           console.error("Error cleaning up temp marker:", error);
         }
       }
     };
-  }, []);
+  }, [markerId]);
 
   // Update marker position in parent when dragged
   const handleDragEnd = (e: L.LeafletEvent) => {
@@ -51,11 +60,32 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
     }
   };
+  
+  // Custom save handler to ensure cleanup before saving
+  const handleSave = () => {
+    // Clean up the marker DOM elements before saving
+    const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+    tempIcons.forEach(icon => {
+      if (icon.parentNode) {
+        icon.parentNode.removeChild(icon);
+      }
+    });
+    
+    // Call the original save handler
+    onSave();
+  };
 
   // Set up marker references
   const setMarkerInstance = (marker: L.Marker) => {
     if (marker) {
       markerRef.current = marker;
+      
+      // Add data attribute for easy identification
+      const element = marker.getElement();
+      if (element) {
+        element.setAttribute('data-marker-id', markerId);
+      }
+      
       setMarkerReady(true);
     }
   };
@@ -86,7 +116,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         setMarkerName={setMarkerName}
         markerType={markerType}
         setMarkerType={setMarkerType}
-        onSave={onSave}
+        onSave={handleSave}
       />
       <Tooltip
         direction="top"
