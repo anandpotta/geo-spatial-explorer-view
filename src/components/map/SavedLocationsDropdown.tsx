@@ -43,8 +43,11 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     cleanupMarkerReferences
   } = useSavedLocationsDropdown();
 
-  const onSelect = (position: [number, number]) => {
-    console.log("SavedLocationsDropdown onSelect called with:", position);
+  // Direct navigation function that bypasses the explorer flow
+  const handleDirectNavigation = (position: [number, number]) => {
+    console.log("SavedLocationsDropdown direct navigation to:", position);
+    
+    // Call the hook's select function with the direct callback
     handleSelectLocation(position, isMapReady, onLocationSelect);
   };
 
@@ -63,7 +66,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
             newLocationName={newLocationName}
             newLocationLat={newLocationLat}
             newLocationLng={newLocationLng}
-            onSelect={onSelect}
+            onSelect={handleDirectNavigation}
             onDelete={handleDeleteClick}
             onStartAddingLocation={() => setIsAddingLocation(true)}
             onNameChange={setNewLocationName}

@@ -88,29 +88,24 @@ export const useSavedLocationsDropdown = () => {
 
   const handleSelectLocation = (position: [number, number], isMapReady: boolean, onLocationSelect?: (position: [number, number]) => void) => {
     console.log("Location selected from SavedLocationsDropdown:", position);
-    console.log("Map ready state:", isMapReady);
+    console.log("Direct callback provided:", !!onLocationSelect);
     
     // Close the dropdown first
     setIsDropdownOpen(false);
     
-    // Call the direct callback immediately for navigation
+    // Use ONLY the direct callback for navigation to avoid map reloading
     if (onLocationSelect) {
-      console.log("Using direct onLocationSelect callback for navigation");
+      console.log("Using direct callback for smooth navigation");
       onLocationSelect(position);
+      toast.success(`Navigating to saved location`);
     } else {
-      console.log("No direct onLocationSelect callback provided");
+      console.log("No direct callback available, navigation may reload map");
+      // Fallback to global handler only if no direct callback
+      if (window.handleSavedLocationSelect) {
+        console.log("Using global handler as last resort");
+        window.handleSavedLocationSelect(position);
+      }
     }
-    
-    // Also try the global navigation handler as fallback
-    if (window.handleSavedLocationSelect) {
-      console.log("Using global navigation handler as backup");
-      window.handleSavedLocationSelect(position);
-    } else {
-      console.log("No global navigation handler available");
-    }
-    
-    // Show success toast
-    toast.success(`Navigating to saved location`);
   };
 
   return {
