@@ -4,7 +4,7 @@ import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
-import { isPointWithinSpecificDrawing, getClosestPointWithinSpecificDrawing, isPointWithinAnyDrawnPath, getClosestPointWithinPaths } from '@/utils/path-boundary-utils';
+import { isPointWithinAnyDrawnPath, getClosestPointWithinPaths } from '@/utils/path-boundary-utils';
 import { toast } from 'sonner';
 
 interface UserMarkerProps {
@@ -37,45 +37,26 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       const newPosition = updatedMarker.getLatLng();
       const newPoint: [number, number] = [newPosition.lat, newPosition.lng];
       
-      // Check if marker has an associated drawing - use specific boundary checking
-      if (marker.associatedDrawing) {
-        const isWithinSpecificPath = isPointWithinSpecificDrawing(newPoint, marker.associatedDrawing);
+      // Check if the new position is within any drawn path
+      const isWithinPath = isPointWithinAnyDrawnPath(newPoint);
+      
+      if (!isWithinPath) {
+        // If outside all paths, find the closest point within a path
+        const closestPoint = getClosestPointWithinPaths(newPoint);
         
-        if (!isWithinSpecificPath) {
-          // If outside the specific associated drawing, find the closest point within that drawing
-          const closestPoint = getClosestPointWithinSpecificDrawing(newPoint, marker.associatedDrawing);
-          
-          // Set marker to the closest valid position within its associated drawing
-          updatedMarker.setLatLng(closestPoint);
-          
-          // Show a brief warning toast
-          toast.warning('Marker movement restricted to its associated building boundaries', {
-            duration: 1000,
-            position: 'bottom-center'
-          });
-        }
-      } else {
-        // Fallback: Check if the new position is within any drawn path (original behavior)
-        const isWithinAnyPath = isPointWithinAnyDrawnPath(newPoint);
+        // Set marker to the closest valid position
+        updatedMarker.setLatLng(closestPoint);
         
-        if (!isWithinAnyPath) {
-          // If outside all paths, find the closest point within any path
-          const closestPoint = getClosestPointWithinPaths(newPoint);
-          
-          // Set marker to the closest valid position
-          updatedMarker.setLatLng(closestPoint);
-          
-          // Show a brief warning toast
-          toast.warning('Marker movement restricted to drawn path boundaries', {
-            duration: 1000,
-            position: 'bottom-center'
-          });
-        }
+        // Show a brief warning toast
+        toast.warning('Marker movement restricted to drawn path boundaries', {
+          duration: 1000,
+          position: 'bottom-center'
+        });
       }
     } catch (error) {
       console.error('Error during marker drag:', error);
     }
-  }, [isDeleting, marker.associatedDrawing]);
+  }, [isDeleting]);
 
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     if (!markerRef.current || isDeleting) return;
@@ -85,28 +66,14 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       const newPosition = updatedMarker.getLatLng();
       const newPoint: [number, number] = [newPosition.lat, newPosition.lng];
       
-      // Final check based on whether marker has an associated drawing
-      let isWithinValidBounds = false;
+      // Final check - ensure the marker is within a drawn path
+      const isWithinPath = isPointWithinAnyDrawnPath(newPoint);
       
-      if (marker.associatedDrawing) {
-        isWithinValidBounds = isPointWithinSpecificDrawing(newPoint, marker.associatedDrawing);
-        
-        if (!isWithinValidBounds) {
-          // Revert to original position if outside the specific associated drawing
-          updatedMarker.setLatLng(originalPosition);
-          toast.error('Marker must stay within its associated building boundaries');
-          return;
-        }
-      } else {
-        // Fallback: ensure the marker is within any drawn path
-        isWithinValidBounds = isPointWithinAnyDrawnPath(newPoint);
-        
-        if (!isWithinValidBounds) {
-          // If still outside, revert to original position
-          updatedMarker.setLatLng(originalPosition);
-          toast.error('Marker must stay within drawn path boundaries');
-          return;
-        }
+      if (!isWithinPath) {
+        // If still outside, revert to original position
+        updatedMarker.setLatLng(originalPosition);
+        toast.error('Marker must stay within drawn path boundaries');
+        return;
       }
       
       // Update marker position in local storage
@@ -131,7 +98,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
-  }, [marker.id, marker.associatedDrawing, isDeleting, originalPosition]);
+  }, [marker.id, isDeleting, originalPosition]);
 
   // Handler for deleting a marker safely
   const handleDelete = useCallback((id: string) => {
