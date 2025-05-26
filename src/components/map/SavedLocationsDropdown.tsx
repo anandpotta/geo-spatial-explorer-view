@@ -38,7 +38,6 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
   const [newLocationName, setNewLocationName] = useState("");
   const [newLocationLat, setNewLocationLat] = useState<number | undefined>(undefined);
   const [newLocationLng, setNewLocationLng] = useState<number | undefined>(undefined);
-  const [isNavigating, setIsNavigating] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleDeleteClick = (id: string, event: React.MouseEvent) => {
@@ -108,49 +107,25 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
   const handleSelectLocation = (position: [number, number]) => {
     console.log("Location selected from SavedLocationsDropdown:", position);
     
-    if (isNavigating) {
-      console.log("Navigation already in progress, ignoring request");
-      return;
-    }
-    
     if (!isMapReady) {
       toast.warning("Map is not ready yet, please wait a moment and try again");
       return;
     }
     
-    // Set navigating status to prevent multiple clicks
-    setIsNavigating(true);
-    
     // Close the dropdown first
     setIsDropdownOpen(false);
     
-    // Create a location object that triggers the proper navigation flow
-    // This mimics how the location search works
-    const locationForNavigation = {
-      id: `saved-location-${Date.now()}`,
-      label: `Saved Location`,
-      x: position[1], // longitude
-      y: position[0]  // latitude
-    };
-    
-    console.log("Triggering navigation to:", locationForNavigation);
-    
-    // Use the parent's navigation function which should handle the view switching
-    // and smooth navigation properly
+    // Use the global navigation handler if available, otherwise fallback to direct call
     if (window.handleSavedLocationSelect) {
+      console.log("Using global navigation handler");
       window.handleSavedLocationSelect(position);
     } else {
-      // Fallback to direct call
+      console.log("Using direct navigation call");
       onLocationSelect(position);
     }
     
     // Show success toast
     toast.success(`Navigating to saved location`);
-    
-    // Reset navigating status after a delay
-    setTimeout(() => {
-      setIsNavigating(false);
-    }, 2000);
   };
 
   return (

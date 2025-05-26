@@ -68,31 +68,31 @@ const GeoSpatialExplorer = () => {
   }, [toast]);
   
   const handleSavedLocationSelect = useCallback((position: [number, number]) => {
-    console.log('Saved location selected in Explorer:', position);
+    console.log('Saved location selected in Explorer with coordinates:', position);
     
-    // Create a simple location object from coordinates
+    // Create a proper location object from coordinates
     const location: Location = {
-      id: `saved-loc-${position[0]}-${position[1]}`,
-      label: `Saved Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-      y: position[0],
-      x: position[1]
+      id: `saved-loc-${position[0]}-${position[1]}-${Date.now()}`,
+      label: `Saved Location`,
+      y: position[0], // latitude
+      x: position[1]  // longitude
     };
     
-    // Reset view to cesium and set the new location for smooth navigation
+    console.log('Created location object for navigation:', location);
+    
+    // Reset view state for fresh navigation
     setCurrentView('cesium');
     setFlyCompleted(false);
     
-    // Small delay to ensure view is set before setting location
-    setTimeout(() => {
-      setSelectedLocation(location);
-      
-      // Show toast notification for navigation feedback
-      toast({
-        title: 'Navigating to saved location',
-        description: `Flying to ${location.label}`,
-        duration: 3000,
-      });
-    }, 100);
+    // Set the location immediately to trigger navigation
+    setSelectedLocation(location);
+    
+    // Show navigation toast
+    toast({
+      title: 'Navigating to saved location',
+      description: `Flying to coordinates ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+      duration: 3000,
+    });
   }, [toast]);
   
   // Expose the saved location handler globally for the dropdown to use
