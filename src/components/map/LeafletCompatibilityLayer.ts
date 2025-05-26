@@ -5,38 +5,9 @@ import { EditControl as OriginalEditControl } from "react-leaflet-draw";
 import React, { forwardRef, useEffect } from 'react';
 import L from 'leaflet';
 
-// Enhanced layer patching to prevent edit errors
-const patchLayerForEditing = (layer: any) => {
-  if (!layer) return;
-  
-  // Add all required edit methods if missing
-  const requiredMethods = ['enable', 'disable', 'enableEdit', 'disableEdit'];
-  
-  requiredMethods.forEach(methodName => {
-    if (!layer[methodName] || typeof layer[methodName] !== 'function') {
-      layer[methodName] = function() { 
-        console.log(`${methodName} called on patched layer`);
-        return this; 
-      };
-    }
-  });
-  
-  // Add editing state tracking
-  if (!layer._leaflet_editing_enabled) {
-    layer._leaflet_editing_enabled = false;
-  }
-  
-  // Ensure the layer has proper event handling
-  if (!layer.on || typeof layer.on !== 'function') {
-    layer.on = function() { return this; };
-  }
-  if (!layer.off || typeof layer.off !== 'function') {
-    layer.off = function() { return this; };
-  }
-};
-
 // Apply patches to leaflet-draw to fix known issues
 const applyLeafletDrawPatches = () => {
+  // Fix for the "type is not defined" error in readableArea
   try {
     if (L.Draw && L.Draw.Polygon) {
       // Patch the readableArea function to provide a fallback for the missing type variable
@@ -47,6 +18,7 @@ const applyLeafletDrawPatches = () => {
           try {
             return originalPolygonTooltip.apply(this, arguments);
           } catch (err) {
+            // Fallback when error occurs in readableArea
             return {
               text: 'Click to continue drawing shape',
               subtext: ''
@@ -55,6 +27,7 @@ const applyLeafletDrawPatches = () => {
         };
       }
       
+      // Also patch Rectangle to use the same safe implementation
       if (L.Draw.Rectangle) {
         const rectangleProto = L.Draw.Rectangle.prototype as any;
         if (rectangleProto && rectangleProto._getTooltipText) {
@@ -63,6 +36,7 @@ const applyLeafletDrawPatches = () => {
             try {
               return originalRectTooltip.apply(this, arguments);
             } catch (err) {
+              // Fallback when error occurs in tooltip text generation
               return {
                 text: 'Click and drag to draw rectangle',
                 subtext: ''
@@ -73,93 +47,10 @@ const applyLeafletDrawPatches = () => {
       }
     }
     
-    // Enhanced edit toolbar patching with better error handling
+    // Patch edit toolbar to properly handle layer detection
     if (L.EditToolbar && L.EditToolbar.Edit) {
       const editProto = L.EditToolbar.Edit.prototype as any;
-      
-      if (editProto) {
-        // Override _enableLayerEdit to safely handle layers
-        const original_enableLayerEdit = editProto._enableLayerEdit;
-        editProto._enableLayerEdit = function(layer: any) {
-          try {
-            // Patch the layer first
-            patchLayerForEditing(layer);
-            
-            // Then try to enable editing with fallback
-            if (layer && typeof layer.enable === 'function') {
-              layer.enable();
-            } else if (layer && typeof layer.enableEdit === 'function') {
-              layer.enableEdit();
-            }
-          } catch (err) {
-            console.warn('Could not enable editing for layer:', err);
-          }
-        };
-        
-        // Override _disableLayerEdit to safely handle layers
-        const original_disableLayerEdit = editProto._disableLayerEdit;
-        editProto._disableLayerEdit = function(layer: any) {
-          try {
-            // Ensure layer has required methods before disabling
-            patchLayerForEditing(layer);
-            
-            // Then try to disable editing with fallback
-            if (layer && typeof layer.disable === 'function') {
-              layer.disable();
-            } else if (layer && typeof layer.disableEdit === 'function') {
-              layer.disableEdit();
-            }
-          } catch (err) {
-            console.warn('Could not disable editing for layer:', err);
-          }
-        };
-        
-        // Override addHooks to safely iterate through layers
-        const originalAddHooks = editProto.addHooks;
-        editProto.addHooks = function() {
-          try {
-            const featureGroup = this.options.featureGroup;
-            if (featureGroup && featureGroup.eachLayer) {
-              // Patch all layers before enabling editing
-              featureGroup.eachLayer((layer: any) => {
-                patchLayerForEditing(layer);
-              });
-            }
-            
-            // Call original addHooks
-            return originalAddHooks.apply(this, arguments);
-          } catch (err) {
-            console.error('Error in addHooks:', err);
-            // Try to continue anyway
-            return originalAddHooks.apply(this, arguments);
-          }
-        };
-        
-        // Override removeHooks to safely handle layer cleanup
-        const originalRemoveHooks = editProto.removeHooks;
-        editProto.removeHooks = function() {
-          try {
-            const featureGroup = this.options.featureGroup;
-            if (featureGroup && featureGroup.eachLayer) {
-              // Patch all layers before disabling editing
-              featureGroup.eachLayer((layer: any) => {
-                patchLayerForEditing(layer);
-              });
-            }
-            
-            // Call original removeHooks
-            return originalRemoveHooks.apply(this, arguments);
-          } catch (err) {
-            console.error('Error in removeHooks:', err);
-            // Try to continue anyway with safe fallback
-            try {
-              return originalRemoveHooks.apply(this, arguments);
-            } catch (fallbackErr) {
-              console.error('Fallback removeHooks also failed:', fallbackErr);
-            }
-          }
-        };
-        
+      if (editProto && editProto._checkDisabled) {
         const originalCheckDisabled = editProto._checkDisabled;
         editProto._checkDisabled = function() {
           // Always allow editing if there are any layers or SVG paths
@@ -223,34 +114,6 @@ const applyLeafletDrawPatches = () => {
         };
       }
     }
-    
-    // Enhanced FeatureGroup patching
-    if (L.FeatureGroup) {
-      const featureGroupProto = L.FeatureGroup.prototype as any;
-      
-      // Override addLayer to automatically patch layers
-      const originalAddLayer = featureGroupProto.addLayer;
-      featureGroupProto.addLayer = function(layer: any) {
-        // Patch the layer before adding it
-        patchLayerForEditing(layer);
-        
-        // Call original addLayer
-        return originalAddLayer.apply(this, arguments);
-      };
-      
-      // Override eachLayer to ensure all layers are patched when accessed
-      const originalEachLayer = featureGroupProto.eachLayer;
-      featureGroupProto.eachLayer = function(fn: any, context?: any) {
-        // Patch each layer before calling the function on it
-        const safeFn = function(layer: any) {
-          patchLayerForEditing(layer);
-          return fn.call(context || this, layer);
-        };
-        
-        // Call original eachLayer with the safe function
-        return originalEachLayer.call(this, safeFn, context);
-      };
-    }
   } catch (error) {
     console.error('Failed to apply Leaflet Draw patches:', error);
   }
@@ -312,17 +175,25 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     };
   }
   
-  // Enhanced layer patching for the feature group
+  // Add a patching function to ensure all layers have properly initialized edit handlers
+  // This is necessary because react-leaflet-draw may try to access edit methods on layers that don't have them
   if (featureGroup) {
     try {
+      // Safety guard to ensure we don't try to access properties on undefined
       setTimeout(() => {
         // Check if featureGroup exists and has layers
         if (featureGroup && featureGroup.getLayers) {
           const layers = featureGroup.getLayers();
           
           // Patch each layer to ensure it has the necessary edit methods
-          layers.forEach((layer: any) => {
-            patchLayerForEditing(layer);
+          layers.forEach(layer => {
+            // Only add if not already present
+            if (layer && !layer.enableEdit) {
+              layer.enableEdit = function() { return this; };
+            }
+            if (layer && !layer.disableEdit) {
+              layer.disableEdit = function() { return this; };
+            }
           });
         }
       }, 0);
