@@ -11,6 +11,8 @@ interface MapHeaderProps {
 const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false }) => {
   const [isVisible, setIsVisible] = useState(true);
   
+  console.log('MapHeader render:', { isMapReady, isVisible });
+  
   // Check if the header is actually visible in the DOM
   useEffect(() => {
     const checkVisibility = () => {
@@ -41,11 +43,11 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
 
   return (
     <div 
-      className="absolute top-4 right-4 z-[1001] flex gap-2 pointer-events-auto" 
+      className="absolute top-4 right-4 z-[1001] flex gap-2" 
       data-map-header="true"
       style={{ pointerEvents: 'auto' }}
     >
-      <DownloadButton disabled={!isMapReady} />
+      <DownloadButton disabled={false} />
       <SavedLocationsDropdown 
         onLocationSelect={handleLocationSelect} 
         isMapReady={isMapReady && isVisible}
