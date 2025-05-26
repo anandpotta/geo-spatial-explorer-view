@@ -44,7 +44,8 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
   } = useSavedLocationsDropdown();
 
   const onSelect = (position: [number, number]) => {
-    handleSelectLocation(position, isMapReady);
+    console.log("SavedLocationsDropdown onSelect called with:", position);
+    handleSelectLocation(position, isMapReady, onLocationSelect);
   };
 
   return (

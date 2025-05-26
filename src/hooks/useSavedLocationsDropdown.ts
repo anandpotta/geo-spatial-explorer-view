@@ -86,7 +86,7 @@ export const useSavedLocationsDropdown = () => {
     setIsAddingLocation(false);
   };
 
-  const handleSelectLocation = (position: [number, number], isMapReady: boolean) => {
+  const handleSelectLocation = (position: [number, number], isMapReady: boolean, onLocationSelect?: (position: [number, number]) => void) => {
     console.log("Location selected from SavedLocationsDropdown:", position);
     
     if (!isMapReady) {
@@ -97,7 +97,13 @@ export const useSavedLocationsDropdown = () => {
     // Close the dropdown first
     setIsDropdownOpen(false);
     
-    // Use the global navigation handler if available, otherwise fallback to direct call
+    // Use the direct callback first (this should trigger the map navigation)
+    if (onLocationSelect) {
+      console.log("Using direct onLocationSelect callback");
+      onLocationSelect(position);
+    }
+    
+    // Also use the global navigation handler as backup
     if (window.handleSavedLocationSelect) {
       console.log("Using global navigation handler");
       window.handleSavedLocationSelect(position);
