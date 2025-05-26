@@ -189,8 +189,8 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         zoomControlsContainer.appendChild(zoomOutBtn);
         zoomControlsContainer.appendChild(resetBtn);
         
-        // Add to the draw toolbar container
-        drawToolbar.style.position = 'relative';
+        // Add to the draw toolbar container - fix TypeScript error by casting to HTMLElement
+        (drawToolbar as HTMLElement).style.position = 'relative';
         drawToolbar.appendChild(zoomControlsContainer);
         
         zoomControlsAddedRef.current = true;
