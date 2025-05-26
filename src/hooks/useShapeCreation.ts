@@ -22,7 +22,7 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
       }
       
       // Create a shape object with additional properties
-      const shape = {
+      const shape: any = {
         layer,
         geoJSON,
         svgPath,
