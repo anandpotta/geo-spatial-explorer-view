@@ -18,14 +18,57 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
+  const [currentPosition, setCurrentPosition] = useState<[number, number]>(marker.position);
   
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
 
+  // Initialize marker position - ensure it's within drawn paths if paths exist
+  useEffect(() => {
+    const validateInitialPosition = () => {
+      try {
+        const savedDrawings = JSON.parse(localStorage.getItem('savedDrawings') || '[]');
+        
+        // If there are no drawings, allow marker at its saved position
+        if (savedDrawings.length === 0) {
+          setCurrentPosition(marker.position);
+          return;
+        }
+        
+        // Check if marker position is within any drawn path
+        const isWithinPath = isPointWithinAnyDrawnPath(marker.position);
+        
+        if (isWithinPath) {
+          // Position is valid, use it
+          setCurrentPosition(marker.position);
+        } else {
+          // Position is outside paths, find closest valid position
+          const closestPoint = getClosestPointWithinPaths(marker.position);
+          setCurrentPosition(closestPoint);
+          
+          // Update the marker position in localStorage
+          const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
+          const updatedMarkers = savedMarkers.map((m: LocationMarker) => {
+            if (m.id === marker.id) {
+              return { ...m, position: closestPoint };
+            }
+            return m;
+          });
+          localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
+        }
+      } catch (error) {
+        console.error('Error validating marker position:', error);
+        setCurrentPosition(marker.position);
+      }
+    };
+
+    validateInitialPosition();
+  }, [marker.position, marker.id]);
+
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
-      const currentPosition = markerRef.current.getLatLng();
-      setOriginalPosition([currentPosition.lat, currentPosition.lng]);
+      const currentPos = markerRef.current.getLatLng();
+      setOriginalPosition([currentPos.lat, currentPos.lng]);
     }
   }, []);
 
@@ -46,12 +89,15 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         
         // Set marker to the closest valid position
         updatedMarker.setLatLng(closestPoint);
+        setCurrentPosition(closestPoint);
         
         // Show a brief warning toast
         toast.warning('Marker movement restricted to drawn path boundaries', {
           duration: 1000,
           position: 'bottom-center'
         });
+      } else {
+        setCurrentPosition(newPoint);
       }
     } catch (error) {
       console.error('Error during marker drag:', error);
@@ -72,6 +118,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       if (!isWithinPath) {
         // If still outside, revert to original position
         updatedMarker.setLatLng(originalPosition);
+        setCurrentPosition(originalPosition);
         toast.error('Marker must stay within drawn path boundaries');
         return;
       }
@@ -95,6 +142,8 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       
       // Update tooltip key to force re-render
       setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
+      
+      setCurrentPosition(newPoint);
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
@@ -163,10 +212,15 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       setIsReady(true);
     }
   };
+
+  // Debug logging for marker visibility
+  useEffect(() => {
+    console.log(`Marker ${marker.id} position:`, currentPosition, 'within path:', isPointWithinAnyDrawnPath(currentPosition));
+  }, [currentPosition, marker.id]);
   
   return (
     <Marker 
-      position={marker.position} 
+      position={currentPosition} 
       key={`marker-${marker.id}`}
       draggable={true}
       ref={setMarkerInstance}
