@@ -2,12 +2,6 @@
 import { toast } from 'sonner';
 import { Location } from '@/utils/geo-utils';
 import L from 'leaflet';
-import { isMapValid } from '@/utils/leaflet-type-utils';
-
-// Define interface for internal map properties not exposed in TypeScript definitions
-interface LeafletMapInternal extends L.Map {
-  _loaded?: boolean;
-}
 
 export function useLocationSelection(
   mapRef: React.MutableRefObject<L.Map | null>,
@@ -19,33 +13,26 @@ export function useLocationSelection(
     console.log("Map ready state:", isMapReady);
     console.log("Map ref current:", !!mapRef.current);
     
-    // Simplified validation - just check if map exists and is ready
-    if (!mapRef.current || !isMapReady) {
-      console.warn("Map is not ready yet, retrying in 1 second");
-      toast.error("Map is not fully loaded yet. Retrying...");
-      
-      // Retry after a short delay
-      setTimeout(() => {
-        if (mapRef.current && isMapReady) {
-          handleLocationSelect(position);
-        }
-      }, 1000);
+    // Check if map exists
+    if (!mapRef.current) {
+      console.warn("Map reference is null, cannot navigate");
+      toast.error("Map is not available. Please try again.");
       return;
     }
     
     try {
       console.log("Attempting to fly to position:", position);
       
-      // Fly to the location
+      // Force fly to the location regardless of ready state
       mapRef.current.flyTo(position, 18, {
         animate: true,
         duration: 1.5
       });
       
-      // If the fly operation succeeded, proceed with location selection
+      // If onLocationSelect callback is provided, call it
       if (onLocationSelect) {
         const location: Location = {
-          id: `loc-${position[0]}-${position[1]}`,
+          id: `loc-${position[0]}-${position[1]}-${Date.now()}`,
           label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
           x: position[1],
           y: position[0]
@@ -62,13 +49,9 @@ export function useLocationSelection(
   };
 
   const handleClearAll = () => {
-    if (mapRef.current && isMapReady) {
+    if (mapRef.current) {
       try {
-        // Cast to internal map type to access private properties
-        const internalMap = mapRef.current as LeafletMapInternal;
-        if (internalMap._loaded) {
-          mapRef.current.invalidateSize();
-        }
+        mapRef.current.invalidateSize();
       } catch (err) {
         console.error('Error invalidating map size:', err);
       }
