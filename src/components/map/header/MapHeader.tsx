@@ -45,7 +45,7 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
     <div 
       className="absolute top-4 right-4 z-[1001] flex gap-2" 
       data-map-header="true"
-      style={{ pointerEvents: 'auto' }}
+      style={{ pointerEvents: 'auto', marginRight: '25px' }}
     >
       <DownloadButton disabled={false} />
       <SavedLocationsDropdown 
