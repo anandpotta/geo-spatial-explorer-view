@@ -39,16 +39,18 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     handleDeleteClick,
     handleConfirmDelete,
     handleAddLocation,
-    handleSelectLocation,
     cleanupMarkerReferences
   } = useSavedLocationsDropdown();
 
-  // Direct navigation function that bypasses the explorer flow
+  // Simple direct navigation that just calls the provided callback
   const handleDirectNavigation = (position: [number, number]) => {
     console.log("SavedLocationsDropdown direct navigation to:", position);
     
-    // Call the hook's select function with the direct callback
-    handleSelectLocation(position, isMapReady, onLocationSelect);
+    // Close dropdown immediately
+    setIsDropdownOpen(false);
+    
+    // Call the callback directly - this should be the map's flyTo function
+    onLocationSelect(position);
   };
 
   return (

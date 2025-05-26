@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useDropdownLocations } from '@/hooks/useDropdownLocations';
 import { useToast } from "@/components/ui/use-toast";
 import { createMarker, deleteMarker } from '@/utils/marker-utils';
-import { toast } from 'sonner';
 
 export const useSavedLocationsDropdown = () => {
   const { toast: uiToast } = useToast();
@@ -86,28 +85,6 @@ export const useSavedLocationsDropdown = () => {
     setIsAddingLocation(false);
   };
 
-  const handleSelectLocation = (position: [number, number], isMapReady: boolean, onLocationSelect?: (position: [number, number]) => void) => {
-    console.log("Location selected from SavedLocationsDropdown:", position);
-    console.log("Direct callback provided:", !!onLocationSelect);
-    
-    // Close the dropdown first
-    setIsDropdownOpen(false);
-    
-    // Use ONLY the direct callback for navigation to avoid map reloading
-    if (onLocationSelect) {
-      console.log("Using direct callback for smooth navigation");
-      onLocationSelect(position);
-      toast.success(`Navigating to saved location`);
-    } else {
-      console.log("No direct callback available, navigation may reload map");
-      // Fallback to global handler only if no direct callback
-      if (window.handleSavedLocationSelect) {
-        console.log("Using global handler as last resort");
-        window.handleSavedLocationSelect(position);
-      }
-    }
-  };
-
   return {
     markers,
     isDeleteDialogOpen,
@@ -127,7 +104,6 @@ export const useSavedLocationsDropdown = () => {
     handleDeleteClick,
     handleConfirmDelete,
     handleAddLocation,
-    handleSelectLocation,
     cleanupMarkerReferences
   };
 };

@@ -4,12 +4,12 @@ import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
 import { useMapState } from '@/hooks/useMapState';
 import { useMapInitialization } from '@/hooks/useMapInitialization';
-import { useLocationSelection } from '@/hooks/useLocationSelection';
 import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
 import { getSavedMarkers } from '@/utils/marker-utils';
 import MapView from './MapView';
 import FloorPlanView from './FloorPlanView';
 import { setupLeafletIcons } from './LeafletMapIcons';
+import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
@@ -51,7 +51,30 @@ const LeafletMap = ({
     resetMapInstance 
   } = useMapInitialization(selectedLocation);
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
-  const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
+
+  // Direct location selection handler that bypasses useLocationSelection
+  const handleLocationSelect = useCallback((position: [number, number]) => {
+    console.log("Direct location select in LeafletMap:", position);
+    
+    if (!mapRef.current) {
+      console.warn("Map reference not available for navigation");
+      toast.error("Map is not ready. Please try again.");
+      return;
+    }
+    
+    try {
+      console.log("Flying to position:", position);
+      mapRef.current.flyTo(position, 18, {
+        animate: true,
+        duration: 1.5
+      });
+      
+      toast.success("Navigated to saved location");
+    } catch (err) {
+      console.error('Error during navigation:', err);
+      toast.error("Navigation failed. Please try again.");
+    }
+  }, []);
 
   // Reset map if there are errors
   const forceReset = useCallback(() => {
@@ -120,8 +143,23 @@ const LeafletMap = ({
       onClearAll();
     }
     
-    handleClearAll();
-  }, [mapState, onClearAll, handleClearAll]);
+    // Clear all layers
+    if (mapRef.current) {
+      try {
+        const layers = mapRef.current._layers;
+        if (layers) {
+          Object.keys(layers).forEach(layerId => {
+            const layer = layers[layerId];
+            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
+              mapRef.current.removeLayer(layer);
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error during clear all operation:', err);
+      }
+    }
+  }, [mapState, onClearAll]);
 
   if (mapState.showFloorPlan) {
     return (
