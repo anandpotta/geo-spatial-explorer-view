@@ -1,3 +1,4 @@
+
 import { useRef, forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { EditControl } from "./LeafletCompatibilityLayer";
 import L from 'leaflet';
@@ -10,8 +11,10 @@ import { usePathElementsCleaner } from '@/hooks/usePathElementsCleaner';
 import { getDrawOptions } from './drawing/DrawOptionsConfiguration';
 import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
 import { useClearAllOperation } from '@/hooks/useClearAllOperation';
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
-import { toast } from 'sonner';
+import { useLayerMonitoring } from '@/hooks/useLayerMonitoring';
+import { useFeatureGroupInitialization } from '@/hooks/useFeatureGroupInitialization';
+import { ZoomControls } from './drawing/ZoomControls';
+import { ClearAllConfirmationDialog } from './drawing/ClearAllConfirmationDialog';
 
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
@@ -26,13 +29,17 @@ interface DrawToolsProps {
 
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
-  const initializedRef = useRef<boolean>(false);
-  const [hasLayers, setHasLayers] = useState(false);
-  const zoomControlsAddedRef = useRef<boolean>(false);
+  const [zoomControlsAdded, setZoomControlsAdded] = useState(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
   const { handleCreated } = useShapeCreation(onCreated);
+  
+  // Initialize feature group
+  useFeatureGroupInitialization(featureGroup);
+  
+  // Monitor layers
+  const { hasLayers } = useLayerMonitoring(featureGroup, getPathElements, editControlRef);
   
   // Use the clear all operation hook
   const { 
@@ -72,263 +79,6 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     getSVGPathData,
     clearPathElements
   }));
-
-  // Function to add zoom controls to the draw toolbar
-  const addZoomControlsToToolbar = () => {
-    if (!editControlRef.current || !featureGroup || !(featureGroup as any)._map || zoomControlsAddedRef.current) return;
-    
-    const map = (featureGroup as any)._map;
-    
-    // Wait for the draw toolbar to be available
-    const checkAndAddControls = () => {
-      // Look for the leaflet draw toolbar specifically
-      const drawToolbar = document.querySelector('.leaflet-draw-toolbar');
-      
-      if (drawToolbar && !zoomControlsAddedRef.current) {
-        console.log('Found draw toolbar, adding zoom controls');
-        
-        // Remove existing zoom controls if they exist
-        const existingZoomControls = document.querySelector('.custom-zoom-controls');
-        if (existingZoomControls) {
-          existingZoomControls.remove();
-        }
-        
-        // Create zoom in button
-        const zoomInBtn = document.createElement('a');
-        zoomInBtn.className = 'leaflet-draw-toolbar-button leaflet-toolbar-button';
-        zoomInBtn.href = '#';
-        zoomInBtn.title = 'Zoom In';
-        zoomInBtn.innerHTML = '+';
-        zoomInBtn.style.cssText = `
-          width: 26px;
-          height: 26px;
-          line-height: 26px;
-          display: block;
-          text-align: center;
-          text-decoration: none;
-          background: #fff;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-radius: 4px;
-          color: black;
-          font-weight: bold;
-          font-size: 18px;
-          cursor: pointer;
-          margin-right: 0;
-          margin-left: 0;
-          float: left;
-        `;
-        zoomInBtn.onclick = (e) => {
-          e.preventDefault();
-          map.zoomIn();
-          toast.success('Zoomed in');
-        };
-        
-        // Create zoom out button
-        const zoomOutBtn = document.createElement('a');
-        zoomOutBtn.className = 'leaflet-draw-toolbar-button leaflet-toolbar-button';
-        zoomOutBtn.href = '#';
-        zoomOutBtn.title = 'Zoom Out';
-        zoomOutBtn.innerHTML = '−';
-        zoomOutBtn.style.cssText = `
-          width: 26px;
-          height: 26px;
-          line-height: 26px;
-          display: block;
-          text-align: center;
-          text-decoration: none;
-          background: #fff;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-radius: 4px;
-          color: black;
-          font-weight: bold;
-          font-size: 18px;
-          cursor: pointer;
-          margin-right: 0;
-          margin-left: 0;
-          float: left;
-        `;
-        zoomOutBtn.onclick = (e) => {
-          e.preventDefault();
-          map.zoomOut();
-          toast.success('Zoomed out');
-        };
-        
-        // Create reset view button
-        const resetBtn = document.createElement('a');
-        resetBtn.className = 'leaflet-draw-toolbar-button leaflet-toolbar-button';
-        resetBtn.href = '#';
-        resetBtn.title = 'Reset View';
-        resetBtn.innerHTML = '⌂';
-        resetBtn.style.cssText = `
-          width: 26px;
-          height: 26px;
-          line-height: 26px;
-          display: block;
-          text-align: center;
-          text-decoration: none;
-          background: #fff;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-radius: 4px;
-          color: black;
-          font-weight: bold;
-          font-size: 16px;
-          cursor: pointer;
-          margin-right: 0;
-          margin-left: 0;
-          float: left;
-        `;
-        resetBtn.onclick = (e) => {
-          e.preventDefault();
-          map.setView([51.505, -0.09], 13);
-          toast.info('View reset');
-        };
-        
-        // Add buttons directly to the toolbar
-        drawToolbar.appendChild(zoomInBtn);
-        drawToolbar.appendChild(zoomOutBtn);
-        drawToolbar.appendChild(resetBtn);
-        
-        zoomControlsAddedRef.current = true;
-        console.log('Zoom controls added successfully to draw toolbar');
-      } else {
-        // Retry after a short delay if toolbar not found
-        setTimeout(checkAndAddControls, 300);
-      }
-    };
-    
-    // Start checking for toolbar
-    setTimeout(checkAndAddControls, 100);
-  };
-
-  // Function to check if there are any layers or SVG paths
-  const checkForLayers = () => {
-    if (!featureGroup) return false;
-    
-    // Check for layers in the feature group
-    let layersFound = false;
-    if (featureGroup.getLayers && featureGroup.getLayers().length > 0) {
-      layersFound = true;
-    }
-    
-    // Check for SVG paths in the DOM
-    const pathElements = getPathElements();
-    const svgPathsFound = pathElements && pathElements.length > 0;
-    
-    // Check for any drawn elements in the map
-    const map = (featureGroup as any)._map;
-    let drawnElementsFound = false;
-    if (map) {
-      const container = map.getContainer();
-      if (container) {
-        const paths = container.querySelectorAll('.leaflet-overlay-pane path');
-        drawnElementsFound = paths.length > 0;
-      }
-    }
-    
-    return layersFound || svgPathsFound || drawnElementsFound;
-  };
-
-  // Effect to monitor layer changes and update edit control state
-  useEffect(() => {
-    const updateEditControlState = () => {
-      const hasAnyLayers = checkForLayers();
-      setHasLayers(hasAnyLayers);
-      
-      // Force update the edit control to refresh its state
-      if (editControlRef.current && editControlRef.current._toolbars) {
-        const editToolbar = editControlRef.current._toolbars.edit;
-        const removeToolbar = editControlRef.current._toolbars.remove;
-        
-        if (editToolbar) {
-          if (hasAnyLayers) {
-            editToolbar.enable();
-          } else {
-            editToolbar.disable();
-          }
-        }
-        
-        if (removeToolbar) {
-          if (hasAnyLayers) {
-            removeToolbar.enable();
-          } else {
-            removeToolbar.disable();
-          }
-        }
-      }
-      
-      // Add zoom controls after toolbar is ready
-      setTimeout(addZoomControlsToToolbar, 500);
-    };
-    
-    // Initial check
-    updateEditControlState();
-    
-    // Set up periodic checking for layers
-    const interval = setInterval(updateEditControlState, 1000);
-    
-    // Listen for various events that might change layer state
-    const events = ['layeradd', 'layerremove', 'drawingCreated', 'drawingDeleted', 'storage', 'markersUpdated'];
-    
-    const handleLayerChange = () => {
-      setTimeout(updateEditControlState, 100);
-    };
-    
-    // Add event listeners to the map if available
-    const map = (featureGroup as any)._map;
-    if (map) {
-      events.forEach(event => {
-        if (event === 'storage' || event === 'markersUpdated' || event === 'drawingCreated' || event === 'drawingDeleted') {
-          window.addEventListener(event, handleLayerChange);
-        } else {
-          map.on(event, handleLayerChange);
-        }
-      });
-    }
-    
-    return () => {
-      clearInterval(interval);
-      if (map) {
-        events.forEach(event => {
-          if (event === 'storage' || event === 'markersUpdated' || event === 'drawingCreated' || event === 'drawingDeleted') {
-            window.removeEventListener(event, handleLayerChange);
-          } else {
-            map.off(event, handleLayerChange);
-          }
-        });
-      }
-    };
-  }, [featureGroup, getPathElements]);
-
-  // Effect to initialize feature group
-  useEffect(() => {
-    // Add safety mechanism to prevent errors when feature group is not initialized
-    if (featureGroup && !initializedRef.current) {
-      // Apply patch to ensure all needed methods exist in a type-safe way
-      if (!featureGroup.eachLayer) {
-        const eachLayerFn = function(this: L.FeatureGroup, cb: (layer: L.Layer) => void) {
-          // Use type assertion to access internal _layers property
-          const layers = (this as any)._layers;
-          if (layers) {
-            Object.keys(layers).forEach(key => {
-              cb(layers[key]);
-            });
-          }
-          return this; // Return this for chaining
-        };
-        
-        // Explicitly cast the function to avoid TypeScript errors
-        (featureGroup as any).eachLayer = eachLayerFn;
-      }
-      
-      // Store map reference globally to help with cleanup operations
-      if ((featureGroup as any)._map) {
-        (window as any).leafletMap = (featureGroup as any)._map;
-      }
-      
-      // Mark as initialized
-      initializedRef.current = true;
-    }
-  }, [featureGroup]);
 
   // Monitor edit control and enhance its clear all functionality
   useEffect(() => {
@@ -382,6 +132,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     }
   };
 
+  // Get map instance for zoom controls
+  const map = (featureGroup as any)._map || null;
+
   return (
     <>
       <EditControl
@@ -393,20 +146,17 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
         featureGroup={featureGroup}
       />
       
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear All Layers</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to clear all drawings and shapes? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmClearAll}>Clear All</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ZoomControls 
+        map={map}
+        isControlsAdded={zoomControlsAdded}
+        onControlsAdded={() => setZoomControlsAdded(true)}
+      />
+      
+      <ClearAllConfirmationDialog
+        open={showConfirmation}
+        onOpenChange={setShowConfirmation}
+        onConfirm={confirmClearAll}
+      />
     </>
   );
 });
