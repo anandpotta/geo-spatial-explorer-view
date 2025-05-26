@@ -232,19 +232,33 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
   
-  // Configure edit options with proper layer detection
+  // Configure edit options with proper layer detection and enhanced editing capabilities
   const editOptions = {
     featureGroup,
     edit: {
-      // Enable editing for all supported shapes
+      // Enable editing for all supported shapes with enhanced options
       selectedPathOptions: { 
         maintainColor: true,
-        opacity: 0.7,
-        weight: 4
+        opacity: 0.8,
+        weight: 6,
+        color: '#ff7800',
+        fillOpacity: 0.1
       },
       moveMarkers: true,
       // Force enable editing regardless of layer count
-      enable: true
+      enable: true,
+      // Enhanced edit options for better visibility
+      poly: {
+        allowIntersection: false
+      },
+      // Make edit handles more visible
+      marker: {
+        icon: L.divIcon({
+          className: 'leaflet-div-icon leaflet-editing-icon',
+          iconAnchor: [7, 7],
+          html: '<div style="width: 14px; height: 14px; background: #ff7800; border: 2px solid white; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>'
+        })
+      }
     },
     remove: {
       // Force enable removing regardless of layer count
