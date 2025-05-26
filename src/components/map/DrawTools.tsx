@@ -73,6 +73,116 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     clearPathElements
   }));
 
+  // Function to add zoom controls to the draw toolbar
+  const addZoomControlsToToolbar = () => {
+    if (!editControlRef.current || !featureGroup || !(featureGroup as any)._map) return;
+    
+    const map = (featureGroup as any)._map;
+    const drawContainer = document.querySelector('.leaflet-draw-toolbar');
+    
+    if (drawContainer) {
+      // Remove existing zoom controls if they exist
+      const existingZoomControls = drawContainer.querySelector('.custom-zoom-controls');
+      if (existingZoomControls) {
+        existingZoomControls.remove();
+      }
+      
+      // Create zoom controls container
+      const zoomControlsContainer = document.createElement('div');
+      zoomControlsContainer.className = 'custom-zoom-controls';
+      zoomControlsContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        margin-left: 5px;
+        border-left: 1px solid #ccc;
+        padding-left: 5px;
+      `;
+      
+      // Zoom In button
+      const zoomInBtn = document.createElement('a');
+      zoomInBtn.className = 'leaflet-draw-toolbar-button';
+      zoomInBtn.href = '#';
+      zoomInBtn.title = 'Zoom In';
+      zoomInBtn.innerHTML = '+';
+      zoomInBtn.style.cssText = `
+        display: block;
+        width: 26px;
+        height: 26px;
+        line-height: 26px;
+        text-align: center;
+        text-decoration: none;
+        color: #333;
+        background: #fff;
+        border: 1px solid #ccc;
+        font-weight: bold;
+        font-size: 16px;
+        margin-bottom: 1px;
+      `;
+      zoomInBtn.onclick = (e) => {
+        e.preventDefault();
+        map.zoomIn();
+      };
+      
+      // Zoom Out button
+      const zoomOutBtn = document.createElement('a');
+      zoomOutBtn.className = 'leaflet-draw-toolbar-button';
+      zoomOutBtn.href = '#';
+      zoomOutBtn.title = 'Zoom Out';
+      zoomOutBtn.innerHTML = '−';
+      zoomOutBtn.style.cssText = `
+        display: block;
+        width: 26px;
+        height: 26px;
+        line-height: 26px;
+        text-align: center;
+        text-decoration: none;
+        color: #333;
+        background: #fff;
+        border: 1px solid #ccc;
+        font-weight: bold;
+        font-size: 16px;
+        margin-bottom: 1px;
+      `;
+      zoomOutBtn.onclick = (e) => {
+        e.preventDefault();
+        map.zoomOut();
+      };
+      
+      // Reset View button
+      const resetBtn = document.createElement('a');
+      resetBtn.className = 'leaflet-draw-toolbar-button';
+      resetBtn.href = '#';
+      resetBtn.title = 'Reset View';
+      resetBtn.innerHTML = '⌂';
+      resetBtn.style.cssText = `
+        display: block;
+        width: 26px;
+        height: 26px;
+        line-height: 26px;
+        text-align: center;
+        text-decoration: none;
+        color: #333;
+        background: #fff;
+        border: 1px solid #ccc;
+        font-weight: bold;
+        font-size: 14px;
+      `;
+      resetBtn.onclick = (e) => {
+        e.preventDefault();
+        map.setView([51.505, -0.09], 13);
+        toast.info('View reset');
+      };
+      
+      // Add buttons to container
+      zoomControlsContainer.appendChild(zoomInBtn);
+      zoomControlsContainer.appendChild(zoomOutBtn);
+      zoomControlsContainer.appendChild(resetBtn);
+      
+      // Add to toolbar
+      drawContainer.appendChild(zoomControlsContainer);
+    }
+  };
+
   // Function to check if there are any layers or SVG paths
   const checkForLayers = () => {
     if (!featureGroup) return false;
@@ -128,6 +238,9 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           }
         }
       }
+      
+      // Add zoom controls after toolbar is ready
+      setTimeout(addZoomControlsToToolbar, 100);
     };
     
     // Initial check
