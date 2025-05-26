@@ -21,27 +21,38 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
         svgPath = layer._path.getAttribute('d');
       }
       
-      // Create a shape object with additional properties
-      const shape: any = {
+      // Create base shape object
+      const baseShape = {
         layer,
         geoJSON,
         svgPath,
         center: layer.getBounds ? layer.getBounds().getCenter() : null,
-        type: layerType, // Use the layerType from the event to distinguish between different shapes
-        id: crypto.randomUUID() // Generate unique ID for tracking
+        type: layerType,
+        id: crypto.randomUUID()
       };
       
       // Only add position for actual marker types, not for circles or other shapes
       if (layerType === 'marker' && layer.getLatLng) {
         const latLng = layer.getLatLng();
-        shape.position = [latLng.lat, latLng.lng];
-      }
-      
-      console.log(`Shape created: ${layerType}`, shape);
-      
-      // Call the provided callback with the shape
-      if (onCreated) {
-        onCreated(shape);
+        const shape = {
+          ...baseShape,
+          position: [latLng.lat, latLng.lng] as [number, number]
+        };
+        
+        console.log(`Shape created: ${layerType}`, shape);
+        
+        // Call the provided callback with the shape
+        if (onCreated) {
+          onCreated(shape);
+        }
+      } else {
+        // For circles, rectangles, polygons - no position property needed
+        console.log(`Shape created: ${layerType}`, baseShape);
+        
+        // Call the provided callback with the shape (no position for non-marker shapes)
+        if (onCreated) {
+          onCreated(baseShape);
+        }
       }
     } catch (err) {
       console.error('Error creating shape:', err);
