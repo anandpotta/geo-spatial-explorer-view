@@ -8,6 +8,7 @@ export function useMarkerHandlers(mapState: any) {
   const { currentUser } = useAuth();
   
   const handleMapClick = (latlng: L.LatLng) => {
+    // Only create markers when explicitly in marker mode or no tool is active
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       mapState.setTempMarker(exactPosition);
@@ -27,6 +28,7 @@ export function useMarkerHandlers(mapState: any) {
   };
 
   const handleShapeCreated = (shape: any) => {
+    // Check if this is specifically a marker creation event
     if (shape.type === 'marker') {
       // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
@@ -62,7 +64,10 @@ export function useMarkerHandlers(mapState: any) {
         toast.error('Could not create marker: invalid position data');
         return;
       }
-    } else {
+    } else if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'polygon') {
+      // Handle drawing shapes (circles, rectangles, polygons) - DO NOT create markers
+      console.log(`Creating ${shape.type} shape, not adding marker`);
+      
       // Create a safe copy of the shape without potential circular references
       const safeShape: DrawingData = {
         type: shape.type,
