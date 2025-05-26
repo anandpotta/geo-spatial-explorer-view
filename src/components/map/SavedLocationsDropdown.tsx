@@ -39,6 +39,7 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
   const [newLocationLat, setNewLocationLat] = useState<number | undefined>(undefined);
   const [newLocationLng, setNewLocationLng] = useState<number | undefined>(undefined);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleDeleteClick = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -120,22 +121,41 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     // Set navigating status to prevent multiple clicks
     setIsNavigating(true);
     
-    // Call the parent's onLocationSelect function directly
-    console.log("Calling parent onLocationSelect with position:", position);
-    onLocationSelect(position);
+    // Close the dropdown first
+    setIsDropdownOpen(false);
+    
+    // Create a location object that triggers the proper navigation flow
+    // This mimics how the location search works
+    const locationForNavigation = {
+      id: `saved-location-${Date.now()}`,
+      label: `Saved Location`,
+      x: position[1], // longitude
+      y: position[0]  // latitude
+    };
+    
+    console.log("Triggering navigation to:", locationForNavigation);
+    
+    // Use the parent's navigation function which should handle the view switching
+    // and smooth navigation properly
+    if (window.handleSavedLocationSelect) {
+      window.handleSavedLocationSelect(position);
+    } else {
+      // Fallback to direct call
+      onLocationSelect(position);
+    }
     
     // Show success toast
-    toast.success(`Navigating to selected location`);
+    toast.success(`Navigating to saved location`);
     
     // Reset navigating status after a delay
     setTimeout(() => {
       setIsNavigating(false);
-    }, 1000);
+    }, 2000);
   };
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline">
             Saved Locations <MoreHorizontal className="ml-2 h-4 w-4" />

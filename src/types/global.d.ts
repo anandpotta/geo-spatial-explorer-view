@@ -1,7 +1,9 @@
 
+import { LocationMarker } from '@/utils/marker-utils';
+
 declare global {
   interface Window {
-    featureGroup?: L.FeatureGroup;
+    handleSavedLocationSelect?: (position: [number, number]) => void;
   }
 }
 
