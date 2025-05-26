@@ -32,37 +32,29 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           existingZoomControls.remove();
         }
         
-        // Create a container for zoom controls
-        const zoomContainer = document.createElement('div');
-        zoomContainer.className = 'custom-zoom-controls';
-        zoomContainer.style.cssText = `
-          display: flex;
-          flex-direction: row;
-          margin-left: 4px;
-        `;
-        
-        // Create zoom in button
+        // Create zoom in button with proper Leaflet styling
         const zoomInBtn = document.createElement('a');
         zoomInBtn.className = 'leaflet-draw-toolbar-button leaflet-toolbar-button';
         zoomInBtn.href = '#';
         zoomInBtn.title = 'Zoom In';
         zoomInBtn.innerHTML = '+';
         zoomInBtn.style.cssText = `
-          width: 26px;
-          height: 26px;
-          line-height: 26px;
-          display: block;
-          text-align: center;
-          text-decoration: none;
-          background: #fff;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-radius: 4px;
-          color: black;
-          font-weight: bold;
-          font-size: 18px;
-          cursor: pointer;
-          margin-right: 2px;
-          float: left;
+          width: 26px !important;
+          height: 26px !important;
+          line-height: 26px !important;
+          display: block !important;
+          text-align: center !important;
+          text-decoration: none !important;
+          background: #fff !important;
+          border: 2px solid rgba(0,0,0,0.2) !important;
+          border-radius: 4px !important;
+          color: black !important;
+          font-weight: bold !important;
+          font-size: 18px !important;
+          cursor: pointer !important;
+          margin: 0 1px 0 0 !important;
+          float: left !important;
+          position: relative !important;
         `;
         zoomInBtn.onclick = (e) => {
           e.preventDefault();
@@ -70,28 +62,29 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           toast.success('Zoomed in');
         };
         
-        // Create zoom out button
+        // Create zoom out button with proper Leaflet styling
         const zoomOutBtn = document.createElement('a');
         zoomOutBtn.className = 'leaflet-draw-toolbar-button leaflet-toolbar-button';
         zoomOutBtn.href = '#';
         zoomOutBtn.title = 'Zoom Out';
         zoomOutBtn.innerHTML = '−';
         zoomOutBtn.style.cssText = `
-          width: 26px;
-          height: 26px;
-          line-height: 26px;
-          display: block;
-          text-align: center;
-          text-decoration: none;
-          background: #fff;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-radius: 4px;
-          color: black;
-          font-weight: bold;
-          font-size: 18px;
-          cursor: pointer;
-          margin-right: 2px;
-          float: left;
+          width: 26px !important;
+          height: 26px !important;
+          line-height: 26px !important;
+          display: block !important;
+          text-align: center !important;
+          text-decoration: none !important;
+          background: #fff !important;
+          border: 2px solid rgba(0,0,0,0.2) !important;
+          border-radius: 4px !important;
+          color: black !important;
+          font-weight: bold !important;
+          font-size: 18px !important;
+          cursor: pointer !important;
+          margin: 0 1px 0 0 !important;
+          float: left !important;
+          position: relative !important;
         `;
         zoomOutBtn.onclick = (e) => {
           e.preventDefault();
@@ -99,27 +92,29 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           toast.success('Zoomed out');
         };
         
-        // Create reset view button
+        // Create reset view button with proper Leaflet styling
         const resetBtn = document.createElement('a');
         resetBtn.className = 'leaflet-draw-toolbar-button leaflet-toolbar-button';
         resetBtn.href = '#';
         resetBtn.title = 'Reset View';
         resetBtn.innerHTML = '⌂';
         resetBtn.style.cssText = `
-          width: 26px;
-          height: 26px;
-          line-height: 26px;
-          display: block;
-          text-align: center;
-          text-decoration: none;
-          background: #fff;
-          border: 2px solid rgba(0,0,0,0.2);
-          border-radius: 4px;
-          color: black;
-          font-weight: bold;
-          font-size: 16px;
-          cursor: pointer;
-          float: left;
+          width: 26px !important;
+          height: 26px !important;
+          line-height: 26px !important;
+          display: block !important;
+          text-align: center !important;
+          text-decoration: none !important;
+          background: #fff !important;
+          border: 2px solid rgba(0,0,0,0.2) !important;
+          border-radius: 4px !important;
+          color: black !important;
+          font-weight: bold !important;
+          font-size: 16px !important;
+          cursor: pointer !important;
+          margin: 0 1px 0 0 !important;
+          float: left !important;
+          position: relative !important;
         `;
         resetBtn.onclick = (e) => {
           e.preventDefault();
@@ -127,13 +122,10 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           toast.info('View reset');
         };
         
-        // Add buttons to the container
-        zoomContainer.appendChild(zoomInBtn);
-        zoomContainer.appendChild(zoomOutBtn);
-        zoomContainer.appendChild(resetBtn);
-        
-        // Add container to the toolbar
-        drawToolbar.appendChild(zoomContainer);
+        // Add buttons directly to the toolbar (they will float next to existing buttons)
+        drawToolbar.appendChild(zoomInBtn);
+        drawToolbar.appendChild(zoomOutBtn);
+        drawToolbar.appendChild(resetBtn);
         
         zoomControlsAddedRef.current = true;
         onControlsAdded();
