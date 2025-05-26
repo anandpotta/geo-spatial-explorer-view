@@ -22,6 +22,11 @@ interface LeafletMapProps {
   onClearSelectedLocation?: () => void;
 }
 
+// Extended interface for accessing internal Leaflet properties
+interface LeafletMapInternal extends L.Map {
+  _layers: { [key: string]: L.Layer };
+}
+
 const LeafletMap = ({ 
   selectedLocation, 
   onMapReady, 
@@ -146,12 +151,13 @@ const LeafletMap = ({
     // Clear all layers
     if (mapRef.current) {
       try {
-        const layers = mapRef.current._layers;
+        const mapInternal = mapRef.current as LeafletMapInternal;
+        const layers = mapInternal._layers;
         if (layers) {
           Object.keys(layers).forEach(layerId => {
             const layer = layers[layerId];
-            if (layer && layer.options && (layer.options.isDrawn || layer.options.id)) {
-              mapRef.current.removeLayer(layer);
+            if (layer && (layer as any).options && ((layer as any).options.isDrawn || (layer as any).options.id)) {
+              mapRef.current?.removeLayer(layer);
             }
           });
         }
