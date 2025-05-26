@@ -105,6 +105,8 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
   };
 
   const handleSelectLocation = (position: [number, number]) => {
+    console.log("Location selected from SavedLocationsDropdown:", position);
+    
     if (isNavigating) {
       console.log("Navigation already in progress, ignoring request");
       return;
@@ -118,25 +120,12 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     // Set navigating status to prevent multiple clicks
     setIsNavigating(true);
     
-    // Log to confirm the position data
-    console.log("Selected location from dropdown:", position);
-    
-    // Call onLocationSelect with the position
+    // Call the parent's onLocationSelect function directly
+    console.log("Calling parent onLocationSelect with position:", position);
     onLocationSelect(position);
     
     // Show success toast
     toast.success(`Navigating to selected location`);
-    
-    // Close dropdown menu after selection
-    const dropdownTrigger = document.querySelector('[data-state="open"]');
-    if (dropdownTrigger) {
-      const closeEvent = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      });
-      dropdownTrigger.dispatchEvent(closeEvent);
-    }
     
     // Reset navigating status after a delay
     setTimeout(() => {
