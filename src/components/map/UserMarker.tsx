@@ -4,6 +4,8 @@ import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
+import { isPointWithinAnyDrawnPath, getClosestPointWithinPaths } from '@/utils/path-boundary-utils';
+import { toast } from 'sonner';
 
 interface UserMarkerProps {
   marker: LocationMarker;
@@ -15,8 +17,46 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [isReady, setIsReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
+  const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
+  
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
+
+  const handleDragStart = useCallback((e: L.LeafletEvent) => {
+    if (markerRef.current) {
+      const currentPosition = markerRef.current.getLatLng();
+      setOriginalPosition([currentPosition.lat, currentPosition.lng]);
+    }
+  }, []);
+
+  const handleDrag = useCallback((e: L.LeafletEvent) => {
+    if (!markerRef.current || isDeleting) return;
+    
+    try {
+      const updatedMarker = e.target;
+      const newPosition = updatedMarker.getLatLng();
+      const newPoint: [number, number] = [newPosition.lat, newPosition.lng];
+      
+      // Check if the new position is within any drawn path
+      const isWithinPath = isPointWithinAnyDrawnPath(newPoint);
+      
+      if (!isWithinPath) {
+        // If outside all paths, find the closest point within a path
+        const closestPoint = getClosestPointWithinPaths(newPoint);
+        
+        // Set marker to the closest valid position
+        updatedMarker.setLatLng(closestPoint);
+        
+        // Show a brief warning toast
+        toast.warning('Marker movement restricted to drawn path boundaries', {
+          duration: 1000,
+          position: 'bottom-center'
+        });
+      }
+    } catch (error) {
+      console.error('Error during marker drag:', error);
+    }
+  }, [isDeleting]);
 
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     if (!markerRef.current || isDeleting) return;
@@ -24,6 +64,17 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     try {
       const updatedMarker = e.target;
       const newPosition = updatedMarker.getLatLng();
+      const newPoint: [number, number] = [newPosition.lat, newPosition.lng];
+      
+      // Final check - ensure the marker is within a drawn path
+      const isWithinPath = isPointWithinAnyDrawnPath(newPoint);
+      
+      if (!isWithinPath) {
+        // If still outside, revert to original position
+        updatedMarker.setLatLng(originalPosition);
+        toast.error('Marker must stay within drawn path boundaries');
+        return;
+      }
       
       // Update marker position in local storage
       const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
@@ -47,7 +98,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
-  }, [marker.id, isDeleting]);
+  }, [marker.id, isDeleting, originalPosition]);
 
   // Handler for deleting a marker safely
   const handleDelete = useCallback((id: string) => {
@@ -119,7 +170,11 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       key={`marker-${marker.id}`}
       draggable={true}
       ref={setMarkerInstance}
-      eventHandlers={{ dragend: handleDragEnd }}
+      eventHandlers={{ 
+        dragstart: handleDragStart,
+        drag: handleDrag,
+        dragend: handleDragEnd 
+      }}
       attribution={`marker-${marker.id}`}
     >
       <MarkerPopup 
