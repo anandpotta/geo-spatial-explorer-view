@@ -17,8 +17,11 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
     
     // Wait for the draw toolbar to be available
     const checkAndAddControls = () => {
-      // Look for the leaflet draw toolbar specifically
-      const drawToolbar = document.querySelector('.leaflet-draw-toolbar');
+      // Look for different possible draw toolbar containers
+      const drawToolbar = document.querySelector('.leaflet-draw-toolbar') ||
+                         document.querySelector('.leaflet-draw-section') ||
+                         document.querySelector('.leaflet-draw-actions') ||
+                         document.querySelector('.leaflet-draw');
       
       if (drawToolbar && !zoomControlsAddedRef.current) {
         console.log('Found draw toolbar, adding zoom controls');
@@ -28,6 +31,15 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
         if (existingZoomControls) {
           existingZoomControls.remove();
         }
+        
+        // Create a container for zoom controls
+        const zoomContainer = document.createElement('div');
+        zoomContainer.className = 'custom-zoom-controls';
+        zoomContainer.style.cssText = `
+          display: flex;
+          flex-direction: row;
+          margin-left: 4px;
+        `;
         
         // Create zoom in button
         const zoomInBtn = document.createElement('a');
@@ -49,8 +61,7 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           font-weight: bold;
           font-size: 18px;
           cursor: pointer;
-          margin-right: 0;
-          margin-left: 0;
+          margin-right: 2px;
           float: left;
         `;
         zoomInBtn.onclick = (e) => {
@@ -79,8 +90,7 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           font-weight: bold;
           font-size: 18px;
           cursor: pointer;
-          margin-right: 0;
-          margin-left: 0;
+          margin-right: 2px;
           float: left;
         `;
         zoomOutBtn.onclick = (e) => {
@@ -109,8 +119,6 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           font-weight: bold;
           font-size: 16px;
           cursor: pointer;
-          margin-right: 0;
-          margin-left: 0;
           float: left;
         `;
         resetBtn.onclick = (e) => {
@@ -119,10 +127,13 @@ export const ZoomControls = ({ map, isControlsAdded, onControlsAdded }: ZoomCont
           toast.info('View reset');
         };
         
-        // Add buttons directly to the toolbar
-        drawToolbar.appendChild(zoomInBtn);
-        drawToolbar.appendChild(zoomOutBtn);
-        drawToolbar.appendChild(resetBtn);
+        // Add buttons to the container
+        zoomContainer.appendChild(zoomInBtn);
+        zoomContainer.appendChild(zoomOutBtn);
+        zoomContainer.appendChild(resetBtn);
+        
+        // Add container to the toolbar
+        drawToolbar.appendChild(zoomContainer);
         
         zoomControlsAddedRef.current = true;
         onControlsAdded();
