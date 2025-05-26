@@ -28,8 +28,11 @@ export function useMarkerHandlers(mapState: any) {
   };
 
   const handleShapeCreated = (shape: any) => {
+    console.log('handleShapeCreated called with shape type:', shape.type);
+    
     // Check if this is specifically a marker creation event
     if (shape.type === 'marker') {
+      console.log('Processing marker creation');
       // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
         const exactPosition: [number, number] = [
@@ -65,8 +68,8 @@ export function useMarkerHandlers(mapState: any) {
         return;
       }
     } else if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'polygon') {
-      // Handle drawing shapes (circles, rectangles, polygons) - DO NOT create markers
-      console.log(`Creating ${shape.type} shape, not adding marker`);
+      // Handle drawing shapes (circles, rectangles, polygons) - ABSOLUTELY NO MARKER LOGIC
+      console.log(`Creating ${shape.type} shape - no marker creation`);
       
       // Create a safe copy of the shape without potential circular references
       const safeShape: DrawingData = {
@@ -98,7 +101,13 @@ export function useMarkerHandlers(mapState: any) {
       // Also immediately save the drawing to prevent loss
       saveDrawing(safeShape);
       
-      toast.success(`${shape.type} created - Click to tag this building or upload a file`);
+      toast.success(`${shape.type} created successfully`);
+      
+      // DO NOT call any marker-related functions here
+      // DO NOT call setTempMarker
+      // DO NOT create any popup or input field
+    } else {
+      console.log(`Unknown shape type: ${shape.type}`);
     }
   };
 
