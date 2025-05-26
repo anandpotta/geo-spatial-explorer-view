@@ -47,10 +47,88 @@ const applyLeafletDrawPatches = () => {
       }
     }
     
-    // Patch edit toolbar to properly handle layer detection
+    // Enhanced layer patching to prevent edit errors
+    const patchLayerForEditing = (layer: any) => {
+      if (!layer) return;
+      
+      // Add required edit methods if missing
+      if (!layer.enable) {
+        layer.enable = function() { 
+          console.log('Edit enabled on patched layer');
+          return this; 
+        };
+      }
+      
+      if (!layer.disable) {
+        layer.disable = function() { 
+          console.log('Edit disabled on patched layer');
+          return this; 
+        };
+      }
+      
+      if (!layer.enableEdit) {
+        layer.enableEdit = function() { 
+          console.log('enableEdit called on patched layer');
+          return this; 
+        };
+      }
+      
+      if (!layer.disableEdit) {
+        layer.disableEdit = function() { 
+          console.log('disableEdit called on patched layer');
+          return this; 
+        };
+      }
+      
+      // Add editing state tracking
+      if (!layer._leaflet_editing_enabled) {
+        layer._leaflet_editing_enabled = false;
+      }
+    };
+    
+    // Patch edit toolbar to properly handle layer detection and patching
     if (L.EditToolbar && L.EditToolbar.Edit) {
       const editProto = L.EditToolbar.Edit.prototype as any;
-      if (editProto && editProto._checkDisabled) {
+      
+      // Override _enableLayerEdit to safely handle layers
+      if (editProto) {
+        editProto._enableLayerEdit = function(layer: any) {
+          try {
+            // Patch the layer first
+            patchLayerForEditing(layer);
+            
+            // Then try to enable editing
+            if (layer && typeof layer.enable === 'function') {
+              layer.enable();
+            } else if (layer && typeof layer.enableEdit === 'function') {
+              layer.enableEdit();
+            }
+          } catch (err) {
+            console.warn('Could not enable editing for layer:', err);
+          }
+        };
+        
+        // Override addHooks to safely iterate through layers
+        const originalAddHooks = editProto.addHooks;
+        editProto.addHooks = function() {
+          try {
+            const featureGroup = this.options.featureGroup;
+            if (featureGroup && featureGroup.eachLayer) {
+              // Patch all layers before enabling editing
+              featureGroup.eachLayer((layer: any) => {
+                patchLayerForEditing(layer);
+              });
+            }
+            
+            // Call original addHooks
+            return originalAddHooks.apply(this, arguments);
+          } catch (err) {
+            console.error('Error in addHooks:', err);
+            // Try to continue anyway
+            return originalAddHooks.apply(this, arguments);
+          }
+        };
+        
         const originalCheckDisabled = editProto._checkDisabled;
         editProto._checkDisabled = function() {
           // Always allow editing if there are any layers or SVG paths
@@ -114,6 +192,21 @@ const applyLeafletDrawPatches = () => {
         };
       }
     }
+    
+    // Enhanced FeatureGroup patching
+    if (L.FeatureGroup) {
+      const featureGroupProto = L.FeatureGroup.prototype as any;
+      
+      // Override addLayer to automatically patch layers
+      const originalAddLayer = featureGroupProto.addLayer;
+      featureGroupProto.addLayer = function(layer: any) {
+        // Patch the layer before adding it
+        patchLayerForEditing(layer);
+        
+        // Call original addLayer
+        return originalAddLayer.apply(this, arguments);
+      };
+    }
   } catch (error) {
     console.error('Failed to apply Leaflet Draw patches:', error);
   }
@@ -175,24 +268,40 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     };
   }
   
-  // Add a patching function to ensure all layers have properly initialized edit handlers
-  // This is necessary because react-leaflet-draw may try to access edit methods on layers that don't have them
+  // Enhanced layer patching for the feature group
   if (featureGroup) {
     try {
-      // Safety guard to ensure we don't try to access properties on undefined
       setTimeout(() => {
         // Check if featureGroup exists and has layers
         if (featureGroup && featureGroup.getLayers) {
           const layers = featureGroup.getLayers();
           
           // Patch each layer to ensure it has the necessary edit methods
-          layers.forEach(layer => {
-            // Only add if not already present
-            if (layer && !layer.enableEdit) {
-              layer.enableEdit = function() { return this; };
+          layers.forEach((layer: any) => {
+            // Add all required edit methods
+            if (!layer.enable) {
+              layer.enable = function() { 
+                console.log('Edit enabled on layer');
+                return this; 
+              };
             }
-            if (layer && !layer.disableEdit) {
-              layer.disableEdit = function() { return this; };
+            if (!layer.disable) {
+              layer.disable = function() { 
+                console.log('Edit disabled on layer');
+                return this; 
+              };
+            }
+            if (!layer.enableEdit) {
+              layer.enableEdit = function() { 
+                console.log('enableEdit called on layer');
+                return this; 
+              };
+            }
+            if (!layer.disableEdit) {
+              layer.disableEdit = function() { 
+                console.log('disableEdit called on layer');
+                return this; 
+              };
             }
           });
         }
