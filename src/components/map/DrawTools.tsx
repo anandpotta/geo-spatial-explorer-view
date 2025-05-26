@@ -28,6 +28,7 @@ interface DrawToolsProps {
 const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup }: DrawToolsProps, ref) => {
   const editControlRef = useRef<any>(null);
   const initializedRef = useRef<boolean>(false);
+  const [hasLayers, setHasLayers] = useState(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
@@ -71,6 +72,102 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     getSVGPathData,
     clearPathElements
   }));
+
+  // Function to check if there are any layers or SVG paths
+  const checkForLayers = () => {
+    if (!featureGroup) return false;
+    
+    // Check for layers in the feature group
+    let layersFound = false;
+    if (featureGroup.getLayers && featureGroup.getLayers().length > 0) {
+      layersFound = true;
+    }
+    
+    // Check for SVG paths in the DOM
+    const pathElements = getPathElements();
+    const svgPathsFound = pathElements && pathElements.length > 0;
+    
+    // Check for any drawn elements in the map
+    const map = (featureGroup as any)._map;
+    let drawnElementsFound = false;
+    if (map) {
+      const container = map.getContainer();
+      if (container) {
+        const paths = container.querySelectorAll('.leaflet-overlay-pane path');
+        drawnElementsFound = paths.length > 0;
+      }
+    }
+    
+    return layersFound || svgPathsFound || drawnElementsFound;
+  };
+
+  // Effect to monitor layer changes and update edit control state
+  useEffect(() => {
+    const updateEditControlState = () => {
+      const hasAnyLayers = checkForLayers();
+      setHasLayers(hasAnyLayers);
+      
+      // Force update the edit control to refresh its state
+      if (editControlRef.current && editControlRef.current._toolbars) {
+        const editToolbar = editControlRef.current._toolbars.edit;
+        const removeToolbar = editControlRef.current._toolbars.remove;
+        
+        if (editToolbar) {
+          if (hasAnyLayers) {
+            editToolbar.enable();
+          } else {
+            editToolbar.disable();
+          }
+        }
+        
+        if (removeToolbar) {
+          if (hasAnyLayers) {
+            removeToolbar.enable();
+          } else {
+            removeToolbar.disable();
+          }
+        }
+      }
+    };
+    
+    // Initial check
+    updateEditControlState();
+    
+    // Set up periodic checking for layers
+    const interval = setInterval(updateEditControlState, 1000);
+    
+    // Listen for various events that might change layer state
+    const events = ['layeradd', 'layerremove', 'drawingCreated', 'drawingDeleted', 'storage', 'markersUpdated'];
+    
+    const handleLayerChange = () => {
+      setTimeout(updateEditControlState, 100);
+    };
+    
+    // Add event listeners to the map if available
+    const map = (featureGroup as any)._map;
+    if (map) {
+      events.forEach(event => {
+        if (event === 'storage' || event === 'markersUpdated' || event === 'drawingCreated' || event === 'drawingDeleted') {
+          window.addEventListener(event, handleLayerChange);
+        } else {
+          map.on(event, handleLayerChange);
+        }
+      });
+    }
+    
+    return () => {
+      clearInterval(interval);
+      if (map) {
+        events.forEach(event => {
+          if (event === 'storage' || event === 'markersUpdated' || event === 'drawingCreated' || event === 'drawingDeleted') {
+            window.removeEventListener(event, handleLayerChange);
+          } else {
+            map.off(event, handleLayerChange);
+          }
+        });
+      }
+    };
+  }, [featureGroup, getPathElements]);
 
   // Effect to initialize feature group
   useEffect(() => {
@@ -135,15 +232,24 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Get draw options from configuration
   const drawOptions = getDrawOptions();
   
-  // Configure edit options safely
+  // Configure edit options with proper layer detection
   const editOptions = {
     featureGroup,
     edit: {
-      // Disable features that might cause issues
-      selectedPathOptions: { maintainColor: true },
-      moveMarkers: false
+      // Enable editing for all supported shapes
+      selectedPathOptions: { 
+        maintainColor: true,
+        opacity: 0.7,
+        weight: 4
+      },
+      moveMarkers: true,
+      // Force enable editing regardless of layer count
+      enable: true
     },
-    remove: true
+    remove: {
+      // Force enable removing regardless of layer count
+      enable: true
+    }
   };
 
   return (

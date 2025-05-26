@@ -46,6 +46,74 @@ const applyLeafletDrawPatches = () => {
         }
       }
     }
+    
+    // Patch edit toolbar to properly handle layer detection
+    if (L.EditToolbar && L.EditToolbar.Edit) {
+      const editProto = L.EditToolbar.Edit.prototype as any;
+      if (editProto && editProto._checkDisabled) {
+        const originalCheckDisabled = editProto._checkDisabled;
+        editProto._checkDisabled = function() {
+          // Always allow editing if there are any layers or SVG paths
+          const featureGroup = this.options.featureGroup;
+          if (featureGroup) {
+            // Check for layers in feature group
+            const layers = featureGroup.getLayers();
+            if (layers && layers.length > 0) {
+              return false; // Enable editing
+            }
+            
+            // Check for SVG paths in the map
+            const map = featureGroup._map;
+            if (map) {
+              const container = map.getContainer();
+              if (container) {
+                const paths = container.querySelectorAll('.leaflet-overlay-pane path');
+                if (paths.length > 0) {
+                  return false; // Enable editing
+                }
+              }
+            }
+          }
+          
+          // Fall back to original check
+          return originalCheckDisabled.apply(this, arguments);
+        };
+      }
+    }
+    
+    // Patch delete toolbar similarly
+    if (L.EditToolbar && L.EditToolbar.Delete) {
+      const deleteProto = L.EditToolbar.Delete.prototype as any;
+      if (deleteProto && deleteProto._checkDisabled) {
+        const originalCheckDisabled = deleteProto._checkDisabled;
+        deleteProto._checkDisabled = function() {
+          // Always allow deleting if there are any layers or SVG paths
+          const featureGroup = this.options.featureGroup;
+          if (featureGroup) {
+            // Check for layers in feature group
+            const layers = featureGroup.getLayers();
+            if (layers && layers.length > 0) {
+              return false; // Enable deleting
+            }
+            
+            // Check for SVG paths in the map
+            const map = featureGroup._map;
+            if (map) {
+              const container = map.getContainer();
+              if (container) {
+                const paths = container.querySelectorAll('.leaflet-overlay-pane path');
+                if (paths.length > 0) {
+                  return false; // Enable deleting
+                }
+              }
+            }
+          }
+          
+          // Fall back to original check
+          return originalCheckDisabled.apply(this, arguments);
+        };
+      }
+    }
   } catch (error) {
     console.error('Failed to apply Leaflet Draw patches:', error);
   }
@@ -87,21 +155,23 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     };
     
     // Ensure selectedPathOptions is properly defined if not already
-    if (!editOptions.selectedPathOptions) {
-      editOptions.selectedPathOptions = {
+    if (editOptions.edit && !editOptions.edit.selectedPathOptions) {
+      editOptions.edit.selectedPathOptions = {
         maintainColor: true,
         opacity: 0.7
       };
     }
   } else {
-    // Default case if edit is undefined or null - create empty object but don't enable editing
+    // Default case - enable both edit and remove
     editOptions = {
       featureGroup: featureGroup,
-      edit: false, // Explicitly disable editing
-      selectedPathOptions: {
-        maintainColor: true,
-        opacity: 0.7
-      }
+      edit: {
+        selectedPathOptions: {
+          maintainColor: true,
+          opacity: 0.7
+        }
+      },
+      remove: true
     };
   }
   
