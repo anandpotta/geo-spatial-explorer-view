@@ -73,6 +73,35 @@ const distanceToLineSegment = (point: [number, number], lineStart: [number, numb
 };
 
 /**
+ * Check if a point is within a specific drawing's boundaries
+ */
+export const isPointWithinSpecificDrawing = (point: [number, number], drawingId: string): boolean => {
+  try {
+    const savedDrawings = JSON.parse(localStorage.getItem('savedDrawings') || '[]');
+    
+    const targetDrawing = savedDrawings.find((drawing: any) => drawing.id === drawingId);
+    
+    if (!targetDrawing || !targetDrawing.coordinates || targetDrawing.coordinates.length === 0) {
+      return false;
+    }
+    
+    // For polygons (rectangles, circles converted to polygons, etc.)
+    if (targetDrawing.type === 'rectangle' || targetDrawing.type === 'polygon' || targetDrawing.type === 'circle') {
+      return isPointInPolygon(point, targetDrawing.coordinates);
+    }
+    // For polylines with tolerance
+    else if (targetDrawing.type === 'polyline') {
+      return isPointNearPolyline(point, targetDrawing.coordinates, 0.0005);
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking point within specific drawing:', error);
+    return true; // Allow movement if there's an error
+  }
+};
+
+/**
  * Get all drawn paths from localStorage and check if a point is within any of them
  */
 export const isPointWithinAnyDrawnPath = (point: [number, number]): boolean => {
@@ -100,6 +129,42 @@ export const isPointWithinAnyDrawnPath = (point: [number, number]): boolean => {
   } catch (error) {
     console.error('Error checking point within drawn paths:', error);
     return true; // Allow movement if there's an error
+  }
+};
+
+/**
+ * Find the closest point within a specific drawing when a marker is dragged outside
+ */
+export const getClosestPointWithinSpecificDrawing = (point: [number, number], drawingId: string): [number, number] => {
+  try {
+    const savedDrawings = JSON.parse(localStorage.getItem('savedDrawings') || '[]');
+    const targetDrawing = savedDrawings.find((drawing: any) => drawing.id === drawingId);
+    
+    if (!targetDrawing || !targetDrawing.coordinates || targetDrawing.coordinates.length === 0) {
+      return point;
+    }
+    
+    let closestPoint = point;
+    let minDistance = Infinity;
+    
+    // Find closest point on the specific drawing's boundary
+    for (let i = 0; i < targetDrawing.coordinates.length; i++) {
+      const pathPoint = targetDrawing.coordinates[i];
+      const distance = Math.sqrt(
+        Math.pow(point[0] - pathPoint[0], 2) + 
+        Math.pow(point[1] - pathPoint[1], 2)
+      );
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = pathPoint;
+      }
+    }
+    
+    return closestPoint;
+  } catch (error) {
+    console.error('Error finding closest point within specific drawing:', error);
+    return point;
   }
 };
 
