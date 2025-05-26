@@ -80,26 +80,17 @@ const GeoSpatialExplorer = () => {
     
     console.log('Created location object for navigation:', location);
     
-    // Reset view state for fresh navigation
-    setCurrentView('cesium');
-    setFlyCompleted(false);
-    
-    // Set the location immediately to trigger navigation
-    setSelectedLocation(location);
-    
-    // Show navigation toast
-    toast({
-      title: 'Navigating to saved location',
-      description: `Flying to coordinates ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-      duration: 3000,
-    });
-  }, [toast]);
+    // Use the same flow as regular location selection
+    handleLocationSelect(location);
+  }, [handleLocationSelect]);
   
   // Expose the saved location handler globally for the dropdown to use
   useEffect(() => {
+    console.log('Setting up global handleSavedLocationSelect');
     window.handleSavedLocationSelect = handleSavedLocationSelect;
     
     return () => {
+      console.log('Cleaning up global handleSavedLocationSelect');
       delete window.handleSavedLocationSelect;
     };
   }, [handleSavedLocationSelect]);

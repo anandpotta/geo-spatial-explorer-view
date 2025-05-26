@@ -97,20 +97,25 @@ export const useSavedLocationsDropdown = () => {
     // Close the dropdown first
     setIsDropdownOpen(false);
     
-    // Use the direct callback first (this should trigger the map navigation)
-    if (onLocationSelect) {
-      console.log("Using direct onLocationSelect callback");
-      onLocationSelect(position);
-    }
-    
-    // Also use the global navigation handler as backup
+    // Always use the global navigation handler as the primary method
     if (window.handleSavedLocationSelect) {
-      console.log("Using global navigation handler");
+      console.log("Using global navigation handler for saved location");
       window.handleSavedLocationSelect(position);
+      
+      // Show success toast
+      toast.success(`Navigating to saved location`);
+      return;
     }
     
-    // Show success toast
-    toast.success(`Navigating to saved location`);
+    // Fallback to direct callback if global handler is not available
+    if (onLocationSelect) {
+      console.log("Using direct onLocationSelect callback as fallback");
+      onLocationSelect(position);
+      toast.success(`Navigating to saved location`);
+    } else {
+      console.error("No navigation handler available");
+      toast.error("Navigation not available");
+    }
   };
 
   return {
