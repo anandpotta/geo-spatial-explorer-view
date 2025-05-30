@@ -16,6 +16,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [showSelectedInfo, setShowSelectedInfo] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -139,7 +140,19 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   };
 
   return (
-    <div className="w-full p-2 z-[10000] bg-background rounded-md shadow-lg">
+    <div
+      className="w-full p-2 z-[10000] bg-background rounded-md shadow-lg"
+      tabIndex={-1}
+      onFocus={() => setShowSelectedInfo(true)}
+      onBlur={e => {
+        // Only hide if focus moves outside the component
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setShowSelectedInfo(false);
+        }
+      }}
+      onMouseEnter={() => setShowSelectedInfo(true)}
+      onMouseLeave={() => setShowSelectedInfo(false)}
+    >
       {isOfflineMode && (
         <div className="mb-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-sm flex items-center rounded">
           <AlertCircle className="mr-2 h-4 w-4" />
@@ -200,7 +213,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         )}
       </form>
       
-      {selectedLocation && (
+      {selectedLocation && showSelectedInfo && (
         <div className="mt-3 p-3 bg-accent rounded-md">
           <h3 className="font-medium">{selectedLocation.label}</h3>
           <p className="text-sm text-muted-foreground">
