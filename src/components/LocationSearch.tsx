@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
@@ -157,6 +156,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pr-8 pl-10 w-full"
+              disabled={!!selectedLocation}
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             {query && (
@@ -164,17 +164,27 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
                 type="button" 
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={handleClear}
+                disabled={!selectedLocation ? false : false}
+                // Actually, only enable clear when a location is selected or query is not empty
+                // But we want to allow clear always if query is not empty
+                // So just disable if selectedLocation is null and query is empty
+                disabled={!!selectedLocation ? false : query === ''}
               >
                 <X size={16} />
               </button>
             )}
           </div>
-          <Button type="submit" size="icon" variant="default">
+          <Button 
+            type="submit" 
+            size="icon" 
+            variant="default"
+            disabled={!!selectedLocation}
+          >
             {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
           </Button>
         </div>
         
-        {showResults && results.length > 0 && (
+        {showResults && results.length > 0 && !selectedLocation && (
           <ul className="absolute z-50 w-full bg-card border rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
             {results.map((location) => (
               <li 
