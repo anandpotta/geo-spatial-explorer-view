@@ -15,6 +15,7 @@ import L from 'leaflet';
 // Import leaflet CSS directly
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { useSearchBarContext } from '@/contexts/SearchBarContext';
 
 interface MapViewProps {
   position: [number, number];
@@ -72,6 +73,7 @@ const MapView = ({
     selectedDrawing,
     handleRegionClick
   } = useFloorPlanState();
+  const { setShowSearchBar } = useSearchBarContext();
 
   const handleLocationSelect = (position: [number, number]) => {
     console.log("Location selected in MapView:", position);
@@ -80,10 +82,15 @@ const MapView = ({
     }
   };
 
+
+
   if (showFloorPlan) {
     return (
       <FloorPlanView 
-        onBack={() => setShowFloorPlan(false)} 
+        onBack={() =>{ 
+          setShowFloorPlan(false)
+          setShowSearchBar(true)
+        }} 
         drawing={selectedDrawing}
       />
     );

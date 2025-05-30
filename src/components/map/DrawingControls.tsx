@@ -1,4 +1,3 @@
-
 import { forwardRef, useImperativeHandle, useEffect } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
@@ -14,6 +13,7 @@ import FileUploadHandler from './drawing/FileUploadHandler';
 import DrawingControlsEffects from './drawing/DrawingControlsEffects';
 import LayerManagerWrapper from './drawing/LayerManagerWrapper';
 import DrawToolsWrapper from './drawing/DrawToolsWrapper';
+import { useSearchBarContext } from '@/contexts/SearchBarContext';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -50,6 +50,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const { handleUploadRequest } = useDrawingControlsState(onUploadToDrawing);
   
   const { handleFileChange, fileInputRef: uploadFileInputRef } = useFileUploadHandling({ onUploadToDrawing });
+  const { setShowSearchBar } = useSearchBarContext();
   
   // Track SVG paths
   const { svgPaths } = useSvgPathTracking({
@@ -115,6 +116,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
 
   const handleDrawingClick = (drawing: DrawingData) => {
     if (onRegionClick) {
+      setShowSearchBar(false); // Hide search bar when a drawing region is clicked
       onRegionClick(drawing);
     }
   };

@@ -8,6 +8,8 @@ export interface FloorPlan {
   fileName: string;
   userId?: string;
   timestamp?: string;
+  zoom?: number;
+  rotation?: number;
 }
 
 // Export the type as FloorPlanData for backward compatibility

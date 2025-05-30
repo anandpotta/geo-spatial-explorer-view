@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Location } from '@/utils/geo-utils';
 import DrawingTools from '../../DrawingTools';
@@ -7,6 +6,7 @@ import { zoomIn, zoomOut, resetCamera } from '@/utils/threejs-camera';
 import MapViews from './MapViews';
 import MapTools from './MapTools';
 import DrawingToolHandler from './DrawingToolHandler';
+import { useSearchBarContext } from '@/contexts/SearchBarContext';
 
 interface MapContentContainerProps {
   currentView: 'cesium' | 'leaflet';
@@ -27,7 +27,11 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   const leafletMapRef = useRef<any>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [mapKey, setMapKey] = useState<number>(Date.now());
-  
+  // Use showSearchBar from context
+  const { showSearchBar } = useSearchBarContext();
+
+  console.log('1111',showSearchBar)
+
   // Reset map instance when view changes
   useEffect(() => {
     setMapKey(Date.now());
@@ -60,7 +64,6 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
   };
 
   const handleToolSelect = (tool: string) => {
-    console.log(`Tool selected: ${tool}`);
     setActiveTool(tool === activeTool ? null : tool);
   };
 
@@ -123,14 +126,16 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
         />
       </div>
       
-      <div 
-        className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
-        style={{ 
-          maxWidth: '400px',
-        }}
-      >
-        <LocationSearch onLocationSelect={onLocationSelect} />
-      </div>
+      {showSearchBar && (
+        <div 
+          className="absolute top-4 left-0 right-0 z-[10000] mx-auto" 
+          style={{ 
+            maxWidth: '400px',
+          }}
+        >
+          <LocationSearch onLocationSelect={onLocationSelect} />
+        </div>
+      )}
     </div>
   );
 };

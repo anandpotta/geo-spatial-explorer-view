@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import { Location } from '@/utils/geo-utils';
@@ -12,6 +11,7 @@ import FloorPlanView from './FloorPlanView';
 import { setupLeafletIcons } from './LeafletMapIcons';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { useSearchBarContext } from '@/contexts/SearchBarContext';
 
 interface LeafletMapProps {
   selectedLocation?: Location;
@@ -123,10 +123,14 @@ const LeafletMap = ({
     handleClearAll();
   }, [mapState, onClearAll, handleClearAll]);
 
+  console.log('222',mapState.showFloorPlan)
+  // Hide search bar when floor plan is shown, show when not
+
+
   if (mapState.showFloorPlan) {
     return (
       <FloorPlanView 
-        onBack={() => mapState.setShowFloorPlan(false)} 
+        onBack={() => mapState.setShowFloorPlan(false)}
         drawing={mapState.selectedDrawing}
       />
     );

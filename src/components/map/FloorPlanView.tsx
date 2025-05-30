@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
@@ -17,27 +16,32 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
   const [fileName, setFileName] = useState<string>("");
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [rotation, setRotation] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(1);
   
   // Check if there's a saved floor plan for this building in localStorage
   useEffect(() => {
     if (drawing?.id) {
       setIsLoading(true);
-      
+
       const loadFloorPlan = async () => {
         const savedFloorPlan = await getFloorPlanById(drawing.id);
         if (savedFloorPlan) {
           setSelectedImage(savedFloorPlan.data);
           setIsPdf(savedFloorPlan.isPdf);
           setFileName(savedFloorPlan.fileName);
+          setZoom(savedFloorPlan.zoom || 1);
+          setRotation(savedFloorPlan.rotation || 0);
         } else {
-          // Reset state if no floor plan is found
           setSelectedImage(null);
           setIsPdf(false);
           setFileName('');
+          setZoom(1);
+          setRotation(0);
         }
         setIsLoading(false);
       };
-      
+
       loadFloorPlan();
     }
   }, [drawing]);
@@ -122,6 +126,23 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     return Math.min(widthRatio, heightRatio, 1); // Never scale up, only down
   };
 
+  useEffect(() => {
+    // Only save if an image is loaded and a drawing is present
+    if (selectedImage && drawing?.id) {
+      // Save the current state (including zoom and rotation)
+      saveFloorPlan(drawing.id, {
+        data: selectedImage,
+        isPdf,
+        fileName,
+        zoom,
+        rotation,
+      });
+      // Optionally, you can show a toast or feedback here
+      // toast.success('Floor plan view updated');
+    }
+    // Only trigger when zoom or rotation changes
+  }, [zoom, rotation]);
+  
   return (
     <div className="relative w-full h-full">
       <div className="absolute top-4 right-4 z-50 flex gap-2">
@@ -171,7 +192,27 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
               {drawing?.properties?.name || 'Floor Plan View'} 
               {fileName && <span className="text-sm font-normal ml-2 text-gray-500">({fileName})</span>}
             </h2>
-            
+            {/* Controls Sidebar */}
+            {selectedImage && (
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-3 bg-white/80 rounded-lg shadow p-2">
+                <Button size="icon" variant="outline" onClick={() => setZoom(z => Math.min(z + 0.1, 3))} disabled={isLoading || !selectedImage}>
+                  <span title="Zoom In">+</span>
+                </Button>
+                <Button size="icon" variant="outline" onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))} disabled={isLoading || !selectedImage}>
+                  <span title="Zoom Out">-</span>
+                </Button>
+                <Button size="icon" variant="outline" onClick={() => setRotation(r => r - 90)} disabled={isLoading || !selectedImage}>
+                  <span title="Rotate Left">&#8634;</span>
+                </Button>
+                <Button size="icon" variant="outline" onClick={() => setRotation(r => r + 90)} disabled={isLoading || !selectedImage}>
+                  <span title="Rotate Right">&#8635;</span>
+                </Button>
+                <Button size="icon" variant="outline" onClick={() => { setZoom(1); setRotation(0); }} disabled={isLoading || !selectedImage}>
+                  <span title="Reset">&#8635;&#8634;</span>
+                </Button>
+              </div>
+            )}
+            {/* Image */}
             {isPdf ? (
               <div className="w-full max-h-[75vh] overflow-hidden rounded-lg shadow-lg border border-gray-200">
                 <iframe 
@@ -185,6 +226,12 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
                 src={selectedImage}
                 alt="Floor Plan"
                 className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg"
+                style={{
+                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                  transition: 'transform 0.2s',
+                  margin: '0 auto',
+                  display: 'block'
+                }}
                 onLoad={(e) => {
                   const img = e.target as HTMLImageElement;
                   const container = img.parentElement?.parentElement;

@@ -1,7 +1,6 @@
-
-import React from 'react';
 import { Location } from '@/utils/geo-utils';
 import MapContentContainer from './map/MapContentContainer';
+import { SearchBarProvider } from '@/contexts/SearchBarContext';
 
 interface MapContentProps {
   currentView: 'cesium' | 'leaflet';
@@ -12,7 +11,11 @@ interface MapContentProps {
 }
 
 const MapContent = (props: MapContentProps) => {
-  return <MapContentContainer {...props} />;
+  return (
+    <SearchBarProvider>
+      <MapContentContainer {...props} />
+    </SearchBarProvider>
+  );
 };
 
 export default MapContent;
