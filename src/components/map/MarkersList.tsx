@@ -45,13 +45,15 @@ const MarkersList = ({
   const handleDeleteMarker = (id: string) => {
     if (isProcessingMarker) return;
     
+    console.log(`MarkersList: Initiating delete for marker ${id}`);
+    
     // Set global flag to prevent map click events temporarily
     window.preventMapClick = true;
     
     // Call the delete handler
     onDeleteMarker(id);
     
-    // Clean up DOM elements
+    // Clean up DOM elements without triggering additional events
     setTimeout(() => {
       const markerId = `marker-${id}`;
       const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);

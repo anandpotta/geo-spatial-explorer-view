@@ -41,26 +41,31 @@ export function useMapState(selectedLocation?: Location) {
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
     
-    // Debounced event handlers to prevent rapid-fire updates
-    let markersTimeout: NodeJS.Timeout | null = null;
-    let drawingsTimeout: NodeJS.Timeout | null = null;
+    // Prevent circular event handling by using a flag
+    let isUpdating = false;
     
     const handleMarkersUpdated = () => {
-      if (!isAuthenticated || !currentUser || isProcessingMarker) return;
+      if (!isAuthenticated || !currentUser || isProcessingMarker || isUpdating) return;
       
-      if (markersTimeout) clearTimeout(markersTimeout);
-      markersTimeout = setTimeout(() => {
+      console.log('Handling markers updated event - loading fresh data');
+      isUpdating = true;
+      
+      setTimeout(() => {
         setMarkers(getSavedMarkers());
-      }, 100);
+        isUpdating = false;
+      }, 50);
     };
 
     const handleDrawingsUpdated = () => {
-      if (!isAuthenticated || !currentUser) return;
+      if (!isAuthenticated || !currentUser || isUpdating) return;
       
-      if (drawingsTimeout) clearTimeout(drawingsTimeout);
-      drawingsTimeout = setTimeout(() => {
+      console.log('Handling drawings updated event - loading fresh data');
+      isUpdating = true;
+      
+      setTimeout(() => {
         setDrawings(getSavedDrawings());
-      }, 100);
+        isUpdating = false;
+      }, 50);
     };
     
     // Listen for floor plan updates
@@ -72,19 +77,14 @@ export function useMapState(selectedLocation?: Location) {
       }
     };
     
+    // Only listen to markersUpdated events, not storage events to prevent loops
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
-    window.addEventListener('storage', handleMarkersUpdated);
-    window.addEventListener('storage', handleDrawingsUpdated);
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     
     return () => {
-      if (markersTimeout) clearTimeout(markersTimeout);
-      if (drawingsTimeout) clearTimeout(drawingsTimeout);
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
-      window.removeEventListener('storage', handleMarkersUpdated);
-      window.removeEventListener('storage', handleDrawingsUpdated);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
   }, [isAuthenticated, currentUser, isProcessingMarker]);
@@ -105,6 +105,8 @@ export function useMapState(selectedLocation?: Location) {
     }
     
     if (!tempMarker || !markerName.trim() || isProcessingMarker) return;
+    
+    console.log('Starting marker save process');
     
     // Prevent multiple simultaneous saves
     setIsProcessingMarker(true);
@@ -129,7 +131,7 @@ export function useMapState(selectedLocation?: Location) {
       return [...filtered, newMarker];
     });
     
-    // Save the marker to storage without triggering immediate UI updates
+    // Save the marker to storage
     try {
       saveMarker(newMarker);
       
@@ -153,24 +155,15 @@ export function useMapState(selectedLocation?: Location) {
       }
       
       toast.success("Location saved successfully");
-      
-      // Clean up DOM elements after a delay
-      setTimeout(() => {
-        const markerId = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
-        const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
-        tempIcons.forEach(icon => {
-          if (icon.parentNode) {
-            icon.parentNode.removeChild(icon);
-          }
-        });
-        
-        setIsProcessingMarker(false);
-      }, 200);
+      console.log('Marker saved successfully');
       
     } catch (error) {
       console.error('Error saving marker:', error);
       toast.error('Failed to save location');
-      setIsProcessingMarker(false);
+      // Restore previous state on error
+      setMarkers(getSavedMarkers());
+    } finally {
+      setTimeout(() => setIsProcessingMarker(false), 200);
     }
   };
 
@@ -180,6 +173,7 @@ export function useMapState(selectedLocation?: Location) {
       return;
     }
     
+    console.log(`Starting marker deletion for ID: ${id}`);
     setIsProcessingMarker(true);
     
     // Update UI immediately
@@ -188,6 +182,7 @@ export function useMapState(selectedLocation?: Location) {
     try {
       deleteMarker(id);
       toast.success("Location removed");
+      console.log('Marker deleted successfully');
     } catch (error) {
       console.error('Error deleting marker:', error);
       toast.error('Failed to remove location');
@@ -204,6 +199,7 @@ export function useMapState(selectedLocation?: Location) {
       return;
     }
     
+    console.log(`Starting marker rename for ID: ${id} to: ${newName}`);
     setIsProcessingMarker(true);
     
     try {
@@ -212,6 +208,7 @@ export function useMapState(selectedLocation?: Location) {
       setMarkers(prev => prev.map(marker => 
         marker.id === id ? { ...marker, name: newName } : marker
       ));
+      console.log('Marker renamed successfully');
     } catch (error) {
       console.error('Error renaming marker:', error);
       toast.error('Failed to rename location');
