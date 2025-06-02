@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Location } from '@/utils/geo-utils';
+import { EnhancedLocation } from '@/utils/enhanced-geo-utils';
 import { useToast } from '@/components/ui/use-toast';
 import LocationSearch from '@/components/LocationSearch';
 import LeafletMap from '@/components/map/LeafletMap';
@@ -50,14 +50,14 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
   initialZoom = 15,
   defaultLocation = { latitude: 40.7128, longitude: -74.0060 } // NYC default
 }) => {
-  const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
+  const [selectedLocation, setSelectedLocation] = useState<EnhancedLocation | undefined>();
   const [isMapReady, setIsMapReady] = useState(false);
   const mapRef = useRef<any>(null);
 
   // Convert external location to internal format
   useEffect(() => {
     if (externalLocation) {
-      const location: Location = {
+      const location: EnhancedLocation = {
         id: `external-${externalLocation.latitude}-${externalLocation.longitude}`,
         label: externalLocation.label || externalLocation.searchString || `Location at ${externalLocation.latitude.toFixed(4)}, ${externalLocation.longitude.toFixed(4)}`,
         x: externalLocation.longitude,
@@ -81,9 +81,21 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
   }, [externalLocation, onLocationChange]);
 
   // Handle internal location selection
-  const handleInternalLocationSelect = useCallback((location: Location) => {
+  const handleInternalLocationSelect = useCallback((location: any) => {
     console.log('Internal location selected:', location);
-    setSelectedLocation(location);
+    
+    // Convert to EnhancedLocation format
+    const enhancedLocation: EnhancedLocation = {
+      id: location.id,
+      label: location.label,
+      x: location.x,
+      y: location.y,
+      searchString: location.label,
+      timestamp: new Date().toISOString(),
+      source: 'internal'
+    };
+    
+    setSelectedLocation(enhancedLocation);
     
     // Notify parent of location change
     if (onLocationChange) {
@@ -177,6 +189,15 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
     overflow: 'hidden'
   };
 
+  // Convert EnhancedLocation back to the format expected by LeafletMap
+  const leafletLocation = selectedLocation ? {
+    id: selectedLocation.id,
+    label: selectedLocation.label,
+    x: selectedLocation.x,
+    y: selectedLocation.y,
+    raw: selectedLocation.raw
+  } : undefined;
+
   return (
     <div 
       className={`standalone-map-container ${theme} ${className}`}
@@ -194,7 +215,7 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
       
       {/* Main map component */}
       <LeafletMap
-        selectedLocation={selectedLocation}
+        selectedLocation={leafletLocation}
         onMapReady={handleMapReady}
         onLocationSelect={handleInternalLocationSelect}
         onClearSelectedLocation={handleClearSelectedLocation}
