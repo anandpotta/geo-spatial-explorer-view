@@ -41,53 +41,7 @@ export function useMapState(selectedLocation?: Location) {
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
     
-    // Prevent circular event handling by using a flag
-    let isUpdating = false;
-    
-    const handleMarkersUpdated = () => {
-      if (!isAuthenticated || !currentUser || isProcessingMarker || isUpdating) return;
-      
-      console.log('Handling markers updated event - loading fresh data');
-      isUpdating = true;
-      
-      setTimeout(() => {
-        setMarkers(getSavedMarkers());
-        isUpdating = false;
-      }, 50);
-    };
-
-    const handleDrawingsUpdated = () => {
-      if (!isAuthenticated || !currentUser || isUpdating) return;
-      
-      console.log('Handling drawings updated event - loading fresh data');
-      isUpdating = true;
-      
-      setTimeout(() => {
-        setDrawings(getSavedDrawings());
-        isUpdating = false;
-      }, 50);
-    };
-    
-    // Listen for floor plan updates
-    const handleFloorPlanUpdated = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail && customEvent.detail.drawingId) {
-        console.log(`Floor plan updated for drawing ${customEvent.detail.drawingId}, triggering refresh`);
-        handleDrawingsUpdated();
-      }
-    };
-    
-    // Only listen to markersUpdated events, not storage events to prevent loops
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
-    window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
-    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
-    
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
-      window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
-      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
-    };
-  }, [isAuthenticated, currentUser, isProcessingMarker]);
+  }, [isAuthenticated, currentUser]);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
