@@ -13,6 +13,7 @@ interface MarkersListProps {
   onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
+  isProcessingMarker?: boolean;
 }
 
 const MarkersList = ({
@@ -23,7 +24,8 @@ const MarkersList = ({
   onDeleteMarker,
   onSaveMarker,
   setMarkerName,
-  setMarkerType
+  setMarkerType,
+  isProcessingMarker = false
 }: MarkersListProps) => {
   // Generate a unique key for the temp marker that changes when position changes
   const tempMarkerKey = tempMarker ? `temp-marker-${tempMarker[0]}-${tempMarker[1]}-${Date.now()}` : '';
@@ -41,15 +43,16 @@ const MarkersList = ({
   
   // Safe delete handler that prevents unwanted marker creation
   const handleDeleteMarker = (id: string) => {
+    if (isProcessingMarker) return;
+    
     // Set global flag to prevent map click events temporarily
     window.preventMapClick = true;
     
     // Call the delete handler
     onDeleteMarker(id);
     
-    // Clear any active DOM elements that might trigger marker creation
+    // Clean up DOM elements
     setTimeout(() => {
-      // Remove any leftover marker icons that might be causing duplicates
       const markerId = `marker-${id}`;
       const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
       duplicateIcons.forEach(icon => {
@@ -58,7 +61,6 @@ const MarkersList = ({
         }
       });
       
-      // Clean up any active popups
       const activePopups = document.querySelectorAll('.leaflet-popup');
       activePopups.forEach(popup => {
         try {
@@ -68,10 +70,9 @@ const MarkersList = ({
         }
       });
       
-      // Reset preventMapClick flag after a short delay
       setTimeout(() => {
         window.preventMapClick = false;
-      }, 500);
+      }, 300);
     }, 0);
   };
   
@@ -85,7 +86,7 @@ const MarkersList = ({
         />
       ))}
       
-      {tempMarker && Array.isArray(tempMarker) && (
+      {tempMarker && Array.isArray(tempMarker) && !isProcessingMarker && (
         <TempMarker 
           key={tempMarkerKey}
           position={tempMarker}
@@ -94,6 +95,7 @@ const MarkersList = ({
           markerType={markerType}
           setMarkerType={setMarkerType}
           onSave={onSaveMarker}
+          isProcessing={isProcessingMarker}
         />
       )}
     </>

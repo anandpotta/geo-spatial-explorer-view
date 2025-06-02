@@ -11,6 +11,7 @@ interface TempMarkerProps {
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
   onSave: () => void;
+  isProcessing?: boolean;
 }
 
 const TempMarker: React.FC<TempMarkerProps> = ({
@@ -19,22 +20,26 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   setMarkerName,
   markerType,
   setMarkerType,
-  onSave
+  onSave,
+  isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [markerReady, setMarkerReady] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
 
-  // Handle cleanup when component unmounts
+  // Handle cleanup when component unmounts or marker is being processed
   useEffect(() => {
+    if (isProcessing) {
+      setIsVisible(false);
+    }
+    
     return () => {
       if (markerRef.current) {
         try {
-          // Safely close any open UI elements
           markerRef.current.closeTooltip();
           markerRef.current.closePopup();
           
-          // Clean up any DOM elements
           const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
           tempIcons.forEach(icon => {
             if (icon.parentNode) {
@@ -46,24 +51,29 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         }
       }
     };
-  }, [markerId]);
+  }, [markerId, isProcessing]);
 
   // Update marker position in parent when dragged
   const handleDragEnd = (e: L.LeafletEvent) => {
+    if (isProcessing) return;
+    
     const marker = e.target;
     if (marker && marker.getLatLng) {
       const position = marker.getLatLng();
-      // Update the position through the global handler if available
       if (window.tempMarkerPositionUpdate) {
         window.tempMarkerPositionUpdate([position.lat, position.lng]);
-        console.log("Marker position updated:", [position.lat, position.lng]);
       }
     }
   };
   
-  // Custom save handler to ensure cleanup before saving
+  // Custom save handler with processing state
   const handleSave = () => {
-    // Clean up the marker DOM elements before saving
+    if (isProcessing) return;
+    
+    // Hide the marker immediately to prevent flickering
+    setIsVisible(false);
+    
+    // Clean up DOM elements
     const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
     tempIcons.forEach(icon => {
       if (icon.parentNode) {
@@ -71,16 +81,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
     });
     
-    // Call the original save handler
+    // Call the save handler
     onSave();
   };
 
   // Set up marker references
   const setMarkerInstance = (marker: L.Marker) => {
-    if (marker) {
+    if (marker && isVisible) {
       markerRef.current = marker;
       
-      // Add data attribute for easy identification
       const element = marker.getElement();
       if (element) {
         element.setAttribute('data-marker-id', markerId);
@@ -90,6 +99,11 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   };
 
+  // Don't render if not visible or processing
+  if (!isVisible || isProcessing) {
+    return null;
+  }
+
   return (
     <Marker
       position={position}
@@ -98,10 +112,9 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       eventHandlers={{
         dragend: handleDragEnd,
         add: () => {
-          // Wait for marker to be added to DOM before showing popup
           setTimeout(() => {
             try {
-              if (markerRef.current) {
+              if (markerRef.current && isVisible) {
                 markerRef.current.openPopup();
               }
             } catch (error) {
@@ -117,6 +130,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         markerType={markerType}
         setMarkerType={setMarkerType}
         onSave={handleSave}
+        disabled={isProcessing}
       />
       <Tooltip
         direction="top"

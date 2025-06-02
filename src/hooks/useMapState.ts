@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -21,6 +22,7 @@ export function useMapState(selectedLocation?: Location) {
   const [showFloorPlan, setShowFloorPlan] = useState(false);
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [isProcessingMarker, setIsProcessingMarker] = useState(false);
 
   // Load existing markers and drawings when user changes or auth state changes
   useEffect(() => {
@@ -39,18 +41,26 @@ export function useMapState(selectedLocation?: Location) {
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
     
-    // Listen for marker updates
+    // Debounced event handlers to prevent rapid-fire updates
+    let markersTimeout: NodeJS.Timeout | null = null;
+    let drawingsTimeout: NodeJS.Timeout | null = null;
+    
     const handleMarkersUpdated = () => {
-      if (isAuthenticated && currentUser) {
+      if (!isAuthenticated || !currentUser || isProcessingMarker) return;
+      
+      if (markersTimeout) clearTimeout(markersTimeout);
+      markersTimeout = setTimeout(() => {
         setMarkers(getSavedMarkers());
-      }
+      }, 100);
     };
 
-    // Listen for drawing updates
     const handleDrawingsUpdated = () => {
-      if (isAuthenticated && currentUser) {
+      if (!isAuthenticated || !currentUser) return;
+      
+      if (drawingsTimeout) clearTimeout(drawingsTimeout);
+      drawingsTimeout = setTimeout(() => {
         setDrawings(getSavedDrawings());
-      }
+      }, 100);
     };
     
     // Listen for floor plan updates
@@ -58,7 +68,6 @@ export function useMapState(selectedLocation?: Location) {
       const customEvent = event as CustomEvent;
       if (customEvent.detail && customEvent.detail.drawingId) {
         console.log(`Floor plan updated for drawing ${customEvent.detail.drawingId}, triggering refresh`);
-        // Trigger a refresh of the drawings
         handleDrawingsUpdated();
       }
     };
@@ -70,13 +79,15 @@ export function useMapState(selectedLocation?: Location) {
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     
     return () => {
+      if (markersTimeout) clearTimeout(markersTimeout);
+      if (drawingsTimeout) clearTimeout(drawingsTimeout);
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
       window.removeEventListener('storage', handleMarkersUpdated);
       window.removeEventListener('storage', handleDrawingsUpdated);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
-  }, [isAuthenticated, currentUser]);
+  }, [isAuthenticated, currentUser, isProcessingMarker]);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -93,7 +104,10 @@ export function useMapState(selectedLocation?: Location) {
       return;
     }
     
-    if (!tempMarker || !markerName.trim()) return;
+    if (!tempMarker || !markerName.trim() || isProcessingMarker) return;
+    
+    // Prevent multiple simultaneous saves
+    setIsProcessingMarker(true);
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
@@ -105,48 +119,43 @@ export function useMapState(selectedLocation?: Location) {
       userId: currentUser.id
     };
     
-    // Clear the temporary marker BEFORE saving to prevent duplicate rendering
+    // Clear the temporary marker IMMEDIATELY to prevent flickering
     setTempMarker(null);
-    
-    // Save the marker
-    saveMarker(newMarker);
-    
-    if (currentDrawing) {
-      // Create a safe copy of currentDrawing without circular references
-      const safeDrawing: DrawingData = {
-        ...currentDrawing,
-        // Remove any potential circular references from geoJSON
-        geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
-          type: currentDrawing.geoJSON.type,
-          geometry: currentDrawing.geoJSON.geometry,
-          properties: currentDrawing.geoJSON.properties
-        })) : undefined,
-        properties: {
-          ...currentDrawing.properties,
-          name: markerName,
-          associatedMarkerId: newMarker.id
-        },
-        userId: currentUser.id
-      };
-      
-      // Save or update the drawing but don't clear it from the map
-      saveDrawing(safeDrawing);
-    }
-    
-    // Clear and reset UI state
     setMarkerName('');
     
-    // Update the markers state with the new marker - use getSavedMarkers to ensure deduplication
-    setMarkers(getSavedMarkers());
+    // Update UI state immediately to prevent flickering
+    setMarkers(prev => {
+      const filtered = prev.filter(m => m.id !== newMarker.id);
+      return [...filtered, newMarker];
+    });
     
-    toast.success("Location saved successfully");
-    
-    // Ensure drawings remain visible by dispatching a custom event
-    window.dispatchEvent(new Event('drawingsUpdated'));
-    
-    // Clean up any leftover temporary marker DOM elements after a slight delay
-    setTimeout(() => {
-      if (tempMarker) {
+    // Save the marker to storage without triggering immediate UI updates
+    try {
+      saveMarker(newMarker);
+      
+      if (currentDrawing) {
+        const safeDrawing: DrawingData = {
+          ...currentDrawing,
+          geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
+            type: currentDrawing.geoJSON.type,
+            geometry: currentDrawing.geoJSON.geometry,
+            properties: currentDrawing.geoJSON.properties
+          })) : undefined,
+          properties: {
+            ...currentDrawing.properties,
+            name: markerName,
+            associatedMarkerId: newMarker.id
+          },
+          userId: currentUser.id
+        };
+        
+        saveDrawing(safeDrawing);
+      }
+      
+      toast.success("Location saved successfully");
+      
+      // Clean up DOM elements after a delay
+      setTimeout(() => {
         const markerId = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
         const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
         tempIcons.forEach(icon => {
@@ -154,31 +163,61 @@ export function useMapState(selectedLocation?: Location) {
             icon.parentNode.removeChild(icon);
           }
         });
-      }
-    }, 100);
+        
+        setIsProcessingMarker(false);
+      }, 200);
+      
+    } catch (error) {
+      console.error('Error saving marker:', error);
+      toast.error('Failed to save location');
+      setIsProcessingMarker(false);
+    }
   };
 
   const handleDeleteMarker = (id: string) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isProcessingMarker) {
       toast.error('Please log in to manage locations');
       return;
     }
     
-    deleteMarker(id);
-    // Update the markers state
-    setMarkers(markers.filter(marker => marker.id !== id));
-    toast.success("Location removed");
+    setIsProcessingMarker(true);
+    
+    // Update UI immediately
+    setMarkers(prev => prev.filter(marker => marker.id !== id));
+    
+    try {
+      deleteMarker(id);
+      toast.success("Location removed");
+    } catch (error) {
+      console.error('Error deleting marker:', error);
+      toast.error('Failed to remove location');
+      // Restore marker on error
+      setMarkers(getSavedMarkers());
+    } finally {
+      setTimeout(() => setIsProcessingMarker(false), 200);
+    }
   };
 
   const handleRenameMarker = (id: string, newName: string) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isProcessingMarker) {
       toast.error('Please log in to manage locations');
       return;
     }
     
-    renameMarker(id, newName);
-    // Update the markers state
-    setMarkers(getSavedMarkers());
+    setIsProcessingMarker(true);
+    
+    try {
+      renameMarker(id, newName);
+      // Update UI immediately
+      setMarkers(prev => prev.map(marker => 
+        marker.id === id ? { ...marker, name: newName } : marker
+      ));
+    } catch (error) {
+      console.error('Error renaming marker:', error);
+      toast.error('Failed to rename location');
+    } finally {
+      setTimeout(() => setIsProcessingMarker(false), 200);
+    }
   };
 
   const handleRegionClick = (drawing: DrawingData) => {
@@ -212,7 +251,8 @@ export function useMapState(selectedLocation?: Location) {
     handleSaveMarker,
     handleDeleteMarker,
     handleRenameMarker,
-    handleRegionClick
+    handleRegionClick,
+    isProcessingMarker
   };
 }
 
