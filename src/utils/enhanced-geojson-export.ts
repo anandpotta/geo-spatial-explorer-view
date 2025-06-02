@@ -1,5 +1,6 @@
 
 import { StandaloneGeoJSON, StandaloneGeoJSONFeature } from './enhanced-geo-utils';
+import { storeGeoJSONToAzureSQL } from '@/services/azure-sql-service';
 
 export interface EnhancedGeoJSONOptions {
   searchLocation?: {
@@ -9,6 +10,11 @@ export interface EnhancedGeoJSONOptions {
   };
   includeSearchMetadata?: boolean;
   filename?: string;
+  azureSQLConfig?: {
+    connectionString: string;
+    tableName?: string;
+    recordName?: string;
+  };
 }
 
 export function generateEnhancedGeoJSON(options: EnhancedGeoJSONOptions = {}): StandaloneGeoJSON {
@@ -95,6 +101,31 @@ export function generateEnhancedGeoJSON(options: EnhancedGeoJSONOptions = {}): S
   };
 
   return geoJSON;
+}
+
+export async function storeEnhancedGeoJSONToAzureSQL(options: EnhancedGeoJSONOptions = {}): Promise<string> {
+  const { azureSQLConfig, searchLocation } = options;
+  
+  if (!azureSQLConfig?.connectionString) {
+    throw new Error('Azure SQL connection string is required');
+  }
+  
+  try {
+    const geoJSON = generateEnhancedGeoJSON(options);
+    
+    const recordId = await storeGeoJSONToAzureSQL(
+      geoJSON,
+      azureSQLConfig.connectionString,
+      azureSQLConfig.recordName,
+      searchLocation
+    );
+    
+    console.log('Enhanced GeoJSON stored to Azure SQL successfully, ID:', recordId);
+    return recordId;
+  } catch (error) {
+    console.error('Error storing enhanced GeoJSON to Azure SQL:', error);
+    throw error;
+  }
 }
 
 export function downloadEnhancedGeoJSON(options: EnhancedGeoJSONOptions = {}) {
