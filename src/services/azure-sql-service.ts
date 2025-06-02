@@ -1,9 +1,17 @@
+
 import { StandaloneGeoJSON } from '@/utils/enhanced-geo-utils';
 import { toast } from 'sonner';
 
 export interface AzureSQLConfig {
   connectionString: string;
   tableName?: string;
+}
+
+export interface UserSession {
+  userId: string;
+  username?: string;
+  connectionString: string;
+  autoSync?: boolean;
 }
 
 export interface UserData {

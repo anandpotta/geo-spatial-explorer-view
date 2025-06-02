@@ -1,10 +1,17 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import MapView from '../../components/map/MapView';
 import { useMapState } from '../../hooks/useMapState';
 import { Location } from '../../utils/geo-utils';
 import { setUserSession, loadUserData, saveUserData, clearUserSession, getCurrentUser } from '../../services/user-data-service';
 import { toast } from 'sonner';
+
+export interface StandaloneMapRef {
+  saveToAzure: () => Promise<boolean>;
+  loadFromAzure: () => Promise<boolean>;
+  getCurrentUser: () => { userId: string; username?: string } | null;
+  clearAll: () => void;
+}
 
 export interface StandaloneMapProps {
   // Map configuration
@@ -46,7 +53,7 @@ export interface StandaloneMapProps {
   onDrawingClick?: (drawing: any) => void;
 }
 
-export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
+export const StandaloneMapComponent = forwardRef<StandaloneMapRef, StandaloneMapProps>(({
   initialCenter = [51.505, -0.09],
   initialZoom = 18,
   externalLocation,
@@ -60,7 +67,7 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
   onMapReady,
   onMarkerClick,
   onDrawingClick
-}) => {
+}, ref) => {
   const mapReadyRef = useRef(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{
@@ -263,8 +270,8 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
     }
   }, [userSession, onDataSync]);
 
-  // Expose methods via ref (if needed)
-  React.useImperativeHandle(React.useRef(), () => ({
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
     saveToAzure,
     loadFromAzure,
     getCurrentUser,
@@ -320,6 +327,8 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
       )}
     </div>
   );
-};
+});
+
+StandaloneMapComponent.displayName = 'StandaloneMapComponent';
 
 export default StandaloneMapComponent;

@@ -1,19 +1,12 @@
-
 import { 
   AzureSQLService, 
   UserData, 
+  UserSession,
   saveUserGeospatialData, 
   getUserGeospatialData, 
   updateUserGeospatialData 
 } from './azure-sql-service';
 import { toast } from 'sonner';
-
-export interface UserSession {
-  userId: string;
-  username?: string;
-  connectionString: string;
-  autoSync?: boolean;
-}
 
 export class UserDataService {
   private session: UserSession | null = null;
