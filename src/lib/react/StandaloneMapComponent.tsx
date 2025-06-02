@@ -1,7 +1,5 @@
-
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { EnhancedLocation } from '@/utils/enhanced-geo-utils';
-import { useToast } from '@/components/ui/use-toast';
 import LocationSearch from '@/components/LocationSearch';
 import LeafletMap from '@/components/map/LeafletMap';
 import { toast } from 'sonner';
@@ -128,7 +126,7 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
     }
   }, [onLocationChange, defaultLocation]);
 
-  // Monitor annotations and notify parent
+  // Monitor annotations and notify parent - removed auth dependency
   useEffect(() => {
     const handleAnnotationsUpdate = () => {
       // Get current annotations from localStorage

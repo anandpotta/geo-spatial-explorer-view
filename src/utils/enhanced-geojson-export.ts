@@ -14,7 +14,7 @@ export interface EnhancedGeoJSONOptions {
 export function generateEnhancedGeoJSON(options: EnhancedGeoJSONOptions = {}): StandaloneGeoJSON {
   const { searchLocation, includeSearchMetadata = true } = options;
   
-  // Get saved markers and drawings
+  // Get saved markers and drawings - no user filtering for standalone
   const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
   const savedDrawings = JSON.parse(localStorage.getItem('savedDrawings') || '[]');
   

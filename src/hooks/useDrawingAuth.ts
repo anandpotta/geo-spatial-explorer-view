@@ -1,15 +1,13 @@
 
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export function useDrawingAuth() {
-  const { isAuthenticated, currentUser } = useAuth();
+  // Always return authenticated for standalone usage
+  const isAuthenticated = true;
+  const currentUser = { id: 'standalone-user', username: 'standalone' };
   
   const checkAuthBeforeAction = (actionName: string): boolean => {
-    if (!isAuthenticated) {
-      toast.error(`Please log in to ${actionName}`);
-      return false;
-    }
+    // Always allow actions in standalone mode
     return true;
   };
   
