@@ -16,8 +16,22 @@ export {
 export {
   AzureSQLService,
   storeGeoJSONToAzureSQL,
-  retrieveGeoJSONFromAzureSQL
+  retrieveGeoJSONFromAzureSQL,
+  saveUserGeospatialData,
+  getUserGeospatialData,
+  updateUserGeospatialData
 } from '../../services/azure-sql-service';
+
+// User data service for RBAC
+export {
+  UserDataService,
+  userDataService,
+  setUserSession,
+  loadUserData,
+  saveUserData,
+  clearUserSession,
+  getCurrentUser
+} from '../../services/user-data-service';
 
 export type { 
   EnhancedLocation, 
@@ -27,5 +41,8 @@ export type {
 
 export type {
   AzureSQLConfig,
-  StoredGeoJSONRecord
+  StoredGeoJSONRecord,
+  UserData,
+  StoredUserDataRecord,
+  UserSession
 } from '../../services/azure-sql-service';
