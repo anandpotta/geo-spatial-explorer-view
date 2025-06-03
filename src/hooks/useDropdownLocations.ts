@@ -8,33 +8,43 @@ export const useDropdownLocations = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const isLoadingRef = useRef(false);
   
   const loadMarkers = () => {
+    if (isLoadingRef.current) return;
+    
+    isLoadingRef.current = true;
     console.log("Loading markers for dropdown");
-    const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
-    const pinned = savedMarkers.filter(marker => marker.isPinned === true);
-    setPinnedMarkers(pinned);
+    
+    try {
+      const savedMarkers = getSavedMarkers();
+      setMarkers(savedMarkers);
+      const pinned = savedMarkers.filter(marker => marker.isPinned === true);
+      setPinnedMarkers(pinned);
+    } catch (error) {
+      console.error('Error loading markers:', error);
+    } finally {
+      setTimeout(() => {
+        isLoadingRef.current = false;
+      }, 100);
+    }
   };
 
   useEffect(() => {
     loadMarkers();
     
-    const handleStorage = () => {
-      console.log("Storage event detected");
-      loadMarkers();
-    };
-    
+    // Only listen to markersUpdated event to prevent circular loops
+    // Remove storage listener as it's redundant and causes loops
     const handleMarkersUpdated = () => {
+      if (isLoadingRef.current) return;
+      
       console.log("Markers updated event detected");
       loadMarkers();
     };
     
-    window.addEventListener('storage', handleStorage);
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     
     return () => {
-      window.removeEventListener('storage', handleStorage);
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
     };
   }, []);

@@ -5,6 +5,9 @@ import { toast } from 'sonner';
 import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
 import { getConnectionStatus } from '../api-service';
 
+// Global flag to prevent event loops
+let isUpdatingMarkers = false;
+
 export function getSavedMarkers(): LocationMarker[] {
   const currentUser = getCurrentUser();
   const markersJson = localStorage.getItem('savedMarkers');
@@ -49,12 +52,16 @@ export function getSavedMarkers(): LocationMarker[] {
 }
 
 export function saveMarker(marker: LocationMarker): void {
+  if (isUpdatingMarkers) return;
+  
   const currentUser = getCurrentUser();
   if (!currentUser) {
     console.error('Cannot save marker: No user is logged in');
     toast.error('Please log in to save your markers');
     return;
   }
+  
+  isUpdatingMarkers = true;
   
   // Ensure the marker has a user ID
   const markerWithUser = {
@@ -82,10 +89,11 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(Array.from(uniqueMarkers.values())));
   
-  // Only dispatch ONE event to prevent loops - just markersUpdated
+  // Dispatch ONLY markersUpdated event with debouncing
   setTimeout(() => {
     window.dispatchEvent(new Event('markersUpdated'));
-  }, 0);
+    isUpdatingMarkers = false;
+  }, 50);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -100,6 +108,8 @@ export function saveMarker(marker: LocationMarker): void {
 }
 
 export function renameMarker(id: string, newName: string): void {
+  if (isUpdatingMarkers) return;
+  
   const currentUser = getCurrentUser();
   if (!currentUser) {
     console.error('Cannot rename marker: No user is logged in');
@@ -107,12 +117,15 @@ export function renameMarker(id: string, newName: string): void {
     return;
   }
   
+  isUpdatingMarkers = true;
+  
   const savedMarkers = getSavedMarkers();
   const markerIndex = savedMarkers.findIndex(marker => marker.id === id);
   
   if (markerIndex === -1) {
     console.error('Marker not found');
     toast.error('Location not found');
+    isUpdatingMarkers = false;
     return;
   }
   
@@ -124,10 +137,11 @@ export function renameMarker(id: string, newName: string): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Only dispatch ONE event to prevent loops
+  // Dispatch ONLY markersUpdated event with debouncing
   setTimeout(() => {
     window.dispatchEvent(new Event('markersUpdated'));
-  }, 0);
+    isUpdatingMarkers = false;
+  }, 50);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -144,6 +158,8 @@ export function renameMarker(id: string, newName: string): void {
 }
 
 export function deleteMarker(id: string): void {
+  if (isUpdatingMarkers) return;
+  
   const currentUser = getCurrentUser();
   if (!currentUser) {
     console.error('Cannot delete marker: No user is logged in');
@@ -151,14 +167,17 @@ export function deleteMarker(id: string): void {
     return;
   }
   
+  isUpdatingMarkers = true;
+  
   const savedMarkers = getSavedMarkers();
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Only dispatch ONE event to prevent loops
+  // Dispatch ONLY markersUpdated event with debouncing
   setTimeout(() => {
     window.dispatchEvent(new Event('markersUpdated'));
-  }, 0);
+    isUpdatingMarkers = false;
+  }, 50);
   
   // Only attempt to sync delete if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
