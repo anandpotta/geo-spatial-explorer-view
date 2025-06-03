@@ -16,11 +16,13 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
   
-  // Create a custom marker ID for DOM element tracking
+  // Create a stable marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
+  
+  // Create a stable tooltip key that only changes when marker name changes
+  const tooltipKey = `tooltip-${marker.id}-${marker.name}`;
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
@@ -90,11 +92,11 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       
       localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
       
-      // Dispatch event to update other components
-      window.dispatchEvent(new CustomEvent('markersUpdated'));
+      // Dispatch event to update other components - but prevent loops
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('markersUpdated'));
+      }, 100);
       
-      // Update tooltip key to force re-render
-      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
     } catch (error) {
       console.error('Error updating marker position:', error);
     }

@@ -1,3 +1,4 @@
+
 import { LocationMarker } from './types';
 import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
@@ -81,9 +82,10 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(Array.from(uniqueMarkers.values())));
   
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
+  // Only dispatch ONE event to prevent loops - just markersUpdated
+  setTimeout(() => {
+    window.dispatchEvent(new Event('markersUpdated'));
+  }, 0);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -122,9 +124,10 @@ export function renameMarker(id: string, newName: string): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
+  // Only dispatch ONE event to prevent loops
+  setTimeout(() => {
+    window.dispatchEvent(new Event('markersUpdated'));
+  }, 0);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -152,9 +155,10 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
+  // Only dispatch ONE event to prevent loops
+  setTimeout(() => {
+    window.dispatchEvent(new Event('markersUpdated'));
+  }, 0);
   
   // Only attempt to sync delete if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();

@@ -41,6 +41,29 @@ export function useMapState(selectedLocation?: Location) {
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
     
+    // Set up event listener for markers updates - but prevent loops
+    let isHandlingEvent = false;
+    
+    const handleMarkersUpdated = () => {
+      if (isHandlingEvent || isProcessingMarker) return;
+      
+      isHandlingEvent = true;
+      console.log('Markers updated - refreshing markers list');
+      
+      setTimeout(() => {
+        const updatedMarkers = getSavedMarkers();
+        setMarkers(updatedMarkers);
+        isHandlingEvent = false;
+      }, 50);
+    };
+    
+    // Only listen to markersUpdated to prevent circular events
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+    };
+    
   }, [isAuthenticated, currentUser]);
 
   // Set up global position update handler for draggable markers
@@ -79,13 +102,7 @@ export function useMapState(selectedLocation?: Location) {
     setTempMarker(null);
     setMarkerName('');
     
-    // Update UI state immediately to prevent flickering
-    setMarkers(prev => {
-      const filtered = prev.filter(m => m.id !== newMarker.id);
-      return [...filtered, newMarker];
-    });
-    
-    // Save the marker to storage
+    // Save the marker to storage (this will trigger the event listener above)
     try {
       saveMarker(newMarker);
       
@@ -114,10 +131,8 @@ export function useMapState(selectedLocation?: Location) {
     } catch (error) {
       console.error('Error saving marker:', error);
       toast.error('Failed to save location');
-      // Restore previous state on error
-      setMarkers(getSavedMarkers());
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 200);
+      setTimeout(() => setIsProcessingMarker(false), 300);
     }
   };
 
@@ -130,9 +145,6 @@ export function useMapState(selectedLocation?: Location) {
     console.log(`Starting marker deletion for ID: ${id}`);
     setIsProcessingMarker(true);
     
-    // Update UI immediately
-    setMarkers(prev => prev.filter(marker => marker.id !== id));
-    
     try {
       deleteMarker(id);
       toast.success("Location removed");
@@ -140,10 +152,8 @@ export function useMapState(selectedLocation?: Location) {
     } catch (error) {
       console.error('Error deleting marker:', error);
       toast.error('Failed to remove location');
-      // Restore marker on error
-      setMarkers(getSavedMarkers());
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 200);
+      setTimeout(() => setIsProcessingMarker(false), 300);
     }
   };
 
@@ -158,16 +168,12 @@ export function useMapState(selectedLocation?: Location) {
     
     try {
       renameMarker(id, newName);
-      // Update UI immediately
-      setMarkers(prev => prev.map(marker => 
-        marker.id === id ? { ...marker, name: newName } : marker
-      ));
       console.log('Marker renamed successfully');
     } catch (error) {
       console.error('Error renaming marker:', error);
       toast.error('Failed to rename location');
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 200);
+      setTimeout(() => setIsProcessingMarker(false), 300);
     }
   };
 
