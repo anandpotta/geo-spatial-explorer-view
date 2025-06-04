@@ -24,14 +24,13 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const [markerReady, setMarkerReady] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isPopupOpen, setIsPopupOpen] = useState(true);
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
 
   // Handle cleanup when component unmounts or marker is being processed
   useEffect(() => {
     if (isProcessing) {
-      setIsVisible(false);
+      setIsPopupOpen(false);
     }
     
     return () => {
@@ -53,24 +52,23 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     };
   }, [markerId, isProcessing]);
 
-  // Auto-open popup when marker is ready
+  // Force popup to open when marker is ready
   useEffect(() => {
-    if (markerRef.current && markerReady && !isProcessing && isVisible) {
-      // Use a longer timeout to ensure the marker is fully rendered
+    if (markerRef.current && !isProcessing && isPopupOpen) {
       const timer = setTimeout(() => {
         try {
-          if (markerRef.current && isVisible) {
+          if (markerRef.current) {
             markerRef.current.openPopup();
             console.log('Popup opened for temp marker');
           }
         } catch (error) {
           console.error("Error opening popup:", error);
         }
-      }, 300);
+      }, 100);
       
       return () => clearTimeout(timer);
     }
-  }, [markerReady, isProcessing, isVisible]);
+  }, [isProcessing, isPopupOpen]);
 
   // Update marker position in parent when dragged
   const handleDragEnd = (e: L.LeafletEvent) => {
@@ -90,7 +88,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     if (isProcessing) return;
     
     // Hide the marker immediately to prevent flickering
-    setIsVisible(false);
+    setIsPopupOpen(false);
     
     // Clean up DOM elements
     const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
@@ -106,7 +104,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 
   // Set up marker references
   const setMarkerInstance = (marker: L.Marker) => {
-    if (marker && isVisible) {
+    if (marker) {
       markerRef.current = marker;
       
       const element = marker.getElement();
@@ -114,15 +112,17 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         element.setAttribute('data-marker-id', markerId);
       }
       
-      // Ensure the popup opens after marker is added to map
+      // Force popup to open immediately
       setTimeout(() => {
-        setMarkerReady(true);
-      }, 100);
+        if (marker && isPopupOpen) {
+          marker.openPopup();
+        }
+      }, 50);
     }
   };
 
-  // Don't render if not visible or processing
-  if (!isVisible || isProcessing) {
+  // Don't render if processing
+  if (isProcessing) {
     return null;
   }
 
@@ -135,12 +135,12 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         dragend: handleDragEnd,
         add: () => {
           console.log('Temp marker added to map');
-          // Force popup to open after marker is added
+          // Force popup to open when marker is added
           setTimeout(() => {
-            if (markerRef.current) {
+            if (markerRef.current && isPopupOpen) {
               markerRef.current.openPopup();
             }
-          }, 200);
+          }, 100);
         },
         popupopen: () => {
           console.log('Popup opened');
@@ -159,16 +159,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         maxWidth={300}
         minWidth={250}
       >
-        <div onClick={(e) => e.stopPropagation()}>
-          <NewMarkerForm
-            markerName={markerName}
-            setMarkerName={setMarkerName}
-            markerType={markerType}
-            setMarkerType={setMarkerType}
-            onSave={handleSave}
-            disabled={isProcessing}
-          />
-        </div>
+        <NewMarkerForm
+          markerName={markerName}
+          setMarkerName={setMarkerName}
+          markerType={markerType}
+          setMarkerType={setMarkerType}
+          onSave={handleSave}
+          disabled={isProcessing}
+        />
       </Popup>
       <Tooltip
         direction="top"
