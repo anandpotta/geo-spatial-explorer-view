@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -52,23 +51,23 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     };
   }, [markerId, isProcessing]);
 
-  // Force popup to open when marker is ready
+  // Force popup to open when marker is ready and keep it open
   useEffect(() => {
-    if (markerRef.current && !isProcessing && isPopupOpen) {
+    if (markerRef.current && !isProcessing) {
       const timer = setTimeout(() => {
         try {
           if (markerRef.current) {
             markerRef.current.openPopup();
-            console.log('Popup opened for temp marker');
+            console.log('Popup opened for temp marker at position:', position);
           }
         } catch (error) {
           console.error("Error opening popup:", error);
         }
-      }, 100);
+      }, 200);
       
       return () => clearTimeout(timer);
     }
-  }, [isProcessing, isPopupOpen]);
+  }, [position, isProcessing]);
 
   // Update marker position in parent when dragged
   const handleDragEnd = (e: L.LeafletEvent) => {
@@ -87,9 +86,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   const handleSave = () => {
     if (isProcessing) return;
     
-    // Hide the marker immediately to prevent flickering
-    setIsPopupOpen(false);
-    
     // Clean up DOM elements
     const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
     tempIcons.forEach(icon => {
@@ -102,7 +98,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     onSave();
   };
 
-  // Set up marker references
+  // Set up marker references and force popup open
   const setMarkerInstance = (marker: L.Marker) => {
     if (marker) {
       markerRef.current = marker;
@@ -112,12 +108,20 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         element.setAttribute('data-marker-id', markerId);
       }
       
-      // Force popup to open immediately
+      // Multiple attempts to ensure popup opens
       setTimeout(() => {
-        if (marker && isPopupOpen) {
+        if (marker) {
           marker.openPopup();
+          console.log('Forcing popup open immediately');
         }
-      }, 50);
+      }, 100);
+      
+      setTimeout(() => {
+        if (marker) {
+          marker.openPopup();
+          console.log('Forcing popup open again');
+        }
+      }, 300);
     }
   };
 
@@ -133,27 +137,35 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd,
-        add: () => {
-          console.log('Temp marker added to map');
-          // Force popup to open when marker is added
+        add: (e) => {
+          console.log('Temp marker added to map at:', position);
+          const marker = e.target;
+          // Force popup to open when marker is added to map
           setTimeout(() => {
-            if (markerRef.current && isPopupOpen) {
-              markerRef.current.openPopup();
+            if (marker) {
+              marker.openPopup();
+              console.log('Popup opened on marker add event');
             }
-          }, 100);
+          }, 150);
         },
         popupopen: () => {
-          console.log('Popup opened');
+          console.log('Popup opened event fired');
         },
-        popupclose: () => {
-          console.log('Popup closed');
+        popupclose: (e) => {
+          console.log('Popup close event fired - preventing close for temp marker');
+          // Immediately reopen the popup for temp markers
+          setTimeout(() => {
+            if (markerRef.current && !isProcessing) {
+              markerRef.current.openPopup();
+            }
+          }, 50);
         }
       }}
     >
       <Popup 
         closeOnClick={false} 
         autoClose={false}
-        closeButton={true}
+        closeButton={false}
         autoPan={true}
         className="marker-popup"
         maxWidth={300}
