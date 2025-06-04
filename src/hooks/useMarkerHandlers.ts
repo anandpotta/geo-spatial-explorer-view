@@ -49,19 +49,25 @@ export function useMarkerHandlers(mapState: any) {
         ];
         
         console.log('Setting temp marker at:', exactPosition);
-        mapState.setTempMarker(exactPosition);
-        mapState.setMarkerName('New Location');
         
-        // Force update the component state to ensure popup appears
+        // Clear any existing temp marker first
+        mapState.setTempMarker(null);
+        
+        // Use a small delay to ensure state updates properly
         setTimeout(() => {
-          console.log('Temp marker should be visible now');
-          // Focus on the marker name input field after a short delay
-          const inputField = document.querySelector('.leaflet-popup input');
-          if (inputField) {
-            (inputField as HTMLElement).focus();
-            console.log('Input field focused');
-          }
-        }, 300);
+          mapState.setTempMarker(exactPosition);
+          mapState.setMarkerName('New Location');
+          console.log('Temp marker set with delay');
+          
+          // Force focus on input after popup appears
+          setTimeout(() => {
+            const inputField = document.querySelector('.leaflet-popup input');
+            if (inputField) {
+              (inputField as HTMLElement).focus();
+              console.log('Input field focused');
+            }
+          }, 600);
+        }, 100);
         
       } else if (shape.layer && shape.layer.getLatLng) {
         // Alternative: try to get position from the layer if available
@@ -69,16 +75,23 @@ export function useMarkerHandlers(mapState: any) {
         const exactPosition: [number, number] = [latLng.lat, latLng.lng];
         
         console.log('Setting temp marker from layer at:', exactPosition);
-        mapState.setTempMarker(exactPosition);
-        mapState.setMarkerName('New Location');
         
-        // Force update and focus
+        // Clear any existing temp marker first
+        mapState.setTempMarker(null);
+        
+        // Use a small delay to ensure state updates properly
         setTimeout(() => {
-          const inputField = document.querySelector('.leaflet-popup input');
-          if (inputField) {
-            (inputField as HTMLElement).focus();
-          }
-        }, 300);
+          mapState.setTempMarker(exactPosition);
+          mapState.setMarkerName('New Location');
+          
+          // Force focus on input after popup appears
+          setTimeout(() => {
+            const inputField = document.querySelector('.leaflet-popup input');
+            if (inputField) {
+              (inputField as HTMLElement).focus();
+            }
+          }, 600);
+        }, 100);
         
       } else {
         console.error('Invalid marker position data:', shape);
