@@ -33,28 +33,39 @@ export function useMapState(selectedLocation?: Location) {
       return;
     }
     
-    console.log(`Loading data for user: ${currentUser.id}`);
-    
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
     
-    // Set up event listener for markers updates - but prevent loops
+    // Set up event listener for markers updates with proper debouncing
     let isHandlingEvent = false;
+    let debounceTimer: NodeJS.Timeout;
     
     const handleMarkersUpdated = () => {
       if (isHandlingEvent || isProcessingMarker) return;
       
-      isHandlingEvent = true;
-      console.log('Markers updated - refreshing markers list');
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
       
-      setTimeout(() => {
-        const updatedMarkers = getSavedMarkers();
-        setMarkers(updatedMarkers);
-        isHandlingEvent = false;
-      }, 50);
+      debounceTimer = setTimeout(() => {
+        if (!isHandlingEvent && !isProcessingMarker) {
+          isHandlingEvent = true;
+          
+          try {
+            const updatedMarkers = getSavedMarkers();
+            setMarkers(updatedMarkers);
+          } catch (error) {
+            console.error('Error updating markers:', error);
+          } finally {
+            setTimeout(() => {
+              isHandlingEvent = false;
+            }, 100);
+          }
+        }
+      }, 150);
     };
     
     // Only listen to markersUpdated to prevent circular events
@@ -62,6 +73,9 @@ export function useMapState(selectedLocation?: Location) {
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
     };
     
   }, [isAuthenticated, currentUser]);
@@ -82,8 +96,6 @@ export function useMapState(selectedLocation?: Location) {
     }
     
     if (!tempMarker || !markerName.trim() || isProcessingMarker) return;
-    
-    console.log('Starting marker save process');
     
     // Prevent multiple simultaneous saves
     setIsProcessingMarker(true);
@@ -126,7 +138,6 @@ export function useMapState(selectedLocation?: Location) {
       }
       
       toast.success("Location saved successfully");
-      console.log('Marker saved successfully');
       
     } catch (error) {
       console.error('Error saving marker:', error);
@@ -142,13 +153,11 @@ export function useMapState(selectedLocation?: Location) {
       return;
     }
     
-    console.log(`Starting marker deletion for ID: ${id}`);
     setIsProcessingMarker(true);
     
     try {
       deleteMarker(id);
       toast.success("Location removed");
-      console.log('Marker deleted successfully');
     } catch (error) {
       console.error('Error deleting marker:', error);
       toast.error('Failed to remove location');
@@ -163,12 +172,10 @@ export function useMapState(selectedLocation?: Location) {
       return;
     }
     
-    console.log(`Starting marker rename for ID: ${id} to: ${newName}`);
     setIsProcessingMarker(true);
     
     try {
       renameMarker(id, newName);
-      console.log('Marker renamed successfully');
     } catch (error) {
       console.error('Error renaming marker:', error);
       toast.error('Failed to rename location');

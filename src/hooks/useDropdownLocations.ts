@@ -9,12 +9,19 @@ export const useDropdownLocations = () => {
   const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const isLoadingRef = useRef(false);
+  const lastUpdateRef = useRef<number>(0);
   
   const loadMarkers = () => {
     if (isLoadingRef.current) return;
     
+    const now = Date.now();
+    // Prevent loading more than once every 200ms
+    if (now - lastUpdateRef.current < 200) {
+      return;
+    }
+    
     isLoadingRef.current = true;
-    console.log("Loading markers for dropdown");
+    lastUpdateRef.current = now;
     
     try {
       const savedMarkers = getSavedMarkers();
@@ -24,32 +31,47 @@ export const useDropdownLocations = () => {
     } catch (error) {
       console.error('Error loading markers:', error);
     } finally {
+      // Reset loading flag after a delay to prevent rapid successive calls
       setTimeout(() => {
         isLoadingRef.current = false;
-      }, 100);
+      }, 150);
     }
   };
 
   useEffect(() => {
+    // Initial load
     loadMarkers();
     
-    // Only listen to markersUpdated event to prevent circular loops
-    // Remove storage listener as it's redundant and causes loops
+    // Create a debounced handler to prevent rapid successive calls
+    let debounceTimer: NodeJS.Timeout;
+    
     const handleMarkersUpdated = () => {
       if (isLoadingRef.current) return;
       
-      console.log("Markers updated event detected");
-      loadMarkers();
+      // Clear any existing timer
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+      
+      // Set a new timer to debounce the update
+      debounceTimer = setTimeout(() => {
+        if (!isLoadingRef.current) {
+          loadMarkers();
+        }
+      }, 100);
     };
     
+    // Only listen to markersUpdated event - no storage events to prevent loops
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
     };
   }, []);
 
-  // Add this function to help with proper cleanup of elements when a marker is deleted
   const cleanupMarkerReferences = () => {
     // Force cleanup of any stale elements that might be causing issues
     const staleDialogs = document.querySelectorAll('[role="dialog"][aria-hidden="true"]');

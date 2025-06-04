@@ -5,8 +5,34 @@ import { toast } from 'sonner';
 import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
 import { getConnectionStatus } from '../api-service';
 
-// Global flag to prevent event loops
+// Global flags to prevent event loops
 let isUpdatingMarkers = false;
+let lastEventTime = 0;
+
+// Debounced event dispatcher to prevent rapid successive events
+const dispatchMarkersEvent = (() => {
+  let timeoutId: NodeJS.Timeout;
+  
+  return () => {
+    const now = Date.now();
+    
+    // Prevent dispatching if we just dispatched an event recently
+    if (now - lastEventTime < 100) {
+      return;
+    }
+    
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    
+    timeoutId = setTimeout(() => {
+      if (!isUpdatingMarkers) {
+        lastEventTime = Date.now();
+        window.dispatchEvent(new Event('markersUpdated'));
+      }
+    }, 50);
+  };
+})();
 
 export function getSavedMarkers(): LocationMarker[] {
   const currentUser = getCurrentUser();
@@ -89,11 +115,11 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(Array.from(uniqueMarkers.values())));
   
-  // Dispatch ONLY markersUpdated event with debouncing
+  // Reset updating flag and dispatch event
   setTimeout(() => {
-    window.dispatchEvent(new Event('markersUpdated'));
     isUpdatingMarkers = false;
-  }, 50);
+    dispatchMarkersEvent();
+  }, 100);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -137,11 +163,11 @@ export function renameMarker(id: string, newName: string): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Dispatch ONLY markersUpdated event with debouncing
+  // Reset updating flag and dispatch event
   setTimeout(() => {
-    window.dispatchEvent(new Event('markersUpdated'));
     isUpdatingMarkers = false;
-  }, 50);
+    dispatchMarkersEvent();
+  }, 100);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -173,11 +199,11 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Dispatch ONLY markersUpdated event with debouncing
+  // Reset updating flag and dispatch event
   setTimeout(() => {
-    window.dispatchEvent(new Event('markersUpdated'));
     isUpdatingMarkers = false;
-  }, 50);
+    dispatchMarkersEvent();
+  }, 100);
   
   // Only attempt to sync delete if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
