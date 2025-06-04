@@ -28,20 +28,6 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
-      // Ignore clicks on drawing paths, SVG elements, and upload controls
-      if (target && (
-        target.closest('path') ||
-        target.tagName === 'path' ||
-        target.tagName === 'svg' ||
-        target.closest('.upload-button-container') ||
-        target.closest('.upload-button-wrapper') ||
-        target.closest('.image-controls-container') ||
-        target.closest('.image-controls-wrapper')
-      )) {
-        console.log('Click on drawing element or control ignored');
-        return;
-      }
-      
       // Allow clicks on marker icons to show popups, but don't create new markers
       if (target && target.closest('.leaflet-marker-icon')) {
         console.log('Click on marker icon - allowing popup to show');
@@ -49,7 +35,32 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
+      // Allow clicks on drawing toolbar and controls but don't create markers
+      if (target && (
+        target.closest('.leaflet-draw') ||
+        target.closest('.leaflet-draw-toolbar') ||
+        target.closest('.leaflet-draw-actions') ||
+        target.closest('.upload-button-container') ||
+        target.closest('.upload-button-wrapper') ||
+        target.closest('.image-controls-container') ||
+        target.closest('.image-controls-wrapper')
+      )) {
+        console.log('Click on drawing toolbar or controls allowed but no marker creation');
+        return;
+      }
+      
+      // Only ignore clicks on actual drawn shapes (paths, SVG elements) but allow map clicks
+      if (target && (
+        target.tagName === 'path' ||
+        target.tagName === 'svg' ||
+        (target.closest('path') && !target.closest('.leaflet-draw-toolbar'))
+      )) {
+        console.log('Click on drawn shape ignored');
+        return;
+      }
+      
       // For all other clicks on the map, create a new marker
+      console.log('Map click allowed - creating marker at:', e.latlng);
       onMapClick(e.latlng);
     }
   });
