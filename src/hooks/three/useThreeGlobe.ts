@@ -99,10 +99,11 @@ export function useThreeGlobe(
     
     console.log("Globe setup complete, starting animation");
     
-    // Start animation loop
+    // Start animation loop with proper null checks
     const animate = () => {
+      // Check if all required objects exist before proceeding
       if (!scene || !camera || !renderer || !controlsRef.current) {
-        console.warn("Animation loop missing required objects");
+        // Stop the animation loop if objects are missing
         return;
       }
       
@@ -143,6 +144,13 @@ export function useThreeGlobe(
     return () => {
       console.log("Globe effect cleanup");
       isSetupCompleteRef.current = false;
+      
+      // Cancel any pending animation frames
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      
       // Dispose globe and atmosphere meshes
       if (globeRef.current) {
         scene.remove(globeRef.current);
