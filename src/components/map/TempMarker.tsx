@@ -1,8 +1,10 @@
 
-import React, { useRef, useEffect, useState } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import React, { useRef, useState } from 'react';
+import { Marker } from 'react-leaflet';
 import L from 'leaflet';
-import NewMarkerForm from './NewMarkerForm';
+import TempMarkerPopup from './TempMarkerPopup';
+import { useTempMarkerEffects } from '@/hooks/useTempMarkerEffects';
+import { useTempMarkerHandlers } from '@/hooks/useTempMarkerHandlers';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -26,39 +28,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   const markerRef = useRef<L.Marker | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  // Force popup to open when marker is created
-  useEffect(() => {
-    if (markerRef.current && !isProcessing) {
-      // Small delay to ensure marker is fully rendered
-      const timer = setTimeout(() => {
-        if (markerRef.current) {
-          markerRef.current.openPopup();
-          setIsPopupOpen(true);
-          console.log('Temp marker popup opened');
-        }
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [position, isProcessing]);
+  const { handleDragEnd, handleMarkerAdd } = useTempMarkerHandlers({ isProcessing });
 
-  const handleDragEnd = (e: L.LeafletEvent) => {
-    if (isProcessing) return;
-    
-    const marker = e.target;
-    if (marker && marker.getLatLng) {
-      const newPosition = marker.getLatLng();
-      if (window.tempMarkerPositionUpdate) {
-        window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
-      }
-    }
-  };
-
-  const handleSave = () => {
-    if (isProcessing) return;
-    setIsPopupOpen(false);
-    onSave();
-  };
+  useTempMarkerEffects({
+    markerRef,
+    position,
+    isProcessing,
+    setIsPopupOpen
+  });
 
   if (isProcessing) {
     return null;
@@ -73,47 +50,19 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd,
-        add: () => {
-          console.log('Temp marker added to map');
-          // Force popup open when added
-          setTimeout(() => {
-            if (markerRef.current) {
-              markerRef.current.openPopup();
-              setIsPopupOpen(true);
-            }
-          }, 50);
-        }
+        add: handleMarkerAdd(markerRef, setIsPopupOpen)
       }}
     >
-      <Popup 
-        closeOnClick={false} 
-        autoClose={false}
-        closeButton={true}
-        autoPan={true}
-        className="marker-popup"
-        maxWidth={300}
-        minWidth={250}
-        keepInView={true}
-        eventHandlers={{
-          popupopen: () => {
-            console.log('Popup opened');
-            setIsPopupOpen(true);
-          },
-          popupclose: () => {
-            console.log('Popup closed');
-            setIsPopupOpen(false);
-          }
-        }}
-      >
-        <NewMarkerForm
-          markerName={markerName}
-          setMarkerName={setMarkerName}
-          markerType={markerType}
-          setMarkerType={setMarkerType}
-          onSave={handleSave}
-          disabled={isProcessing}
-        />
-      </Popup>
+      <TempMarkerPopup
+        markerName={markerName}
+        setMarkerName={setMarkerName}
+        markerType={markerType}
+        setMarkerType={setMarkerType}
+        onSave={onSave}
+        isProcessing={isProcessing}
+        isPopupOpen={isPopupOpen}
+        setIsPopupOpen={setIsPopupOpen}
+      />
     </Marker>
   );
 };
