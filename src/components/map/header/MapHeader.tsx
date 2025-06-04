@@ -10,33 +10,20 @@ interface MapHeaderProps {
 
 const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false }) => {
   const [isVisible, setIsVisible] = useState(true);
-  const [hasCheckedVisibility, setHasCheckedVisibility] = useState(false);
   
-  // Memoize the location select handler to prevent unnecessary re-renders
+  // Stable location select handler with no dependencies to prevent re-renders
   const handleLocationSelect = useCallback((position: [number, number]) => {
-    if (!isVisible) {
-      console.warn("Map header is not visible, cannot select location");
-      return;
-    }
-    
     onLocationSelect(position);
-  }, [isVisible, onLocationSelect]);
+  }, [onLocationSelect]);
 
-  // Only check visibility once on mount and when isMapReady changes
+  // Only check visibility once when component mounts
   useEffect(() => {
-    if (!hasCheckedVisibility && isMapReady) {
-      const checkVisibility = () => {
-        const element = document.querySelector('[data-map-header="true"]');
-        const visible = !!element && document.body.contains(element);
-        setIsVisible(visible);
-        setHasCheckedVisibility(true);
-      };
-      
-      checkVisibility();
-    }
-  }, [isMapReady, hasCheckedVisibility]);
+    const element = document.querySelector('[data-map-header="true"]');
+    const visible = !!element && document.body.contains(element);
+    setIsVisible(visible);
+  }, []); // Empty dependency array - only run once
 
-  // Memoize the component to prevent unnecessary re-renders
+  // Completely memoize the component content to prevent any re-renders
   const memoizedContent = useMemo(() => (
     <div 
       className="absolute top-4 right-4 z-[1001] flex gap-2" 
@@ -49,9 +36,14 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
         isMapReady={isMapReady && isVisible}
       />
     </div>
-  ), [handleLocationSelect, isMapReady, isVisible]);
+  ), [handleLocationSelect, isMapReady, isVisible]); // Only re-render if these specific values change
 
   return memoizedContent;
 };
 
-export default React.memo(MapHeader);
+// Completely prevent re-renders with React.memo and custom comparison
+export default React.memo(MapHeader, (prevProps, nextProps) => {
+  // Only re-render if isMapReady actually changes
+  return prevProps.isMapReady === nextProps.isMapReady && 
+         prevProps.onLocationSelect === nextProps.onLocationSelect;
+});

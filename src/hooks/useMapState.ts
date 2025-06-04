@@ -27,7 +27,6 @@ export function useMapState(selectedLocation?: Location) {
   // Load existing markers and drawings when user changes or auth state changes
   useEffect(() => {
     if (!isAuthenticated || !currentUser) {
-      // Clear data when user logs out
       setMarkers([]);
       setDrawings([]);
       return;
@@ -39,40 +38,37 @@ export function useMapState(selectedLocation?: Location) {
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
     
-    // Simplified event listener with much longer debounce
-    let debounceTimer: NodeJS.Timeout;
+    // Listen only to the custom markersSaved event with heavy throttling
+    let updateTimeout: NodeJS.Timeout;
     
-    const handleMarkersUpdated = (event: Event) => {
-      // Ignore events from storage operations to prevent loops
-      if (event instanceof CustomEvent && event.detail?.source === 'storage') {
-        return;
-      }
-      
-      if (isProcessingMarker) return;
-      
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-      
-      debounceTimer = setTimeout(() => {
-        if (!isProcessingMarker) {
+    const handleMarkersSaved = (event: Event) => {
+      if (event instanceof CustomEvent && 
+          event.detail?.source === 'storage' && 
+          !isProcessingMarker) {
+        
+        // Clear any existing timeout
+        if (updateTimeout) {
+          clearTimeout(updateTimeout);
+        }
+        
+        // Heavy debounce - only update every 3 seconds max
+        updateTimeout = setTimeout(() => {
           try {
             const updatedMarkers = getSavedMarkers();
             setMarkers(updatedMarkers);
           } catch (error) {
             console.error('Error updating markers:', error);
           }
-        }
-      }, 1000); // Much longer debounce
+        }, 3000);
+      }
     };
     
-    // Only listen to markersUpdated to prevent circular events
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('markersSaved', handleMarkersSaved);
     
     return () => {
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
+      window.removeEventListener('markersSaved', handleMarkersSaved);
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
       }
     };
     
@@ -95,7 +91,6 @@ export function useMapState(selectedLocation?: Location) {
     
     if (!tempMarker || !markerName.trim() || isProcessingMarker) return;
     
-    // Prevent multiple simultaneous saves
     setIsProcessingMarker(true);
     
     const newMarker: LocationMarker = {
@@ -108,11 +103,9 @@ export function useMapState(selectedLocation?: Location) {
       userId: currentUser.id
     };
     
-    // Clear the temporary marker IMMEDIATELY to prevent flickering
     setTempMarker(null);
     setMarkerName('');
     
-    // Save the marker to storage (this will trigger the event listener above)
     try {
       saveMarker(newMarker);
       
@@ -141,7 +134,7 @@ export function useMapState(selectedLocation?: Location) {
       console.error('Error saving marker:', error);
       toast.error('Failed to save location');
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 1000);
+      setTimeout(() => setIsProcessingMarker(false), 2000);
     }
   }, [isAuthenticated, currentUser, tempMarker, markerName, isProcessingMarker, markerType, currentDrawing]);
 
@@ -160,7 +153,7 @@ export function useMapState(selectedLocation?: Location) {
       console.error('Error deleting marker:', error);
       toast.error('Failed to remove location');
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 1000);
+      setTimeout(() => setIsProcessingMarker(false), 2000);
     }
   }, [isAuthenticated, isProcessingMarker]);
 
@@ -178,7 +171,7 @@ export function useMapState(selectedLocation?: Location) {
       console.error('Error renaming marker:', error);
       toast.error('Failed to rename location');
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 1000);
+      setTimeout(() => setIsProcessingMarker(false), 2000);
     }
   }, [isAuthenticated, isProcessingMarker]);
 
@@ -218,7 +211,6 @@ export function useMapState(selectedLocation?: Location) {
   };
 }
 
-// Extend the Window interface to include our custom property
 declare global {
   interface Window {
     tempMarkerPositionUpdate?: (pos: [number, number]) => void;
