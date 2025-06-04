@@ -1,22 +1,14 @@
 
 import { DrawingData } from './types';
-import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
 import { syncDrawingsWithBackend, fetchDrawingsFromBackend, deleteDrawingFromBackend } from './sync';
 import { getConnectionStatus } from '../api-service';
 
 export function saveDrawing(drawing: DrawingData): void {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot save drawing: No user is logged in');
-    toast.error('Please log in to save your drawings');
-    return;
-  }
-  
-  // Ensure the drawing has the current user's ID
+  // Use default user for standalone mode
   const drawingWithUser = {
     ...drawing,
-    userId: currentUser.id
+    userId: 'standalone-user'
   };
   
   const savedDrawings = getSavedDrawings();
@@ -49,7 +41,6 @@ export function saveDrawing(drawing: DrawingData): void {
 }
 
 export function getSavedDrawings(): DrawingData[] {
-  const currentUser = getCurrentUser();
   const drawingsJson = localStorage.getItem('savedDrawings');
   
   if (!drawingsJson) {
@@ -75,11 +66,6 @@ export function getSavedDrawings(): DrawingData[] {
       }
     }));
     
-    // Filter drawings by user if a user is logged in
-    if (currentUser) {
-      drawings = drawings.filter((drawing: DrawingData) => drawing.userId === currentUser.id);
-    }
-    
     return drawings;
   } catch (e) {
     console.error('Failed to parse saved drawings', e);
@@ -88,13 +74,6 @@ export function getSavedDrawings(): DrawingData[] {
 }
 
 export function deleteDrawing(id: string): void {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot delete drawing: No user is logged in');
-    toast.error('Please log in to manage your drawings');
-    return;
-  }
-  
   const savedDrawings = getSavedDrawings();
   const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);
   localStorage.setItem('savedDrawings', JSON.stringify(filteredDrawings));

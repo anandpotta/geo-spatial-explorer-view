@@ -1,6 +1,5 @@
 
 import { LocationMarker } from './types';
-import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
 import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
 import { getConnectionStatus } from '../api-service';
@@ -12,7 +11,6 @@ const MIN_UPDATE_INTERVAL = 2000; // 2 seconds minimum between updates
 
 // Completely remove automatic event dispatching
 export function getSavedMarkers(): LocationMarker[] {
-  const currentUser = getCurrentUser();
   const markersJson = localStorage.getItem('savedMarkers');
   
   if (!markersJson) {
@@ -32,10 +30,6 @@ export function getSavedMarkers(): LocationMarker[] {
       ...marker,
       createdAt: new Date(marker.createdAt)
     }));
-    
-    if (currentUser) {
-      markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
-    }
     
     const uniqueMarkers = new Map<string, LocationMarker>();
     markers.forEach((marker: LocationMarker) => {
@@ -57,19 +51,12 @@ export function saveMarker(marker: LocationMarker): void {
     return;
   }
   
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot save marker: No user is logged in');
-    toast.error('Please log in to save your markers');
-    return;
-  }
-  
   isUpdatingStorage = true;
   lastUpdateTime = now;
   
   const markerWithUser = {
     ...marker,
-    userId: currentUser.id
+    userId: 'standalone-user' // Use default user for standalone mode
   };
   
   const savedMarkers = getSavedMarkers();
@@ -113,13 +100,6 @@ export function renameMarker(id: string, newName: string): void {
   const now = Date.now();
   
   if (isUpdatingStorage || (now - lastUpdateTime < MIN_UPDATE_INTERVAL)) {
-    return;
-  }
-  
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot rename marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
     return;
   }
   
@@ -170,13 +150,6 @@ export function deleteMarker(id: string): void {
   const now = Date.now();
   
   if (isUpdatingStorage || (now - lastUpdateTime < MIN_UPDATE_INTERVAL)) {
-    return;
-  }
-  
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot delete marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
     return;
   }
   
