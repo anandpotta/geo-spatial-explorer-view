@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -51,21 +52,25 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     };
   }, [markerId, isProcessing]);
 
-  // Force popup to open when marker is ready and keep it open
+  // Aggressively force popup to open and stay open
   useEffect(() => {
     if (markerRef.current && !isProcessing) {
-      const timer = setTimeout(() => {
-        try {
-          if (markerRef.current) {
+      const forcePopupOpen = () => {
+        if (markerRef.current) {
+          try {
             markerRef.current.openPopup();
-            console.log('Popup opened for temp marker at position:', position);
+            console.log('Popup force-opened for temp marker at position:', position);
+          } catch (error) {
+            console.error("Error opening popup:", error);
           }
-        } catch (error) {
-          console.error("Error opening popup:", error);
         }
-      }, 200);
-      
-      return () => clearTimeout(timer);
+      };
+
+      // Multiple attempts to ensure popup opens
+      setTimeout(forcePopupOpen, 100);
+      setTimeout(forcePopupOpen, 200);
+      setTimeout(forcePopupOpen, 400);
+      setTimeout(forcePopupOpen, 600);
     }
   }, [position, isProcessing]);
 
@@ -108,20 +113,20 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         element.setAttribute('data-marker-id', markerId);
       }
       
-      // Multiple attempts to ensure popup opens
+      // Immediate popup opening attempts
       setTimeout(() => {
         if (marker) {
           marker.openPopup();
-          console.log('Forcing popup open immediately');
+          console.log('Immediate popup open attempt');
         }
-      }, 100);
+      }, 10);
       
       setTimeout(() => {
         if (marker) {
           marker.openPopup();
-          console.log('Forcing popup open again');
+          console.log('Second popup open attempt');
         }
-      }, 300);
+      }, 50);
     }
   };
 
@@ -140,11 +145,17 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         add: (e) => {
           console.log('Temp marker added to map at:', position);
           const marker = e.target;
-          // Force popup to open when marker is added to map
+          // Immediately force popup to open when marker is added to map
           setTimeout(() => {
             if (marker) {
               marker.openPopup();
               console.log('Popup opened on marker add event');
+            }
+          }, 50);
+          setTimeout(() => {
+            if (marker) {
+              marker.openPopup();
+              console.log('Second popup attempt on marker add');
             }
           }, 150);
         },
@@ -153,12 +164,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         },
         popupclose: (e) => {
           console.log('Popup close event fired - preventing close for temp marker');
-          // Immediately reopen the popup for temp markers
-          setTimeout(() => {
-            if (markerRef.current && !isProcessing) {
-              markerRef.current.openPopup();
-            }
-          }, 50);
+          // For temp markers, immediately reopen the popup
+          if (!isProcessing) {
+            setTimeout(() => {
+              if (markerRef.current) {
+                markerRef.current.openPopup();
+                console.log('Popup reopened after close attempt');
+              }
+            }, 10);
+          }
         }
       }}
     >
@@ -170,6 +184,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         className="marker-popup"
         maxWidth={300}
         minWidth={250}
+        keepInView={true}
       >
         <NewMarkerForm
           markerName={markerName}

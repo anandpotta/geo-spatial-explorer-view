@@ -56,11 +56,28 @@ export function useMarkerHandlers(mapState: any) {
       if (exactPosition) {
         console.log('Setting temp marker at:', exactPosition);
         
-        // Set the temporary marker state immediately
-        mapState.setTempMarker(exactPosition);
-        mapState.setMarkerName('New Location');
+        // Clear any existing temporary marker first
+        mapState.setTempMarker(null);
         
-        console.log('Temp marker state set - popup should appear');
+        // Use setTimeout to ensure state updates properly and popup appears
+        setTimeout(() => {
+          mapState.setTempMarker(exactPosition);
+          mapState.setMarkerName('New Location');
+          
+          console.log('Temp marker state set - popup should appear');
+          
+          // Force the popup to appear by triggering a re-render
+          setTimeout(() => {
+            const inputField = document.querySelector('.leaflet-popup input');
+            if (inputField) {
+              (inputField as HTMLElement).focus();
+              console.log('Input field focused for new marker');
+            } else {
+              console.log('Input field not found - popup may not be visible');
+            }
+          }, 300);
+        }, 50);
+        
       } else {
         console.error('Could not determine marker position from shape:', shape);
         toast.error('Could not create marker: invalid position data');
