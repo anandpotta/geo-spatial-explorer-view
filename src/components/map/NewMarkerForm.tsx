@@ -35,6 +35,7 @@ const NewMarkerForm = ({
     const timer = setTimeout(() => {
       if (inputRef.current && !disabled) {
         inputRef.current.focus();
+        inputRef.current.select();
       }
     }, 100);
     
@@ -45,7 +46,7 @@ const NewMarkerForm = ({
     e.preventDefault();
     e.stopPropagation();
     
-    if (disabled) return;
+    if (disabled || !markerName.trim()) return;
     
     if (isEditing && existingMarkerId && onRename) {
       onRename(existingMarkerId, markerName);
@@ -54,27 +55,43 @@ const NewMarkerForm = ({
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    setMarkerName(e.target.value);
+  };
+
+  const handleTypeButtonClick = (type: 'pin' | 'area' | 'building') => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!disabled) {
+      setMarkerType(type);
+    }
+  };
+
+  const handleFormClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
-    <Popup>
-      <div className="p-2">
+    <Popup closeOnClick={false} autoClose={false}>
+      <div className="p-2" onClick={handleFormClick}>
         <Input 
           ref={inputRef}
           type="text"
           placeholder="Location name"
           value={markerName}
-          onChange={(e) => setMarkerName(e.target.value)}
+          onChange={handleInputChange}
           className="mb-2"
-          autoFocus
           disabled={disabled}
         />
         {!isEditing && (
-          <div className="flex mb-2">
+          <div className="flex mb-2 gap-1">
             <Button
               type="button"
               size="sm"
               variant={markerType === 'pin' ? 'default' : 'outline'}
               className="flex-1"
-              onClick={() => setMarkerType('pin')}
+              onClick={handleTypeButtonClick('pin')}
               disabled={disabled}
             >
               Pin
@@ -84,7 +101,7 @@ const NewMarkerForm = ({
               size="sm"
               variant={markerType === 'area' ? 'default' : 'outline'}
               className="flex-1"
-              onClick={() => setMarkerType('area')}
+              onClick={handleTypeButtonClick('area')}
               disabled={disabled}
             >
               Area
@@ -94,7 +111,7 @@ const NewMarkerForm = ({
               size="sm"
               variant={markerType === 'building' ? 'default' : 'outline'}
               className="flex-1"
-              onClick={() => setMarkerType('building')}
+              onClick={handleTypeButtonClick('building')}
               disabled={disabled}
             >
               Building
