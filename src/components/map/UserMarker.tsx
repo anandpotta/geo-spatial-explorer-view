@@ -1,10 +1,11 @@
 
 import React, { useCallback, useRef, useEffect, useState } from 'react';
-import { Marker, Tooltip } from 'react-leaflet';
+import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
-import MarkerPopup from './MarkerPopup';
-import { isPointWithinAnyDrawnPath, getClosestPointWithinPaths } from '@/utils/path-boundary-utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { MapPin, MapPinOff, Trash2, Edit2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserMarkerProps {
@@ -14,51 +15,10 @@ interface UserMarkerProps {
 
 const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(marker.name);
+  const [isPinned, setIsPinned] = useState(marker.isPinned || false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
-  
-  // Create a stable marker ID for DOM element tracking
-  const markerId = `marker-${marker.id}`;
-  
-  // Create a stable tooltip key that only changes when marker name changes
-  const tooltipKey = `tooltip-${marker.id}-${marker.name}`;
-
-  const handleDragStart = useCallback((e: L.LeafletEvent) => {
-    if (markerRef.current) {
-      const currentPosition = markerRef.current.getLatLng();
-      setOriginalPosition([currentPosition.lat, currentPosition.lng]);
-    }
-  }, []);
-
-  const handleDrag = useCallback((e: L.LeafletEvent) => {
-    if (!markerRef.current || isDeleting) return;
-    
-    try {
-      const updatedMarker = e.target;
-      const newPosition = updatedMarker.getLatLng();
-      const newPoint: [number, number] = [newPosition.lat, newPosition.lng];
-      
-      // Check if the new position is within any drawn path
-      const isWithinPath = isPointWithinAnyDrawnPath(newPoint);
-      
-      if (!isWithinPath) {
-        // If outside all paths, find the closest point within a path
-        const closestPoint = getClosestPointWithinPaths(newPoint);
-        
-        // Set marker to the closest valid position
-        updatedMarker.setLatLng(closestPoint);
-        
-        // Show a brief warning toast
-        toast.warning('Marker movement restricted to drawn path boundaries', {
-          duration: 1000,
-          position: 'bottom-center'
-        });
-      }
-    } catch (error) {
-      console.error('Error during marker drag:', error);
-    }
-  }, [isDeleting]);
 
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     if (!markerRef.current || isDeleting) return;
@@ -66,17 +26,6 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     try {
       const updatedMarker = e.target;
       const newPosition = updatedMarker.getLatLng();
-      const newPoint: [number, number] = [newPosition.lat, newPosition.lng];
-      
-      // Final check - ensure the marker is within a drawn path
-      const isWithinPath = isPointWithinAnyDrawnPath(newPoint);
-      
-      if (!isWithinPath) {
-        // If still outside, revert to original position
-        updatedMarker.setLatLng(originalPosition);
-        toast.error('Marker must stay within drawn path boundaries');
-        return;
-      }
       
       // Update marker position in local storage
       const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
@@ -91,108 +40,164 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       });
       
       localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
-      
-      // Dispatch event to update other components - but prevent loops
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('markersUpdated'));
-      }, 100);
+      window.dispatchEvent(new CustomEvent('markersUpdated'));
       
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
-  }, [marker.id, isDeleting, originalPosition]);
+  }, [marker.id, isDeleting]);
 
-  // Handler for deleting a marker safely
-  const handleDelete = useCallback((id: string) => {
+  const handleRename = () => {
+    if (editName.trim() && editName !== marker.name) {
+      // Update marker name in localStorage
+      const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
+      const updatedMarkers = savedMarkers.map((m: LocationMarker) => 
+        m.id === marker.id ? { ...m, name: editName.trim() } : m
+      );
+      localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
+      window.dispatchEvent(new CustomEvent('markersUpdated'));
+      toast.success('Location renamed successfully');
+    }
+    setIsEditing(false);
+  };
+
+  const handlePinToggle = () => {
+    const updatedPinnedState = !isPinned;
+    setIsPinned(updatedPinnedState);
+    
+    // Update the marker in localStorage
+    const markers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
+    const updatedMarkers = markers.map((m: LocationMarker) => 
+      m.id === marker.id ? { ...m, isPinned: updatedPinnedState } : m
+    );
+    localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
+    window.dispatchEvent(new CustomEvent('markersUpdated'));
+    
+    toast.success(updatedPinnedState ? 'Location pinned' : 'Location unpinned');
+  };
+
+  const handleDelete = useCallback(() => {
     if (isDeleting) return;
     
     setIsDeleting(true);
     
-    // First close any open popups or tooltips
     if (markerRef.current) {
       try {
-        markerRef.current.closeTooltip();
         markerRef.current.closePopup();
       } catch (e) {
         console.error('Error cleaning up marker before deletion:', e);
       }
     }
     
-    // Then delete the marker
-    onDelete(id);
-    
-    // Reset isDeleting state after a short delay
-    setTimeout(() => {
-      setIsDeleting(false);
-    }, 100);
-  }, [onDelete, isDeleting]);
+    onDelete(marker.id);
+    toast.success('Location deleted');
+  }, [onDelete, marker.id, isDeleting]);
 
-  // Set up marker references and handle cleanup when unmounting
+  // Cleanup on unmount
   useEffect(() => {
-    // Cleanup function for when the marker is unmounted
     return () => {
       if (markerRef.current) {
         try {
-          // First close tooltips and popups
-          markerRef.current.closeTooltip();
           markerRef.current.closePopup();
-          
-          // Clean up any leftover DOM elements that might be causing duplicates
-          const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
-          duplicateIcons.forEach(icon => {
-            if (icon.parentNode) {
-              icon.parentNode.removeChild(icon);
-            }
-          });
         } catch (error) {
           console.error('Error cleaning up marker:', error);
         }
       }
     };
-  }, [markerId]);
+  }, []);
 
-  // Set up marker references
-  const setMarkerInstance = (marker: L.Marker) => {
-    if (marker && !markerRef.current) {
-      markerRef.current = marker;
-      
-      // Add a custom data attribute to help identify this marker's DOM elements
-      const element = marker.getElement();
-      if (element) {
-        element.setAttribute('data-marker-id', markerId);
-      }
-      
-      setIsReady(true);
-    }
-  };
-  
   return (
     <Marker 
       position={marker.position} 
-      key={`marker-${marker.id}`}
       draggable={true}
-      ref={setMarkerInstance}
+      ref={(markerInstance) => {
+        markerRef.current = markerInstance;
+      }}
       eventHandlers={{ 
-        dragstart: handleDragStart,
-        drag: handleDrag,
         dragend: handleDragEnd 
       }}
-      attribution={`marker-${marker.id}`}
     >
-      <MarkerPopup 
-        marker={marker} 
-        onDelete={() => handleDelete(marker.id)} 
-      />
-
-      <Tooltip 
-        key={tooltipKey}
-        direction="top" 
-        offset={[0, -10]} 
-        opacity={0.9}
-        permanent={true}
-      >
-        <span className="font-medium">{marker.name}</span>
-      </Tooltip>
+      <Popup closeOnClick={false} autoClose={false} maxWidth={300} minWidth={250}>
+        <div className="p-2" onClick={(e) => e.stopPropagation()}>
+          {isEditing ? (
+            <div className="space-y-3">
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Location name"
+                className="text-sm"
+                autoFocus
+              />
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  onClick={handleRename}
+                  disabled={!editName.trim()}
+                  className="flex-1"
+                >
+                  <Save className="h-3 w-3 mr-1" />
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditName(marker.name);
+                  }}
+                  className="flex-1"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm">{marker.name}</h3>
+              <div className="grid grid-cols-2 gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1"
+                >
+                  <Edit2 size={12} />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePinToggle}
+                  className="flex items-center gap-1"
+                >
+                  {isPinned ? (
+                    <>
+                      <MapPinOff size={12} />
+                      Unpin
+                    </>
+                  ) : (
+                    <>
+                      <MapPin size={12} />
+                      Pin
+                    </>
+                  )}
+                </Button>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDelete}
+                className="w-full flex items-center gap-1"
+                disabled={isDeleting}
+              >
+                <Trash2 size={12} />
+                Delete Location
+              </Button>
+            </div>
+          )}
+        </div>
+      </Popup>
     </Marker>
   );
 };
