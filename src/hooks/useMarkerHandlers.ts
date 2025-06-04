@@ -36,6 +36,11 @@ export function useMarkerHandlers(mapState: any) {
     if (shape.type === 'marker') {
       console.log('Processing marker creation with position:', shape.position);
       
+      // Remove the actual marker from the map since we want to show it as temp marker
+      if (shape.layer && shape.layer.remove) {
+        shape.layer.remove();
+      }
+      
       // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
         const exactPosition: [number, number] = [
