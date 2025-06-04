@@ -8,31 +8,32 @@ import { getConnectionStatus } from '../api-service';
 // Global flags to prevent event loops
 let isUpdatingMarkers = false;
 let lastEventTime = 0;
+let eventDispatchTimer: NodeJS.Timeout | null = null;
 
-// Debounced event dispatcher to prevent rapid successive events
-const dispatchMarkersEvent = (() => {
-  let timeoutId: NodeJS.Timeout;
+// Completely remove automatic event dispatching to prevent loops
+const dispatchMarkersEvent = () => {
+  // Only dispatch if we're not already updating and enough time has passed
+  const now = Date.now();
+  if (isUpdatingMarkers || (now - lastEventTime < 2000)) {
+    return;
+  }
   
-  return () => {
-    const now = Date.now();
-    
-    // Prevent dispatching if we just dispatched an event recently
-    if (now - lastEventTime < 100) {
-      return;
+  // Clear any existing timer
+  if (eventDispatchTimer) {
+    clearTimeout(eventDispatchTimer);
+    eventDispatchTimer = null;
+  }
+  
+  // Set a timer with a much longer delay
+  eventDispatchTimer = setTimeout(() => {
+    if (!isUpdatingMarkers) {
+      lastEventTime = Date.now();
+      // Only dispatch to specific listeners, not storage
+      window.dispatchEvent(new CustomEvent('markersUpdated', { detail: { source: 'storage' } }));
     }
-    
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    
-    timeoutId = setTimeout(() => {
-      if (!isUpdatingMarkers) {
-        lastEventTime = Date.now();
-        window.dispatchEvent(new Event('markersUpdated'));
-      }
-    }, 50);
-  };
-})();
+    eventDispatchTimer = null;
+  }, 1000);
+};
 
 export function getSavedMarkers(): LocationMarker[] {
   const currentUser = getCurrentUser();
@@ -115,11 +116,12 @@ export function saveMarker(marker: LocationMarker): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(Array.from(uniqueMarkers.values())));
   
-  // Reset updating flag and dispatch event
+  // Reset updating flag after a longer delay
   setTimeout(() => {
     isUpdatingMarkers = false;
+    // Only dispatch event after saving is complete
     dispatchMarkersEvent();
-  }, 100);
+  }, 500);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -163,11 +165,11 @@ export function renameMarker(id: string, newName: string): void {
   
   localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
   
-  // Reset updating flag and dispatch event
+  // Reset updating flag after a longer delay
   setTimeout(() => {
     isUpdatingMarkers = false;
     dispatchMarkersEvent();
-  }, 100);
+  }, 500);
   
   // Only attempt to sync if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();
@@ -199,11 +201,11 @@ export function deleteMarker(id: string): void {
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
   
-  // Reset updating flag and dispatch event
+  // Reset updating flag after a longer delay
   setTimeout(() => {
     isUpdatingMarkers = false;
     dispatchMarkersEvent();
-  }, 100);
+  }, 500);
   
   // Only attempt to sync delete if we're online
   const { isOnline, isBackendAvailable } = getConnectionStatus();

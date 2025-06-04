@@ -1,6 +1,10 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
+
+// Global state to prevent multiple concurrent loads
+let isGloballyLoading = false;
+let lastGlobalLoad = 0;
 
 export const useDropdownLocations = () => {
   const [markers, setMarkers] = useState<LocationMarker[]>([]);
@@ -10,69 +14,55 @@ export const useDropdownLocations = () => {
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const isLoadingRef = useRef(false);
   const lastUpdateRef = useRef<number>(0);
+  const hasInitialLoadRef = useRef(false);
   
-  const loadMarkers = () => {
-    if (isLoadingRef.current) return;
-    
+  const loadMarkers = useCallback(() => {
     const now = Date.now();
-    // Prevent loading more than once every 200ms
-    if (now - lastUpdateRef.current < 200) {
+    
+    // Prevent rapid successive loads globally
+    if (isGloballyLoading || (now - lastGlobalLoad < 1000)) {
+      return;
+    }
+    
+    // Prevent rapid successive loads locally
+    if (isLoadingRef.current || (now - lastUpdateRef.current < 1000)) {
       return;
     }
     
     isLoadingRef.current = true;
+    isGloballyLoading = true;
     lastUpdateRef.current = now;
+    lastGlobalLoad = now;
     
     try {
       const savedMarkers = getSavedMarkers();
       setMarkers(savedMarkers);
       const pinned = savedMarkers.filter(marker => marker.isPinned === true);
       setPinnedMarkers(pinned);
+      hasInitialLoadRef.current = true;
     } catch (error) {
       console.error('Error loading markers:', error);
     } finally {
-      // Reset loading flag after a delay to prevent rapid successive calls
+      // Reset loading flags after a longer delay
       setTimeout(() => {
         isLoadingRef.current = false;
-      }, 150);
+        isGloballyLoading = false;
+      }, 500);
     }
-  };
-
-  useEffect(() => {
-    // Initial load
-    loadMarkers();
-    
-    // Create a debounced handler to prevent rapid successive calls
-    let debounceTimer: NodeJS.Timeout;
-    
-    const handleMarkersUpdated = () => {
-      if (isLoadingRef.current) return;
-      
-      // Clear any existing timer
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-      
-      // Set a new timer to debounce the update
-      debounceTimer = setTimeout(() => {
-        if (!isLoadingRef.current) {
-          loadMarkers();
-        }
-      }, 100);
-    };
-    
-    // Only listen to markersUpdated event - no storage events to prevent loops
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
-    
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-    };
   }, []);
 
-  const cleanupMarkerReferences = () => {
+  useEffect(() => {
+    // Only load once on initial mount
+    if (!hasInitialLoadRef.current) {
+      loadMarkers();
+    }
+    
+    // Remove all event listeners to prevent loops
+    // The markers will be updated through the parent component's state management
+    
+  }, []); // Empty dependency array - only run on mount
+
+  const cleanupMarkerReferences = useCallback(() => {
     // Force cleanup of any stale elements that might be causing issues
     const staleDialogs = document.querySelectorAll('[role="dialog"][aria-hidden="true"]');
     staleDialogs.forEach(dialog => {
@@ -88,7 +78,7 @@ export const useDropdownLocations = () => {
     // Ensure body is not restricted
     document.body.style.pointerEvents = '';
     document.body.removeAttribute('aria-hidden');
-  };
+  }, []);
 
   return {
     markers,

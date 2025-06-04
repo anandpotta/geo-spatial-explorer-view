@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
@@ -39,33 +39,31 @@ export function useMapState(selectedLocation?: Location) {
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
     
-    // Set up event listener for markers updates with proper debouncing
-    let isHandlingEvent = false;
+    // Simplified event listener with much longer debounce
     let debounceTimer: NodeJS.Timeout;
     
-    const handleMarkersUpdated = () => {
-      if (isHandlingEvent || isProcessingMarker) return;
+    const handleMarkersUpdated = (event: Event) => {
+      // Ignore events from storage operations to prevent loops
+      if (event instanceof CustomEvent && event.detail?.source === 'storage') {
+        return;
+      }
+      
+      if (isProcessingMarker) return;
       
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
       
       debounceTimer = setTimeout(() => {
-        if (!isHandlingEvent && !isProcessingMarker) {
-          isHandlingEvent = true;
-          
+        if (!isProcessingMarker) {
           try {
             const updatedMarkers = getSavedMarkers();
             setMarkers(updatedMarkers);
           } catch (error) {
             console.error('Error updating markers:', error);
-          } finally {
-            setTimeout(() => {
-              isHandlingEvent = false;
-            }, 100);
           }
         }
-      }, 150);
+      }, 1000); // Much longer debounce
     };
     
     // Only listen to markersUpdated to prevent circular events
@@ -78,7 +76,7 @@ export function useMapState(selectedLocation?: Location) {
       }
     };
     
-  }, [isAuthenticated, currentUser]);
+  }, [isAuthenticated, currentUser, isProcessingMarker]);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -89,7 +87,7 @@ export function useMapState(selectedLocation?: Location) {
     };
   }, []);
 
-  const handleSaveMarker = () => {
+  const handleSaveMarker = useCallback(() => {
     if (!isAuthenticated || !currentUser) {
       toast.error('Please log in to save locations');
       return;
@@ -143,11 +141,11 @@ export function useMapState(selectedLocation?: Location) {
       console.error('Error saving marker:', error);
       toast.error('Failed to save location');
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 300);
+      setTimeout(() => setIsProcessingMarker(false), 1000);
     }
-  };
+  }, [isAuthenticated, currentUser, tempMarker, markerName, isProcessingMarker, markerType, currentDrawing]);
 
-  const handleDeleteMarker = (id: string) => {
+  const handleDeleteMarker = useCallback((id: string) => {
     if (!isAuthenticated || isProcessingMarker) {
       toast.error('Please log in to manage locations');
       return;
@@ -162,11 +160,11 @@ export function useMapState(selectedLocation?: Location) {
       console.error('Error deleting marker:', error);
       toast.error('Failed to remove location');
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 300);
+      setTimeout(() => setIsProcessingMarker(false), 1000);
     }
-  };
+  }, [isAuthenticated, isProcessingMarker]);
 
-  const handleRenameMarker = (id: string, newName: string) => {
+  const handleRenameMarker = useCallback((id: string, newName: string) => {
     if (!isAuthenticated || isProcessingMarker) {
       toast.error('Please log in to manage locations');
       return;
@@ -180,14 +178,14 @@ export function useMapState(selectedLocation?: Location) {
       console.error('Error renaming marker:', error);
       toast.error('Failed to rename location');
     } finally {
-      setTimeout(() => setIsProcessingMarker(false), 300);
+      setTimeout(() => setIsProcessingMarker(false), 1000);
     }
-  };
+  }, [isAuthenticated, isProcessingMarker]);
 
-  const handleRegionClick = (drawing: DrawingData) => {
+  const handleRegionClick = useCallback((drawing: DrawingData) => {
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
-  };
+  }, []);
 
   return {
     position,
