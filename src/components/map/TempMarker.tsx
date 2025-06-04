@@ -26,6 +26,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   const markerRef = useRef<L.Marker | null>(null);
   const [markerReady, setMarkerReady] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [popupOpen, setPopupOpen] = useState(false);
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
 
   // Handle cleanup when component unmounts or marker is being processed
@@ -52,6 +53,23 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
     };
   }, [markerId, isProcessing]);
+
+  // Auto-open popup when marker is ready
+  useEffect(() => {
+    if (markerRef.current && markerReady && !popupOpen && !isProcessing) {
+      setTimeout(() => {
+        try {
+          if (markerRef.current && isVisible) {
+            markerRef.current.openPopup();
+            setPopupOpen(true);
+            console.log('Popup opened for temp marker');
+          }
+        } catch (error) {
+          console.error("Error opening popup:", error);
+        }
+      }, 200);
+    }
+  }, [markerReady, popupOpen, isProcessing, isVisible]);
 
   // Update marker position in parent when dragged
   const handleDragEnd = (e: L.LeafletEvent) => {
@@ -112,26 +130,34 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       eventHandlers={{
         dragend: handleDragEnd,
         add: () => {
-          setTimeout(() => {
-            try {
-              if (markerRef.current && isVisible) {
-                markerRef.current.openPopup();
-              }
-            } catch (error) {
-              console.error("Error opening popup:", error);
-            }
-          }, 100);
+          console.log('Temp marker added to map');
+          setMarkerReady(true);
+        },
+        popupopen: () => {
+          console.log('Popup opened');
+          setPopupOpen(true);
+        },
+        popupclose: () => {
+          console.log('Popup closed');
+          setPopupOpen(false);
         }
       }}
     >
-      <NewMarkerForm
-        markerName={markerName}
-        setMarkerName={setMarkerName}
-        markerType={markerType}
-        setMarkerType={setMarkerType}
-        onSave={handleSave}
-        disabled={isProcessing}
-      />
+      <Popup 
+        closeOnClick={false} 
+        autoClose={false}
+        closeButton={false}
+        autoPan={true}
+      >
+        <NewMarkerForm
+          markerName={markerName}
+          setMarkerName={setMarkerName}
+          markerType={markerType}
+          setMarkerType={setMarkerType}
+          onSave={handleSave}
+          disabled={isProcessing}
+        />
+      </Popup>
       <Tooltip
         direction="top"
         offset={[0, -10]}
