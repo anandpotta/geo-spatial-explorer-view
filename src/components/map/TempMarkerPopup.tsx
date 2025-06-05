@@ -10,8 +10,6 @@ interface TempMarkerPopupProps {
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
   onSave: () => void;
   isProcessing: boolean;
-  isPopupOpen: boolean;
-  setIsPopupOpen: (open: boolean) => void;
 }
 
 const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
@@ -20,14 +18,19 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
   markerType,
   setMarkerType,
   onSave,
-  isProcessing,
-  isPopupOpen,
-  setIsPopupOpen
+  isProcessing
 }) => {
-  const handleSave = () => {
-    if (isProcessing) return;
-    setIsPopupOpen(false);
+  const handleSave = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (isProcessing || !markerName.trim()) return;
     onSave();
+  };
+
+  const handlePopupClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   return (
@@ -36,29 +39,20 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       autoClose={false}
       closeButton={true}
       autoPan={true}
-      className="marker-popup"
       maxWidth={300}
       minWidth={250}
       keepInView={true}
-      eventHandlers={{
-        popupopen: () => {
-          console.log('Popup opened');
-          setIsPopupOpen(true);
-        },
-        popupclose: () => {
-          console.log('Popup closed');
-          setIsPopupOpen(false);
-        }
-      }}
     >
-      <NewMarkerForm
-        markerName={markerName}
-        setMarkerName={setMarkerName}
-        markerType={markerType}
-        setMarkerType={setMarkerType}
-        onSave={handleSave}
-        disabled={isProcessing}
-      />
+      <div onClick={handlePopupClick}>
+        <NewMarkerForm
+          markerName={markerName}
+          setMarkerName={setMarkerName}
+          markerType={markerType}
+          setMarkerType={setMarkerType}
+          onSave={handleSave}
+          disabled={isProcessing}
+        />
+      </div>
     </Popup>
   );
 };

@@ -32,18 +32,75 @@ const UserMarkerPopup = ({
   onPinToggle,
   onDelete
 }: UserMarkerPopupProps) => {
-  const handleSave = () => {
-    onRename(editName);
+  const handleSave = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (editName.trim()) {
+      onRename(editName);
+    }
+  };
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onCancelEditing();
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onStartEditing();
+  };
+
+  const handlePin = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onPinToggle();
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete();
+  };
+
+  const handlePopupClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    setEditName(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && editName.trim()) {
+      e.preventDefault();
+      e.stopPropagation();
+      onRename(editName);
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      onCancelEditing();
+    }
   };
 
   return (
-    <Popup closeOnClick={false} autoClose={false} maxWidth={300} minWidth={250}>
-      <div className="p-2" onClick={(e) => e.stopPropagation()}>
+    <Popup 
+      closeOnClick={false} 
+      autoClose={false} 
+      maxWidth={300} 
+      minWidth={250}
+      keepInView={true}
+    >
+      <div className="p-2" onClick={handlePopupClick}>
         {isEditing ? (
           <div className="space-y-3">
             <Input
               value={editName}
-              onChange={(e) => setEditName(e.target.value)}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               placeholder="Location name"
               className="text-sm"
               autoFocus
@@ -61,7 +118,7 @@ const UserMarkerPopup = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={onCancelEditing}
+                onClick={handleCancel}
                 className="flex-1"
               >
                 <X className="h-3 w-3 mr-1" />
@@ -76,7 +133,7 @@ const UserMarkerPopup = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onStartEditing}
+                onClick={handleEdit}
                 className="flex items-center gap-1"
               >
                 <Edit2 size={12} />
@@ -85,7 +142,7 @@ const UserMarkerPopup = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onPinToggle}
+                onClick={handlePin}
                 className="flex items-center gap-1"
               >
                 {isPinned ? (
@@ -104,7 +161,7 @@ const UserMarkerPopup = ({
             <Button
               variant="destructive"
               size="sm"
-              onClick={onDelete}
+              onClick={handleDelete}
               className="w-full flex items-center gap-1"
               disabled={isDeleting}
             >

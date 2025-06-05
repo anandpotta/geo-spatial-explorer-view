@@ -9,7 +9,7 @@ interface NewMarkerFormProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
+  onSave: (e?: React.MouseEvent) => void;
   isEditing?: boolean;
   existingMarkerId?: string;
   onRename?: (id: string, newName: string) => void;
@@ -30,15 +30,16 @@ const NewMarkerForm = ({
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
-    // Focus on input when component mounts
-    const timer = setTimeout(() => {
-      if (inputRef.current && !disabled) {
-        inputRef.current.focus();
-        inputRef.current.select();
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
+    if (!disabled) {
+      const timer = setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
   }, [disabled]);
 
   const handleSaveButtonClick = (e: React.MouseEvent) => {
@@ -50,7 +51,7 @@ const NewMarkerForm = ({
     if (isEditing && existingMarkerId && onRename) {
       onRename(existingMarkerId, markerName);
     } else {
-      onSave();
+      onSave(e);
     }
   };
 
@@ -71,24 +72,38 @@ const NewMarkerForm = ({
     e.stopPropagation();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && markerName.trim() && !disabled) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isEditing && existingMarkerId && onRename) {
+        onRename(existingMarkerId, markerName);
+      } else {
+        onSave();
+      }
+    }
+  };
+
   return (
-    <div className="p-2" onClick={handleFormClick}>
+    <div className="p-3" onClick={handleFormClick}>
       <Input 
         ref={inputRef}
         type="text"
-        placeholder="Location name"
+        placeholder="Enter location name"
         value={markerName}
         onChange={handleInputChange}
-        className="mb-2"
+        onKeyDown={handleKeyDown}
+        className="mb-3"
         disabled={disabled}
+        autoFocus
       />
       {!isEditing && (
-        <div className="flex mb-2 gap-1">
+        <div className="flex mb-3 gap-1">
           <Button
             type="button"
             size="sm"
             variant={markerType === 'pin' ? 'default' : 'outline'}
-            className="flex-1"
+            className="flex-1 text-xs"
             onClick={handleTypeButtonClick('pin')}
             disabled={disabled}
           >
@@ -98,7 +113,7 @@ const NewMarkerForm = ({
             type="button"
             size="sm"
             variant={markerType === 'area' ? 'default' : 'outline'}
-            className="flex-1"
+            className="flex-1 text-xs"
             onClick={handleTypeButtonClick('area')}
             disabled={disabled}
           >
@@ -108,7 +123,7 @@ const NewMarkerForm = ({
             type="button"
             size="sm"
             variant={markerType === 'building' ? 'default' : 'outline'}
-            className="flex-1"
+            className="flex-1 text-xs"
             onClick={handleTypeButtonClick('building')}
             disabled={disabled}
           >
@@ -120,6 +135,7 @@ const NewMarkerForm = ({
         onClick={handleSaveButtonClick}
         disabled={!markerName.trim() || disabled}
         className="w-full"
+        size="sm"
       >
         {isEditing ? (
           <>

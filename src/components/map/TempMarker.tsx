@@ -1,10 +1,8 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import TempMarkerPopup from './TempMarkerPopup';
-import { useTempMarkerEffects } from '@/hooks/useTempMarkerEffects';
-import { useTempMarkerHandlers } from '@/hooks/useTempMarkerHandlers';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -26,16 +24,41 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  const { handleDragEnd, handleMarkerAdd } = useTempMarkerHandlers({ isProcessing });
+  const handleDragEnd = (e: L.LeafletEvent) => {
+    if (isProcessing) return;
+    
+    const marker = e.target;
+    if (marker && marker.getLatLng) {
+      const newPosition = marker.getLatLng();
+      if (window.tempMarkerPositionUpdate) {
+        window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
+      }
+    }
+  };
 
-  useTempMarkerEffects({
-    markerRef,
-    position,
-    isProcessing,
-    setIsPopupOpen
-  });
+  // Force popup to open when marker is created
+  useEffect(() => {
+    if (markerRef.current && !isProcessing) {
+      const timer = setTimeout(() => {
+        if (markerRef.current) {
+          markerRef.current.openPopup();
+          console.log('Temp marker popup opened');
+          
+          // Focus on input after popup opens
+          setTimeout(() => {
+            const inputField = document.querySelector('.leaflet-popup input') as HTMLInputElement;
+            if (inputField) {
+              inputField.focus();
+              inputField.select();
+            }
+          }, 200);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [position, isProcessing]);
 
   if (isProcessing) {
     return null;
@@ -50,7 +73,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd,
-        add: handleMarkerAdd(markerRef, setIsPopupOpen)
+        add: () => {
+          console.log('Temp marker added to map');
+          setTimeout(() => {
+            if (markerRef.current) {
+              markerRef.current.openPopup();
+            }
+          }, 50);
+        }
       }}
     >
       <TempMarkerPopup
@@ -60,8 +90,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         setMarkerType={setMarkerType}
         onSave={onSave}
         isProcessing={isProcessing}
-        isPopupOpen={isPopupOpen}
-        setIsPopupOpen={setIsPopupOpen}
       />
     </Marker>
   );

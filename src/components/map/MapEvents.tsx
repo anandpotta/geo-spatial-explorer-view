@@ -22,16 +22,17 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (target && (
         target.closest('.leaflet-popup') ||
         target.closest('.leaflet-popup-content') ||
-        target.closest('.leaflet-popup-content-wrapper')
+        target.closest('.leaflet-popup-content-wrapper') ||
+        target.closest('button') ||
+        target.closest('input')
       )) {
-        console.log('Click on popup allowed');
+        console.log('Click on popup or interactive element allowed');
         return;
       }
       
       // Allow clicks on marker icons to show popups, but don't create new markers
       if (target && target.closest('.leaflet-marker-icon')) {
         console.log('Click on marker icon - allowing popup to show');
-        // Don't call onMapClick for marker icons, let the marker handle its own popup
         return;
       }
       
