@@ -16,24 +16,31 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
-      // Ignore clicks on markers, popups, or SVG paths
-      if (
-        e.originalEvent.target &&
-        ((e.originalEvent.target as HTMLElement).closest('.leaflet-marker-icon') ||
-         (e.originalEvent.target as HTMLElement).closest('.leaflet-popup') ||
-         (e.originalEvent.target as HTMLElement).closest('path') ||
-         (e.originalEvent.target as HTMLElement).tagName === 'path' ||
-         (e.originalEvent.target as HTMLElement).tagName === 'svg' ||
-         // Also ignore clicks on upload buttons or image controls
-         (e.originalEvent.target as HTMLElement).closest('.upload-button-container') ||
-         (e.originalEvent.target as HTMLElement).closest('.upload-button-wrapper') ||
-         (e.originalEvent.target as HTMLElement).closest('.image-controls-container') ||
-         (e.originalEvent.target as HTMLElement).closest('.image-controls-wrapper'))
-      ) {
-        console.log('Click on marker, popup, path or control ignored');
-        return;
+      // Check if this is a click on a leaflet control or popup that should be ignored
+      if (e.originalEvent && e.originalEvent.target) {
+        const target = e.originalEvent.target as HTMLElement;
+        
+        // Only ignore clicks on specific elements that should not create markers
+        if (
+          // Ignore clicks on leaflet popups (but allow them to function)
+          target.closest('.leaflet-popup') ||
+          // Ignore clicks on leaflet controls
+          target.closest('.leaflet-control') ||
+          // Ignore clicks on specific UI controls
+          target.closest('.upload-button-container') ||
+          target.closest('.upload-button-wrapper') ||
+          target.closest('.image-controls-container') ||
+          target.closest('.image-controls-wrapper')
+        ) {
+          console.log('Click on control or UI element ignored');
+          return;
+        }
+        
+        // Allow clicks on markers and paths to go through normally
+        // Remove the aggressive filtering that was preventing marker interactions
       }
       
+      // Allow the map click to proceed for marker creation
       onMapClick(e.latlng);
     }
   });
