@@ -151,8 +151,8 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     // Prevent popup from closing unless it's a save operation
     if (!isProcessing && markerRef.current) {
       try {
-        // Use the marker's map reference instead of e.target
-        const map = markerRef.current.getMap?.() || (markerRef.current as any)._map;
+        // Use the marker's _map property (standard Leaflet property)
+        const map = (markerRef.current as any)._map;
         if (map && typeof map.hasLayer === 'function') {
           e.popup.openOn(map);
         } else {
