@@ -31,17 +31,17 @@ const NewMarkerForm = ({
   
   useEffect(() => {
     if (!disabled) {
-      const timer = setTimeout(() => {
+      const focusTimer = setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
           inputRef.current.select();
-          console.log('Input field focused');
+          console.log('Input field focused and selected');
         }
-      }, 100);
+      }, 200);
       
-      return () => clearTimeout(timer);
+      return () => clearTimeout(focusTimer);
     }
-  }, [disabled]);
+  }, [disabled, markerName]);
 
   const handleSaveButtonClick = (e: React.MouseEvent) => {
     console.log('Save button clicked in form');
@@ -95,57 +95,65 @@ const NewMarkerForm = ({
 
   return (
     <div 
-      className="p-3" 
+      className="p-4" 
       onClick={handleFormClick}
       onMouseDown={(e) => e.stopPropagation()}
       style={{ pointerEvents: 'all' }}
     >
-      <Input 
-        ref={inputRef}
-        type="text"
-        placeholder="Enter location name"
-        value={markerName}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        className="mb-3"
-        disabled={disabled}
-        autoFocus
-        onClick={(e) => e.stopPropagation()}
-      />
+      <div className="mb-3">
+        <label className="block text-sm font-medium mb-1">Location Name</label>
+        <Input 
+          ref={inputRef}
+          type="text"
+          placeholder="Enter location name"
+          value={markerName}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          className="w-full"
+          disabled={disabled}
+          autoFocus
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+      
       {!isEditing && (
-        <div className="flex mb-3 gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'pin' ? 'default' : 'outline'}
-            className="flex-1 text-xs"
-            onClick={handleTypeButtonClick('pin')}
-            disabled={disabled}
-          >
-            Pin
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'area' ? 'default' : 'outline'}
-            className="flex-1 text-xs"
-            onClick={handleTypeButtonClick('area')}
-            disabled={disabled}
-          >
-            Area
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={markerType === 'building' ? 'default' : 'outline'}
-            className="flex-1 text-xs"
-            onClick={handleTypeButtonClick('building')}
-            disabled={disabled}
-          >
-            Building
-          </Button>
+        <div className="mb-3">
+          <label className="block text-sm font-medium mb-2">Location Type</label>
+          <div className="flex gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'pin' ? 'default' : 'outline'}
+              className="flex-1 text-xs"
+              onClick={handleTypeButtonClick('pin')}
+              disabled={disabled}
+            >
+              Pin
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'area' ? 'default' : 'outline'}
+              className="flex-1 text-xs"
+              onClick={handleTypeButtonClick('area')}
+              disabled={disabled}
+            >
+              Area
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={markerType === 'building' ? 'default' : 'outline'}
+              className="flex-1 text-xs"
+              onClick={handleTypeButtonClick('building')}
+              disabled={disabled}
+            >
+              Building
+            </Button>
+          </div>
         </div>
       )}
+      
       <Button 
         onClick={handleSaveButtonClick}
         disabled={!markerName.trim() || disabled}

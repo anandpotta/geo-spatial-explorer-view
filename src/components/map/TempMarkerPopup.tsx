@@ -44,10 +44,10 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
     <Popup 
       closeOnClick={false} 
       autoClose={false}
-      closeButton={true}
+      closeButton={false}
       autoPan={true}
-      maxWidth={300}
-      minWidth={250}
+      maxWidth={320}
+      minWidth={280}
       keepInView={true}
       interactive={true}
       className="temp-marker-popup"
@@ -56,8 +56,8 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
         onClick={handlePopupClick}
         onMouseDown={handlePopupMouseDown}
         style={{ 
-          minWidth: '250px',
-          padding: '4px',
+          minWidth: '280px',
+          padding: '8px',
           pointerEvents: 'all'
         }}
       >
