@@ -1,5 +1,5 @@
 
-import { forwardRef, useImperativeHandle, useEffect } from 'react';
+import { forwardRef, useImperativeHandle, useEffect, useCallback, useRef } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
@@ -36,6 +36,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
 }: DrawingControlsProps, ref) => {
   const { drawings: savedDrawings } = useDrawings();
   const { isAuthenticated, currentUser, checkAuthBeforeAction } = useDrawingAuth();
+  const initializationRef = useRef(false);
   
   const {
     featureGroupRef,
@@ -51,18 +52,25 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   
   const { handleFileChange, fileInputRef: uploadFileInputRef } = useFileUploadHandling({ onUploadToDrawing });
   
-  // Track SVG paths
+  // Stable callback for paths updated
+  const handlePathsUpdated = useCallback((paths: string[]) => {
+    if (onPathsUpdated && mountedRef.current) {
+      onPathsUpdated(paths);
+    }
+  }, [onPathsUpdated, mountedRef]);
+  
+  // Track SVG paths with stable callback
   const { svgPaths } = useSvgPathTracking({
     isInitialized,
     drawToolsRef,
     mountedRef,
-    onPathsUpdated
+    onPathsUpdated: handlePathsUpdated
   });
   
-  // Handle shape creation with authentication check
-  const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, onPathsUpdated, svgPaths);
+  // Handle shape creation with stable callback
+  const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, handlePathsUpdated, svgPaths);
   
-  // Handle clear all operation with authentication check
+  // Handle clear all operation with stable callback
   const { handleClearAllWrapper } = useClearAllOperation(onClearAll);
   
   useImperativeHandle(ref, () => ({
@@ -80,30 +88,37 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       }
       return [];
     }
-  }));
+  }), [checkAuthBeforeAction, openFileUploadDialog, featureGroupRef, drawToolsRef]);
   
-  // Effect for initialization
+  // Stable initialization effect - only run once
   useEffect(() => {
-    if (featureGroupRef.current) {
+    if (featureGroupRef.current && !initializationRef.current) {
+      initializationRef.current = true;
       setIsInitialized(true);
     }
     
     return () => {
       mountedRef.current = false;
     };
-  }, []);
+  }, [featureGroupRef.current, setIsInitialized, mountedRef]);
 
-  // Handle user changes - reload drawings when user changes
+  // Handle user changes - only when user actually changes
   useEffect(() => {
-    if (isInitialized && currentUser && drawToolsRef.current) {
-      // When user logs in or changes, we need to refresh the map
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('markersUpdated'));
-      window.dispatchEvent(new Event('drawingsUpdated'));
+    if (isInitialized && currentUser && drawToolsRef.current && initializationRef.current) {
+      // Use timeout to prevent immediate re-render
+      const timeoutId = setTimeout(() => {
+        if (mountedRef.current) {
+          window.dispatchEvent(new Event('storage'));
+          window.dispatchEvent(new Event('markersUpdated'));
+          window.dispatchEvent(new Event('drawingsUpdated'));
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [currentUser, isInitialized]);
+  }, [currentUser?.id, isInitialized]); // Only depend on user ID, not the full user object
 
-  const handleRemoveShape = (drawingId: string) => {
+  const handleRemoveShape = useCallback((drawingId: string) => {
     if (!checkAuthBeforeAction('remove shapes')) {
       return;
     }
@@ -111,13 +126,13 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     if (onRemoveShape) {
       onRemoveShape(drawingId);
     }
-  };
+  }, [checkAuthBeforeAction, onRemoveShape]);
 
-  const handleDrawingClick = (drawing: DrawingData) => {
+  const handleDrawingClick = useCallback((drawing: DrawingData) => {
     if (onRegionClick) {
       onRegionClick(drawing);
     }
-  };
+  }, [onRegionClick]);
 
   return (
     <>
