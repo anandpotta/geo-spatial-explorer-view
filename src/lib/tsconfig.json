@@ -13,14 +13,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": false,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "jsx": "react-jsx",
-    "outDir": "./dist",
-    "rootDir": "./",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "jsx": "react-jsx"
   },
   "include": [
     "**/*.ts",
@@ -31,7 +24,7 @@
     "dist",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "**/*.spec.ts",
+    "**/*.spec.ts", 
     "**/*.spec.tsx"
   ]
 }
