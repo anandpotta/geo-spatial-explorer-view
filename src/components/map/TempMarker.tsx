@@ -24,8 +24,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const [popupOpen, setPopupOpen] = useState(false);
-  const [isMarkerReady, setIsMarkerReady] = useState(false);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   const handleDragEnd = (e: L.LeafletEvent) => {
     if (isProcessing) return;
@@ -39,55 +38,37 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   };
 
-  // Aggressive popup opening strategy
-  const forceOpenPopup = () => {
-    if (!markerRef.current || isProcessing) return;
-    
-    try {
-      console.log('TempMarker: Attempting to force open popup');
-      markerRef.current.openPopup();
-      setPopupOpen(true);
-      
-      // Additional attempt to focus input
-      setTimeout(() => {
-        const inputField = document.querySelector('.temp-marker-popup input') as HTMLInputElement;
-        if (inputField) {
-          inputField.focus();
-          inputField.select();
-          console.log('TempMarker: Input focused and selected');
-        } else {
-          console.log('TempMarker: Input field not found');
-        }
-      }, 200);
-      
-    } catch (e) {
-      console.error('TempMarker: Error opening popup:', e);
-    }
-  };
-
-  // Multiple attempts to open popup when marker is created
+  // Force popup open immediately when marker is ready
   useEffect(() => {
-    console.log('TempMarker: Mounted at position:', position, 'Ready:', isMarkerReady);
+    console.log('TempMarker: Effect triggered, marker ref:', !!markerRef.current, 'processing:', isProcessing);
     
-    if (!isMarkerReady) return;
-    
-    // Immediate attempt
-    forceOpenPopup();
-    
-    // Backup attempts with increasing delays
-    const timeouts = [150, 400, 800, 1500].map(delay => 
-      setTimeout(() => {
-        if (!popupOpen && markerRef.current) {
-          console.log(`TempMarker: Retry attempt at ${delay}ms`);
-          forceOpenPopup();
+    if (markerRef.current && !isProcessing) {
+      // Multiple attempts to open popup with increasing delays
+      const openPopup = () => {
+        try {
+          if (markerRef.current) {
+            console.log('TempMarker: Opening popup via useEffect');
+            markerRef.current.openPopup();
+            setIsPopupOpen(true);
+          }
+        } catch (e) {
+          console.error('TempMarker: Error opening popup:', e);
         }
-      }, delay)
-    );
-    
-    return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout));
-    };
-  }, [position, isMarkerReady, popupOpen]);
+      };
+
+      // Immediate attempt
+      openPopup();
+      
+      // Backup attempts
+      const timeouts = [50, 150, 300, 500].map(delay => 
+        setTimeout(openPopup, delay)
+      );
+
+      return () => {
+        timeouts.forEach(timeout => clearTimeout(timeout));
+      };
+    }
+  }, [markerRef.current, isProcessing]);
 
   if (isProcessing) {
     return null;
@@ -101,46 +82,43 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       eventHandlers={{
         dragend: handleDragEnd,
         add: (e) => {
-          console.log('TempMarker: Marker added to map, setting ready state');
-          setIsMarkerReady(true);
-          
-          // Immediate popup attempt on add
+          console.log('TempMarker: Marker added to map');
+          // Force popup open immediately when marker is added
           setTimeout(() => {
             if (e.target && e.target.openPopup) {
               console.log('TempMarker: Opening popup via add event');
               e.target.openPopup();
-              setPopupOpen(true);
+              setIsPopupOpen(true);
             }
-          }, 100);
+          }, 50);
         },
         click: (e) => {
-          console.log('TempMarker: Marker clicked, forcing popup open');
+          console.log('TempMarker: Marker clicked');
           e.target.openPopup();
-          setPopupOpen(true);
+          setIsPopupOpen(true);
           
-          // Stop event propagation to prevent map click
           if (e.originalEvent) {
             e.originalEvent.preventDefault();
             e.originalEvent.stopPropagation();
           }
         },
         popupopen: () => {
-          console.log('TempMarker: Popup opened event triggered');
-          setPopupOpen(true);
+          console.log('TempMarker: Popup opened event');
+          setIsPopupOpen(true);
           
-          // Focus input when popup opens
+          // Focus input after popup opens
           setTimeout(() => {
             const inputField = document.querySelector('.temp-marker-popup input') as HTMLInputElement;
             if (inputField) {
               inputField.focus();
               inputField.select();
-              console.log('TempMarker: Input focused via popupopen event');
+              console.log('TempMarker: Input focused');
             }
           }, 100);
         },
         popupclose: () => {
-          console.log('TempMarker: Popup closed event triggered');
-          setPopupOpen(false);
+          console.log('TempMarker: Popup closed event');
+          setIsPopupOpen(false);
         }
       }}
     >
@@ -151,7 +129,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         setMarkerType={setMarkerType}
         onSave={onSave}
         isProcessing={isProcessing}
-        forceOpen={true}
       />
     </Marker>
   );

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 
@@ -10,7 +10,6 @@ interface TempMarkerPopupProps {
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
   onSave: () => void;
   isProcessing: boolean;
-  forceOpen?: boolean;
 }
 
 const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
@@ -19,8 +18,7 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
   markerType,
   setMarkerType,
   onSave,
-  isProcessing,
-  forceOpen = false
+  isProcessing
 }) => {
   const handleSave = (e?: React.MouseEvent) => {
     if (e) {
@@ -28,20 +26,15 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       e.stopPropagation();
     }
     if (isProcessing || !markerName.trim()) return;
-    console.log('TempMarkerPopup: Save button clicked, saving marker:', markerName);
+    console.log('TempMarkerPopup: Saving marker:', markerName);
     onSave();
   };
 
   const handlePopupClick = (e: React.MouseEvent) => {
-    console.log('TempMarkerPopup: Popup content clicked, preventing propagation');
+    console.log('TempMarkerPopup: Popup content clicked');
     e.stopPropagation();
     e.preventDefault();
   };
-
-  // Log when popup renders and state changes
-  useEffect(() => {
-    console.log('TempMarkerPopup: Rendered, forceOpen:', forceOpen, 'markerName:', markerName);
-  }, [forceOpen, markerName]);
 
   return (
     <Popup 
@@ -58,17 +51,8 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
     >
       <div 
         onClick={handlePopupClick}
-        onMouseDown={(e) => {
-          console.log('TempMarkerPopup: Mouse down on popup content');
-          e.stopPropagation();
-        }}
-        style={{ 
-          minWidth: '300px',
-          padding: '12px',
-          background: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-        }}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="bg-white p-3 rounded-lg shadow-lg min-w-[300px]"
       >
         <div className="mb-2">
           <h3 className="text-sm font-medium text-gray-900">Add New Location</h3>
