@@ -20,20 +20,23 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Check if this is a click on a path element - let it handle its own events
+        // Allow path clicks to proceed - they should handle their own events for uploads
         if (target.tagName === 'path' || target.tagName === 'svg' || target.closest('path')) {
-          console.log('Click on path detected - allowing path to handle its own events');
-          // Don't prevent the event, but also don't create markers
-          // The path should handle its own click events
+          console.log('Click on path detected - allowing path to handle upload');
+          // Let the path handle its own click events for image uploads
           return;
         }
         
-        // Check if this is a click on a marker or its popup
+        // Check if this is a click on a marker - allow normal marker behavior
         if (target.closest('.leaflet-marker-icon') || 
-            target.closest('.leaflet-marker-shadow') ||
-            target.closest('.leaflet-popup')) {
-          console.log('Click on marker or popup detected - allowing marker interaction');
-          // Don't create new markers for these clicks
+            target.closest('.leaflet-marker-shadow')) {
+          console.log('Click on marker detected - allowing normal marker behavior');
+          return;
+        }
+        
+        // Don't create markers when clicking on popups
+        if (target.closest('.leaflet-popup')) {
+          console.log('Click on popup detected - ignoring for marker creation');
           return;
         }
         
