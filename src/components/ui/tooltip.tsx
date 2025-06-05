@@ -26,4 +26,13 @@ const TooltipContent = React.forwardRef<
 ))
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+// Create a wrapper component that includes the provider
+const TooltipWrapper = ({ children, ...props }: { children: React.ReactNode } & React.ComponentProps<typeof Tooltip>) => (
+  <TooltipProvider>
+    <Tooltip {...props}>
+      {children}
+    </Tooltip>
+  </TooltipProvider>
+)
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, TooltipWrapper }

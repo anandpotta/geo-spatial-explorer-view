@@ -35,6 +35,7 @@ const NewMarkerForm = ({
         if (inputRef.current) {
           inputRef.current.focus();
           inputRef.current.select();
+          console.log('Input field focused');
         }
       }, 100);
       
@@ -43,14 +44,20 @@ const NewMarkerForm = ({
   }, [disabled]);
 
   const handleSaveButtonClick = (e: React.MouseEvent) => {
+    console.log('Save button clicked in form');
     e.preventDefault();
     e.stopPropagation();
     
-    if (disabled || !markerName.trim()) return;
+    if (disabled || !markerName.trim()) {
+      console.log('Save prevented: disabled or empty name');
+      return;
+    }
     
     if (isEditing && existingMarkerId && onRename) {
+      console.log('Renaming marker:', existingMarkerId, markerName);
       onRename(existingMarkerId, markerName);
     } else {
+      console.log('Saving new marker:', markerName);
       onSave(e);
     }
   };
@@ -61,6 +68,7 @@ const NewMarkerForm = ({
   };
 
   const handleTypeButtonClick = (type: 'pin' | 'area' | 'building') => (e: React.MouseEvent) => {
+    console.log('Type button clicked:', type);
     e.preventDefault();
     e.stopPropagation();
     if (!disabled) {
@@ -76,6 +84,7 @@ const NewMarkerForm = ({
     if (e.key === 'Enter' && markerName.trim() && !disabled) {
       e.preventDefault();
       e.stopPropagation();
+      console.log('Enter key pressed, saving marker');
       if (isEditing && existingMarkerId && onRename) {
         onRename(existingMarkerId, markerName);
       } else {
@@ -85,7 +94,12 @@ const NewMarkerForm = ({
   };
 
   return (
-    <div className="p-3" onClick={handleFormClick}>
+    <div 
+      className="p-3" 
+      onClick={handleFormClick}
+      onMouseDown={(e) => e.stopPropagation()}
+      style={{ pointerEvents: 'all' }}
+    >
       <Input 
         ref={inputRef}
         type="text"
@@ -96,6 +110,7 @@ const NewMarkerForm = ({
         className="mb-3"
         disabled={disabled}
         autoFocus
+        onClick={(e) => e.stopPropagation()}
       />
       {!isEditing && (
         <div className="flex mb-3 gap-1">
@@ -136,6 +151,7 @@ const NewMarkerForm = ({
         disabled={!markerName.trim() || disabled}
         className="w-full"
         size="sm"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {isEditing ? (
           <>

@@ -25,11 +25,18 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       e.preventDefault();
       e.stopPropagation();
     }
-    if (isProcessing || !markerName.trim()) return;
+    if (isProcessingPopupOpened || !markerName.trim()) return;
+    console.log('Save button clicked, saving marker:', markerName);
     onSave();
   };
 
   const handlePopupClick = (e: React.MouseEvent) => {
+    console.log('Popup clicked, preventing propagation');
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const handlePopupMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
@@ -42,8 +49,18 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       maxWidth={300}
       minWidth={250}
       keepInView={true}
+      interactive={true}
+      className="temp-marker-popup"
     >
-      <div onClick={handlePopupClick}>
+      <div 
+        onClick={handlePopupClick}
+        onMouseDown={handlePopupMouseDown}
+        style={{ 
+          minWidth: '250px',
+          padding: '4px',
+          pointerEvents: 'all'
+        }}
+      >
         <NewMarkerForm
           markerName={markerName}
           setMarkerName={setMarkerName}
