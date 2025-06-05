@@ -16,32 +16,30 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Don't interfere with temp marker popups or any popup content
-        if (target.closest('.temp-marker-popup') || 
-            target.closest('.temp-marker-content') ||
-            target.closest('.leaflet-popup') ||
+        // Don't interfere with popup content clicks
+        if (target.closest('.leaflet-popup') ||
             target.closest('.leaflet-popup-content') ||
-            target.closest('.leaflet-popup-content-wrapper')) {
-          console.log('MapEvents: Popup click - stopping propagation');
-          e.originalEvent.stopPropagation();
+            target.closest('.leaflet-popup-content-wrapper') ||
+            target.closest('.temp-marker-popup') || 
+            target.closest('.temp-marker-content')) {
+          console.log('MapEvents: Popup content click - ignoring');
           return;
         }
         
-        // Allow marker clicks to open popups - but don't create new markers
+        // Handle marker clicks - allow popup to open but don't create new markers
         if (target.closest('.leaflet-marker-icon') || 
             target.closest('.leaflet-marker-shadow') ||
             target.classList.contains('leaflet-marker-icon')) {
-          console.log('MapEvents: Marker click detected - stopping map click propagation');
-          e.originalEvent.stopPropagation();
+          console.log('MapEvents: Marker click detected - allowing popup, not creating new marker');
           return;
         }
         
-        // Allow SVG path clicks for image uploads
+        // Allow SVG path clicks for image uploads and other drawing interactions
         if (target.tagName === 'path' || 
             target.tagName === 'svg' || 
             target.closest('path') ||
             target.closest('svg')) {
-          console.log('MapEvents: SVG/Path click detected - allowing functionality');
+          console.log('MapEvents: SVG/Path click detected - allowing drawing functionality');
           return;
         }
         
@@ -54,8 +52,8 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         }
       }
       
-      // Allow the map click to proceed for marker creation
-      console.log('MapEvents: Proceeding with map click for marker creation');
+      // This is a valid map click for marker creation
+      console.log('MapEvents: Valid map click - calling onMapClick handler');
       onMapClick(e.latlng);
     }
   });

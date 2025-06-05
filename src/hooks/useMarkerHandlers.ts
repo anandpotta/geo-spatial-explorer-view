@@ -9,16 +9,24 @@ export function useMarkerHandlers(mapState: any) {
   const { currentUser } = useAuth();
   
   const handleMapClick = useCallback((latlng: L.LatLng) => {
-    // Only create markers when explicitly in marker mode or no tool is active
+    console.log('useMarkerHandlers: handleMapClick called with:', latlng);
+    console.log('useMarkerHandlers: Current activeTool:', mapState.activeTool);
+    console.log('useMarkerHandlers: Current tempMarker:', mapState.tempMarker);
+    
+    // Only create markers when explicitly in marker mode or no tool is active and no temp marker exists
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       
-      console.log('Creating temp marker at position:', exactPosition);
+      console.log('useMarkerHandlers: Creating temp marker at position:', exactPosition);
       mapState.setTempMarker(exactPosition);
       
       // Always set a default name to make it easier to save
       const defaultName = mapState.selectedLocation?.label || 'New Building';
       mapState.setMarkerName(defaultName);
+      
+      console.log('useMarkerHandlers: Temp marker created successfully');
+    } else {
+      console.log('useMarkerHandlers: Not creating marker - activeTool:', mapState.activeTool, 'tempMarker exists:', !!mapState.tempMarker);
     }
   }, [mapState]);
 
