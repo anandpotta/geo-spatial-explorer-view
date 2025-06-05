@@ -102,19 +102,27 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     }
   }, [marker.id, isDeleting, originalPosition]);
 
-  // Handler for clicking on marker
+  // Handler for clicking on marker - fixed with proper event handling
   const handleMarkerClick = useCallback((e: L.LeafletEvent) => {
+    e.originalEvent?.stopPropagation();
+    e.originalEvent?.preventDefault();
+    
     console.log('UserMarker: Marker clicked, opening popup');
     const clickedMarker = e.target as L.Marker;
+    
     if (clickedMarker && !isDeleting) {
-      // Stop event propagation to prevent map click - safely access originalEvent
-      const leafletEvent = e as any;
-      if (leafletEvent.originalEvent) {
-        L.DomEvent.stopPropagation(leafletEvent.originalEvent);
-      }
+      // Force close any existing popups first
+      clickedMarker.closePopup();
       
-      // Open the popup
-      clickedMarker.openPopup();
+      // Open popup with a slight delay to ensure proper rendering
+      setTimeout(() => {
+        try {
+          clickedMarker.openPopup();
+          console.log('UserMarker: Popup opened successfully');
+        } catch (error) {
+          console.error('Error opening popup:', error);
+        }
+      }, 50);
     }
   }, [isDeleting]);
 

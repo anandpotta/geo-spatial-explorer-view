@@ -52,14 +52,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     onSave();
   }, [isProcessing, onSave]);
 
-  // Open popup with retry mechanism
-  const openPopupWithRetry = useCallback((marker: L.Marker, attempt = 1) => {
+  // Improved popup opening with better timing
+  const openPopupSafely = useCallback((marker: L.Marker) => {
     if (!marker || isOpeningRef.current) return;
     
     isOpeningRef.current = true;
-    console.log(`TempMarker: Opening popup attempt ${attempt}`);
+    console.log('TempMarker: Opening popup safely');
     
     try {
+      // Ensure popup exists
       const popup = marker.getPopup();
       if (!popup) {
         console.error('TempMarker: No popup found');
@@ -67,35 +68,42 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         return;
       }
       
-      // Force open the popup
-      marker.openPopup();
+      // Close any existing popups first
+      marker.closePopup();
       
-      // Check if it opened successfully after a delay
-      setTimeout(() => {
-        if (marker.isPopupOpen()) {
-          console.log('TempMarker: Popup opened successfully');
-          // Focus the input
+      // Use requestAnimationFrame for better timing
+      requestAnimationFrame(() => {
+        try {
+          marker.openPopup();
+          
+          // Check if popup opened and focus input
           setTimeout(() => {
-            const popupElement = popup.getElement();
-            if (popupElement) {
-              const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
-              if (input) {
-                input.focus();
-                console.log('TempMarker: Input focused');
+            if (marker.isPopupOpen()) {
+              console.log('TempMarker: Popup opened successfully');
+              const popupElement = popup.getElement();
+              if (popupElement) {
+                const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
+                if (input) {
+                  input.focus();
+                  input.select();
+                  console.log('TempMarker: Input focused and selected');
+                }
               }
+            } else {
+              console.log('TempMarker: Popup failed to open, retrying...');
+              setTimeout(() => marker.openPopup(), 100);
             }
+            isOpeningRef.current = false;
           }, 100);
-        } else if (attempt < 3) {
-          console.log(`TempMarker: Popup not open, retry ${attempt + 1}`);
-          setTimeout(() => openPopupWithRetry(marker, attempt + 1), 200);
-        } else {
-          console.error('TempMarker: Failed to open popup after 3 attempts');
+          
+        } catch (error) {
+          console.error('TempMarker: Error in requestAnimationFrame:', error);
+          isOpeningRef.current = false;
         }
-        isOpeningRef.current = false;
-      }, 150);
+      });
       
     } catch (error) {
-      console.error('TempMarker: Error opening popup:', error);
+      console.error('TempMarker: Error opening popup safely:', error);
       isOpeningRef.current = false;
     }
   }, []);
@@ -106,12 +114,12 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       markerRef.current = marker;
       console.log('TempMarker: Marker instance set');
       
-      // Open popup after marker is fully ready
+      // Open popup after marker is ready
       setTimeout(() => {
-        openPopupWithRetry(marker);
-      }, 200);
+        openPopupSafely(marker);
+      }, 250);
     }
-  }, [openPopupWithRetry]);
+  }, [openPopupSafely]);
 
   const setPopupInstance = useCallback((popup: L.Popup) => {
     if (popup && !popupRef.current) {
@@ -125,16 +133,16 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     console.log('TempMarker: Marker added to map');
     const marker = e.target as L.Marker;
     
-    // Additional attempt to open popup when marker is added to map
+    // Ensure popup opens when marker is added to map
     setTimeout(() => {
       if (!marker.isPopupOpen()) {
-        openPopupWithRetry(marker);
+        openPopupSafely(marker);
       }
     }, 300);
-  }, [openPopupWithRetry]);
+  }, [openPopupSafely]);
 
   const handlePopupOpen = useCallback(() => {
-    console.log('TempMarker: Popup opened successfully');
+    console.log('TempMarker: Popup opened event fired');
   }, []);
 
   const handlePopupClose = useCallback((e: L.PopupEvent) => {

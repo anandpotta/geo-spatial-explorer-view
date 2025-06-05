@@ -16,10 +16,23 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Don't interfere with temp marker popups
+        // Don't interfere with temp marker popups or any popup content
         if (target.closest('.temp-marker-popup') || 
-            target.closest('.temp-marker-content')) {
-          console.log('MapEvents: Temp marker popup click - ignoring');
+            target.closest('.temp-marker-content') ||
+            target.closest('.leaflet-popup') ||
+            target.closest('.leaflet-popup-content') ||
+            target.closest('.leaflet-popup-content-wrapper')) {
+          console.log('MapEvents: Popup click - stopping propagation');
+          e.originalEvent.stopPropagation();
+          return;
+        }
+        
+        // Allow marker clicks to open popups - but don't create new markers
+        if (target.closest('.leaflet-marker-icon') || 
+            target.closest('.leaflet-marker-shadow') ||
+            target.classList.contains('leaflet-marker-icon')) {
+          console.log('MapEvents: Marker click detected - stopping map click propagation');
+          e.originalEvent.stopPropagation();
           return;
         }
         
@@ -29,24 +42,6 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
             target.closest('path') ||
             target.closest('svg')) {
           console.log('MapEvents: SVG/Path click detected - allowing functionality');
-          // Don't prevent default - let the path handle its own events
-          return;
-        }
-        
-        // Allow marker clicks - let markers handle their own events
-        if (target.closest('.leaflet-marker-icon') || 
-            target.closest('.leaflet-marker-shadow') ||
-            target.classList.contains('leaflet-marker-icon')) {
-          console.log('MapEvents: Marker click detected - allowing popup');
-          // Don't prevent default - let the marker handle its own events
-          return;
-        }
-        
-        // Don't create markers when clicking on any popup
-        if (target.closest('.leaflet-popup') ||
-            target.closest('.leaflet-popup-content') ||
-            target.closest('.leaflet-popup-content-wrapper')) {
-          console.log('MapEvents: Popup click - ignoring');
           return;
         }
         
