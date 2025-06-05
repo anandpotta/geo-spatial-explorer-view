@@ -1,5 +1,6 @@
 
-import { Component, OnInit } from '@angular/core';
+// This is an example showing how to integrate the geospatial explorer in Angular
+// In a real Angular app, you would import from '@angular/core'
 
 interface GeoLocation {
   x: number; // longitude
@@ -14,59 +15,55 @@ interface MapOptions {
   showControls?: boolean;
 }
 
-@Component({
-  selector: 'app-dashboard',
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css']
-})
-export class DashboardComponent implements OnInit {
+// Example Angular component interface (for reference only)
+export interface DashboardComponentExample {
   // Map configuration
-  mapOptions: MapOptions = {
+  mapOptions: MapOptions;
+  selectedLocation: GeoLocation | null;
+  
+  // Dashboard data
+  isMapReady: boolean;
+  isLoading: boolean;
+  dashboardStats: {
+    totalLocations: number;
+    activeRegions: number;
+    coverage: string;
+  };
+
+  // Methods that would be implemented in real Angular component
+  ngOnInit(): void;
+  onMapReady(mapInstance: any): void;
+  onLocationSelect(location: GeoLocation): void;
+  onMapError(error: Error): void;
+  setLocation(lat: number, lng: number, label?: string): void;
+  clearSelection(): void;
+}
+
+// Example implementation showing the structure
+export const dashboardExample: DashboardComponentExample = {
+  mapOptions: {
     zoom: 10,
-    center: { lat: 40.7128, lng: -74.0060 }, // New York City
+    center: { lat: 40.7128, lng: -74.0060 },
     showControls: true,
     tileProvider: 'openstreetmap'
-  };
-
-  // Selected location for the map
-  selectedLocation: GeoLocation | null = {
-    x: -74.0060, // longitude
-    y: 40.7128,  // latitude
+  },
+  
+  selectedLocation: {
+    x: -74.0060,
+    y: 40.7128,
     label: 'New York City'
-  };
-
-  // Dashboard data
-  isMapReady = false;
-  isLoading = true;
-  dashboardStats = {
+  },
+  
+  isMapReady: false,
+  isLoading: true,
+  dashboardStats: {
     totalLocations: 0,
     activeRegions: 0,
     coverage: '0%'
-  };
+  },
 
   ngOnInit() {
-    this.loadDashboardData();
-  }
-
-  onMapReady(mapInstance: any) {
-    console.log('Map is ready:', mapInstance);
-    this.isMapReady = true;
-    this.isLoading = false;
-  }
-
-  onLocationSelect(location: GeoLocation) {
-    console.log('Location selected:', location);
-    this.selectedLocation = location;
-    this.updateLocationStats(location);
-  }
-
-  onMapError(error: Error) {
-    console.error('Map error:', error);
-    this.isLoading = false;
-  }
-
-  private loadDashboardData() {
-    // Simulate loading dashboard data
+    // Load dashboard data
     setTimeout(() => {
       this.dashboardStats = {
         totalLocations: 150,
@@ -74,24 +71,33 @@ export class DashboardComponent implements OnInit {
         coverage: '85%'
       };
     }, 1000);
-  }
+  },
 
-  private updateLocationStats(location: GeoLocation) {
-    // Update stats based on selected location
-    console.log('Updating stats for:', location.label);
-  }
+  onMapReady(mapInstance: any) {
+    console.log('Map is ready:', mapInstance);
+    this.isMapReady = true;
+    this.isLoading = false;
+  },
 
-  // Method to programmatically set location
+  onLocationSelect(location: GeoLocation) {
+    console.log('Location selected:', location);
+    this.selectedLocation = location;
+  },
+
+  onMapError(error: Error) {
+    console.error('Map error:', error);
+    this.isLoading = false;
+  },
+
   setLocation(lat: number, lng: number, label?: string) {
     this.selectedLocation = {
       x: lng,
       y: lat,
       label: label || 'Selected Location'
     };
-  }
+  },
 
-  // Method to clear selection
   clearSelection() {
     this.selectedLocation = null;
   }
-}
+};

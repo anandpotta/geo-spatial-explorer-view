@@ -1,130 +1,118 @@
 
 # GeoSpatial Explorer Library
 
-A cross-platform library for 3D globe and map visualizations that works on:
-- Web (React)
-- Mobile (React Native)
-- Angular applications
+A cross-platform geospatial visualization library supporting React, Angular, and React Native.
+
+## Features
+
+- **3D Globe View**: Three.js-powered interactive globe
+- **2D Map View**: Leaflet-based mapping with drawing tools
+- **Cross-Platform**: React, Angular, and React Native support
+- **Drawing Tools**: Shape creation, editing, and floor plan overlays
+- **Location Search**: Integrated location search and selection
+- **Cloud Sync**: Azure SQL integration for data persistence
 
 ## Installation
 
 ```bash
-npm install geospatial-explorer-lib
+npm install @your-org/geospatial-explorer
 ```
 
-## Usage
+## Quick Start
 
-### React Web Application
+### React
 
-```jsx
-import { ReactComponents } from 'geospatial-explorer-lib';
-
-const { GlobeComponent } = ReactComponents;
+```tsx
+import React from 'react';
+import { GeoSpatialExplorer } from '@your-org/geospatial-explorer/react';
 
 function App() {
-  const location = {
-    id: 'nyc',
-    label: 'New York City',
-    x: -74.006, // longitude
-    y: 40.7128  // latitude
-  };
-
   return (
-    <div style={{ width: '100%', height: '500px' }}>
-      <GlobeComponent 
-        selectedLocation={location}
-        onReady={() => console.log('Globe is ready')}
-        onFlyComplete={() => console.log('Flight animation completed')}
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <GeoSpatialExplorer
+        selectedLocation={{
+          id: '1',
+          x: -74.0060,
+          y: 40.7128,
+          label: 'New York City'
+        }}
+        onLocationSelect={(location) => {
+          console.log('Selected:', location);
+        }}
       />
     </div>
   );
 }
 ```
 
-### React Native Application
-
-```jsx
-import { ReactNativeComponents } from 'geospatial-explorer-lib';
-
-const { GlobeComponent } = ReactNativeComponents;
-
-function GlobeScreen() {
-  const location = {
-    id: 'nyc',
-    label: 'New York City',
-    x: -74.006, // longitude
-    y: 40.7128  // latitude
-  };
-
-  return (
-    <View style={{ flex: 1 }}>
-      <GlobeComponent 
-        selectedLocation={location}
-        onReady={() => console.log('Globe is ready')}
-        onFlyComplete={() => console.log('Flight animation completed')}
-      />
-    </View>
-  );
-}
-```
-
-### Angular Application
+### Angular
 
 ```typescript
 // app.module.ts
-import { NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
-import { GeoSpatialExplorerModule } from 'geospatial-explorer-lib-angular';
+import { GeospatialModule } from '@your-org/geospatial-explorer/angular';
 
 @NgModule({
-  imports: [
-    BrowserModule,
-    GeoSpatialExplorerModule
-  ],
+  imports: [GeospatialModule],
   // ...
 })
 export class AppModule { }
+```
 
-// app.component.ts
-@Component({
-  selector: 'app-root',
-  template: `
-    <div style="width: 100%; height: 500px;">
-      <app-globe 
-        [selectedLocation]="location"
-        (ready)="onGlobeReady($event)"
-        (flyComplete)="onFlyComplete()">
-      </app-globe>
-    </div>
-  `
-})
-export class AppComponent {
-  location = {
-    id: 'nyc',
-    label: 'New York City',
-    x: -74.006,
-    y: 40.7128
-  };
+```html
+<!-- component.html -->
+<geo-spatial-explorer 
+  [selectedLocation]="location"
+  (locationSelect)="onLocationSelect($event)">
+</geo-spatial-explorer>
+```
 
-  onGlobeReady(api: any) {
-    console.log('Globe is ready');
-  }
+### React Native
 
-  onFlyComplete() {
-    console.log('Flight animation completed');
-  }
+```tsx
+import { GeoSpatialExplorerNative } from '@your-org/geospatial-explorer/react-native';
+
+export default function App() {
+  return (
+    <GeoSpatialExplorerNative
+      selectedLocation={location}
+      onLocationSelect={handleLocationSelect}
+    />
+  );
 }
 ```
 
-## Platform-Specific Considerations
+## API Reference
 
-### React Native
-- Requires `react-native-webview` dependency
-- For best performance, use a device with good WebGL support
+### Components
 
-### Angular
-- Install the companion package `geospatial-explorer-lib-angular`
-- Angular 13+ is required
+#### GeoSpatialExplorer (React)
+- `selectedLocation?: GeoLocation` - Currently selected location
+- `onLocationSelect?: (location: GeoLocation) => void` - Location selection callback
+- `onMapReady?: () => void` - Map ready callback
+
+#### Core Types
+
+```typescript
+interface GeoLocation {
+  id: string;
+  x: number; // longitude
+  y: number; // latitude
+  label: string;
+  z?: number; // altitude
+}
+```
+
+## Building the Package
+
+```bash
+npm run build
+```
+
+## Publishing
+
+```bash
+npm publish
+```
 
 ## License
 
