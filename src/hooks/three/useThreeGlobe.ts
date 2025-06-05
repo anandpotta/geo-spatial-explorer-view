@@ -22,7 +22,7 @@ export function useThreeGlobe(
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const autoRotationEnabledRef = useRef<boolean>(true);
   const isCleaningUpRef = useRef<boolean>(false);
-  const setupCompleteRef = useRef<boolean>(false);
+  const setupAttemptedRef = useRef<boolean>(false);
   
   // Use the scene hook
   const {
@@ -31,9 +31,7 @@ export function useThreeGlobe(
     renderer,
     controls: existingControls,
     isInitialized: sceneInitialized,
-    setIsInitialized,
     animationFrameRef,
-    canvasElementRef,
     controlsRef
   } = useThreeScene(containerRef);
 
@@ -44,26 +42,25 @@ export function useThreeGlobe(
   // Setup globe objects and controls
   useEffect(() => {
     // Wait for scene to be ready and prevent multiple setups
-    if (!sceneInitialized || !scene || !camera || !renderer || setupCompleteRef.current || isCleaningUpRef.current) {
+    if (!sceneInitialized || !scene || !camera || !renderer || setupAttemptedRef.current || isCleaningUpRef.current) {
       if (!sceneInitialized) {
         console.log("Three.js scene not yet initialized, waiting...");
-      } else if (setupCompleteRef.current) {
-        console.log("Globe setup already complete");
+      } else if (setupAttemptedRef.current) {
+        console.log("Globe setup already attempted");
       }
       return;
     }
     
     console.log("Setting up globe objects and controls");
-    setupCompleteRef.current = true;
+    setupAttemptedRef.current = true;
     
     try {
       // Clear any previous starfield or elements
-      scene.children.forEach(child => {
-        if (child instanceof THREE.Points || 
-            (child instanceof THREE.Mesh && child.userData.type === 'starfield')) {
-          scene.remove(child);
-        }
-      });
+      const childrenToRemove = scene.children.filter(child => 
+        child instanceof THREE.Points || 
+        (child instanceof THREE.Mesh && child.userData.type === 'starfield')
+      );
+      childrenToRemove.forEach(child => scene.remove(child));
       
       // Add starfield background
       createStarfield(scene);
@@ -92,6 +89,7 @@ export function useThreeGlobe(
         });
       } else {
         console.error("Failed to create globe group or earth mesh");
+        setupAttemptedRef.current = false; // Allow retry
         return;
       }
       
@@ -119,7 +117,8 @@ export function useThreeGlobe(
         if (isCleaningUpRef.current || 
             !scene || 
             !camera || 
-            !renderer) {
+            !renderer ||
+            !setupAttemptedRef.current) {
           console.log("Animation loop stopping - missing required objects or cleaning up");
           return;
         }
@@ -130,8 +129,6 @@ export function useThreeGlobe(
         if (controlsRef.current) {
           try {
             controlsRef.current.update();
-            
-            // Ensure the renderer is drawing the scene
             renderer.render(scene, camera);
           } catch (error) {
             console.error("Error in animation loop:", error);
@@ -146,7 +143,7 @@ export function useThreeGlobe(
       
       // Call onInitialized after a short delay to ensure everything is ready
       setTimeout(() => {
-        if (!isCleaningUpRef.current) {
+        if (!isCleaningUpRef.current && setupAttemptedRef.current) {
           console.log("Globe initialization complete, calling onInitialized");
           if (onInitialized) {
             onInitialized();
@@ -156,14 +153,13 @@ export function useThreeGlobe(
       
     } catch (error) {
       console.error("Error during globe setup:", error);
-      setupCompleteRef.current = false; // Allow retry on error
+      setupAttemptedRef.current = false; // Allow retry on error
     }
     
     // Cleanup function
     return () => {
       console.log("Globe effect cleanup");
       isCleaningUpRef.current = true;
-      setupCompleteRef.current = false;
       
       // Stop animation loop
       if (animationFrameRef.current) {
@@ -185,16 +181,11 @@ export function useThreeGlobe(
       }
       
       earthMeshRef.current = null;
+      setupAttemptedRef.current = false;
       setGlobeInitialized(false);
+      setTexturesLoaded(false);
     };
   }, [sceneInitialized, scene, camera, renderer, animationFrameRef, controlsRef, onInitialized]);
-  
-  // Call onInitialized when textures are loaded (if not already called)
-  useEffect(() => {
-    if (texturesLoaded && onInitialized && globeInitialized && !isCleaningUpRef.current) {
-      console.log("Textures loaded, globe ready");
-    }
-  }, [texturesLoaded, onInitialized, globeInitialized]);
   
   // Enable/disable auto-rotation
   const setAutoRotation = useCallback((enabled: boolean) => {

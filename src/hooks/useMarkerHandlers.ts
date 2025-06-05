@@ -13,20 +13,33 @@ export function useMarkerHandlers(mapState: any) {
     console.log('useMarkerHandlers: Current activeTool:', mapState.activeTool);
     console.log('useMarkerHandlers: Current tempMarker:', mapState.tempMarker);
     
-    // Only create markers when explicitly in marker mode or no tool is active and no temp marker exists
-    if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
+    // Create markers when explicitly in marker mode OR when no tool is active (default behavior)
+    // Remove the tempMarker blocking condition to allow multiple markers
+    if (mapState.activeTool === 'marker' || !mapState.activeTool) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
       
       console.log('useMarkerHandlers: Creating temp marker at position:', exactPosition);
-      mapState.setTempMarker(exactPosition);
       
-      // Always set a default name to make it easier to save
-      const defaultName = mapState.selectedLocation?.label || 'New Building';
-      mapState.setMarkerName(defaultName);
-      
-      console.log('useMarkerHandlers: Temp marker created successfully');
+      // Clear any existing temp marker first
+      if (mapState.tempMarker) {
+        console.log('useMarkerHandlers: Clearing existing temp marker');
+        mapState.setTempMarker(null);
+        
+        // Small delay to ensure cleanup before creating new one
+        setTimeout(() => {
+          mapState.setTempMarker(exactPosition);
+          const defaultName = mapState.selectedLocation?.label || 'New Building';
+          mapState.setMarkerName(defaultName);
+          console.log('useMarkerHandlers: New temp marker created successfully');
+        }, 100);
+      } else {
+        mapState.setTempMarker(exactPosition);
+        const defaultName = mapState.selectedLocation?.label || 'New Building';
+        mapState.setMarkerName(defaultName);
+        console.log('useMarkerHandlers: Temp marker created successfully');
+      }
     } else {
-      console.log('useMarkerHandlers: Not creating marker - activeTool:', mapState.activeTool, 'tempMarker exists:', !!mapState.tempMarker);
+      console.log('useMarkerHandlers: Not creating marker - activeTool:', mapState.activeTool);
     }
   }, [mapState]);
 

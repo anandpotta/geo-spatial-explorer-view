@@ -145,37 +145,23 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     console.log('TempMarker: Popup opened event fired');
   }, []);
 
-  const handlePopupClose = useCallback((e: L.PopupEvent) => {
+  // Simplified popup close handler - allow closing after save
+  const handlePopupClose = useCallback(() => {
     console.log('TempMarker: Popup close attempted');
     
-    // Prevent popup from closing unless it's a save operation
+    // Only prevent close if we're not processing (saving)
     if (!isProcessing && markerRef.current) {
-      try {
-        // Use the marker's _map property (standard Leaflet property)
-        const map = (markerRef.current as any)._map;
-        if (map && typeof map.hasLayer === 'function') {
-          e.popup.openOn(map);
-        } else {
-          // Fallback: try to reopen popup directly on marker
-          setTimeout(() => {
-            if (markerRef.current) {
-              markerRef.current.openPopup();
-            }
-          }, 50);
-        }
-      } catch (error) {
-        console.error('TempMarker: Error preventing popup close:', error);
-        // Fallback: try to reopen popup directly
-        setTimeout(() => {
-          if (markerRef.current) {
-            try {
-              markerRef.current.openPopup();
-            } catch (err) {
-              console.error('TempMarker: Fallback popup open failed:', err);
-            }
+      console.log('TempMarker: Preventing popup close');
+      // Simple reopen after a short delay
+      setTimeout(() => {
+        if (markerRef.current && !markerRef.current.isPopupOpen()) {
+          try {
+            markerRef.current.openPopup();
+          } catch (error) {
+            console.error('TempMarker: Error reopening popup:', error);
           }
-        }, 50);
-      }
+        }
+      }, 50);
     }
   }, [isProcessing]);
 
