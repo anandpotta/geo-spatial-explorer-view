@@ -31,15 +31,21 @@ const NewMarkerForm = ({
   
   useEffect(() => {
     if (!disabled) {
-      const focusTimer = setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-          inputRef.current.select();
-          console.log('Input field focused and selected');
-        }
-      }, 200);
+      // Focus with multiple attempts
+      const focusAttempts = [50, 150, 300, 500];
+      const timers = focusAttempts.map(delay => 
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+            console.log(`Input field focused at ${delay}ms`);
+          }
+        }, delay)
+      );
       
-      return () => clearTimeout(focusTimer);
+      return () => {
+        timers.forEach(timer => clearTimeout(timer));
+      };
     }
   }, [disabled, markerName]);
 
@@ -98,7 +104,6 @@ const NewMarkerForm = ({
       className="p-4" 
       onClick={handleFormClick}
       onMouseDown={(e) => e.stopPropagation()}
-      style={{ pointerEvents: 'all' }}
     >
       <div className="mb-3">
         <label className="block text-sm font-medium mb-1">Location Name</label>

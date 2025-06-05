@@ -41,7 +41,7 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       closeOnClick={false} 
       autoClose={false}
       closeButton={false}
-      autoPan={true}
+      autoPan={false}
       maxWidth={320}
       minWidth={280}
       keepInView={true}
@@ -53,8 +53,7 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
         onMouseDown={(e) => e.stopPropagation()}
         style={{ 
           minWidth: '280px',
-          padding: '4px',
-          pointerEvents: 'all'
+          padding: '4px'
         }}
       >
         <NewMarkerForm
