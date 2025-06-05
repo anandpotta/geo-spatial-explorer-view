@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef } from 'react';
+import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Save, Edit2 } from 'lucide-react';
@@ -9,7 +10,7 @@ interface NewMarkerFormProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: (e?: React.MouseEvent) => void;
+  onSave: () => void;
   isEditing?: boolean;
   existingMarkerId?: string;
   onRename?: (id: string, newName: string) => void;
@@ -30,108 +31,50 @@ const NewMarkerForm = ({
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
-    if (!disabled) {
-      console.log('NewMarkerForm focusing input, disabled:', disabled);
-      // Multiple focused attempts with longer delays
-      const focusAttempts = [100, 250, 500, 750];
-      const timers = focusAttempts.map(delay => 
-        setTimeout(() => {
-          if (inputRef.current) {
-            inputRef.current.focus();
-            inputRef.current.select();
-            console.log(`Input field focused at ${delay}ms`);
-          }
-        }, delay)
-      );
-      
-      return () => {
-        timers.forEach(timer => clearTimeout(timer));
-      };
-    }
-  }, [disabled, markerName]);
+    // Focus on input when component mounts
+    const timer = setTimeout(() => {
+      if (inputRef.current && !disabled) {
+        inputRef.current.focus();
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [disabled]);
 
   const handleSaveButtonClick = (e: React.MouseEvent) => {
-    console.log('Save button clicked in form');
     e.preventDefault();
     e.stopPropagation();
     
-    if (disabled || !markerName.trim()) {
-      console.log('Save prevented: disabled or empty name');
-      return;
-    }
+    if (disabled) return;
     
     if (isEditing && existingMarkerId && onRename) {
-      console.log('Renaming marker:', existingMarkerId, markerName);
       onRename(existingMarkerId, markerName);
     } else {
-      console.log('Saving new marker:', markerName);
-      onSave(e);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    setMarkerName(e.target.value);
-  };
-
-  const handleTypeButtonClick = (type: 'pin' | 'area' | 'building') => (e: React.MouseEvent) => {
-    console.log('Type button clicked:', type);
-    e.preventDefault();
-    e.stopPropagation();
-    if (!disabled) {
-      setMarkerType(type);
-    }
-  };
-
-  const handleFormClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && markerName.trim() && !disabled) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('Enter key pressed, saving marker');
-      if (isEditing && existingMarkerId && onRename) {
-        onRename(existingMarkerId, markerName);
-      } else {
-        onSave();
-      }
+      onSave();
     }
   };
 
   return (
-    <div 
-      className="space-y-3" 
-      onClick={handleFormClick}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <div>
-        <label className="block text-xs font-medium mb-1 text-gray-700">Location Name</label>
+    <Popup>
+      <div className="p-2">
         <Input 
           ref={inputRef}
           type="text"
-          placeholder="Enter location name"
+          placeholder="Location name"
           value={markerName}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          className="w-full text-sm"
+          onChange={(e) => setMarkerName(e.target.value)}
+          className="mb-2"
+          autoFocus
           disabled={disabled}
-          autoFocus={true}
-          onClick={(e) => e.stopPropagation()}
         />
-      </div>
-      
-      {!isEditing && (
-        <div>
-          <label className="block text-xs font-medium mb-1 text-gray-700">Location Type</label>
-          <div className="flex gap-1">
+        {!isEditing && (
+          <div className="flex mb-2">
             <Button
               type="button"
               size="sm"
               variant={markerType === 'pin' ? 'default' : 'outline'}
-              className="flex-1 text-xs py-1 h-7"
-              onClick={handleTypeButtonClick('pin')}
+              className="flex-1"
+              onClick={() => setMarkerType('pin')}
               disabled={disabled}
             >
               Pin
@@ -140,8 +83,8 @@ const NewMarkerForm = ({
               type="button"
               size="sm"
               variant={markerType === 'area' ? 'default' : 'outline'}
-              className="flex-1 text-xs py-1 h-7"
-              onClick={handleTypeButtonClick('area')}
+              className="flex-1"
+              onClick={() => setMarkerType('area')}
               disabled={disabled}
             >
               Area
@@ -150,36 +93,33 @@ const NewMarkerForm = ({
               type="button"
               size="sm"
               variant={markerType === 'building' ? 'default' : 'outline'}
-              className="flex-1 text-xs py-1 h-7"
-              onClick={handleTypeButtonClick('building')}
+              className="flex-1"
+              onClick={() => setMarkerType('building')}
               disabled={disabled}
             >
               Building
             </Button>
           </div>
-        </div>
-      )}
-      
-      <Button 
-        onClick={handleSaveButtonClick}
-        disabled={!markerName.trim() || disabled}
-        className="w-full text-sm py-1 h-8"
-        size="sm"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {isEditing ? (
-          <>
-            <Edit2 className="h-3 w-3 mr-1" />
-            Rename
-          </>
-        ) : (
-          <>
-            <Save className="h-3 w-3 mr-1" />
-            Save Location
-          </>
         )}
-      </Button>
-    </div>
+        <Button 
+          onClick={handleSaveButtonClick}
+          disabled={!markerName.trim() || disabled}
+          className="w-full"
+        >
+          {isEditing ? (
+            <>
+              <Edit2 className="h-4 w-4 mr-2" />
+              Rename Location
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save Location
+            </>
+          )}
+        </Button>
+      </div>
+    </Popup>
   );
 };
 

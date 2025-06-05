@@ -15,7 +15,7 @@ export const setupLayerClickHandlers = (
   if (!layer || !isMounted || !onRegionClick) return;
   
   const currentUser = getCurrentUser();
-  if (!currentUser) return;
+  if (!currentUser) return; // Don't set up handlers if no user is logged in
   
   // Only set up click handlers for drawings owned by the current user
   if (drawing.userId && drawing.userId !== currentUser.id) {
@@ -23,45 +23,14 @@ export const setupLayerClickHandlers = (
     return;
   }
   
-  // Remove any existing click handlers
-  layer.off('click');
-  
   layer.on('click', (e) => {
-    console.log('Layer clicked:', drawing.id);
-    
     // Stop event propagation to prevent map click
     if (e.originalEvent) {
       L.DomEvent.stopPropagation(e.originalEvent);
-      e.originalEvent.preventDefault();
     }
     
-    // Prevent the event from bubbling up
-    L.DomEvent.stop(e);
-    
-    if (isMounted && onRegionClick) {
-      console.log('Calling onRegionClick for drawing:', drawing.id);
+    if (isMounted) {
       onRegionClick(drawing);
-    }
-  });
-  
-  // Also set up mouse events for better interaction
-  layer.on('mouseover', () => {
-    if (layer instanceof L.Path) {
-      layer.setStyle({ 
-        weight: 5,
-        opacity: 0.8,
-        fillOpacity: 0.3
-      });
-    }
-  });
-  
-  layer.on('mouseout', () => {
-    if (layer instanceof L.Path) {
-      layer.setStyle({ 
-        weight: 3,
-        opacity: 0.6,
-        fillOpacity: 0.2
-      });
     }
   });
 };

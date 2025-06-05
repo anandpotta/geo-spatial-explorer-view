@@ -1,3 +1,4 @@
 
-export { GeoSpatialExplorerNative } from './GeoSpatialExplorerNative';
-export * from '../core';
+export { GlobeComponent } from './GlobeComponent';
+export { MapComponent } from './MapComponent';
+

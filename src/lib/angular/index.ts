@@ -1,3 +1,4 @@
 
-export { GeospatialModule } from './geospatial.module';
-export * from '../core';
+export { MapComponentAngular } from './map.component';
+export { GlobeComponent } from './globe.component';
+

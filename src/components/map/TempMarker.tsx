@@ -1,8 +1,8 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import TempMarkerPopup from './TempMarkerPopup';
+import NewMarkerForm from './NewMarkerForm';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -24,112 +24,122 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [markerReady, setMarkerReady] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const markerId = `temp-marker-${position[0]}-${position[1]}`;
 
+  // Handle cleanup when component unmounts or marker is being processed
+  useEffect(() => {
+    if (isProcessing) {
+      setIsVisible(false);
+    }
+    
+    return () => {
+      if (markerRef.current) {
+        try {
+          markerRef.current.closeTooltip();
+          markerRef.current.closePopup();
+          
+          const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+          tempIcons.forEach(icon => {
+            if (icon.parentNode) {
+              icon.parentNode.removeChild(icon);
+            }
+          });
+        } catch (error) {
+          console.error("Error cleaning up temp marker:", error);
+        }
+      }
+    };
+  }, [markerId, isProcessing]);
+
+  // Update marker position in parent when dragged
   const handleDragEnd = (e: L.LeafletEvent) => {
     if (isProcessing) return;
     
     const marker = e.target;
     if (marker && marker.getLatLng) {
-      const newPosition = marker.getLatLng();
+      const position = marker.getLatLng();
       if (window.tempMarkerPositionUpdate) {
-        window.tempMarkerPositionUpdate([newPosition.lat, newPosition.lng]);
+        window.tempMarkerPositionUpdate([position.lat, position.lng]);
       }
     }
   };
-
-  // Force popup open immediately when marker is ready
-  useEffect(() => {
-    console.log('TempMarker: Effect triggered, marker ref:', !!markerRef.current, 'processing:', isProcessing);
+  
+  // Custom save handler with processing state
+  const handleSave = () => {
+    if (isProcessing) return;
     
-    if (markerRef.current && !isProcessing) {
-      // Multiple attempts to open popup with increasing delays
-      const openPopup = () => {
-        try {
-          if (markerRef.current) {
-            console.log('TempMarker: Opening popup via useEffect');
-            markerRef.current.openPopup();
-            setIsPopupOpen(true);
-          }
-        } catch (e) {
-          console.error('TempMarker: Error opening popup:', e);
-        }
-      };
+    // Hide the marker immediately to prevent flickering
+    setIsVisible(false);
+    
+    // Clean up DOM elements
+    const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+    tempIcons.forEach(icon => {
+      if (icon.parentNode) {
+        icon.parentNode.removeChild(icon);
+      }
+    });
+    
+    // Call the save handler
+    onSave();
+  };
 
-      // Immediate attempt
-      openPopup();
+  // Set up marker references
+  const setMarkerInstance = (marker: L.Marker) => {
+    if (marker && isVisible) {
+      markerRef.current = marker;
       
-      // Backup attempts
-      const timeouts = [50, 150, 300, 500].map(delay => 
-        setTimeout(openPopup, delay)
-      );
-
-      return () => {
-        timeouts.forEach(timeout => clearTimeout(timeout));
-      };
+      const element = marker.getElement();
+      if (element) {
+        element.setAttribute('data-marker-id', markerId);
+      }
+      
+      setMarkerReady(true);
     }
-  }, [markerRef.current, isProcessing]);
+  };
 
-  if (isProcessing) {
+  // Don't render if not visible or processing
+  if (!isVisible || isProcessing) {
     return null;
   }
 
   return (
     <Marker
       position={position}
-      ref={markerRef}
+      ref={setMarkerInstance}
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd,
-        add: (e) => {
-          console.log('TempMarker: Marker added to map');
-          // Force popup open immediately when marker is added
+        add: () => {
           setTimeout(() => {
-            if (e.target && e.target.openPopup) {
-              console.log('TempMarker: Opening popup via add event');
-              e.target.openPopup();
-              setIsPopupOpen(true);
-            }
-          }, 50);
-        },
-        click: (e) => {
-          console.log('TempMarker: Marker clicked');
-          e.target.openPopup();
-          setIsPopupOpen(true);
-          
-          if (e.originalEvent) {
-            e.originalEvent.preventDefault();
-            e.originalEvent.stopPropagation();
-          }
-        },
-        popupopen: () => {
-          console.log('TempMarker: Popup opened event');
-          setIsPopupOpen(true);
-          
-          // Focus input after popup opens
-          setTimeout(() => {
-            const inputField = document.querySelector('.temp-marker-popup input') as HTMLInputElement;
-            if (inputField) {
-              inputField.focus();
-              inputField.select();
-              console.log('TempMarker: Input focused');
+            try {
+              if (markerRef.current && isVisible) {
+                markerRef.current.openPopup();
+              }
+            } catch (error) {
+              console.error("Error opening popup:", error);
             }
           }, 100);
-        },
-        popupclose: () => {
-          console.log('TempMarker: Popup closed event');
-          setIsPopupOpen(false);
         }
       }}
     >
-      <TempMarkerPopup
+      <NewMarkerForm
         markerName={markerName}
         setMarkerName={setMarkerName}
         markerType={markerType}
         setMarkerType={setMarkerType}
-        onSave={onSave}
-        isProcessing={isProcessing}
+        onSave={handleSave}
+        disabled={isProcessing}
       />
+      <Tooltip
+        direction="top"
+        offset={[0, -10]}
+        opacity={0.9}
+        permanent={true}
+      >
+        <span className="font-medium">{markerName || 'New Location'}</span>
+      </Tooltip>
     </Marker>
   );
 };

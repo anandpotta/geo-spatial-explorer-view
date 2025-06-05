@@ -14,10 +14,7 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
   const [isPinned, setIsPinned] = useState(marker.isPinned || false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handlePinToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    
+  const handlePinToggle = () => {
     const updatedPinnedState = !isPinned;
     setIsPinned(updatedPinnedState);
     
@@ -28,16 +25,12 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
     );
     localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
     
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('markersSaved', { 
-      detail: { 
-        source: 'storage',
-        timestamp: Date.now()
-      } 
-    }));
+    // Dispatch storage event to notify other components
+    window.dispatchEvent(new Event('storage'));
   };
   
   const handleDeleteClick = (e: React.MouseEvent) => {
+    // Prevent event propagation to avoid triggering any map click events
     e.stopPropagation();
     e.preventDefault();
     
@@ -52,8 +45,8 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
   };
 
   return (
-    <Popup closeOnClick={false} autoClose={false}>
-      <div className="p-2" onClick={(e) => e.stopPropagation()}>
+    <Popup>
+      <div className="p-2">
         <h3 className="font-medium mb-2">{marker.name}</h3>
         <div className="flex gap-2">
           <Button
@@ -79,7 +72,6 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
             size="sm"
             onClick={handleDeleteClick}
             className="flex items-center gap-1"
-            disabled={isDeleting}
           >
             <Trash2 size={16} />
             Delete

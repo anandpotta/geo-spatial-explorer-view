@@ -19,10 +19,7 @@ setTimeout(() => {
       command: 'npm run dev', 
       name: 'frontend', 
       prefixColor: 'blue',
-      env: { 
-        BROWSER: 'none',
-        npm_config_package_manager: 'npm'
-      }
+      env: { BROWSER: 'none' }
     }
   ], {
     prefix: 'name',

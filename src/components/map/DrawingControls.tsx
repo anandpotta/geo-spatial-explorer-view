@@ -1,5 +1,5 @@
 
-import { forwardRef, useImperativeHandle, useEffect, useCallback } from 'react';
+import { forwardRef, useImperativeHandle, useEffect } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
@@ -82,31 +82,28 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     }
   }));
   
-  // Effect for initialization - only run once
+  // Effect for initialization
   useEffect(() => {
-    if (featureGroupRef.current && !isInitialized) {
+    if (featureGroupRef.current) {
       setIsInitialized(true);
     }
     
     return () => {
       mountedRef.current = false;
     };
-  }, [isInitialized, setIsInitialized]);
+  }, []);
 
-  // Handle user changes - only when user actually changes, not on every render
-  const handleUserChange = useCallback(() => {
+  // Handle user changes - reload drawings when user changes
+  useEffect(() => {
     if (isInitialized && currentUser && drawToolsRef.current) {
       // When user logs in or changes, we need to refresh the map
+      window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));
       window.dispatchEvent(new Event('drawingsUpdated'));
     }
-  }, [isInitialized, currentUser]);
+  }, [currentUser, isInitialized]);
 
-  useEffect(() => {
-    handleUserChange();
-  }, [currentUser?.id]); // Only depend on user ID, not the whole user object
-
-  const handleRemoveShape = useCallback((drawingId: string) => {
+  const handleRemoveShape = (drawingId: string) => {
     if (!checkAuthBeforeAction('remove shapes')) {
       return;
     }
@@ -114,13 +111,13 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     if (onRemoveShape) {
       onRemoveShape(drawingId);
     }
-  }, [checkAuthBeforeAction, onRemoveShape]);
+  };
 
-  const handleDrawingClick = useCallback((drawing: DrawingData) => {
+  const handleDrawingClick = (drawing: DrawingData) => {
     if (onRegionClick) {
       onRegionClick(drawing);
     }
-  }, [onRegionClick]);
+  };
 
   return (
     <>

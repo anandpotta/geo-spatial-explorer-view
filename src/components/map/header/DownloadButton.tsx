@@ -1,5 +1,5 @@
 
-import React, { useMemo, useCallback } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { downloadGeoJSON, generateGeoJSON } from '@/utils/geojson-export';
 import { toast } from 'sonner';
@@ -10,23 +10,21 @@ interface DownloadButtonProps {
 }
 
 const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false }) => {
-  // Memoize the data check to prevent infinite loops
-  const hasDataToDownload = useMemo(() => {
+  const checkIfDataExists = () => {
     try {
       const geoJSON = generateGeoJSON();
       const hasData = geoJSON.features && geoJSON.features.length > 0;
+      console.log('GeoJSON data check:', { hasData, featureCount: geoJSON.features?.length || 0 });
       return hasData;
     } catch (error) {
       console.error('Error checking GeoJSON data:', error);
       return false;
     }
-  }, []); // Empty dependency array - only check once when component mounts
+  };
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = () => {
     try {
-      // Fresh check at download time
-      const geoJSON = generateGeoJSON();
-      const hasData = geoJSON.features && geoJSON.features.length > 0;
+      const hasData = checkIfDataExists();
       
       if (!hasData) {
         toast.error('No data available to download. Please add some markers or drawings first.');
@@ -43,9 +41,13 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false }) => 
       console.error('Error downloading GeoJSON:', error);
       toast.error('Failed to download GeoJSON file');
     }
-  }, []);
+  };
 
+  // Check if we have data to enable the button regardless of map ready state
+  const hasDataToDownload = checkIfDataExists();
   const isButtonDisabled = disabled && !hasDataToDownload;
+
+  console.log('Download button state:', { disabled, hasDataToDownload, isButtonDisabled });
 
   return (
     <Button
@@ -62,4 +64,4 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false }) => 
   );
 };
 
-export default React.memo(DownloadButton);
+export default DownloadButton;

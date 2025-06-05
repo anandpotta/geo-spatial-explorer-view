@@ -8,27 +8,22 @@ export function useMarkerHandlers(mapState: any) {
   const { currentUser } = useAuth();
   
   const handleMapClick = (latlng: L.LatLng) => {
-    console.log('Map clicked at:', latlng.lat, latlng.lng, 'Active tool:', mapState.activeTool);
-    
     // Only create markers when explicitly in marker mode or no tool is active
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
+      mapState.setTempMarker(exactPosition);
       
-      console.log('Creating temp marker at position:', exactPosition);
+      // Always set a default name to make it easier to save
+      const defaultName = mapState.selectedLocation?.label || 'New Building';
+      mapState.setMarkerName(defaultName);
       
-      // Clear any existing temp marker first
-      mapState.setTempMarker(null);
-      
-      // Set the new temp marker with a small delay to ensure proper state update
+      // Make sure to focus on the marker name input field after a short delay
       setTimeout(() => {
-        mapState.setTempMarker(exactPosition);
-        
-        // Always set a default name to make it easier to save
-        const defaultName = mapState.selectedLocation?.label || 'New Location';
-        mapState.setMarkerName(defaultName);
-        
-        console.log('Temp marker state set with name:', defaultName);
-      }, 50);
+        const inputField = document.querySelector('.leaflet-popup input');
+        if (inputField) {
+          (inputField as HTMLElement).focus();
+        }
+      }, 100);
     }
   };
 
@@ -37,48 +32,41 @@ export function useMarkerHandlers(mapState: any) {
     
     // Check if this is specifically a marker creation event
     if (shape.type === 'marker') {
-      console.log('Processing marker creation with position:', shape.position);
-      
-      // Remove the actual marker from the map since we want to show it as temp marker
-      if (shape.layer && shape.layer.remove) {
-        shape.layer.remove();
-      }
-      
-      let exactPosition: [number, number] | null = null;
-      
-      // Try to get position from shape.position first
+      console.log('Processing marker creation');
+      // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
-        exactPosition = [shape.position[0], shape.position[1]];
-      } 
-      // Fall back to getting position from the layer
-      else if (shape.layer && shape.layer.getLatLng) {
-        const latLng = shape.layer.getLatLng();
-        exactPosition = [latLng.lat, latLng.lng];
-      }
-      
-      if (exactPosition) {
-        console.log('Setting temp marker from shape creation at:', exactPosition);
+        const exactPosition: [number, number] = [
+          shape.position[0],
+          shape.position[1]
+        ];
+        mapState.setTempMarker(exactPosition);
+        mapState.setMarkerName('New Marker');
         
-        // Clear any existing temporary marker first
-        mapState.setTempMarker(null);
-        
-        // Force a state update to ensure the temp marker appears
+        // Focus on the marker name input field after a short delay
         setTimeout(() => {
-          mapState.setTempMarker(exactPosition);
-          mapState.setMarkerName('New Location');
-          console.log('Temp marker state set from shape - popup should appear');
-          
-          // Force the marker to be processed by triggering a re-render
-          setTimeout(() => {
-            console.log('Final temp marker confirmation:', exactPosition);
-          }, 100);
-        }, 50);
+          const inputField = document.querySelector('.leaflet-popup input');
+          if (inputField) {
+            (inputField as HTMLElement).focus();
+          }
+        }, 100);
+      } else if (shape.layer && shape.layer.getLatLng) {
+        // Alternative: try to get position from the layer if available
+        const latLng = shape.layer.getLatLng();
+        mapState.setTempMarker([latLng.lat, latLng.lng]);
+        mapState.setMarkerName('New Marker');
         
+        // Focus on the marker name input field after a short delay
+        setTimeout(() => {
+          const inputField = document.querySelector('.leaflet-popup input');
+          if (inputField) {
+            (inputField as HTMLElement).focus();
+          }
+        }, 100);
       } else {
-        console.error('Could not determine marker position from shape:', shape);
+        console.error('Invalid marker position data:', shape);
         toast.error('Could not create marker: invalid position data');
+        return;
       }
-      
     } else if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'polygon') {
       // Handle drawing shapes (circles, rectangles, polygons) - ABSOLUTELY NO MARKER LOGIC
       console.log(`Creating ${shape.type} shape - no marker creation`);
@@ -115,6 +103,9 @@ export function useMarkerHandlers(mapState: any) {
       
       toast.success(`${shape.type} created successfully`);
       
+      // DO NOT call any marker-related functions here
+      // DO NOT call setTempMarker
+      // DO NOT create any popup or input field
     } else {
       console.log(`Unknown shape type: ${shape.type}`);
     }
