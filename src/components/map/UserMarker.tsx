@@ -102,6 +102,21 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     }
   }, [marker.id, isDeleting, originalPosition]);
 
+  // Handler for clicking on marker
+  const handleMarkerClick = useCallback((e: L.LeafletEvent) => {
+    console.log('UserMarker: Marker clicked, opening popup');
+    const marker = e.target as L.Marker;
+    if (marker && !isDeleting) {
+      // Stop event propagation to prevent map click
+      if (e.originalEvent) {
+        L.DomEvent.stopPropagation(e.originalEvent);
+      }
+      
+      // Open the popup
+      marker.openPopup();
+    }
+  }, [isDeleting]);
+
   // Handler for deleting a marker safely
   const handleDelete = useCallback((id: string) => {
     if (isDeleting) return;
@@ -175,7 +190,8 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       eventHandlers={{ 
         dragstart: handleDragStart,
         drag: handleDrag,
-        dragend: handleDragEnd 
+        dragend: handleDragEnd,
+        click: handleMarkerClick
       }}
       attribution={`marker-${marker.id}`}
     >

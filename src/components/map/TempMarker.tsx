@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -25,7 +26,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
-  const forceOpenTimeoutRef = useRef<NodeJS.Timeout>();
+  const isOpeningRef = useRef(false);
   
   // Update marker position in parent when dragged
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
@@ -51,40 +52,31 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     onSave();
   }, [isProcessing, onSave]);
 
-  // Force open popup with multiple attempts
-  const forceOpenPopup = useCallback((marker: L.Marker, attempt = 1) => {
-    if (!marker) return;
+  // Open popup with retry mechanism
+  const openPopupWithRetry = useCallback((marker: L.Marker, attempt = 1) => {
+    if (!marker || isOpeningRef.current) return;
     
-    console.log(`TempMarker: Force opening popup - attempt ${attempt}`);
+    isOpeningRef.current = true;
+    console.log(`TempMarker: Opening popup attempt ${attempt}`);
     
     try {
-      // Check if popup exists
       const popup = marker.getPopup();
       if (!popup) {
-        console.error('TempMarker: No popup found on marker');
+        console.error('TempMarker: No popup found');
+        isOpeningRef.current = false;
         return;
       }
       
-      // Check if popup is already open
-      if (marker.isPopupOpen()) {
-        console.log('TempMarker: Popup is already open');
-        return;
-      }
-      
-      // Try to open the popup
+      // Force open the popup
       marker.openPopup();
       
-      // Verify it opened and retry if it didn't
+      // Check if it opened successfully after a delay
       setTimeout(() => {
-        if (!marker.isPopupOpen() && attempt < 5) {
-          console.log(`TempMarker: Popup still not open, retrying attempt ${attempt + 1}`);
-          forceOpenPopup(marker, attempt + 1);
-        } else if (marker.isPopupOpen()) {
-          console.log('TempMarker: Popup successfully opened');
-          
-          // Force focus on the input field
+        if (marker.isPopupOpen()) {
+          console.log('TempMarker: Popup opened successfully');
+          // Focus the input
           setTimeout(() => {
-            const popupElement = marker.getPopup()?.getElement();
+            const popupElement = popup.getElement();
             if (popupElement) {
               const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
               if (input) {
@@ -93,36 +85,36 @@ const TempMarker: React.FC<TempMarkerProps> = ({
               }
             }
           }, 100);
+        } else if (attempt < 3) {
+          console.log(`TempMarker: Popup not open, retry ${attempt + 1}`);
+          setTimeout(() => openPopupWithRetry(marker, attempt + 1), 200);
         } else {
-          console.error('TempMarker: Failed to open popup after 5 attempts');
+          console.error('TempMarker: Failed to open popup after 3 attempts');
         }
-      }, 200 * attempt); // Increasing delay with each attempt
+        isOpeningRef.current = false;
+      }, 150);
       
     } catch (error) {
       console.error('TempMarker: Error opening popup:', error);
+      isOpeningRef.current = false;
     }
   }, []);
 
-  // Set up marker and popup references
+  // Set up marker reference and auto-open popup
   const setMarkerInstance = useCallback((marker: L.Marker) => {
-    if (marker) {
+    if (marker && !markerRef.current) {
       markerRef.current = marker;
       console.log('TempMarker: Marker instance set');
       
-      // Clear any existing timeout
-      if (forceOpenTimeoutRef.current) {
-        clearTimeout(forceOpenTimeoutRef.current);
-      }
-      
-      // Force open popup after a short delay to ensure everything is ready
-      forceOpenTimeoutRef.current = setTimeout(() => {
-        forceOpenPopup(marker);
-      }, 150);
+      // Open popup after marker is fully ready
+      setTimeout(() => {
+        openPopupWithRetry(marker);
+      }, 200);
     }
-  }, [forceOpenPopup]);
+  }, [openPopupWithRetry]);
 
   const setPopupInstance = useCallback((popup: L.Popup) => {
-    if (popup) {
+    if (popup && !popupRef.current) {
       popupRef.current = popup;
       console.log('TempMarker: Popup instance set');
     }
@@ -133,19 +125,30 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     console.log('TempMarker: Marker added to map');
     const marker = e.target as L.Marker;
     
-    // Additional delay before forcing popup open
+    // Additional attempt to open popup when marker is added to map
     setTimeout(() => {
-      forceOpenPopup(marker);
-    }, 100);
-  }, [forceOpenPopup]);
+      if (!marker.isPopupOpen()) {
+        openPopupWithRetry(marker);
+      }
+    }, 300);
+  }, [openPopupWithRetry]);
 
-  // Handle cleanup when component unmounts
+  const handlePopupOpen = useCallback(() => {
+    console.log('TempMarker: Popup opened successfully');
+  }, []);
+
+  const handlePopupClose = useCallback((e: L.PopupEvent) => {
+    console.log('TempMarker: Popup close attempted');
+    // Prevent popup from closing unless it's a save operation
+    if (!isProcessing) {
+      e.popup.openOn(e.target);
+    }
+  }, [isProcessing]);
+
+  // Cleanup
   useEffect(() => {
     return () => {
-      if (forceOpenTimeoutRef.current) {
-        clearTimeout(forceOpenTimeoutRef.current);
-      }
-      
+      isOpeningRef.current = false;
       if (markerRef.current) {
         try {
           markerRef.current.closePopup();
@@ -164,12 +167,8 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       eventHandlers={{
         dragend: handleDragEnd,
         add: handleMarkerAdd,
-        popupopen: () => {
-          console.log('TempMarker: Popup opened event fired');
-        },
-        popupclose: () => {
-          console.log('TempMarker: Popup closed event fired');
-        }
+        popupopen: handlePopupOpen,
+        popupclose: handlePopupClose
       }}
     >
       <Popup 
@@ -177,14 +176,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         closeOnClick={false}
         closeOnEscapeKey={false}
         autoClose={false}
-        closeButton={true}
+        closeButton={false}
         autoPan={true}
         keepInView={true}
         className="temp-marker-popup"
         maxWidth={300}
         minWidth={250}
       >
-        <div style={{ minWidth: '250px', padding: '8px' }}>
+        <div className="temp-marker-content">
           <NewMarkerForm
             markerName={markerName}
             setMarkerName={setMarkerName}
