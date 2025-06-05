@@ -1,0 +1,51 @@
+
+.temp-marker-popup {
+  z-index: 10000 !important;
+}
+
+.temp-marker-popup .leaflet-popup-content-wrapper {
+  background: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  padding: 0 !important;
+  min-width: 250px !important;
+  max-width: 300px !important;
+}
+
+.temp-marker-popup .leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+  min-width: 250px !important;
+}
+
+.temp-marker-popup .leaflet-popup-tip {
+  background: white !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.temp-marker-popup .leaflet-popup-close-button {
+  color: #666 !important;
+  font-size: 18px !important;
+  padding: 4px 8px !important;
+  top: 8px !important;
+  right: 8px !important;
+}
+
+.temp-marker-popup .leaflet-popup-close-button:hover {
+  color: #000 !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-radius: 4px !important;
+}
+
+/* Ensure temp marker popup appears above everything else */
+.leaflet-pane .leaflet-popup-pane .temp-marker-popup {
+  z-index: 10000 !important;
+  position: relative !important;
+}
+
+/* Override any competing z-index rules */
+.leaflet-container .temp-marker-popup {
+  z-index: 10000 !important;
+}
