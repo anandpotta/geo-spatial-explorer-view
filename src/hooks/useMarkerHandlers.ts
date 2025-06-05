@@ -33,7 +33,7 @@ export function useMarkerHandlers(mapState: any) {
     
     // Check if this is specifically a marker creation event
     if (shape.type === 'marker') {
-      console.log('Processing marker creation');
+      console.log('Processing marker creation from shape');
       
       // Prevent map click during marker creation
       window.preventMapClick = true;
@@ -45,12 +45,16 @@ export function useMarkerHandlers(mapState: any) {
           shape.position[1]
         ];
         mapState.setTempMarker(exactPosition);
-        mapState.setMarkerName('New Marker');
+        mapState.setMarkerName('New Building');
+        
+        console.log('Temp marker created from shape at:', exactPosition);
       } else if (shape.layer && shape.layer.getLatLng) {
         // Alternative: try to get position from the layer if available
         const latLng = shape.layer.getLatLng();
         mapState.setTempMarker([latLng.lat, latLng.lng]);
-        mapState.setMarkerName('New Marker');
+        mapState.setMarkerName('New Building');
+        
+        console.log('Temp marker created from layer at:', [latLng.lat, latLng.lng]);
       } else {
         console.error('Invalid marker position data:', shape);
         toast.error('Could not create marker: invalid position data');

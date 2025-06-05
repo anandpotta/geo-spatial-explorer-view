@@ -20,7 +20,21 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Only ignore clicks on specific elements that should not create markers
+        // Check if this is a click on a path element
+        if (target.tagName === 'path' || target.tagName === 'svg' || target.closest('path')) {
+          console.log('Click on path detected - allowing path interaction');
+          // Let path clicks through to their handlers, but don't create markers
+          return;
+        }
+        
+        // Check if this is a click on a marker
+        if (target.closest('.leaflet-marker-icon') || target.closest('.leaflet-marker-shadow')) {
+          console.log('Click on marker detected - allowing marker interaction');
+          // Let marker clicks through to their handlers, but don't create new markers
+          return;
+        }
+        
+        // Only ignore clicks on specific UI controls that should not create markers
         if (
           // Ignore clicks on leaflet popups (but allow them to function)
           target.closest('.leaflet-popup') ||
@@ -35,12 +49,10 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           console.log('Click on control or UI element ignored');
           return;
         }
-        
-        // Allow clicks on markers and paths to go through normally
-        // Remove the aggressive filtering that was preventing marker interactions
       }
       
       // Allow the map click to proceed for marker creation
+      console.log('Map click proceeding for marker creation at:', e.latlng);
       onMapClick(e.latlng);
     }
   });
