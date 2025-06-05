@@ -4,7 +4,7 @@ import { useMapPosition } from './map/useMapPosition';
 import { useMapMarkers } from './map/useMapMarkers';
 import { useMapDrawings } from './map/useMapDrawings';
 import { useFloorPlanState } from './map/useFloorPlanState';
-import { useTempMarkerGlobal } from './map/useTempMarkerGlobal';
+import { useEffect } from 'react';
 
 export function useMapState(selectedLocation?: Location) {
   const mapPosition = useMapPosition(selectedLocation);
@@ -12,8 +12,14 @@ export function useMapState(selectedLocation?: Location) {
   const mapDrawings = useMapDrawings();
   const floorPlanState = useFloorPlanState();
 
-  // Set up global temp marker handler
-  useTempMarkerGlobal(mapMarkers.setTempMarker);
+  // Set up global temp marker handler - ensure this is always called
+  useEffect(() => {
+    window.tempMarkerPositionUpdate = mapMarkers.setTempMarker;
+    
+    return () => {
+      delete window.tempMarkerPositionUpdate;
+    };
+  }, [mapMarkers.setTempMarker]);
 
   // Enhanced save marker handler that includes current drawing
   const handleSaveMarker = () => {
