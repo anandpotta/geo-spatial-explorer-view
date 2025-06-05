@@ -25,7 +25,7 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       e.preventDefault();
       e.stopPropagation();
     }
-    if (isProcessingPopupOpened || !markerName.trim()) return;
+    if (isProcessing || !markerName.trim()) return;
     console.log('Save button clicked, saving marker:', markerName);
     onSave();
   };
