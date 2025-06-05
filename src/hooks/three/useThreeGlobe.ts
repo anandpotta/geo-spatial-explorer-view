@@ -22,6 +22,7 @@ export function useThreeGlobe(
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const autoRotationEnabledRef = useRef<boolean>(true);
+  const isCleaningUpRef = useRef<boolean>(false);
   
   // Use the scene hook
   const {
@@ -44,7 +45,7 @@ export function useThreeGlobe(
   
   // Setup globe objects and controls
   useEffect(() => {
-    if (!scene || !camera || !renderer || isSetupCompleteRef.current) {
+    if (!scene || !camera || !renderer || isSetupCompleteRef.current || isCleaningUpRef.current) {
       console.log("Scene not ready or setup already complete");
       return;
     }
@@ -99,26 +100,37 @@ export function useThreeGlobe(
     
     console.log("Globe setup complete, starting animation");
     
-    // Start animation loop
+    // Start animation loop with proper checks
     const animate = () => {
-      if (!scene || !camera || !renderer || !controlsRef.current) {
-        console.warn("Animation loop missing required objects");
+      // Check if we're cleaning up or if required objects are missing
+      if (isCleaningUpRef.current || 
+          !scene || 
+          !camera || 
+          !renderer || 
+          !controlsRef.current) {
+        console.log("Animation loop stopping - missing required objects or cleaning up");
         return;
       }
       
       animationFrameRef.current = requestAnimationFrame(animate);
       
-      // If we have a globe, rotate it slightly for a more dynamic appearance
+      // If we have a globe, apply auto-rotation
       if (globeRef.current && autoRotationEnabledRef.current) {
         // The globe rotation is now handled by OrbitControls autoRotate
         // but we could add additional rotation effects here if needed
       }
       
       // Make sure controls are updated every frame
-      controlsRef.current.update();
-      
-      // Ensure the renderer is drawing the scene
-      renderer.render(scene, camera);
+      try {
+        controlsRef.current.update();
+        
+        // Ensure the renderer is drawing the scene
+        renderer.render(scene, camera);
+      } catch (error) {
+        console.error("Error in animation loop:", error);
+        // Stop animation if there's an error
+        return;
+      }
     };
     
     // Start animation
@@ -126,7 +138,7 @@ export function useThreeGlobe(
     
     // Mark as initialized after a small timeout to ensure everything is ready
     setTimeout(() => {
-      if (!isInitialized) {
+      if (!isInitialized && !isCleaningUpRef.current) {
         console.log("Setting isInitialized to true");
         setIsInitialized(true);
         
@@ -142,7 +154,15 @@ export function useThreeGlobe(
     // Cleanup function
     return () => {
       console.log("Globe effect cleanup");
+      isCleaningUpRef.current = true;
       isSetupCompleteRef.current = false;
+      
+      // Stop animation loop
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      
       // Dispose globe and atmosphere meshes
       if (globeRef.current) {
         scene.remove(globeRef.current);
@@ -162,7 +182,7 @@ export function useThreeGlobe(
   
   // Call onInitialized when textures are loaded
   useEffect(() => {
-    if (texturesLoaded && onInitialized && isInitialized) {
+    if (texturesLoaded && onInitialized && isInitialized && !isCleaningUpRef.current) {
       console.log("Calling onInitialized callback - textures loaded");
       onInitialized();
     }
@@ -170,7 +190,7 @@ export function useThreeGlobe(
   
   // Enable/disable auto-rotation
   const setAutoRotation = useCallback((enabled: boolean) => {
-    if (controlsRef.current) {
+    if (controlsRef.current && !isCleaningUpRef.current) {
       controlsRef.current.autoRotate = enabled;
       autoRotationEnabledRef.current = enabled;
     }
@@ -185,6 +205,8 @@ export function useThreeGlobe(
   
   // Wrap the flyToLocation to handle auto-rotation
   const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
+    if (isCleaningUpRef.current) return;
+    
     // Ensure the globe is rotating while flying for a more dynamic effect
     setAutoRotation(true);
     
@@ -196,6 +218,13 @@ export function useThreeGlobe(
       if (onComplete) onComplete();
     });
   }, [flyToLocation, setAutoRotation]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isCleaningUpRef.current = true;
+    };
+  }, []);
   
   return {
     scene,
