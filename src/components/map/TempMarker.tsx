@@ -25,7 +25,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const popupRef = useRef<L.Popup | null>(null);
   const hasOpenedRef = useRef(false);
   
   // Update marker position in parent when dragged
@@ -41,31 +40,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   }, [isProcessing]);
   
-  // Enhanced save handler that prevents popup closing
+  // Enhanced save handler
   const handleSave = useCallback(() => {
     if (isProcessing) {
       console.log('TempMarker: Save already in progress, ignoring duplicate call');
       return;
     }
     
-    console.log('TempMarker: Save initiated, preventing popup close');
-    
-    // Temporarily disable popup closing during save
-    if (popupRef.current) {
-      const popup = popupRef.current;
-      const originalCloseOnClick = popup.options.closeOnClick;
-      const originalCloseOnEscapeKey = popup.options.closeOnEscapeKey;
-      
-      popup.options.closeOnClick = false;
-      popup.options.closeOnEscapeKey = false;
-      
-      // Restore options after save completes
-      setTimeout(() => {
-        popup.options.closeOnClick = originalCloseOnClick;
-        popup.options.closeOnEscapeKey = originalCloseOnEscapeKey;
-      }, 3000);
-    }
-    
+    console.log('TempMarker: Save initiated');
     onSave();
   }, [isProcessing, onSave]);
 
@@ -113,26 +95,17 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   }, [openPopupSafely]);
 
-  // Set up popup reference
-  const setPopupInstance = useCallback((popup: L.Popup) => {
-    if (popup) {
-      popupRef.current = popup;
-      console.log('TempMarker: Popup instance set');
-    }
-  }, []);
-
   // Handle popup events
   const handlePopupOpen = useCallback(() => {
     console.log('TempMarker: Popup opened event fired');
   }, []);
 
-  // Prevent popup from closing during processing or initially
+  // Prevent popup from closing during processing
   const handlePopupClose = useCallback((e: L.PopupEvent) => {
     if (isProcessing) {
       console.log('TempMarker: Preventing popup close during processing');
-      e.preventDefault?.();
       
-      // Reopen popup after a brief delay
+      // Stop the event and reopen popup
       setTimeout(() => {
         if (markerRef.current && !markerRef.current.isPopupOpen()) {
           try {
@@ -178,9 +151,8 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }}
     >
       <Popup 
-        ref={setPopupInstance}
-        closeOnClick={false}
-        closeOnEscapeKey={false}
+        closeOnClick={!isProcessing}
+        closeOnEscapeKey={!isProcessing}
         autoClose={false}
         closeButton={false}
         autoPan={true}
