@@ -20,25 +20,22 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Allow path clicks to proceed for image uploads - don't prevent these
+        // Allow path clicks for image uploads - these should handle their own events
         if (target.tagName === 'path' || target.tagName === 'svg' || target.closest('path')) {
-          console.log('Click on path detected - allowing path to handle upload');
-          // Let path handle its own events and don't create markers
+          console.log('Click on path detected - allowing path upload functionality');
           return;
         }
         
-        // Allow marker clicks to proceed normally
+        // Allow marker clicks - let markers handle their own events
         if (target.closest('.leaflet-marker-icon') || 
             target.closest('.leaflet-marker-shadow')) {
-          console.log('Click on marker detected - allowing normal marker behavior');
-          // Let marker handle its own events
+          console.log('Click on marker detected - allowing marker popup');
           return;
         }
         
-        // Don't create markers when clicking inside popups
-        if (target.closest('.leaflet-popup-content') || 
-            target.closest('.leaflet-popup-close-button')) {
-          console.log('Click inside popup detected - ignoring for marker creation');
+        // Don't create markers when clicking on popups or popup content
+        if (target.closest('.leaflet-popup')) {
+          console.log('Click on popup detected - ignoring');
           return;
         }
         

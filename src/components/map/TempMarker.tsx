@@ -25,8 +25,8 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isVisible, setIsVisible] = useState(true);
-  const [popupOpened, setPopupOpened] = useState(false);
   const saveInProgressRef = useRef(false);
+  const autoOpenTriggered = useRef(false);
   
   // Create a stable marker ID that doesn't change on every render
   const markerId = `temp-marker-${position[0].toFixed(6)}-${position[1].toFixed(6)}`;
@@ -93,46 +93,41 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         element.setAttribute('data-marker-id', markerId);
       }
       
-      // Auto-open popup after DOM is ready
-      setTimeout(() => {
-        if (markerRef.current && isVisible && !popupOpened) {
-          try {
-            console.log('Auto-opening marker popup on creation');
-            markerRef.current.openPopup();
-            setPopupOpened(true);
-          } catch (error) {
-            console.error("Error opening popup:", error);
+      // Auto-open popup once after marker is created
+      if (!autoOpenTriggered.current) {
+        autoOpenTriggered.current = true;
+        setTimeout(() => {
+          if (markerRef.current && isVisible) {
+            try {
+              console.log('Auto-opening marker popup on creation');
+              markerRef.current.openPopup();
+            } catch (error) {
+              console.error("Error opening popup:", error);
+            }
           }
-        }
-      }, 200);
+        }, 150);
+      }
     }
-  }, [markerId, isVisible, popupOpened]);
-
-  // Handle popup open event
-  const handlePopupOpen = useCallback(() => {
-    console.log('Popup opened');
-    setPopupOpened(true);
-  }, []);
-
-  // Handle popup close event
-  const handlePopupClose = useCallback(() => {
-    console.log('Popup closed');
-    setPopupOpened(false);
-  }, []);
+  }, [markerId, isVisible]);
 
   // Handle marker click - ensure popup opens
   const handleMarkerClick = useCallback((e: L.LeafletMouseEvent) => {
-    console.log('Temp marker clicked');
+    console.log('Temp marker clicked - opening popup');
+    
     // Stop propagation to prevent map click
     if (e.originalEvent) {
       e.originalEvent.stopPropagation();
     }
     
-    // Ensure popup is open
-    if (markerRef.current && !popupOpened) {
-      markerRef.current.openPopup();
+    // Force popup to open
+    if (markerRef.current) {
+      try {
+        markerRef.current.openPopup();
+      } catch (error) {
+        console.error('Error opening popup on click:', error);
+      }
     }
-  }, [popupOpened]);
+  }, []);
 
   // Don't render if not visible
   if (!isVisible) {
@@ -146,9 +141,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       draggable={!isProcessing}
       eventHandlers={{
         dragend: handleDragEnd,
-        click: handleMarkerClick,
-        popupopen: handlePopupOpen,
-        popupclose: handlePopupClose
+        click: handleMarkerClick
       }}
     >
       <Popup 
