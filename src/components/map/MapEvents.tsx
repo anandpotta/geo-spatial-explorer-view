@@ -20,29 +20,26 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Check if this is a click on a path element - allow it but don't create markers
+        // Check if this is a click on a path element - let it handle its own events
         if (target.tagName === 'path' || target.tagName === 'svg' || target.closest('path')) {
-          console.log('Click on path detected - allowing path interaction');
-          // For path clicks, we want to allow the path to handle the interaction
-          // but we don't want to create new markers
+          console.log('Click on path detected - allowing path to handle its own events');
+          // Don't prevent the event, but also don't create markers
+          // The path should handle its own click events
           return;
         }
         
-        // Check if this is a click on a marker - allow it and don't create new markers
-        if (target.closest('.leaflet-marker-icon') || target.closest('.leaflet-marker-shadow')) {
-          console.log('Click on marker detected - allowing marker interaction');
-          // For marker clicks, let the marker handle its own click events
-          // Don't create new markers
+        // Check if this is a click on a marker or its popup
+        if (target.closest('.leaflet-marker-icon') || 
+            target.closest('.leaflet-marker-shadow') ||
+            target.closest('.leaflet-popup')) {
+          console.log('Click on marker or popup detected - allowing marker interaction');
+          // Don't create new markers for these clicks
           return;
         }
         
-        // Only ignore clicks on specific UI controls that should not create markers
+        // Ignore clicks on specific UI controls
         if (
-          // Ignore clicks on leaflet popups (but allow them to function)
-          target.closest('.leaflet-popup') ||
-          // Ignore clicks on leaflet controls
           target.closest('.leaflet-control') ||
-          // Ignore clicks on specific UI controls
           target.closest('.upload-button-container') ||
           target.closest('.upload-button-wrapper') ||
           target.closest('.image-controls-container') ||
