@@ -20,17 +20,19 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Check if this is a click on a path element
+        // Check if this is a click on a path element - allow it but don't create markers
         if (target.tagName === 'path' || target.tagName === 'svg' || target.closest('path')) {
           console.log('Click on path detected - allowing path interaction');
-          // Let path clicks through to their handlers, but don't create markers
+          // For path clicks, we want to allow the path to handle the interaction
+          // but we don't want to create new markers
           return;
         }
         
-        // Check if this is a click on a marker
+        // Check if this is a click on a marker - allow it and don't create new markers
         if (target.closest('.leaflet-marker-icon') || target.closest('.leaflet-marker-shadow')) {
           console.log('Click on marker detected - allowing marker interaction');
-          // Let marker clicks through to their handlers, but don't create new markers
+          // For marker clicks, let the marker handle its own click events
+          // Don't create new markers
           return;
         }
         

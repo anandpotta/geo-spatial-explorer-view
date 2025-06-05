@@ -48,6 +48,12 @@ export function useMarkerHandlers(mapState: any) {
         mapState.setMarkerName('New Building');
         
         console.log('Temp marker created from shape at:', exactPosition);
+        
+        // Force popup to open after a short delay to ensure DOM is ready
+        setTimeout(() => {
+          window.forceOpenMarkerPopup = true;
+        }, 200);
+        
       } else if (shape.layer && shape.layer.getLatLng) {
         // Alternative: try to get position from the layer if available
         const latLng = shape.layer.getLatLng();
@@ -55,6 +61,12 @@ export function useMarkerHandlers(mapState: any) {
         mapState.setMarkerName('New Building');
         
         console.log('Temp marker created from layer at:', [latLng.lat, latLng.lng]);
+        
+        // Force popup to open after a short delay to ensure DOM is ready
+        setTimeout(() => {
+          window.forceOpenMarkerPopup = true;
+        }, 200);
+        
       } else {
         console.error('Invalid marker position data:', shape);
         toast.error('Could not create marker: invalid position data');
@@ -115,4 +127,10 @@ export function useMarkerHandlers(mapState: any) {
     handleMapClick,
     handleShapeCreated
   };
+}
+
+declare global {
+  interface Window {
+    forceOpenMarkerPopup?: boolean;
+  }
 }

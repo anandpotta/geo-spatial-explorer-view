@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -50,6 +51,21 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     };
   }, [markerId]);
 
+  // Check for forced popup open flag
+  useEffect(() => {
+    if (window.forceOpenMarkerPopup && markerRef.current && isVisible && !popupOpen) {
+      console.log('Force opening marker popup');
+      try {
+        markerRef.current.openPopup();
+        setPopupOpen(true);
+        // Clear the flag
+        window.forceOpenMarkerPopup = false;
+      } catch (error) {
+        console.error("Error force opening popup:", error);
+      }
+    }
+  }, [isVisible, popupOpen]);
+
   // Update marker position in parent when dragged
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     if (isProcessing) return;
@@ -88,22 +104,25 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       setTimeout(() => {
         if (markerRef.current && isVisible && !popupOpen) {
           try {
+            console.log('Auto-opening marker popup');
             markerRef.current.openPopup();
             setPopupOpen(true);
           } catch (error) {
             console.error("Error opening popup:", error);
           }
         }
-      }, 150);
+      }, 300); // Increased delay to ensure proper DOM setup
     }
   }, [markerId, isVisible, popupOpen]);
 
   // Handle popup events
   const handlePopupOpen = useCallback(() => {
+    console.log('Popup opened');
     setPopupOpen(true);
   }, []);
 
   const handlePopupClose = useCallback(() => {
+    console.log('Popup closed');
     setPopupOpen(false);
   }, []);
 
@@ -120,7 +139,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       eventHandlers={{
         dragend: handleDragEnd,
         popupopen: handlePopupOpen,
-        popupclose: handlePopupClose
+        popupclose: handlePopupClose,
+        click: (e) => {
+          console.log('Temp marker clicked');
+          // Ensure popup opens on click
+          if (markerRef.current && !popupOpen) {
+            markerRef.current.openPopup();
+          }
+        }
       }}
     >
       <Popup 
@@ -128,6 +154,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         closeOnEscapeKey={false}
         autoClose={false}
         closeButton={!isProcessing}
+        autoPan={true}
       >
         <NewMarkerForm
           markerName={markerName}
