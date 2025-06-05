@@ -27,6 +27,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
   const isOpeningRef = useRef(false);
+  const hasTriedOpeningRef = useRef(false);
   
   // Update marker position in parent when dragged
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
@@ -52,50 +53,45 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     onSave();
   }, [isProcessing, onSave]);
 
-  // Improved popup opening with better timing
-  const openPopupSafely = useCallback((marker: L.Marker) => {
-    if (!marker || isOpeningRef.current) return;
+  // Improved popup opening that waits for both marker and popup to be ready
+  const tryOpenPopup = useCallback(() => {
+    if (isOpeningRef.current || hasTriedOpeningRef.current || !markerRef.current || !popupRef.current) {
+      return;
+    }
     
     isOpeningRef.current = true;
-    console.log('TempMarker: Opening popup safely');
+    hasTriedOpeningRef.current = true;
+    console.log('TempMarker: Attempting to open popup with both marker and popup ready');
     
     try {
-      // Ensure popup exists
-      const popup = marker.getPopup();
-      if (!popup) {
-        console.error('TempMarker: No popup found');
-        isOpeningRef.current = false;
-        return;
-      }
-      
       // Close any existing popups first
-      marker.closePopup();
+      markerRef.current.closePopup();
       
       // Use requestAnimationFrame for better timing
       requestAnimationFrame(() => {
         try {
-          marker.openPopup();
-          
-          // Check if popup opened and focus input
-          setTimeout(() => {
-            if (marker.isPopupOpen()) {
-              console.log('TempMarker: Popup opened successfully');
-              const popupElement = popup.getElement();
-              if (popupElement) {
-                const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
-                if (input) {
-                  input.focus();
-                  input.select();
-                  console.log('TempMarker: Input focused and selected');
+          if (markerRef.current && popupRef.current) {
+            markerRef.current.openPopup();
+            
+            // Check if popup opened and focus input
+            setTimeout(() => {
+              if (markerRef.current && markerRef.current.isPopupOpen()) {
+                console.log('TempMarker: Popup opened successfully');
+                const popupElement = popupRef.current?.getElement();
+                if (popupElement) {
+                  const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
+                  if (input) {
+                    input.focus();
+                    input.select();
+                    console.log('TempMarker: Input focused and selected');
+                  }
                 }
+              } else {
+                console.log('TempMarker: Popup failed to open');
               }
-            } else {
-              console.log('TempMarker: Popup failed to open, retrying...');
-              setTimeout(() => marker.openPopup(), 100);
-            }
-            isOpeningRef.current = false;
-          }, 100);
-          
+              isOpeningRef.current = false;
+            }, 100);
+          }
         } catch (error) {
           console.error('TempMarker: Error in requestAnimationFrame:', error);
           isOpeningRef.current = false;
@@ -103,43 +99,47 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       });
       
     } catch (error) {
-      console.error('TempMarker: Error opening popup safely:', error);
+      console.error('TempMarker: Error opening popup:', error);
       isOpeningRef.current = false;
     }
   }, []);
 
-  // Set up marker reference and auto-open popup
+  // Set up marker reference
   const setMarkerInstance = useCallback((marker: L.Marker) => {
     if (marker && !markerRef.current) {
       markerRef.current = marker;
       console.log('TempMarker: Marker instance set');
       
-      // Open popup after marker is ready
-      setTimeout(() => {
-        openPopupSafely(marker);
-      }, 250);
+      // Try to open popup if popup is also ready
+      if (popupRef.current) {
+        setTimeout(() => tryOpenPopup(), 250);
+      }
     }
-  }, [openPopupSafely]);
+  }, [tryOpenPopup]);
 
+  // Set up popup reference
   const setPopupInstance = useCallback((popup: L.Popup) => {
     if (popup && !popupRef.current) {
       popupRef.current = popup;
       console.log('TempMarker: Popup instance set');
+      
+      // Try to open popup if marker is also ready
+      if (markerRef.current) {
+        setTimeout(() => tryOpenPopup(), 250);
+      }
     }
-  }, []);
+  }, [tryOpenPopup]);
 
   // Handle marker events
   const handleMarkerAdd = useCallback((e: L.LeafletEvent) => {
     console.log('TempMarker: Marker added to map');
-    const marker = e.target as L.Marker;
-    
-    // Ensure popup opens when marker is added to map
+    // Try opening popup after a delay if both refs are ready
     setTimeout(() => {
-      if (!marker.isPopupOpen()) {
-        openPopupSafely(marker);
+      if (markerRef.current && popupRef.current && !hasTriedOpeningRef.current) {
+        tryOpenPopup();
       }
     }, 300);
-  }, [openPopupSafely]);
+  }, [tryOpenPopup]);
 
   const handlePopupOpen = useCallback(() => {
     console.log('TempMarker: Popup opened event fired');
@@ -165,10 +165,17 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   }, [isProcessing]);
 
+  // Reset refs when position changes
+  useEffect(() => {
+    hasTriedOpeningRef.current = false;
+    isOpeningRef.current = false;
+  }, [position]);
+
   // Cleanup
   useEffect(() => {
     return () => {
       isOpeningRef.current = false;
+      hasTriedOpeningRef.current = false;
       if (markerRef.current) {
         try {
           markerRef.current.closePopup();
