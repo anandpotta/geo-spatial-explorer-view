@@ -147,9 +147,35 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 
   const handlePopupClose = useCallback((e: L.PopupEvent) => {
     console.log('TempMarker: Popup close attempted');
+    
     // Prevent popup from closing unless it's a save operation
-    if (!isProcessing) {
-      e.popup.openOn(e.target);
+    if (!isProcessing && markerRef.current) {
+      try {
+        // Use the marker's map reference instead of e.target
+        const map = markerRef.current.getMap?.() || (markerRef.current as any)._map;
+        if (map && typeof map.hasLayer === 'function') {
+          e.popup.openOn(map);
+        } else {
+          // Fallback: try to reopen popup directly on marker
+          setTimeout(() => {
+            if (markerRef.current) {
+              markerRef.current.openPopup();
+            }
+          }, 50);
+        }
+      } catch (error) {
+        console.error('TempMarker: Error preventing popup close:', error);
+        // Fallback: try to reopen popup directly
+        setTimeout(() => {
+          if (markerRef.current) {
+            try {
+              markerRef.current.openPopup();
+            } catch (err) {
+              console.error('TempMarker: Fallback popup open failed:', err);
+            }
+          }
+        }, 50);
+      }
     }
   }, [isProcessing]);
 
