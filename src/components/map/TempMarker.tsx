@@ -26,8 +26,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const popupRef = useRef<L.Popup | null>(null);
-  const isOpeningRef = useRef(false);
-  const hasTriedOpeningRef = useRef(false);
+  const hasOpenedRef = useRef(false);
   
   // Update marker position in parent when dragged
   const handleDragEnd = useCallback((e: L.LeafletEvent) => {
@@ -42,117 +41,98 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   }, [isProcessing]);
   
-  // Custom save handler
+  // Enhanced save handler that prevents popup closing
   const handleSave = useCallback(() => {
     if (isProcessing) {
-      console.log('Save already in progress, ignoring duplicate call');
+      console.log('TempMarker: Save already in progress, ignoring duplicate call');
       return;
     }
     
-    console.log('TempMarker: Save initiated');
+    console.log('TempMarker: Save initiated, preventing popup close');
+    
+    // Temporarily disable popup closing during save
+    if (popupRef.current) {
+      const popup = popupRef.current;
+      const originalCloseOnClick = popup.options.closeOnClick;
+      const originalCloseOnEscapeKey = popup.options.closeOnEscapeKey;
+      
+      popup.options.closeOnClick = false;
+      popup.options.closeOnEscapeKey = false;
+      
+      // Restore options after save completes
+      setTimeout(() => {
+        popup.options.closeOnClick = originalCloseOnClick;
+        popup.options.closeOnEscapeKey = originalCloseOnEscapeKey;
+      }, 3000);
+    }
+    
     onSave();
   }, [isProcessing, onSave]);
 
-  // Improved popup opening that waits for both marker and popup to be ready
-  const tryOpenPopup = useCallback(() => {
-    if (isOpeningRef.current || hasTriedOpeningRef.current || !markerRef.current || !popupRef.current) {
+  // Open popup when marker is ready
+  const openPopupSafely = useCallback(() => {
+    if (hasOpenedRef.current || !markerRef.current) {
       return;
     }
     
-    isOpeningRef.current = true;
-    hasTriedOpeningRef.current = true;
-    console.log('TempMarker: Attempting to open popup with both marker and popup ready');
+    console.log('TempMarker: Opening popup safely');
+    hasOpenedRef.current = true;
     
     try {
-      // Close any existing popups first
-      markerRef.current.closePopup();
-      
-      // Use requestAnimationFrame for better timing
-      requestAnimationFrame(() => {
-        try {
-          if (markerRef.current && popupRef.current) {
-            markerRef.current.openPopup();
-            
-            // Check if popup opened and focus input
-            setTimeout(() => {
-              if (markerRef.current && markerRef.current.isPopupOpen()) {
-                console.log('TempMarker: Popup opened successfully');
-                const popupElement = popupRef.current?.getElement();
-                if (popupElement) {
-                  const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
-                  if (input) {
-                    input.focus();
-                    input.select();
-                    console.log('TempMarker: Input focused and selected');
-                  }
-                }
-              } else {
-                console.log('TempMarker: Popup failed to open');
+      // Ensure popup is attached before opening
+      setTimeout(() => {
+        if (markerRef.current && !markerRef.current.isPopupOpen()) {
+          markerRef.current.openPopup();
+          
+          // Focus the input after popup opens
+          setTimeout(() => {
+            const popupElement = markerRef.current?.getPopup()?.getElement();
+            if (popupElement) {
+              const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
+              if (input) {
+                input.focus();
+                input.select();
               }
-              isOpeningRef.current = false;
-            }, 100);
-          }
-        } catch (error) {
-          console.error('TempMarker: Error in requestAnimationFrame:', error);
-          isOpeningRef.current = false;
+            }
+          }, 100);
         }
-      });
-      
+      }, 200);
     } catch (error) {
       console.error('TempMarker: Error opening popup:', error);
-      isOpeningRef.current = false;
     }
   }, []);
 
-  // Set up marker reference
+  // Set up marker reference and open popup
   const setMarkerInstance = useCallback((marker: L.Marker) => {
     if (marker && !markerRef.current) {
       markerRef.current = marker;
       console.log('TempMarker: Marker instance set');
       
-      // Try to open popup if popup is also ready
-      if (popupRef.current) {
-        setTimeout(() => tryOpenPopup(), 250);
-      }
+      // Open popup after marker is fully ready
+      setTimeout(() => openPopupSafely(), 300);
     }
-  }, [tryOpenPopup]);
+  }, [openPopupSafely]);
 
   // Set up popup reference
   const setPopupInstance = useCallback((popup: L.Popup) => {
-    if (popup && !popupRef.current) {
+    if (popup) {
       popupRef.current = popup;
       console.log('TempMarker: Popup instance set');
-      
-      // Try to open popup if marker is also ready
-      if (markerRef.current) {
-        setTimeout(() => tryOpenPopup(), 250);
-      }
     }
-  }, [tryOpenPopup]);
+  }, []);
 
-  // Handle marker events
-  const handleMarkerAdd = useCallback((e: L.LeafletEvent) => {
-    console.log('TempMarker: Marker added to map');
-    // Try opening popup after a delay if both refs are ready
-    setTimeout(() => {
-      if (markerRef.current && popupRef.current && !hasTriedOpeningRef.current) {
-        tryOpenPopup();
-      }
-    }, 300);
-  }, [tryOpenPopup]);
-
+  // Handle popup events
   const handlePopupOpen = useCallback(() => {
     console.log('TempMarker: Popup opened event fired');
   }, []);
 
-  // Simplified popup close handler - allow closing after save
-  const handlePopupClose = useCallback(() => {
-    console.log('TempMarker: Popup close attempted');
-    
-    // Only prevent close if we're not processing (saving)
-    if (!isProcessing && markerRef.current) {
-      console.log('TempMarker: Preventing popup close');
-      // Simple reopen after a short delay
+  // Prevent popup from closing during processing or initially
+  const handlePopupClose = useCallback((e: L.PopupEvent) => {
+    if (isProcessing) {
+      console.log('TempMarker: Preventing popup close during processing');
+      e.preventDefault?.();
+      
+      // Reopen popup after a brief delay
       setTimeout(() => {
         if (markerRef.current && !markerRef.current.isPopupOpen()) {
           try {
@@ -162,25 +142,25 @@ const TempMarker: React.FC<TempMarkerProps> = ({
           }
         }
       }, 50);
+    } else {
+      console.log('TempMarker: Allowing popup to close');
     }
   }, [isProcessing]);
 
-  // Reset refs when position changes
+  // Reset when position changes
   useEffect(() => {
-    hasTriedOpeningRef.current = false;
-    isOpeningRef.current = false;
+    hasOpenedRef.current = false;
   }, [position]);
 
   // Cleanup
   useEffect(() => {
     return () => {
-      isOpeningRef.current = false;
-      hasTriedOpeningRef.current = false;
+      hasOpenedRef.current = false;
       if (markerRef.current) {
         try {
           markerRef.current.closePopup();
         } catch (error) {
-          console.error("Error cleaning up temp marker:", error);
+          console.error("TempMarker: Error cleaning up:", error);
         }
       }
     };
@@ -193,7 +173,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       draggable={!isProcessing}
       eventHandlers={{
         dragend: handleDragEnd,
-        add: handleMarkerAdd,
         popupopen: handlePopupOpen,
         popupclose: handlePopupClose
       }}
@@ -210,16 +189,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         maxWidth={300}
         minWidth={250}
       >
-        <div className="temp-marker-content">
-          <NewMarkerForm
-            markerName={markerName}
-            setMarkerName={setMarkerName}
-            markerType={markerType}
-            setMarkerType={setMarkerType}
-            onSave={handleSave}
-            disabled={isProcessing}
-          />
-        </div>
+        <NewMarkerForm
+          markerName={markerName}
+          setMarkerName={setMarkerName}
+          markerType={markerType}
+          setMarkerType={setMarkerType}
+          onSave={handleSave}
+          disabled={isProcessing}
+        />
       </Popup>
     </Marker>
   );
