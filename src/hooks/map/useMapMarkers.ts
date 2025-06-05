@@ -14,14 +14,17 @@ export function useMapMarkers() {
   const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
   const [isProcessingMarker, setIsProcessingMarker] = useState(false);
   
-  const currentUserIdRef = useRef<string | null>(null);
-  const isAuthenticatedRef = useRef(false);
+  // Initialize refs properly
+  const currentUserIdRef = useRef<string | null>(currentUser?.id || null);
+  const isAuthenticatedRef = useRef<boolean>(isAuthenticated);
   const loadTimeoutRef = useRef<NodeJS.Timeout>();
   const lastLoadTime = useRef(0);
 
-  // Update refs without triggering re-renders
-  currentUserIdRef.current = currentUser?.id || null;
-  isAuthenticatedRef.current = isAuthenticated;
+  // Update refs when auth state changes
+  useEffect(() => {
+    currentUserIdRef.current = currentUser?.id || null;
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [currentUser?.id, isAuthenticated]);
 
   const loadMarkers = useCallback(() => {
     const now = Date.now();
