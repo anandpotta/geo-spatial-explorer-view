@@ -34,7 +34,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onUploadToDrawing,
   onPathsUpdated
 }: DrawingControlsProps, ref) => {
-  const { savedDrawings } = useDrawings();
+  const { drawings: savedDrawings } = useDrawings();
   const { isAuthenticated, currentUser, checkAuthBeforeAction } = useDrawingAuth();
   
   const {
