@@ -9,12 +9,6 @@ export function useMarkerHandlers(mapState: any) {
   const { currentUser } = useAuth();
   
   const handleMapClick = useCallback((latlng: L.LatLng) => {
-    // Prevent marker creation if we're in a preventing state
-    if (window.preventMapClick) {
-      console.log('Map click prevented due to preventMapClick flag');
-      return;
-    }
-    
     // Only create markers when explicitly in marker mode or no tool is active
     if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
@@ -34,9 +28,6 @@ export function useMarkerHandlers(mapState: any) {
     // Check if this is specifically a marker creation event
     if (shape.type === 'marker') {
       console.log('Processing marker creation from shape');
-      
-      // Prevent map click during marker creation
-      window.preventMapClick = true;
       
       // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
@@ -60,14 +51,8 @@ export function useMarkerHandlers(mapState: any) {
       } else {
         console.error('Invalid marker position data:', shape);
         toast.error('Could not create marker: invalid position data');
-        window.preventMapClick = false;
         return;
       }
-      
-      // Clear the prevent flag after a short delay
-      setTimeout(() => {
-        window.preventMapClick = false;
-      }, 500);
       
     } else if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'polygon') {
       // Handle drawing shapes (circles, rectangles, polygons) - ABSOLUTELY NO MARKER LOGIC

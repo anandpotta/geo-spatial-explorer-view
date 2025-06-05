@@ -10,12 +10,6 @@ interface MapEventsProps {
 const MapEvents = ({ onMapClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
-      // Don't trigger click if we're in the process of deleting a marker
-      if (window.preventMapClick) {
-        console.log('Map click prevented after marker deletion');
-        return;
-      }
-      
       // Check if this is a click on a leaflet control or popup that should be ignored
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
