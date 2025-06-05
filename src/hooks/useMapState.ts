@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
@@ -23,43 +23,85 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [isProcessingMarker, setIsProcessingMarker] = useState(false);
+  
+  // Use refs to prevent unnecessary re-renders
+  const currentUserRef = useRef(currentUser);
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  const loadTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Load existing markers and drawings when user changes or auth state changes
+  // Update refs when auth state changes
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
+    currentUserRef.current = currentUser;
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [currentUser, isAuthenticated]);
+
+  // Memoized load functions to prevent recreation
+  const loadMarkers = useCallback(() => {
+    if (!isAuthenticatedRef.current || !currentUserRef.current) {
       setMarkers([]);
+      return;
+    }
+    
+    try {
+      const savedMarkers = getSavedMarkers();
+      setMarkers(savedMarkers);
+    } catch (error) {
+      console.error('Error loading markers:', error);
+    }
+  }, []);
+
+  const loadDrawings = useCallback(() => {
+    if (!isAuthenticatedRef.current || !currentUserRef.current) {
       setDrawings([]);
       return;
     }
     
-    const savedMarkers = getSavedMarkers();
-    setMarkers(savedMarkers);
+    try {
+      const savedDrawings = getSavedDrawings();
+      setDrawings(savedDrawings);
+    } catch (error) {
+      console.error('Error loading drawings:', error);
+    }
+  }, []);
+
+  // Load initial data when auth state changes (with debouncing)
+  useEffect(() => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+    }
     
-    const savedDrawings = getSavedDrawings();
-    setDrawings(savedDrawings);
+    loadTimeoutRef.current = setTimeout(() => {
+      loadMarkers();
+      loadDrawings();
+    }, 100);
+
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+    };
+  }, [isAuthenticated, currentUser, loadMarkers, loadDrawings]);
+
+  // Debounced event handlers to prevent loops
+  const handleStorageUpdate = useCallback(() => {
+    if (isProcessingMarker || !isAuthenticatedRef.current) return;
     
-    // Listen only to the custom markersSaved event with heavy throttling
-    let updateTimeout: NodeJS.Timeout;
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+    }
     
+    loadTimeoutRef.current = setTimeout(() => {
+      loadMarkers();
+    }, 1000); // Longer debounce to prevent loops
+  }, [isProcessingMarker, loadMarkers]);
+
+  // Listen for storage events with heavy debouncing
+  useEffect(() => {
     const handleMarkersSaved = (event: Event) => {
       if (event instanceof CustomEvent && 
           event.detail?.source === 'storage' && 
           !isProcessingMarker) {
-        
-        // Clear any existing timeout
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-        
-        // Heavy debounce - only update every 3 seconds max
-        updateTimeout = setTimeout(() => {
-          try {
-            const updatedMarkers = getSavedMarkers();
-            setMarkers(updatedMarkers);
-          } catch (error) {
-            console.error('Error updating markers:', error);
-          }
-        }, 3000);
+        handleStorageUpdate();
       }
     };
     
@@ -67,12 +109,8 @@ export function useMapState(selectedLocation?: Location) {
     
     return () => {
       window.removeEventListener('markersSaved', handleMarkersSaved);
-      if (updateTimeout) {
-        clearTimeout(updateTimeout);
-      }
     };
-    
-  }, [isAuthenticated, currentUser, isProcessingMarker]);
+  }, [handleStorageUpdate, isProcessingMarker]);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
