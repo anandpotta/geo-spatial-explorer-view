@@ -25,6 +25,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isVisible, setIsVisible] = useState(true);
+  const [popupOpened, setPopupOpened] = useState(false);
   const saveInProgressRef = useRef(false);
   
   // Create a stable marker ID that doesn't change on every render
@@ -94,26 +95,46 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       
       // Auto-open popup after DOM is ready
       setTimeout(() => {
-        if (markerRef.current && isVisible) {
+        if (markerRef.current && isVisible && !popupOpened) {
           try {
             console.log('Auto-opening marker popup on creation');
             markerRef.current.openPopup();
+            setPopupOpened(true);
           } catch (error) {
             console.error("Error opening popup:", error);
           }
         }
-      }, 100);
+      }, 200);
     }
-  }, [markerId, isVisible]);
+  }, [markerId, isVisible, popupOpened]);
 
-  // Handle marker click - allow normal popup behavior
+  // Handle popup open event
+  const handlePopupOpen = useCallback(() => {
+    console.log('Popup opened');
+    setPopupOpened(true);
+  }, []);
+
+  // Handle popup close event
+  const handlePopupClose = useCallback(() => {
+    console.log('Popup closed');
+    setPopupOpened(false);
+  }, []);
+
+  // Handle marker click - ensure popup opens
   const handleMarkerClick = useCallback((e: L.LeafletMouseEvent) => {
     console.log('Temp marker clicked');
     // Stop propagation to prevent map click
-    e.originalEvent?.stopPropagation();
-  }, []);
+    if (e.originalEvent) {
+      e.originalEvent.stopPropagation();
+    }
+    
+    // Ensure popup is open
+    if (markerRef.current && !popupOpened) {
+      markerRef.current.openPopup();
+    }
+  }, [popupOpened]);
 
-  // Don't render if not visible or if being processed
+  // Don't render if not visible
   if (!isVisible) {
     return null;
   }
@@ -125,7 +146,9 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       draggable={!isProcessing}
       eventHandlers={{
         dragend: handleDragEnd,
-        click: handleMarkerClick
+        click: handleMarkerClick,
+        popupopen: handlePopupOpen,
+        popupclose: handlePopupClose
       }}
     >
       <Popup 

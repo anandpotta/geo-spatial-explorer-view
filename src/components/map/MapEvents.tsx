@@ -20,33 +20,36 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Allow path clicks to proceed - they should handle their own events for uploads
+        // Allow path clicks to proceed for image uploads - don't prevent these
         if (target.tagName === 'path' || target.tagName === 'svg' || target.closest('path')) {
           console.log('Click on path detected - allowing path to handle upload');
-          // Let the path handle its own click events for image uploads
+          // Let path handle its own events and don't create markers
           return;
         }
         
-        // Check if this is a click on a marker - allow normal marker behavior
+        // Allow marker clicks to proceed normally
         if (target.closest('.leaflet-marker-icon') || 
             target.closest('.leaflet-marker-shadow')) {
           console.log('Click on marker detected - allowing normal marker behavior');
+          // Let marker handle its own events
           return;
         }
         
-        // Don't create markers when clicking on popups
-        if (target.closest('.leaflet-popup')) {
-          console.log('Click on popup detected - ignoring for marker creation');
+        // Don't create markers when clicking inside popups
+        if (target.closest('.leaflet-popup-content') || 
+            target.closest('.leaflet-popup-close-button')) {
+          console.log('Click inside popup detected - ignoring for marker creation');
           return;
         }
         
-        // Ignore clicks on specific UI controls
+        // Ignore clicks on drawing controls and UI elements
         if (
           target.closest('.leaflet-control') ||
           target.closest('.upload-button-container') ||
           target.closest('.upload-button-wrapper') ||
           target.closest('.image-controls-container') ||
-          target.closest('.image-controls-wrapper')
+          target.closest('.image-controls-wrapper') ||
+          target.closest('.leaflet-draw-toolbar')
         ) {
           console.log('Click on control or UI element ignored');
           return;
