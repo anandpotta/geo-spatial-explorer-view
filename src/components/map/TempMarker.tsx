@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import NewMarkerForm from './NewMarkerForm';
@@ -24,9 +24,11 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const [markerReady, setMarkerReady] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const markerId = `temp-marker-${position[0]}-${position[1]}`;
+  const [hasOpenedPopup, setHasOpenedPopup] = useState(false);
+  
+  // Create a stable marker ID that doesn't change on every render
+  const markerId = `temp-marker-${position[0].toFixed(6)}-${position[1].toFixed(6)}`;
 
   // Handle cleanup when component unmounts or marker is being processed
   useEffect(() => {
@@ -54,7 +56,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   }, [markerId, isProcessing]);
 
   // Update marker position in parent when dragged
-  const handleDragEnd = (e: L.LeafletEvent) => {
+  const handleDragEnd = useCallback((e: L.LeafletEvent) => {
     if (isProcessing) return;
     
     const marker = e.target;
@@ -64,11 +66,13 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         window.tempMarkerPositionUpdate([position.lat, position.lng]);
       }
     }
-  };
+  }, [isProcessing]);
   
   // Custom save handler with processing state
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (isProcessing) return;
+    
+    console.log('TempMarker: Save initiated');
     
     // Hide the marker immediately to prevent flickering
     setIsVisible(false);
@@ -83,21 +87,35 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     
     // Call the save handler
     onSave();
-  };
+  }, [isProcessing, markerId, onSave]);
 
   // Set up marker references
-  const setMarkerInstance = (marker: L.Marker) => {
-    if (marker && isVisible) {
+  const setMarkerInstance = useCallback((marker: L.Marker) => {
+    if (marker && isVisible && !markerRef.current) {
       markerRef.current = marker;
       
       const element = marker.getElement();
       if (element) {
         element.setAttribute('data-marker-id', markerId);
       }
-      
-      setMarkerReady(true);
     }
-  };
+  }, [markerId, isVisible]);
+
+  // Handle popup opening only once
+  const handleMarkerAdd = useCallback(() => {
+    if (!hasOpenedPopup && markerRef.current && isVisible) {
+      setTimeout(() => {
+        try {
+          if (markerRef.current && isVisible) {
+            markerRef.current.openPopup();
+            setHasOpenedPopup(true);
+          }
+        } catch (error) {
+          console.error("Error opening popup:", error);
+        }
+      }, 100);
+    }
+  }, [hasOpenedPopup, isVisible]);
 
   // Don't render if not visible or processing
   if (!isVisible || isProcessing) {
@@ -111,17 +129,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd,
-        add: () => {
-          setTimeout(() => {
-            try {
-              if (markerRef.current && isVisible) {
-                markerRef.current.openPopup();
-              }
-            } catch (error) {
-              console.error("Error opening popup:", error);
-            }
-          }, 100);
-        }
+        add: handleMarkerAdd
       }}
     >
       <NewMarkerForm
@@ -144,4 +152,4 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   );
 };
 
-export default TempMarker;
+export default React.memo(TempMarker);
