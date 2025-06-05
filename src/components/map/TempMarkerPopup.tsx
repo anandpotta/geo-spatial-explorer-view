@@ -55,17 +55,6 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       interactive={true}
       className="temp-marker-popup"
       offset={[0, -45]}
-      // Force popup to be open initially
-      ref={(popup) => {
-        if (popup && forceOpen) {
-          console.log('Popup ref callback, attempting to open');
-          setTimeout(() => {
-            if (popup._source && popup._source.openPopup) {
-              popup._source.openPopup();
-            }
-          }, 100);
-        }
-      }}
     >
       <div 
         onClick={handlePopupClick}
