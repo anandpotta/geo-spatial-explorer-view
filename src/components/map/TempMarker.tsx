@@ -39,63 +39,36 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 
   // Force popup to open when marker is created
   useEffect(() => {
-    console.log('TempMarker useEffect triggered, position:', position, 'isProcessing:', isProcessing);
+    console.log('TempMarker mounted at position:', position);
     
-    if (markerRef.current && !isProcessing) {
-      console.log('Attempting to open popup for temp marker');
-      
-      // Multiple attempts to ensure popup opens with proper timing
-      const openPopupWithRetries = () => {
-        let attempts = 0;
-        const maxAttempts = 5;
+    const openPopup = () => {
+      if (markerRef.current) {
+        console.log('Opening popup for temp marker');
+        markerRef.current.openPopup();
         
-        const tryOpen = () => {
-          attempts++;
-          console.log(`Popup open attempt ${attempts}`);
-          
-          if (markerRef.current) {
-            try {
-              markerRef.current.openPopup();
-              console.log('Popup opened successfully on attempt', attempts);
-              
-              // Focus input after popup opens
-              setTimeout(() => {
-                const inputField = document.querySelector('.leaflet-popup-content input') as HTMLInputElement;
-                if (inputField) {
-                  inputField.focus();
-                  inputField.select();
-                  console.log('Input focused successfully');
-                } else {
-                  console.log('Input field not found after popup open');
-                }
-              }, 200);
-              
-            } catch (error) {
-              console.error('Error opening popup on attempt', attempts, error);
-              
-              // Retry if not max attempts
-              if (attempts < maxAttempts) {
-                setTimeout(tryOpen, 100 * attempts);
-              }
-            }
-          } else {
-            console.log('Marker ref not available on attempt', attempts);
-            
-            // Retry if not max attempts
-            if (attempts < maxAttempts) {
-              setTimeout(tryOpen, 100 * attempts);
-            }
+        // Focus the input field after popup opens
+        setTimeout(() => {
+          const inputField = document.querySelector('.leaflet-popup-content input') as HTMLInputElement;
+          if (inputField) {
+            inputField.focus();
+            inputField.select();
+            console.log('Input focused and selected');
           }
-        };
-        
-        // Start trying immediately
-        tryOpen();
-      };
-      
-      // Start opening popup with a small delay
-      setTimeout(openPopupWithRetries, 100);
-    }
-  }, [position, isProcessing, markerRef.current]);
+        }, 100);
+      }
+    };
+
+    // Try to open popup immediately and with retries
+    const timer1 = setTimeout(openPopup, 50);
+    const timer2 = setTimeout(openPopup, 150);
+    const timer3 = setTimeout(openPopup, 300);
+    
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  }, [position]);
 
   if (isProcessing) {
     return null;
@@ -107,41 +80,37 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       ref={(marker) => {
         if (marker) {
           markerRef.current = marker;
-          console.log('Temp marker ref set successfully');
+          console.log('Temp marker ref set, opening popup');
+          // Immediate attempt to open popup
+          setTimeout(() => {
+            if (marker) {
+              marker.openPopup();
+            }
+          }, 10);
         }
       }}
       draggable={true}
       eventHandlers={{
         dragend: handleDragEnd,
         add: (e) => {
-          console.log('Temp marker added to map event fired');
+          console.log('Temp marker added to map');
           const marker = e.target;
-          if (marker && marker.openPopup) {
-            // Immediate popup open attempt when added
-            setTimeout(() => {
-              try {
-                marker.openPopup();
-                console.log('Popup opened via add event');
-              } catch (err) {
-                console.error('Error opening popup via add event:', err);
-              }
-            }, 50);
-          }
+          setTimeout(() => {
+            if (marker && marker.openPopup) {
+              marker.openPopup();
+              console.log('Popup opened via add event');
+            }
+          }, 20);
         },
         popupopen: (e) => {
-          console.log('Popup opened event fired for temp marker');
+          console.log('Popup opened for temp marker');
           setTimeout(() => {
             const inputField = document.querySelector('.leaflet-popup-content input') as HTMLInputElement;
             if (inputField) {
               inputField.focus();
               inputField.select();
-              console.log('Input focused via popup open event');
             }
-          }, 100);
-        },
-        click: (e) => {
-          console.log('Temp marker clicked');
-          e.target.openPopup();
+          }, 50);
         }
       }}
     >

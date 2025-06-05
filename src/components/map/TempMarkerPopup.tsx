@@ -36,10 +36,6 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
     e.preventDefault();
   };
 
-  const handlePopupMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
   return (
     <Popup 
       closeOnClick={false} 
@@ -54,10 +50,10 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
     >
       <div 
         onClick={handlePopupClick}
-        onMouseDown={handlePopupMouseDown}
+        onMouseDown={(e) => e.stopPropagation()}
         style={{ 
           minWidth: '280px',
-          padding: '8px',
+          padding: '4px',
           pointerEvents: 'all'
         }}
       >
