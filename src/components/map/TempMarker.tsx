@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import TempMarkerPopup from './TempMarkerPopup';
@@ -24,6 +24,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   isProcessing = false
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
+  const [popupOpen, setPopupOpen] = useState(false);
 
   const handleDragEnd = (e: L.LeafletEvent) => {
     if (isProcessing) return;
@@ -37,17 +38,18 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   };
 
-  // Force popup to open when marker is created/mounted
+  // Force popup to open when marker is created
   useEffect(() => {
     console.log('TempMarker mounted at position:', position);
     
-    const openPopup = () => {
+    const forcePopupOpen = () => {
       if (markerRef.current) {
         try {
-          console.log('Attempting to open popup');
+          console.log('Forcing popup open for temp marker');
           markerRef.current.openPopup();
+          setPopupOpen(true);
           
-          // Focus input after a short delay
+          // Focus input after popup opens
           setTimeout(() => {
             const inputField = document.querySelector('.leaflet-popup-content input') as HTMLInputElement;
             if (inputField) {
@@ -55,22 +57,22 @@ const TempMarker: React.FC<TempMarkerProps> = ({
               inputField.select();
               console.log('Input focused and selected');
             }
-          }, 100);
+          }, 150);
         } catch (e) {
           console.error('Error opening popup:', e);
         }
       }
     };
 
-    // Multiple attempts with increasing delays
-    const timeouts = [50, 200, 500].map(delay => 
-      setTimeout(openPopup, delay)
+    // Try multiple times with increasing delays to ensure popup opens
+    const timeouts = [100, 300, 600, 1000].map(delay => 
+      setTimeout(forcePopupOpen, delay)
     );
     
     return () => {
       timeouts.forEach(timeout => clearTimeout(timeout));
     };
-  }, []);
+  }, [position]);
 
   if (isProcessing) {
     return null;
@@ -85,17 +87,19 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         dragend: handleDragEnd,
         add: (e) => {
           console.log('Temp marker added to map');
-          // Force popup open when marker is added
+          // Immediate attempt when marker is added to map
           setTimeout(() => {
             if (e.target && e.target.openPopup) {
               e.target.openPopup();
+              setPopupOpen(true);
               console.log('Popup opened via add event');
             }
-          }, 100);
+          }, 50);
         },
         click: (e) => {
           console.log('Temp marker clicked, opening popup');
           e.target.openPopup();
+          setPopupOpen(true);
         }
       }}
     >
@@ -106,6 +110,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         setMarkerType={setMarkerType}
         onSave={onSave}
         isProcessing={isProcessing}
+        forceOpen={popupOpen}
       />
     </Marker>
   );

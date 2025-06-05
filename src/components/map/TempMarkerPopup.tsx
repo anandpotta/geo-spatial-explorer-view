@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import NewMarkerForm from './NewMarkerForm';
 
@@ -10,6 +10,7 @@ interface TempMarkerPopupProps {
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
   onSave: () => void;
   isProcessing: boolean;
+  forceOpen?: boolean;
 }
 
 const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
@@ -18,7 +19,8 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
   markerType,
   setMarkerType,
   onSave,
-  isProcessing
+  isProcessing,
+  forceOpen = false
 }) => {
   const handleSave = (e?: React.MouseEvent) => {
     if (e) {
@@ -36,29 +38,51 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
     e.preventDefault();
   };
 
+  // Log when popup renders
+  useEffect(() => {
+    console.log('TempMarkerPopup rendered, forceOpen:', forceOpen);
+  }, [forceOpen]);
+
   return (
     <Popup 
       closeOnClick={false} 
       autoClose={false}
       closeButton={false}
       autoPan={true}
-      maxWidth={320}
-      minWidth={280}
+      maxWidth={350}
+      minWidth={300}
       keepInView={true}
       interactive={true}
       className="temp-marker-popup"
-      offset={[0, -40]}
+      offset={[0, -45]}
+      // Force popup to be open initially
+      ref={(popup) => {
+        if (popup && forceOpen) {
+          console.log('Popup ref callback, attempting to open');
+          setTimeout(() => {
+            if (popup._source && popup._source.openPopup) {
+              popup._source.openPopup();
+            }
+          }, 100);
+        }
+      }}
     >
       <div 
         onClick={handlePopupClick}
         onMouseDown={(e) => e.stopPropagation()}
         style={{ 
-          minWidth: '280px',
-          padding: '8px',
+          minWidth: '300px',
+          padding: '12px',
           background: 'white',
-          borderRadius: '4px'
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
         }}
       >
+        <div className="mb-2">
+          <h3 className="text-sm font-medium text-gray-900">Add New Location</h3>
+          <p className="text-xs text-gray-500">Enter details for this marker</p>
+        </div>
+        
         <NewMarkerForm
           markerName={markerName}
           setMarkerName={setMarkerName}

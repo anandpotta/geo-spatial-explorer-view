@@ -31,8 +31,9 @@ const NewMarkerForm = ({
   
   useEffect(() => {
     if (!disabled) {
-      // Focus with multiple attempts
-      const focusAttempts = [50, 150, 300, 500];
+      console.log('NewMarkerForm focusing input, disabled:', disabled);
+      // Multiple focused attempts with longer delays
+      const focusAttempts = [100, 250, 500, 750];
       const timers = focusAttempts.map(delay => 
         setTimeout(() => {
           if (inputRef.current) {
@@ -101,12 +102,12 @@ const NewMarkerForm = ({
 
   return (
     <div 
-      className="p-4" 
+      className="space-y-3" 
       onClick={handleFormClick}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div className="mb-3">
-        <label className="block text-sm font-medium mb-1">Location Name</label>
+      <div>
+        <label className="block text-xs font-medium mb-1 text-gray-700">Location Name</label>
         <Input 
           ref={inputRef}
           type="text"
@@ -114,22 +115,22 @@ const NewMarkerForm = ({
           value={markerName}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          className="w-full"
+          className="w-full text-sm"
           disabled={disabled}
-          autoFocus
+          autoFocus={true}
           onClick={(e) => e.stopPropagation()}
         />
       </div>
       
       {!isEditing && (
-        <div className="mb-3">
-          <label className="block text-sm font-medium mb-2">Location Type</label>
+        <div>
+          <label className="block text-xs font-medium mb-1 text-gray-700">Location Type</label>
           <div className="flex gap-1">
             <Button
               type="button"
               size="sm"
               variant={markerType === 'pin' ? 'default' : 'outline'}
-              className="flex-1 text-xs"
+              className="flex-1 text-xs py-1 h-7"
               onClick={handleTypeButtonClick('pin')}
               disabled={disabled}
             >
@@ -139,7 +140,7 @@ const NewMarkerForm = ({
               type="button"
               size="sm"
               variant={markerType === 'area' ? 'default' : 'outline'}
-              className="flex-1 text-xs"
+              className="flex-1 text-xs py-1 h-7"
               onClick={handleTypeButtonClick('area')}
               disabled={disabled}
             >
@@ -149,7 +150,7 @@ const NewMarkerForm = ({
               type="button"
               size="sm"
               variant={markerType === 'building' ? 'default' : 'outline'}
-              className="flex-1 text-xs"
+              className="flex-1 text-xs py-1 h-7"
               onClick={handleTypeButtonClick('building')}
               disabled={disabled}
             >
@@ -162,18 +163,18 @@ const NewMarkerForm = ({
       <Button 
         onClick={handleSaveButtonClick}
         disabled={!markerName.trim() || disabled}
-        className="w-full"
+        className="w-full text-sm py-1 h-8"
         size="sm"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {isEditing ? (
           <>
-            <Edit2 className="h-4 w-4 mr-2" />
-            Rename Location
+            <Edit2 className="h-3 w-3 mr-1" />
+            Rename
           </>
         ) : (
           <>
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-3 w-3 mr-1" />
             Save Location
           </>
         )}
