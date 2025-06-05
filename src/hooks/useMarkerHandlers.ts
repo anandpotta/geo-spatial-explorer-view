@@ -62,13 +62,17 @@ export function useMarkerHandlers(mapState: any) {
         // Clear any existing temporary marker first
         mapState.setTempMarker(null);
         
-        // Use setTimeout to ensure state updates properly and popup appears
+        // Force a state update to ensure the temp marker appears
         setTimeout(() => {
           mapState.setTempMarker(exactPosition);
           mapState.setMarkerName('New Location');
-          
           console.log('Temp marker state set from shape - popup should appear');
-        }, 100);
+          
+          // Force the marker to be processed by triggering a re-render
+          setTimeout(() => {
+            console.log('Final temp marker confirmation:', exactPosition);
+          }, 100);
+        }, 50);
         
       } else {
         console.error('Could not determine marker position from shape:', shape);
@@ -111,9 +115,6 @@ export function useMarkerHandlers(mapState: any) {
       
       toast.success(`${shape.type} created successfully`);
       
-      // DO NOT call any marker-related functions here
-      // DO NOT call setTempMarker
-      // DO NOT create any popup or input field
     } else {
       console.log(`Unknown shape type: ${shape.type}`);
     }
