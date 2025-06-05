@@ -28,20 +28,20 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
       e.stopPropagation();
     }
     if (isProcessing || !markerName.trim()) return;
-    console.log('Save button clicked, saving marker:', markerName);
+    console.log('TempMarkerPopup: Save button clicked, saving marker:', markerName);
     onSave();
   };
 
   const handlePopupClick = (e: React.MouseEvent) => {
-    console.log('Popup clicked, preventing propagation');
+    console.log('TempMarkerPopup: Popup content clicked, preventing propagation');
     e.stopPropagation();
     e.preventDefault();
   };
 
-  // Log when popup renders
+  // Log when popup renders and state changes
   useEffect(() => {
-    console.log('TempMarkerPopup rendered, forceOpen:', forceOpen);
-  }, [forceOpen]);
+    console.log('TempMarkerPopup: Rendered, forceOpen:', forceOpen, 'markerName:', markerName);
+  }, [forceOpen, markerName]);
 
   return (
     <Popup 
@@ -58,7 +58,10 @@ const TempMarkerPopup: React.FC<TempMarkerPopupProps> = ({
     >
       <div 
         onClick={handlePopupClick}
-        onMouseDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => {
+          console.log('TempMarkerPopup: Mouse down on popup content');
+          e.stopPropagation();
+        }}
         style={{ 
           minWidth: '300px',
           padding: '12px',
