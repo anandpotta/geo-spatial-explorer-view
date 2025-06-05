@@ -24,20 +24,23 @@ export function useMapState(selectedLocation?: Location) {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [isProcessingMarker, setIsProcessingMarker] = useState(false);
   
-  // Use refs to prevent unnecessary re-renders
-  const currentUserRef = useRef(currentUser);
-  const isAuthenticatedRef = useRef(isAuthenticated);
+  // Stable refs to prevent re-renders
+  const currentUserIdRef = useRef<string | null>(null);
+  const isAuthenticatedRef = useRef(false);
   const loadTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastLoadTime = useRef(0);
 
-  // Update refs when auth state changes
-  useEffect(() => {
-    currentUserRef.current = currentUser;
-    isAuthenticatedRef.current = isAuthenticated;
-  }, [currentUser, isAuthenticated]);
+  // Update refs without triggering re-renders
+  currentUserIdRef.current = currentUser?.id || null;
+  isAuthenticatedRef.current = isAuthenticated;
 
-  // Memoized load functions to prevent recreation
+  // Stable load functions with heavy debouncing
   const loadMarkers = useCallback(() => {
-    if (!isAuthenticatedRef.current || !currentUserRef.current) {
+    const now = Date.now();
+    if (now - lastLoadTime.current < 2000) return; // Prevent frequent calls
+    lastLoadTime.current = now;
+    
+    if (!isAuthenticatedRef.current || !currentUserIdRef.current) {
       setMarkers([]);
       return;
     }
@@ -48,10 +51,10 @@ export function useMapState(selectedLocation?: Location) {
     } catch (error) {
       console.error('Error loading markers:', error);
     }
-  }, []);
+  }, []); // No dependencies to keep stable
 
   const loadDrawings = useCallback(() => {
-    if (!isAuthenticatedRef.current || !currentUserRef.current) {
+    if (!isAuthenticatedRef.current || !currentUserIdRef.current) {
       setDrawings([]);
       return;
     }
@@ -62,9 +65,9 @@ export function useMapState(selectedLocation?: Location) {
     } catch (error) {
       console.error('Error loading drawings:', error);
     }
-  }, []);
+  }, []); // No dependencies to keep stable
 
-  // Load initial data when auth state changes (with debouncing)
+  // Load initial data only on auth state changes with heavy debouncing
   useEffect(() => {
     if (loadTimeoutRef.current) {
       clearTimeout(loadTimeoutRef.current);
@@ -73,16 +76,16 @@ export function useMapState(selectedLocation?: Location) {
     loadTimeoutRef.current = setTimeout(() => {
       loadMarkers();
       loadDrawings();
-    }, 100);
+    }, 1000); // Increased debounce
 
     return () => {
       if (loadTimeoutRef.current) {
         clearTimeout(loadTimeoutRef.current);
       }
     };
-  }, [isAuthenticated, currentUser, loadMarkers, loadDrawings]);
+  }, [isAuthenticated, currentUser?.id]); // Only depend on auth state
 
-  // Debounced event handlers to prevent loops
+  // Minimal storage event handler
   const handleStorageUpdate = useCallback(() => {
     if (isProcessingMarker || !isAuthenticatedRef.current) return;
     
@@ -92,10 +95,10 @@ export function useMapState(selectedLocation?: Location) {
     
     loadTimeoutRef.current = setTimeout(() => {
       loadMarkers();
-    }, 1000); // Longer debounce to prevent loops
+    }, 2000); // Very long debounce
   }, [isProcessingMarker, loadMarkers]);
 
-  // Listen for storage events with heavy debouncing
+  // Minimal event listeners
   useEffect(() => {
     const handleMarkersSaved = (event: Event) => {
       if (event instanceof CustomEvent && 
@@ -112,7 +115,7 @@ export function useMapState(selectedLocation?: Location) {
     };
   }, [handleStorageUpdate, isProcessingMarker]);
 
-  // Set up global position update handler for draggable markers
+  // Set up global position update handler
   useEffect(() => {
     window.tempMarkerPositionUpdate = setTempMarker;
     
@@ -121,8 +124,9 @@ export function useMapState(selectedLocation?: Location) {
     };
   }, []);
 
+  // Stable handlers with minimal dependencies
   const handleSaveMarker = useCallback(() => {
-    if (!isAuthenticated || !currentUser) {
+    if (!isAuthenticatedRef.current || !currentUserIdRef.current) {
       toast.error('Please log in to save locations');
       return;
     }
@@ -138,7 +142,7 @@ export function useMapState(selectedLocation?: Location) {
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: currentUser.id
+      userId: currentUserIdRef.current
     };
     
     setTempMarker(null);
@@ -160,7 +164,7 @@ export function useMapState(selectedLocation?: Location) {
             name: markerName,
             associatedMarkerId: newMarker.id
           },
-          userId: currentUser.id
+          userId: currentUserIdRef.current
         };
         
         saveDrawing(safeDrawing);
@@ -174,10 +178,10 @@ export function useMapState(selectedLocation?: Location) {
     } finally {
       setTimeout(() => setIsProcessingMarker(false), 2000);
     }
-  }, [isAuthenticated, currentUser, tempMarker, markerName, isProcessingMarker, markerType, currentDrawing]);
+  }, [tempMarker, markerName, isProcessingMarker, markerType, currentDrawing]); // Only essential dependencies
 
   const handleDeleteMarker = useCallback((id: string) => {
-    if (!isAuthenticated || isProcessingMarker) {
+    if (!isAuthenticatedRef.current || isProcessingMarker) {
       toast.error('Please log in to manage locations');
       return;
     }
@@ -193,10 +197,10 @@ export function useMapState(selectedLocation?: Location) {
     } finally {
       setTimeout(() => setIsProcessingMarker(false), 2000);
     }
-  }, [isAuthenticated, isProcessingMarker]);
+  }, [isProcessingMarker]);
 
   const handleRenameMarker = useCallback((id: string, newName: string) => {
-    if (!isAuthenticated || isProcessingMarker) {
+    if (!isAuthenticatedRef.current || isProcessingMarker) {
       toast.error('Please log in to manage locations');
       return;
     }
@@ -211,7 +215,7 @@ export function useMapState(selectedLocation?: Location) {
     } finally {
       setTimeout(() => setIsProcessingMarker(false), 2000);
     }
-  }, [isAuthenticated, isProcessingMarker]);
+  }, [isProcessingMarker]);
 
   const handleRegionClick = useCallback((drawing: DrawingData) => {
     setSelectedDrawing(drawing);

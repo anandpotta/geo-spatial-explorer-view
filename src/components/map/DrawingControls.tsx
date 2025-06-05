@@ -37,6 +37,22 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const { drawings: savedDrawings } = useDrawings();
   const { isAuthenticated, currentUser, checkAuthBeforeAction } = useDrawingAuth();
   const initializationRef = useRef(false);
+  const stableCallbacksRef = useRef({
+    onCreated,
+    onRegionClick,
+    onClearAll,
+    onRemoveShape,
+    onUploadToDrawing,
+    onPathsUpdated
+  });
+  
+  // Update refs without triggering re-renders
+  stableCallbacksRef.current.onCreated = onCreated;
+  stableCallbacksRef.current.onRegionClick = onRegionClick;
+  stableCallbacksRef.current.onClearAll = onClearAll;
+  stableCallbacksRef.current.onRemoveShape = onRemoveShape;
+  stableCallbacksRef.current.onUploadToDrawing = onUploadToDrawing;
+  stableCallbacksRef.current.onPathsUpdated = onPathsUpdated;
   
   const {
     featureGroupRef,
@@ -54,10 +70,10 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   
   // Stable callback for paths updated
   const handlePathsUpdated = useCallback((paths: string[]) => {
-    if (onPathsUpdated && mountedRef.current) {
-      onPathsUpdated(paths);
+    if (stableCallbacksRef.current.onPathsUpdated && mountedRef.current) {
+      stableCallbacksRef.current.onPathsUpdated(paths);
     }
-  }, [onPathsUpdated, mountedRef]);
+  }, [mountedRef]);
   
   // Track SVG paths with stable callback
   const { svgPaths } = useSvgPathTracking({
@@ -68,10 +84,16 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   });
   
   // Handle shape creation with stable callback
-  const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, handlePathsUpdated, svgPaths);
+  const { handleCreatedWrapper } = useHandleShapeCreation(
+    (shape: any) => stableCallbacksRef.current.onCreated(shape), 
+    handlePathsUpdated, 
+    svgPaths
+  );
   
   // Handle clear all operation with stable callback
-  const { handleClearAllWrapper } = useClearAllOperation(onClearAll);
+  const { handleClearAllWrapper } = useClearAllOperation(
+    () => stableCallbacksRef.current.onClearAll?.()
+  );
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
@@ -102,37 +124,36 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     };
   }, [featureGroupRef.current, setIsInitialized, mountedRef]);
 
-  // Handle user changes - only when user actually changes
+  // Minimal user change handling - only when user ID actually changes
   useEffect(() => {
-    if (isInitialized && currentUser && drawToolsRef.current && initializationRef.current) {
-      // Use timeout to prevent immediate re-render
+    if (isInitialized && currentUser?.id && drawToolsRef.current && initializationRef.current) {
       const timeoutId = setTimeout(() => {
         if (mountedRef.current) {
           window.dispatchEvent(new Event('storage'));
           window.dispatchEvent(new Event('markersUpdated'));
           window.dispatchEvent(new Event('drawingsUpdated'));
         }
-      }, 100);
+      }, 1000); // Increased timeout
       
       return () => clearTimeout(timeoutId);
     }
-  }, [currentUser?.id, isInitialized]); // Only depend on user ID, not the full user object
+  }, [currentUser?.id, isInitialized]); // Only depend on user ID
 
   const handleRemoveShape = useCallback((drawingId: string) => {
     if (!checkAuthBeforeAction('remove shapes')) {
       return;
     }
     
-    if (onRemoveShape) {
-      onRemoveShape(drawingId);
+    if (stableCallbacksRef.current.onRemoveShape) {
+      stableCallbacksRef.current.onRemoveShape(drawingId);
     }
-  }, [checkAuthBeforeAction, onRemoveShape]);
+  }, [checkAuthBeforeAction]);
 
   const handleDrawingClick = useCallback((drawing: DrawingData) => {
-    if (onRegionClick) {
-      onRegionClick(drawing);
+    if (stableCallbacksRef.current.onRegionClick) {
+      stableCallbacksRef.current.onRegionClick(drawing);
     }
-  }, [onRegionClick]);
+  }, []);
 
   return (
     <>

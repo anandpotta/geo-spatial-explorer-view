@@ -19,10 +19,17 @@ export function useSvgPathTracking({
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   const pathsTimeoutRef = useRef<number | null>(null);
   const lastPathsRef = useRef<string>('');
+  const stableOnPathsUpdatedRef = useRef(onPathsUpdated);
+  const trackingInProgress = useRef(false);
   
-  // Stable callback for tracking paths
+  // Update ref when callback changes but don't trigger re-renders
+  stableOnPathsUpdatedRef.current = onPathsUpdated;
+  
+  // Stable callback for tracking paths - dependencies are minimal and stable
   const trackPaths = useCallback(() => {
-    if (!mountedRef.current || !isInitialized) return;
+    if (!mountedRef.current || !isInitialized || trackingInProgress.current) return;
+    
+    trackingInProgress.current = true;
     
     try {
       if (drawToolsRef.current && typeof drawToolsRef.current.getSVGPathData === 'function') {
@@ -40,39 +47,47 @@ export function useSvgPathTracking({
             saveSvgPaths(paths);
           }
           
-          if (onPathsUpdated) {
-            onPathsUpdated(paths);
+          if (stableOnPathsUpdatedRef.current) {
+            stableOnPathsUpdatedRef.current(paths);
           }
         }
       }
     } catch (e) {
       console.error('Error tracking SVG paths:', e);
+    } finally {
+      trackingInProgress.current = false;
     }
-  }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated]);
+  }, [isInitialized, mountedRef]); // Only depend on stable values
   
-  // Debounced path tracking handler
+  // Heavily debounced path tracking handler
   const handlePathsUpdated = useCallback(() => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || trackingInProgress.current) return;
     
     // Clear existing timeout
     if (pathsTimeoutRef.current) {
       window.clearTimeout(pathsTimeoutRef.current);
     }
     
-    // Set new timeout with longer delay to prevent excessive calls
+    // Set new timeout with very long delay to prevent excessive calls
     pathsTimeoutRef.current = window.setTimeout(() => {
-      trackPaths();
-    }, 500); // Increased from 100ms to 500ms
-  }, [trackPaths]);
+      if (mountedRef.current) {
+        trackPaths();
+      }
+    }, 1000); // Increased to 1 second
+  }, [trackPaths, mountedRef]);
   
-  // Effect for tracking SVG paths
+  // Effect for tracking SVG paths - only run when truly necessary
   useEffect(() => {
     if (!isInitialized || !drawToolsRef.current) return;
     
-    // Track paths initially
-    trackPaths();
+    // Track paths initially with delay
+    const initTimeout = setTimeout(() => {
+      if (mountedRef.current) {
+        trackPaths();
+      }
+    }, 500);
     
-    // Set up event listeners with debounced handler
+    // Set up event listeners with heavily debounced handler
     const events = [
       'drawingCreated',
       'drawingDeleted', 
@@ -85,6 +100,7 @@ export function useSvgPathTracking({
     });
     
     return () => {
+      clearTimeout(initTimeout);
       events.forEach(event => {
         window.removeEventListener(event, handlePathsUpdated);
       });
@@ -93,25 +109,20 @@ export function useSvgPathTracking({
         window.clearTimeout(pathsTimeoutRef.current);
       }
     };
-  }, [isInitialized, trackPaths, handlePathsUpdated]);
+  }, [isInitialized]); // Only depend on isInitialized
   
-  // Handle user changes with stable callback
-  const handleUserChange = useCallback(() => {
-    if (drawToolsRef.current && isInitialized) {
-      // Use timeout to prevent immediate re-render
-      setTimeout(() => {
-        trackPaths();
-      }, 100);
-    }
-  }, [drawToolsRef, isInitialized, trackPaths]);
-  
+  // Handle user changes with minimal dependencies
   useEffect(() => {
-    window.addEventListener('userChanged', handleUserChange);
-    
-    return () => {
-      window.removeEventListener('userChanged', handleUserChange);
-    };
-  }, [handleUserChange]);
+    if (drawToolsRef.current && isInitialized) {
+      const timeout = setTimeout(() => {
+        if (mountedRef.current) {
+          trackPaths();
+        }
+      }, 500);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isInitialized]); // Remove user dependency to prevent loops
   
   return { svgPaths, setSvgPaths };
 }
