@@ -10,45 +10,41 @@ interface MapEventsProps {
 const MapEvents = ({ onMapClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
-      // Check if this is a click on a leaflet control or popup that should be ignored
+      console.log('MapEvents: Click detected at:', e.latlng);
+      
+      // Check if this is a click on a UI element that should be ignored
       if (e.originalEvent && e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Allow path clicks for image uploads - these should handle their own events
+        // Allow path clicks for image uploads
         if (target.tagName === 'path' || target.tagName === 'svg' || target.closest('path')) {
-          console.log('Click on path detected - allowing path upload functionality');
+          console.log('MapEvents: Path click - allowing upload functionality');
           return;
         }
         
         // Allow marker clicks - let markers handle their own events
         if (target.closest('.leaflet-marker-icon') || 
             target.closest('.leaflet-marker-shadow')) {
-          console.log('Click on marker detected - allowing marker popup');
+          console.log('MapEvents: Marker click - allowing marker popup');
           return;
         }
         
-        // Don't create markers when clicking on popups or popup content
+        // Don't create markers when clicking on popups
         if (target.closest('.leaflet-popup')) {
-          console.log('Click on popup detected - ignoring');
+          console.log('MapEvents: Popup click - ignoring');
           return;
         }
         
-        // Ignore clicks on drawing controls and UI elements
-        if (
-          target.closest('.leaflet-control') ||
-          target.closest('.upload-button-container') ||
-          target.closest('.upload-button-wrapper') ||
-          target.closest('.image-controls-container') ||
-          target.closest('.image-controls-wrapper') ||
-          target.closest('.leaflet-draw-toolbar')
-        ) {
-          console.log('Click on control or UI element ignored');
+        // Ignore clicks on controls
+        if (target.closest('.leaflet-control') ||
+            target.closest('.leaflet-draw-toolbar')) {
+          console.log('MapEvents: Control click - ignoring');
           return;
         }
       }
       
       // Allow the map click to proceed for marker creation
-      console.log('Map click proceeding for marker creation at:', e.latlng);
+      console.log('MapEvents: Proceeding with map click for marker creation');
       onMapClick(e.latlng);
     }
   });
