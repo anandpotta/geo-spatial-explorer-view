@@ -1,3 +1,4 @@
+
 import { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { useThreeScene } from './useThreeScene';
@@ -16,7 +17,7 @@ export function useThreeGlobe(
   containerRef: React.RefObject<HTMLDivElement>,
   onInitialized?: () => void
 ) {
-  // Globe-specific refs
+  // All refs first, in consistent order
   const globeRef = useRef<THREE.Group | null>(null);
   const atmosphereRef = useRef<THREE.Mesh | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
@@ -24,7 +25,11 @@ export function useThreeGlobe(
   const isCleaningUpRef = useRef<boolean>(false);
   const setupAttemptedRef = useRef<boolean>(false);
   
-  // Use the scene hook
+  // All state hooks after refs, in consistent order
+  const [texturesLoaded, setTexturesLoaded] = useState(false);
+  const [globeInitialized, setGlobeInitialized] = useState(false);
+  
+  // Use the scene hook - this must be called unconditionally
   const {
     scene,
     camera,
@@ -34,14 +39,36 @@ export function useThreeGlobe(
     animationFrameRef,
     controlsRef
   } = useThreeScene(containerRef);
-
-  // Track if textures are loaded
-  const [texturesLoaded, setTexturesLoaded] = useState(false);
-  const [globeInitialized, setGlobeInitialized] = useState(false);
   
-  // Setup globe objects and controls
+  // All callbacks after hooks that return values
+  const setAutoRotation = useCallback((enabled: boolean) => {
+    if (controlsRef.current && !isCleaningUpRef.current) {
+      controlsRef.current.autoRotate = enabled;
+      autoRotationEnabledRef.current = enabled;
+    }
+  }, [controlsRef]);
+
+  // Get flyToLocation functionality - must be called unconditionally
+  const { flyToLocation } = useFlyToLocation(
+    { current: camera },
+    controlsRef,
+    EARTH_RADIUS
+  );
+  
+  const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
+    if (isCleaningUpRef.current) return;
+    
+    setAutoRotation(true);
+    
+    flyToLocation(longitude, latitude, () => {
+      setAutoRotation(true);
+      if (onComplete) onComplete();
+    });
+  }, [flyToLocation, setAutoRotation]);
+  
+  // All useEffect hooks at the end, in consistent order
   useEffect(() => {
-    // Wait for scene to be ready and prevent multiple setups
+    // Main setup effect
     if (!sceneInitialized || !scene || !camera || !renderer || setupAttemptedRef.current || isCleaningUpRef.current) {
       if (!sceneInitialized) {
         console.log("Three.js scene not yet initialized, waiting...");
@@ -89,7 +116,7 @@ export function useThreeGlobe(
         });
       } else {
         console.error("Failed to create globe group or earth mesh");
-        setupAttemptedRef.current = false; // Allow retry
+        setupAttemptedRef.current = false;
         return;
       }
       
@@ -113,7 +140,6 @@ export function useThreeGlobe(
       
       // Start animation loop with proper checks
       const animate = () => {
-        // Check if we're cleaning up or if required objects are missing
         if (isCleaningUpRef.current || 
             !scene || 
             !camera || 
@@ -125,23 +151,20 @@ export function useThreeGlobe(
         
         animationFrameRef.current = requestAnimationFrame(animate);
         
-        // Update controls if available
         if (controlsRef.current) {
           try {
             controlsRef.current.update();
             renderer.render(scene, camera);
           } catch (error) {
             console.error("Error in animation loop:", error);
-            // Stop animation if there's an error
             return;
           }
         }
       };
       
-      // Start animation
       animate();
       
-      // Call onInitialized after a short delay to ensure everything is ready
+      // Call onInitialized after a short delay
       setTimeout(() => {
         if (!isCleaningUpRef.current && setupAttemptedRef.current) {
           console.log("Globe initialization complete, calling onInitialized");
@@ -153,7 +176,7 @@ export function useThreeGlobe(
       
     } catch (error) {
       console.error("Error during globe setup:", error);
-      setupAttemptedRef.current = false; // Allow retry on error
+      setupAttemptedRef.current = false;
     }
     
     // Cleanup function
@@ -161,13 +184,11 @@ export function useThreeGlobe(
       console.log("Globe effect cleanup");
       isCleaningUpRef.current = true;
       
-      // Stop animation loop
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
       
-      // Dispose globe and atmosphere meshes
       if (globeRef.current) {
         scene.remove(globeRef.current);
         disposeObject3D(globeRef.current);
@@ -187,38 +208,7 @@ export function useThreeGlobe(
     };
   }, [sceneInitialized, scene, camera, renderer, animationFrameRef, controlsRef, onInitialized]);
   
-  // Enable/disable auto-rotation
-  const setAutoRotation = useCallback((enabled: boolean) => {
-    if (controlsRef.current && !isCleaningUpRef.current) {
-      controlsRef.current.autoRotate = enabled;
-      autoRotationEnabledRef.current = enabled;
-    }
-  }, [controlsRef]);
-  
-  // Get flyToLocation functionality
-  const { flyToLocation } = useFlyToLocation(
-    { current: camera }, // Wrap camera in an object with current property to match MutableRefObject type
-    controlsRef,
-    EARTH_RADIUS
-  );
-  
-  // Wrap the flyToLocation to handle auto-rotation
-  const enhancedFlyToLocation = useCallback((longitude: number, latitude: number, onComplete?: () => void) => {
-    if (isCleaningUpRef.current) return;
-    
-    // Ensure the globe is rotating while flying for a more dynamic effect
-    setAutoRotation(true);
-    
-    // Call the original flyToLocation
-    flyToLocation(longitude, latitude, () => {
-      // Keep auto-rotation on after flying
-      setAutoRotation(true);
-      
-      if (onComplete) onComplete();
-    });
-  }, [flyToLocation, setAutoRotation]);
-  
-  // Cleanup on unmount
+  // Cleanup on unmount effect
   useEffect(() => {
     return () => {
       isCleaningUpRef.current = true;
