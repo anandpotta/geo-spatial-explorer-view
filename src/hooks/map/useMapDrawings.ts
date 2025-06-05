@@ -9,13 +9,15 @@ export function useMapDrawings() {
   const [currentDrawing, setCurrentDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   
-  const currentUserIdRef = useRef<string | null>(null);
-  const isAuthenticatedRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(currentUser?.id || null);
+  const isAuthenticatedRef = useRef<boolean>(isAuthenticated);
   const loadTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Update refs without triggering re-renders
-  currentUserIdRef.current = currentUser?.id || null;
-  isAuthenticatedRef.current = isAuthenticated;
+  // Update refs when auth state changes
+  useEffect(() => {
+    currentUserIdRef.current = currentUser?.id || null;
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [currentUser?.id, isAuthenticated]);
 
   const loadDrawings = useCallback(() => {
     if (!isAuthenticatedRef.current || !currentUserIdRef.current) {
