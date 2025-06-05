@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
@@ -35,7 +34,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
       window.removeEventListener('online', handleOnlineStatusChange);
       window.removeEventListener('offline', handleOnlineStatusChange);
     };
-  }, [handleOnlineStatusChange]);
+  }, []);
 
   // Memoize the search function to prevent infinite loops
   const performSearch = useCallback(async (searchQuery: string) => {
@@ -122,17 +121,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     } else if (results.length > 0) {
       handleSelect(results[0]);
     } else if (query.length >= 3) {
-      performSearch(query).then(() => {
-        if (results.length > 0) {
-          handleSelect(results[0]);
-        } else {
-          toast({
-            title: "No locations found",
-            description: "Try entering a more specific address",
-            variant: "destructive"
-          });
-        }
-      });
+      performSearch(query);
     }
   }, [selectedLocation, results, query, onLocationSelect, toast, handleSelect, performSearch]);
 
