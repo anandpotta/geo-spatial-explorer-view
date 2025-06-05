@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { saveSvgPaths } from './useSavedPathsRestoration';
 import { getCurrentUser } from '@/services/auth-service';
 
@@ -18,90 +18,100 @@ export function useSvgPathTracking({
 }: UseSvgPathTrackingProps) {
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   const pathsTimeoutRef = useRef<number | null>(null);
+  const lastPathsRef = useRef<string>('');
   
-  // Effect for tracking SVG paths
-  useEffect(() => {
-    if (isInitialized && drawToolsRef.current) {
-      const trackPaths = () => {
-        if (!mountedRef.current) return;
+  // Stable callback for tracking paths
+  const trackPaths = useCallback(() => {
+    if (!mountedRef.current || !isInitialized) return;
+    
+    try {
+      if (drawToolsRef.current && typeof drawToolsRef.current.getSVGPathData === 'function') {
+        const paths = drawToolsRef.current.getSVGPathData();
+        const pathsString = JSON.stringify(paths);
         
-        try {
-          if (drawToolsRef.current && typeof drawToolsRef.current.getSVGPathData === 'function') {
-            const paths = drawToolsRef.current.getSVGPathData();
-            setSvgPaths(paths);
-            
-            // User-specific save
-            const currentUser = getCurrentUser();
-            if (currentUser) {
-              saveSvgPaths(paths);
-            }
-            
-            if (onPathsUpdated) {
-              onPathsUpdated(paths);
-            }
+        // Only update if paths have actually changed
+        if (pathsString !== lastPathsRef.current) {
+          lastPathsRef.current = pathsString;
+          setSvgPaths(paths);
+          
+          // User-specific save
+          const currentUser = getCurrentUser();
+          if (currentUser) {
+            saveSvgPaths(paths);
           }
-        } catch (e) {
-          console.error('Error tracking SVG paths:', e);
+          
+          if (onPathsUpdated) {
+            onPathsUpdated(paths);
+          }
         }
-      };
-      
-      // Track paths initially
-      trackPaths();
-      
-      // Set up tracking on drawing events
-      const handlePathsUpdated = () => {
-        if (!mountedRef.current) return;
-        
-        // Debounce path tracking to prevent excessive saves
-        if (pathsTimeoutRef.current) {
-          window.clearTimeout(pathsTimeoutRef.current);
-        }
-        
-        pathsTimeoutRef.current = window.setTimeout(() => {
-          trackPaths();
-        }, 100);
-      };
-      
-      // Set up event listeners
-      window.addEventListener('drawingCreated', handlePathsUpdated);
-      window.addEventListener('drawingDeleted', handlePathsUpdated);
-      window.addEventListener('drawingsLoaded', handlePathsUpdated);
-      window.addEventListener('floorPlanUpdated', handlePathsUpdated);
-      window.addEventListener('svgPathsUpdated', handlePathsUpdated);
-      
-      return () => {
-        window.removeEventListener('drawingCreated', handlePathsUpdated);
-        window.removeEventListener('drawingDeleted', handlePathsUpdated);
-        window.removeEventListener('drawingsLoaded', handlePathsUpdated);
-        window.removeEventListener('floorPlanUpdated', handlePathsUpdated);
-        window.removeEventListener('svgPathsUpdated', handlePathsUpdated);
-        
-        if (pathsTimeoutRef.current) {
-          window.clearTimeout(pathsTimeoutRef.current);
-        }
-      };
+      }
+    } catch (e) {
+      console.error('Error tracking SVG paths:', e);
     }
   }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated]);
   
-  // Make sure we re-initialize when user changes
+  // Debounced path tracking handler
+  const handlePathsUpdated = useCallback(() => {
+    if (!mountedRef.current) return;
+    
+    // Clear existing timeout
+    if (pathsTimeoutRef.current) {
+      window.clearTimeout(pathsTimeoutRef.current);
+    }
+    
+    // Set new timeout with longer delay to prevent excessive calls
+    pathsTimeoutRef.current = window.setTimeout(() => {
+      trackPaths();
+    }, 500); // Increased from 100ms to 500ms
+  }, [trackPaths]);
+  
+  // Effect for tracking SVG paths
   useEffect(() => {
-    const handleUserChange = () => {
-      if (drawToolsRef.current && isInitialized) {
-        const paths = drawToolsRef.current.getSVGPathData();
-        setSvgPaths(paths);
-        
-        if (onPathsUpdated) {
-          onPathsUpdated(paths);
-        }
+    if (!isInitialized || !drawToolsRef.current) return;
+    
+    // Track paths initially
+    trackPaths();
+    
+    // Set up event listeners with debounced handler
+    const events = [
+      'drawingCreated',
+      'drawingDeleted', 
+      'drawingsLoaded',
+      'floorPlanUpdated'
+    ];
+    
+    events.forEach(event => {
+      window.addEventListener(event, handlePathsUpdated);
+    });
+    
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handlePathsUpdated);
+      });
+      
+      if (pathsTimeoutRef.current) {
+        window.clearTimeout(pathsTimeoutRef.current);
       }
     };
-    
+  }, [isInitialized, trackPaths, handlePathsUpdated]);
+  
+  // Handle user changes with stable callback
+  const handleUserChange = useCallback(() => {
+    if (drawToolsRef.current && isInitialized) {
+      // Use timeout to prevent immediate re-render
+      setTimeout(() => {
+        trackPaths();
+      }, 100);
+    }
+  }, [drawToolsRef, isInitialized, trackPaths]);
+  
+  useEffect(() => {
     window.addEventListener('userChanged', handleUserChange);
     
     return () => {
       window.removeEventListener('userChanged', handleUserChange);
     };
-  }, [drawToolsRef, isInitialized, onPathsUpdated]);
+  }, [handleUserChange]);
   
   return { svgPaths, setSvgPaths };
 }
