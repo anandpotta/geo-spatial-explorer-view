@@ -39,6 +39,14 @@ try {
   const packageJson = require('./package.json');
   fs.writeFileSync('./dist/package.json', JSON.stringify(packageJson, null, 2));
 
+  // Copy README.md to dist
+  if (fs.existsSync('./README.md')) {
+    fs.copyFileSync('./README.md', './dist/README.md');
+    console.log('Copied README.md to dist directory');
+  } else {
+    console.warn('README.md not found in library directory');
+  }
+
   console.log('Build completed successfully!');
 } catch (error) {
   console.error('Build failed:', error.message);
