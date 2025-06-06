@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { EnhancedLocation } from '@/utils/enhanced-geo-utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -37,7 +36,8 @@ export interface StandaloneMapProps {
   };
 }
 
-export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
+// Change from FC to regular function component to fix JSX type issues
+function StandaloneMapComponent({
   externalLocation,
   showInternalSearch = true,
   width = '100%',
@@ -49,7 +49,7 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
   theme = 'light',
   initialZoom = 15,
   defaultLocation = { latitude: 40.7128, longitude: -74.0060 } // NYC default
-}) => {
+}: StandaloneMapProps) {
   const [selectedLocation, setSelectedLocation] = useState<EnhancedLocation | undefined>();
   const [isMapReady, setIsMapReady] = useState(false);
   const mapRef = useRef<any>(null);
@@ -222,6 +222,7 @@ export const StandaloneMapComponent: React.FC<StandaloneMapProps> = ({
       />
     </div>
   );
-};
+}
 
+export { StandaloneMapComponent };
 export default StandaloneMapComponent;
