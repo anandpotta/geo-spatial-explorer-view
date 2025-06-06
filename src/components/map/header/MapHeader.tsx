@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import SavedLocationsDropdown from '../SavedLocationsDropdown';
 import DownloadButton from './DownloadButton';
 
@@ -11,20 +10,37 @@ interface MapHeaderProps {
 const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false }) => {
   const [isVisible, setIsVisible] = useState(true);
   
-  // Stable location select handler with no dependencies to prevent re-renders
-  const handleLocationSelect = useCallback((position: [number, number]) => {
-    onLocationSelect(position);
-  }, [onLocationSelect]);
-
-  // Only check visibility once when component mounts
+  console.log('MapHeader render:', { isMapReady, isVisible });
+  
+  // Check if the header is actually visible in the DOM
   useEffect(() => {
-    const element = document.querySelector('[data-map-header="true"]');
-    const visible = !!element && document.body.contains(element);
-    setIsVisible(visible);
-  }, []); // Empty dependency array - only run once
+    const checkVisibility = () => {
+      // Simple check if the component is mounted in the DOM
+      const element = document.querySelector('[data-map-header="true"]');
+      setIsVisible(!!element && document.body.contains(element));
+    };
+    
+    checkVisibility();
+    
+    // Set up a mutation observer to detect DOM changes
+    const observer = new MutationObserver(checkVisibility);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
-  // Completely memoize the component content to prevent any re-renders
-  const memoizedContent = useMemo(() => (
+  const handleLocationSelect = (position: [number, number]) => {
+    if (!isVisible) {
+      console.warn("Map header is not visible, cannot select location");
+      return;
+    }
+    
+    onLocationSelect(position);
+  };
+
+  return (
     <div 
       className="absolute top-4 right-4 z-[1001] flex gap-2" 
       data-map-header="true"
@@ -36,14 +52,7 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
         isMapReady={isMapReady && isVisible}
       />
     </div>
-  ), [handleLocationSelect, isMapReady, isVisible]); // Only re-render if these specific values change
-
-  return memoizedContent;
+  );
 };
 
-// Completely prevent re-renders with React.memo and custom comparison
-export default React.memo(MapHeader, (prevProps, nextProps) => {
-  // Only re-render if isMapReady actually changes
-  return prevProps.isMapReady === nextProps.isMapReady && 
-         prevProps.onLocationSelect === nextProps.onLocationSelect;
-});
+export default MapHeader;

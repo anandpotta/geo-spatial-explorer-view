@@ -1,9 +1,8 @@
 
-import React, { useRef, useEffect, useCallback } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import React, { useRef, useEffect, useState } from 'react';
+import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import NewMarkerForm from './NewMarkerForm';
-import './TempMarker.css';
 
 interface TempMarkerProps {
   position: [number, number];
@@ -12,7 +11,6 @@ interface TempMarkerProps {
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
   onSave: () => void;
-  isProcessing?: boolean;
 }
 
 const TempMarker: React.FC<TempMarkerProps> = ({
@@ -21,157 +19,115 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   setMarkerName,
   markerType,
   setMarkerType,
-  onSave,
-  isProcessing = false
+  onSave
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
-  const hasOpenedRef = useRef(false);
-  
-  // Update marker position in parent when dragged
-  const handleDragEnd = useCallback((e: L.LeafletEvent) => {
-    if (isProcessing) return;
-    
-    const marker = e.target;
-    if (marker && marker.getLatLng) {
-      const position = marker.getLatLng();
-      if (window.tempMarkerPositionUpdate) {
-        window.tempMarkerPositionUpdate([position.lat, position.lng]);
-      }
-    }
-  }, [isProcessing]);
-  
-  // Enhanced save handler
-  const handleSave = useCallback(() => {
-    if (isProcessing) {
-      console.log('TempMarker: Save already in progress, ignoring duplicate call');
-      return;
-    }
-    
-    console.log('TempMarker: Save initiated');
-    onSave();
-  }, [isProcessing, onSave]);
+  const [markerReady, setMarkerReady] = useState(false);
+  const markerId = `temp-marker-${position[0]}-${position[1]}`;
 
-  // Open popup when marker is ready
-  const openPopupSafely = useCallback(() => {
-    if (hasOpenedRef.current || !markerRef.current) {
-      return;
-    }
-    
-    console.log('TempMarker: Opening popup safely');
-    hasOpenedRef.current = true;
-    
-    try {
-      // Ensure popup is attached before opening
-      setTimeout(() => {
-        if (markerRef.current && !markerRef.current.isPopupOpen()) {
-          markerRef.current.openPopup();
-          
-          // Focus the input after popup opens
-          setTimeout(() => {
-            const popupElement = markerRef.current?.getPopup()?.getElement();
-            if (popupElement) {
-              const input = popupElement.querySelector('input[type="text"]') as HTMLInputElement;
-              if (input) {
-                input.focus();
-                input.select();
-              }
-            }
-          }, 100);
-        }
-      }, 200);
-    } catch (error) {
-      console.error('TempMarker: Error opening popup:', error);
-    }
-  }, []);
-
-  // Set up marker reference and open popup
-  const setMarkerInstance = useCallback((marker: L.Marker) => {
-    if (marker && !markerRef.current) {
-      markerRef.current = marker;
-      console.log('TempMarker: Marker instance set');
-      
-      // Open popup after marker is fully ready
-      setTimeout(() => openPopupSafely(), 300);
-    }
-  }, [openPopupSafely]);
-
-  // Handle popup events
-  const handlePopupOpen = useCallback(() => {
-    console.log('TempMarker: Popup opened event fired');
-  }, []);
-
-  // Prevent popup from closing during processing
-  const handlePopupClose = useCallback((e: L.PopupEvent) => {
-    if (isProcessing) {
-      console.log('TempMarker: Preventing popup close during processing');
-      
-      // Stop the event and reopen popup
-      setTimeout(() => {
-        if (markerRef.current && !markerRef.current.isPopupOpen()) {
-          try {
-            markerRef.current.openPopup();
-          } catch (error) {
-            console.error('TempMarker: Error reopening popup:', error);
-          }
-        }
-      }, 50);
-    } else {
-      console.log('TempMarker: Allowing popup to close');
-    }
-  }, [isProcessing]);
-
-  // Reset when position changes
-  useEffect(() => {
-    hasOpenedRef.current = false;
-  }, [position]);
-
-  // Cleanup
+  // Handle cleanup when component unmounts
   useEffect(() => {
     return () => {
-      hasOpenedRef.current = false;
       if (markerRef.current) {
         try {
+          // Safely close any open UI elements
+          markerRef.current.closeTooltip();
           markerRef.current.closePopup();
+          
+          // Clean up any DOM elements
+          const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+          tempIcons.forEach(icon => {
+            if (icon.parentNode) {
+              icon.parentNode.removeChild(icon);
+            }
+          });
         } catch (error) {
-          console.error("TempMarker: Error cleaning up:", error);
+          console.error("Error cleaning up temp marker:", error);
         }
       }
     };
-  }, []);
+  }, [markerId]);
+
+  // Update marker position in parent when dragged
+  const handleDragEnd = (e: L.LeafletEvent) => {
+    const marker = e.target;
+    if (marker && marker.getLatLng) {
+      const position = marker.getLatLng();
+      // Update the position through the global handler if available
+      if (window.tempMarkerPositionUpdate) {
+        window.tempMarkerPositionUpdate([position.lat, position.lng]);
+        console.log("Marker position updated:", [position.lat, position.lng]);
+      }
+    }
+  };
+  
+  // Custom save handler to ensure cleanup before saving
+  const handleSave = () => {
+    // Clean up the marker DOM elements before saving
+    const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+    tempIcons.forEach(icon => {
+      if (icon.parentNode) {
+        icon.parentNode.removeChild(icon);
+      }
+    });
+    
+    // Call the original save handler
+    onSave();
+  };
+
+  // Set up marker references
+  const setMarkerInstance = (marker: L.Marker) => {
+    if (marker) {
+      markerRef.current = marker;
+      
+      // Add data attribute for easy identification
+      const element = marker.getElement();
+      if (element) {
+        element.setAttribute('data-marker-id', markerId);
+      }
+      
+      setMarkerReady(true);
+    }
+  };
 
   return (
     <Marker
       position={position}
       ref={setMarkerInstance}
-      draggable={!isProcessing}
+      draggable={true}
       eventHandlers={{
         dragend: handleDragEnd,
-        popupopen: handlePopupOpen,
-        popupclose: handlePopupClose
+        add: () => {
+          // Wait for marker to be added to DOM before showing popup
+          setTimeout(() => {
+            try {
+              if (markerRef.current) {
+                markerRef.current.openPopup();
+              }
+            } catch (error) {
+              console.error("Error opening popup:", error);
+            }
+          }, 100);
+        }
       }}
     >
-      <Popup 
-        closeOnClick={!isProcessing}
-        closeOnEscapeKey={!isProcessing}
-        autoClose={false}
-        closeButton={false}
-        autoPan={true}
-        keepInView={true}
-        className="temp-marker-popup"
-        maxWidth={300}
-        minWidth={250}
+      <NewMarkerForm
+        markerName={markerName}
+        setMarkerName={setMarkerName}
+        markerType={markerType}
+        setMarkerType={setMarkerType}
+        onSave={handleSave}
+      />
+      <Tooltip
+        direction="top"
+        offset={[0, -10]}
+        opacity={0.9}
+        permanent={true}
       >
-        <NewMarkerForm
-          markerName={markerName}
-          setMarkerName={setMarkerName}
-          markerType={markerType}
-          setMarkerType={setMarkerType}
-          onSave={handleSave}
-          disabled={isProcessing}
-        />
-      </Popup>
+        <span className="font-medium">{markerName || 'New Location'}</span>
+      </Tooltip>
     </Marker>
   );
 };
 
-export default React.memo(TempMarker);
+export default TempMarker;

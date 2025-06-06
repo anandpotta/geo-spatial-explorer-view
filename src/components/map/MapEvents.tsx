@@ -10,50 +10,30 @@ interface MapEventsProps {
 const MapEvents = ({ onMapClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
-      console.log('MapEvents: Click detected at:', e.latlng);
-      
-      // Check if this is a click on a UI element that should be ignored
-      if (e.originalEvent && e.originalEvent.target) {
-        const target = e.originalEvent.target as HTMLElement;
-        
-        // Don't interfere with popup content clicks
-        if (target.closest('.leaflet-popup') ||
-            target.closest('.leaflet-popup-content') ||
-            target.closest('.leaflet-popup-content-wrapper') ||
-            target.closest('.temp-marker-popup') || 
-            target.closest('.temp-marker-content')) {
-          console.log('MapEvents: Popup content click - ignoring');
-          return;
-        }
-        
-        // Handle marker clicks - allow popup to open but don't create new markers
-        if (target.closest('.leaflet-marker-icon') || 
-            target.closest('.leaflet-marker-shadow') ||
-            target.classList.contains('leaflet-marker-icon')) {
-          console.log('MapEvents: Marker click detected - allowing popup, not creating new marker');
-          return;
-        }
-        
-        // Allow SVG path clicks for image uploads and other drawing interactions
-        if (target.tagName === 'path' || 
-            target.tagName === 'svg' || 
-            target.closest('path') ||
-            target.closest('svg')) {
-          console.log('MapEvents: SVG/Path click detected - allowing drawing functionality');
-          return;
-        }
-        
-        // Ignore clicks on controls and toolbars
-        if (target.closest('.leaflet-control') ||
-            target.closest('.leaflet-draw-toolbar') ||
-            target.closest('.leaflet-draw-actions')) {
-          console.log('MapEvents: Control/toolbar click - ignoring');
-          return;
-        }
+      // Don't trigger click if we're in the process of deleting a marker
+      if (window.preventMapClick) {
+        console.log('Map click prevented after marker deletion');
+        return;
       }
       
-      // This is a valid map click for marker creation
-      console.log('MapEvents: Valid map click - calling onMapClick handler');
+      // Ignore clicks on markers, popups, or SVG paths
+      if (
+        e.originalEvent.target &&
+        ((e.originalEvent.target as HTMLElement).closest('.leaflet-marker-icon') ||
+         (e.originalEvent.target as HTMLElement).closest('.leaflet-popup') ||
+         (e.originalEvent.target as HTMLElement).closest('path') ||
+         (e.originalEvent.target as HTMLElement).tagName === 'path' ||
+         (e.originalEvent.target as HTMLElement).tagName === 'svg' ||
+         // Also ignore clicks on upload buttons or image controls
+         (e.originalEvent.target as HTMLElement).closest('.upload-button-container') ||
+         (e.originalEvent.target as HTMLElement).closest('.upload-button-wrapper') ||
+         (e.originalEvent.target as HTMLElement).closest('.image-controls-container') ||
+         (e.originalEvent.target as HTMLElement).closest('.image-controls-wrapper'))
+      ) {
+        console.log('Click on marker, popup, path or control ignored');
+        return;
+      }
+      
       onMapClick(e.latlng);
     }
   });

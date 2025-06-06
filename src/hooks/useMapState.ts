@@ -1,71 +1,222 @@
-
-import { Location } from '@/utils/geo-utils';
-import { useMapPosition } from './map/useMapPosition';
-import { useMapMarkers } from './map/useMapMarkers';
-import { useMapDrawings } from './map/useMapDrawings';
-import { useFloorPlanState } from './map/useFloorPlanState';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { Location, LocationMarker } from '@/utils/geo-utils';
+import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
+import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useMapState(selectedLocation?: Location) {
-  const mapPosition = useMapPosition(selectedLocation);
-  const mapMarkers = useMapMarkers();
-  const mapDrawings = useMapDrawings();
-  const floorPlanState = useFloorPlanState();
+  const { currentUser, isAuthenticated } = useAuth();
+  const [position, setPosition] = useState<[number, number]>(
+    selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
+  );
+  const [zoom, setZoom] = useState(18);
+  const [markers, setMarkers] = useState<LocationMarker[]>([]);
+  const [drawings, setDrawings] = useState<DrawingData[]>([]);
+  const [tempMarker, setTempMarker] = useState<[number, number] | null>(null);
+  const [markerName, setMarkerName] = useState('');
+  const [markerType, setMarkerType] = useState<'pin' | 'area' | 'building'>('building');
+  const [currentDrawing, setCurrentDrawing] = useState<DrawingData | null>(null);
+  const [showFloorPlan, setShowFloorPlan] = useState(false);
+  const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Set up global temp marker handler - ensure this is always called
+  // Load existing markers and drawings when user changes or auth state changes
   useEffect(() => {
-    window.tempMarkerPositionUpdate = mapMarkers.setTempMarker;
+    if (!isAuthenticated || !currentUser) {
+      // Clear data when user logs out
+      setMarkers([]);
+      setDrawings([]);
+      return;
+    }
+    
+    console.log(`Loading data for user: ${currentUser.id}`);
+    
+    const savedMarkers = getSavedMarkers();
+    setMarkers(savedMarkers);
+    
+    const savedDrawings = getSavedDrawings();
+    setDrawings(savedDrawings);
+    
+    // Listen for marker updates
+    const handleMarkersUpdated = () => {
+      if (isAuthenticated && currentUser) {
+        setMarkers(getSavedMarkers());
+      }
+    };
+
+    // Listen for drawing updates
+    const handleDrawingsUpdated = () => {
+      if (isAuthenticated && currentUser) {
+        setDrawings(getSavedDrawings());
+      }
+    };
+    
+    // Listen for floor plan updates
+    const handleFloorPlanUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.drawingId) {
+        console.log(`Floor plan updated for drawing ${customEvent.detail.drawingId}, triggering refresh`);
+        // Trigger a refresh of the drawings
+        handleDrawingsUpdated();
+      }
+    };
+    
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+    window.addEventListener('storage', handleDrawingsUpdated);
+    window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+      window.removeEventListener('storage', handleDrawingsUpdated);
+      window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+    };
+  }, [isAuthenticated, currentUser]);
+
+  // Set up global position update handler for draggable markers
+  useEffect(() => {
+    window.tempMarkerPositionUpdate = setTempMarker;
     
     return () => {
       delete window.tempMarkerPositionUpdate;
     };
-  }, [mapMarkers.setTempMarker]);
+  }, []);
 
-  // Enhanced save marker handler that includes current drawing
   const handleSaveMarker = () => {
-    mapMarkers.handleSaveMarker(mapDrawings.currentDrawing);
+    if (!isAuthenticated || !currentUser) {
+      toast.error('Please log in to save locations');
+      return;
+    }
+    
+    if (!tempMarker || !markerName.trim()) return;
+    
+    const newMarker: LocationMarker = {
+      id: uuidv4(),
+      name: markerName,
+      position: tempMarker,
+      type: markerType,
+      createdAt: new Date(),
+      associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
+      userId: currentUser.id
+    };
+    
+    // Clear the temporary marker BEFORE saving to prevent duplicate rendering
+    setTempMarker(null);
+    
+    // Save the marker
+    saveMarker(newMarker);
+    
+    if (currentDrawing) {
+      // Create a safe copy of currentDrawing without circular references
+      const safeDrawing: DrawingData = {
+        ...currentDrawing,
+        // Remove any potential circular references from geoJSON
+        geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
+          type: currentDrawing.geoJSON.type,
+          geometry: currentDrawing.geoJSON.geometry,
+          properties: currentDrawing.geoJSON.properties
+        })) : undefined,
+        properties: {
+          ...currentDrawing.properties,
+          name: markerName,
+          associatedMarkerId: newMarker.id
+        },
+        userId: currentUser.id
+      };
+      
+      // Save or update the drawing but don't clear it from the map
+      saveDrawing(safeDrawing);
+    }
+    
+    // Clear and reset UI state
+    setMarkerName('');
+    
+    // Update the markers state with the new marker - use getSavedMarkers to ensure deduplication
+    setMarkers(getSavedMarkers());
+    
+    toast.success("Location saved successfully");
+    
+    // Ensure drawings remain visible by dispatching a custom event
+    window.dispatchEvent(new Event('drawingsUpdated'));
+    
+    // Clean up any leftover temporary marker DOM elements after a slight delay
+    setTimeout(() => {
+      if (tempMarker) {
+        const markerId = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
+        const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+        tempIcons.forEach(icon => {
+          if (icon.parentNode) {
+            icon.parentNode.removeChild(icon);
+          }
+        });
+      }
+    }, 100);
+  };
+
+  const handleDeleteMarker = (id: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to manage locations');
+      return;
+    }
+    
+    deleteMarker(id);
+    // Update the markers state
+    setMarkers(markers.filter(marker => marker.id !== id));
+    toast.success("Location removed");
+  };
+
+  const handleRenameMarker = (id: string, newName: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to manage locations');
+      return;
+    }
+    
+    renameMarker(id, newName);
+    // Update the markers state
+    setMarkers(getSavedMarkers());
+  };
+
+  const handleRegionClick = (drawing: DrawingData) => {
+    setSelectedDrawing(drawing);
+    setShowFloorPlan(true);
   };
 
   return {
-    // Position state
-    position: mapPosition.position,
-    setPosition: mapPosition.setPosition,
-    zoom: mapPosition.zoom,
-    setZoom: mapPosition.setZoom,
-    
-    // Marker state
-    markers: mapMarkers.markers,
-    setMarkers: mapMarkers.setMarkers,
-    tempMarker: mapMarkers.tempMarker,
-    setTempMarker: mapMarkers.setTempMarker,
-    markerName: mapMarkers.markerName,
-    setMarkerName: mapMarkers.setMarkerName,
-    markerType: mapMarkers.markerType,
-    setMarkerType: mapMarkers.setMarkerType,
-    isProcessingMarker: mapMarkers.isProcessingMarker,
-    
-    // Drawing state
-    drawings: mapDrawings.drawings,
-    setDrawings: mapDrawings.setDrawings,
-    currentDrawing: mapDrawings.currentDrawing,
-    setCurrentDrawing: mapDrawings.setCurrentDrawing,
-    activeTool: mapDrawings.activeTool,
-    setActiveTool: mapDrawings.setActiveTool,
-    
-    // Floor plan state
-    showFloorPlan: floorPlanState.showFloorPlan,
-    setShowFloorPlan: floorPlanState.setShowFloorPlan,
-    selectedDrawing: floorPlanState.selectedDrawing,
-    setSelectedDrawing: floorPlanState.setSelectedDrawing,
-    
-    // Action handlers
+    position,
+    setPosition,
+    zoom,
+    setZoom,
+    markers,
+    setMarkers,
+    drawings,
+    setDrawings,
+    tempMarker,
+    setTempMarker,
+    markerName,
+    setMarkerName,
+    markerType,
+    setMarkerType,
+    currentDrawing,
+    setCurrentDrawing,
+    showFloorPlan,
+    setShowFloorPlan,
+    selectedDrawing,
+    setSelectedDrawing,
+    activeTool,
+    setActiveTool,
     handleSaveMarker,
-    handleDeleteMarker: mapMarkers.handleDeleteMarker,
-    handleRenameMarker: mapMarkers.handleRenameMarker,
-    handleRegionClick: floorPlanState.handleRegionClick
+    handleDeleteMarker,
+    handleRenameMarker,
+    handleRegionClick
   };
 }
 
+// Extend the Window interface to include our custom property
 declare global {
   interface Window {
     tempMarkerPositionUpdate?: (pos: [number, number]) => void;

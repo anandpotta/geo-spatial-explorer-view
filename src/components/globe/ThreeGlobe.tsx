@@ -1,8 +1,8 @@
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Location } from '@/utils/geo-utils';
 import { useThreeGlobe } from '@/hooks/useThreeGlobe';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
@@ -21,12 +21,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const previousLocationRef = useRef<string | null>(null);
   
-  const handleMapReady = useCallback(() => {
-    console.log("ThreeGlobe: Scene initialized successfully");
-    setIsGlobeReady(true);
-    if (onMapReady) onMapReady();
-  }, [onMapReady]);
-  
+  // Use our custom hook to handle Three.js setup and animation
   const { 
     scene, 
     camera, 
@@ -35,34 +30,46 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
     globe,
     flyToLocation,
     isInitialized
-  } = useThreeGlobe(containerRef, handleMapReady);
+  } = useThreeGlobe(containerRef, () => {
+    console.log("ThreeGlobe: Scene initialized successfully");
+    setIsGlobeReady(true);
+    if (onMapReady) onMapReady({ scene, camera, renderer, globe, controls });
+  });
   
+  // Show loading progress animation
   useEffect(() => {
+    // Only start progress animation if not ready yet
     if (!isGlobeReady) {
       let progress = 0;
       const interval = setInterval(() => {
-        progress += 2;
+        progress += 1;
         if (progress >= 95) {
+          // If we reach 95% and still not ready, stay there
           setLoadingProgress(95);
           clearInterval(interval);
         } else {
           setLoadingProgress(progress);
         }
-      }, 100);
+      }, 50);
       
       return () => clearInterval(interval);
     } else {
+      // When ready, set to 100% immediately
       setLoadingProgress(100);
     }
   }, [isGlobeReady]);
   
+  // Handle flying to a location when selectedLocation changes
   useEffect(() => {
-    if (!isInitialized || !selectedLocation || !flyToLocation) return;
+    if (!isInitialized || !selectedLocation) return;
     
+    // Create a unique ID for the location to detect changes
     const locationId = `${selectedLocation.id}-${selectedLocation.x}-${selectedLocation.y}`;
     
+    // Skip if we're already flying or it's the same location
     if (isFlying || locationId === previousLocationRef.current) return;
     
+    // Validate coordinates before flying
     if (typeof selectedLocation.x !== 'number' || typeof selectedLocation.y !== 'number' ||
         isNaN(selectedLocation.x) || isNaN(selectedLocation.y)) {
       console.error('Invalid coordinates:', selectedLocation);
@@ -89,7 +96,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         }
       }
     );
-  }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete, toast]);
+  }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);
 
   return (
     <div 
@@ -103,7 +110,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         bottom: 0,
         width: '100%',
         height: '100%',
-        background: '#000011',
+        background: '#000011', // Very dark blue background
         overflow: 'hidden',
         zIndex: 0
       }}
@@ -129,7 +136,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
                 style={{ width: `${loadingProgress}%` }}
               ></div>
             </div>
-            <p className="text-sm text-green-200">Initializing 3D globe...</p>
+            <p className="text-sm text-green-200">Loading high-resolution terrain...</p>
           </div>
         </div>
       )}

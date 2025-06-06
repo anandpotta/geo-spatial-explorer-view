@@ -30,14 +30,18 @@ const LeafletMap = ({
   onClearAll,
   onClearSelectedLocation 
 }: LeafletMapProps) => {
-  // ALL hooks must be called in the same order every time
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
   const [instanceKey, setInstanceKey] = useState<number>(Date.now());
+  
+  // Initialize Leaflet icons
+  useEffect(() => {
+    setupLeafletIcons();
+  }, []);
   
   // Generate a unique instance ID for this component instance to avoid container reuse
   const uniqueInstanceId = useMemo(() => `leaflet-map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, []);
   
-  // Custom hooks - ALWAYS call these in the same order
+  // Custom hooks
   const mapState = useMapState(selectedLocation);
   const { 
     mapRef, 
@@ -49,12 +53,7 @@ const LeafletMap = ({
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
 
-  // Initialize Leaflet icons - ALWAYS call this effect
-  useEffect(() => {
-    setupLeafletIcons();
-  }, []);
-
-  // Reset map if there are errors - ALWAYS define this callback
+  // Reset map if there are errors
   const forceReset = useCallback(() => {
     console.log("Forcing map reset");
     setInstanceKey(Date.now());
@@ -62,7 +61,7 @@ const LeafletMap = ({
     setIsMapReferenceSet(false);
   }, [resetMapInstance]);
 
-  // Handle markers updates - ALWAYS call this effect
+  // Handle markers updates
   useEffect(() => {
     const handleMarkersUpdated = () => {
       const savedMarkers = getSavedMarkers();
@@ -78,7 +77,7 @@ const LeafletMap = ({
     };
   }, [mapState]);
 
-  // Handle selected location changes - ALWAYS call this effect
+  // Handle selected location changes
   useEffect(() => {
     if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
       try {
@@ -96,7 +95,7 @@ const LeafletMap = ({
     }
   }, [selectedLocation, isMapReady, isMapReferenceSet]);
 
-  // Custom map reference handler - ALWAYS define this callback
+  // Custom map reference handler
   const handleMapRefWrapper = useCallback((map: L.Map) => {
     console.log('Map ref wrapper called');
     handleSetMapRef(map);
@@ -108,7 +107,7 @@ const LeafletMap = ({
     }
   }, [handleSetMapRef, onMapReady, isMapReferenceSet]);
 
-  // Clear all layers and reset state - ALWAYS define this callback
+  // Clear all layers and reset state (but preserve selected location)
   const handleClearAllWrapper = useCallback(() => {
     mapState.setTempMarker(null);
     mapState.setMarkerName('');

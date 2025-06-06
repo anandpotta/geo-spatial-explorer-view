@@ -1,66 +1,69 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSavedDrawings } from '@/utils/drawing-utils';
+import { useState, useEffect } from 'react';
+import { DrawingData, getSavedDrawings, deleteDrawing } from '@/utils/drawing-utils';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
-export const useDrawings = () => {
-  const [drawings, setDrawings] = useState([]);
-  const mountedRef = useRef(true);
-  const loadTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Stable callback that doesn't change on every render
-  const loadDrawings = useCallback(() => {
-    if (!mountedRef.current) return;
-    
-    try {
-      const savedDrawings = getSavedDrawings();
-      setDrawings(savedDrawings);
-    } catch (error) {
-      console.error('Error loading drawings:', error);
-    }
-  }, []); // No dependencies - this function is stable
-
-  // Debounced storage handler to prevent excessive calls
-  const handleStorage = useCallback(() => {
-    if (!mountedRef.current) return;
-    
-    // Clear existing timeout
-    if (loadTimeoutRef.current) {
-      clearTimeout(loadTimeoutRef.current);
+export function useDrawings() {
+  const [savedDrawings, setSavedDrawings] = useState<DrawingData[]>([]);
+  const { currentUser } = useAuth();
+  
+  const loadDrawings = () => {
+    if (!currentUser) {
+      setSavedDrawings([]);
+      return;
     }
     
-    // Debounce the loading
-    loadTimeoutRef.current = setTimeout(() => {
-      if (mountedRef.current) {
-        loadDrawings();
-      }
-    }, 100);
-  }, [loadDrawings]);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    
-    // Load initial drawings
-    loadDrawings();
-
-    // Listen for storage changes with debounced handler
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('drawingsUpdated', handleStorage);
-
-    return () => {
-      mountedRef.current = false;
-      
-      // Clear timeout on cleanup
-      if (loadTimeoutRef.current) {
-        clearTimeout(loadTimeoutRef.current);
-      }
-      
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('drawingsUpdated', handleStorage);
-    };
-  }, [loadDrawings, handleStorage]); // Now these are stable
-
-  return {
-    drawings,
-    loadDrawings
+    const drawings = getSavedDrawings();
+    setSavedDrawings(drawings);
+    console.log(`Loaded ${drawings.length} drawings for user ${currentUser.id}`);
   };
-};
+  
+  useEffect(() => {
+    // Initial load
+    loadDrawings();
+    
+    // Set up listeners for drawing updates
+    const handleStorage = () => {
+      loadDrawings();
+    };
+    
+    const handleDrawingsUpdated = () => {
+      loadDrawings();
+    };
+    
+    const handleUserChanged = () => {
+      // Short delay to ensure auth state is updated
+      setTimeout(loadDrawings, 50);
+    };
+    
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
+    window.addEventListener('userChanged', handleUserChanged);
+    window.addEventListener('floorPlanUpdated', handleDrawingsUpdated);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
+      window.removeEventListener('userChanged', handleUserChanged);
+      window.removeEventListener('floorPlanUpdated', handleDrawingsUpdated);
+    };
+  }, [currentUser]);
+  
+  const handleDeleteDrawing = (id: string) => {
+    if (!currentUser) {
+      toast.error('Please log in to manage drawings');
+      return;
+    }
+    
+    deleteDrawing(id);
+    loadDrawings(); // Reload immediately
+    toast.success('Drawing deleted');
+  };
+  
+  return { 
+    savedDrawings, 
+    setSavedDrawings, 
+    deleteDrawing: handleDeleteDrawing 
+  };
+}

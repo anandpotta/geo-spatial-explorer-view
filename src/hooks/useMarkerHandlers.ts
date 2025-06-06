@@ -3,53 +3,36 @@ import { toast } from 'sonner';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import L from 'leaflet';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCallback } from 'react';
 
 export function useMarkerHandlers(mapState: any) {
   const { currentUser } = useAuth();
   
-  const handleMapClick = useCallback((latlng: L.LatLng) => {
-    console.log('useMarkerHandlers: handleMapClick called with:', latlng);
-    console.log('useMarkerHandlers: Current activeTool:', mapState.activeTool);
-    console.log('useMarkerHandlers: Current tempMarker:', mapState.tempMarker);
-    
-    // Create markers when explicitly in marker mode OR when no tool is active (default behavior)
-    // Remove the tempMarker blocking condition to allow multiple markers
-    if (mapState.activeTool === 'marker' || !mapState.activeTool) {
+  const handleMapClick = (latlng: L.LatLng) => {
+    // Only create markers when explicitly in marker mode or no tool is active
+    if (mapState.activeTool === 'marker' || (!mapState.activeTool && !mapState.tempMarker)) {
       const exactPosition: [number, number] = [latlng.lat, latlng.lng];
+      mapState.setTempMarker(exactPosition);
       
-      console.log('useMarkerHandlers: Creating temp marker at position:', exactPosition);
+      // Always set a default name to make it easier to save
+      const defaultName = mapState.selectedLocation?.label || 'New Building';
+      mapState.setMarkerName(defaultName);
       
-      // Clear any existing temp marker first
-      if (mapState.tempMarker) {
-        console.log('useMarkerHandlers: Clearing existing temp marker');
-        mapState.setTempMarker(null);
-        
-        // Small delay to ensure cleanup before creating new one
-        setTimeout(() => {
-          mapState.setTempMarker(exactPosition);
-          const defaultName = mapState.selectedLocation?.label || 'New Building';
-          mapState.setMarkerName(defaultName);
-          console.log('useMarkerHandlers: New temp marker created successfully');
-        }, 100);
-      } else {
-        mapState.setTempMarker(exactPosition);
-        const defaultName = mapState.selectedLocation?.label || 'New Building';
-        mapState.setMarkerName(defaultName);
-        console.log('useMarkerHandlers: Temp marker created successfully');
-      }
-    } else {
-      console.log('useMarkerHandlers: Not creating marker - activeTool:', mapState.activeTool);
+      // Make sure to focus on the marker name input field after a short delay
+      setTimeout(() => {
+        const inputField = document.querySelector('.leaflet-popup input');
+        if (inputField) {
+          (inputField as HTMLElement).focus();
+        }
+      }, 100);
     }
-  }, [mapState]);
+  };
 
-  const handleShapeCreated = useCallback((shape: any) => {
+  const handleShapeCreated = (shape: any) => {
     console.log('handleShapeCreated called with shape type:', shape.type);
     
     // Check if this is specifically a marker creation event
     if (shape.type === 'marker') {
-      console.log('Processing marker creation from shape');
-      
+      console.log('Processing marker creation');
       // Ensure position exists and is valid before accessing it
       if (shape.position && Array.isArray(shape.position) && shape.position.length >= 2) {
         const exactPosition: [number, number] = [
@@ -57,24 +40,33 @@ export function useMarkerHandlers(mapState: any) {
           shape.position[1]
         ];
         mapState.setTempMarker(exactPosition);
-        mapState.setMarkerName('New Building');
+        mapState.setMarkerName('New Marker');
         
-        console.log('Temp marker created from shape at:', exactPosition);
-        
+        // Focus on the marker name input field after a short delay
+        setTimeout(() => {
+          const inputField = document.querySelector('.leaflet-popup input');
+          if (inputField) {
+            (inputField as HTMLElement).focus();
+          }
+        }, 100);
       } else if (shape.layer && shape.layer.getLatLng) {
         // Alternative: try to get position from the layer if available
         const latLng = shape.layer.getLatLng();
         mapState.setTempMarker([latLng.lat, latLng.lng]);
-        mapState.setMarkerName('New Building');
+        mapState.setMarkerName('New Marker');
         
-        console.log('Temp marker created from layer at:', [latLng.lat, latLng.lng]);
-        
+        // Focus on the marker name input field after a short delay
+        setTimeout(() => {
+          const inputField = document.querySelector('.leaflet-popup input');
+          if (inputField) {
+            (inputField as HTMLElement).focus();
+          }
+        }, 100);
       } else {
         console.error('Invalid marker position data:', shape);
         toast.error('Could not create marker: invalid position data');
         return;
       }
-      
     } else if (shape.type === 'circle' || shape.type === 'rectangle' || shape.type === 'polygon') {
       // Handle drawing shapes (circles, rectangles, polygons) - ABSOLUTELY NO MARKER LOGIC
       console.log(`Creating ${shape.type} shape - no marker creation`);
@@ -117,7 +109,7 @@ export function useMarkerHandlers(mapState: any) {
     } else {
       console.log(`Unknown shape type: ${shape.type}`);
     }
-  }, [currentUser, mapState]);
+  };
 
   return {
     handleMapClick,

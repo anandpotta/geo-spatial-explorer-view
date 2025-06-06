@@ -1,5 +1,5 @@
 
-import { forwardRef, useImperativeHandle, useEffect, useCallback, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useEffect } from 'react';
 import { FeatureGroup } from 'react-leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useDrawings } from '@/hooks/useDrawings';
@@ -34,25 +34,8 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onUploadToDrawing,
   onPathsUpdated
 }: DrawingControlsProps, ref) => {
-  const { drawings: savedDrawings } = useDrawings();
+  const { savedDrawings } = useDrawings();
   const { isAuthenticated, currentUser, checkAuthBeforeAction } = useDrawingAuth();
-  const initializationRef = useRef(false);
-  const stableCallbacksRef = useRef({
-    onCreated,
-    onRegionClick,
-    onClearAll,
-    onRemoveShape,
-    onUploadToDrawing,
-    onPathsUpdated
-  });
-  
-  // Update refs without triggering re-renders
-  stableCallbacksRef.current.onCreated = onCreated;
-  stableCallbacksRef.current.onRegionClick = onRegionClick;
-  stableCallbacksRef.current.onClearAll = onClearAll;
-  stableCallbacksRef.current.onRemoveShape = onRemoveShape;
-  stableCallbacksRef.current.onUploadToDrawing = onUploadToDrawing;
-  stableCallbacksRef.current.onPathsUpdated = onPathsUpdated;
   
   const {
     featureGroupRef,
@@ -68,32 +51,19 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   
   const { handleFileChange, fileInputRef: uploadFileInputRef } = useFileUploadHandling({ onUploadToDrawing });
   
-  // Stable callback for paths updated
-  const handlePathsUpdated = useCallback((paths: string[]) => {
-    if (stableCallbacksRef.current.onPathsUpdated && mountedRef.current) {
-      stableCallbacksRef.current.onPathsUpdated(paths);
-    }
-  }, [mountedRef]);
-  
-  // Track SVG paths with stable callback
+  // Track SVG paths
   const { svgPaths } = useSvgPathTracking({
     isInitialized,
     drawToolsRef,
     mountedRef,
-    onPathsUpdated: handlePathsUpdated
+    onPathsUpdated
   });
   
-  // Handle shape creation with stable callback
-  const { handleCreatedWrapper } = useHandleShapeCreation(
-    (shape: any) => stableCallbacksRef.current.onCreated(shape), 
-    handlePathsUpdated, 
-    svgPaths
-  );
+  // Handle shape creation with authentication check
+  const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, onPathsUpdated, svgPaths);
   
-  // Handle clear all operation with stable callback
-  const { handleClearAllWrapper } = useClearAllOperation(
-    () => stableCallbacksRef.current.onClearAll?.()
-  );
+  // Handle clear all operation with authentication check
+  const { handleClearAllWrapper } = useClearAllOperation(onClearAll);
   
   useImperativeHandle(ref, () => ({
     getFeatureGroup: () => featureGroupRef.current,
@@ -110,50 +80,44 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
       }
       return [];
     }
-  }), [checkAuthBeforeAction, openFileUploadDialog, featureGroupRef, drawToolsRef]);
+  }));
   
-  // Stable initialization effect - only run once
+  // Effect for initialization
   useEffect(() => {
-    if (featureGroupRef.current && !initializationRef.current) {
-      initializationRef.current = true;
+    if (featureGroupRef.current) {
       setIsInitialized(true);
     }
     
     return () => {
       mountedRef.current = false;
     };
-  }, [featureGroupRef.current, setIsInitialized, mountedRef]);
+  }, []);
 
-  // Minimal user change handling - only when user ID actually changes
+  // Handle user changes - reload drawings when user changes
   useEffect(() => {
-    if (isInitialized && currentUser?.id && drawToolsRef.current && initializationRef.current) {
-      const timeoutId = setTimeout(() => {
-        if (mountedRef.current) {
-          window.dispatchEvent(new Event('storage'));
-          window.dispatchEvent(new Event('markersUpdated'));
-          window.dispatchEvent(new Event('drawingsUpdated'));
-        }
-      }, 1000); // Increased timeout
-      
-      return () => clearTimeout(timeoutId);
+    if (isInitialized && currentUser && drawToolsRef.current) {
+      // When user logs in or changes, we need to refresh the map
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('markersUpdated'));
+      window.dispatchEvent(new Event('drawingsUpdated'));
     }
-  }, [currentUser?.id, isInitialized]); // Only depend on user ID
+  }, [currentUser, isInitialized]);
 
-  const handleRemoveShape = useCallback((drawingId: string) => {
+  const handleRemoveShape = (drawingId: string) => {
     if (!checkAuthBeforeAction('remove shapes')) {
       return;
     }
     
-    if (stableCallbacksRef.current.onRemoveShape) {
-      stableCallbacksRef.current.onRemoveShape(drawingId);
+    if (onRemoveShape) {
+      onRemoveShape(drawingId);
     }
-  }, [checkAuthBeforeAction]);
+  };
 
-  const handleDrawingClick = useCallback((drawing: DrawingData) => {
-    if (stableCallbacksRef.current.onRegionClick) {
-      stableCallbacksRef.current.onRegionClick(drawing);
+  const handleDrawingClick = (drawing: DrawingData) => {
+    if (onRegionClick) {
+      onRegionClick(drawing);
     }
-  }, []);
+  };
 
   return (
     <>

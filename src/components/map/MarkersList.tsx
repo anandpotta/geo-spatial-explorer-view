@@ -2,7 +2,7 @@
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 
 interface MarkersListProps {
   markers: LocationMarker[];
@@ -13,7 +13,6 @@ interface MarkersListProps {
   onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  isProcessingMarker?: boolean;
 }
 
 const MarkersList = ({
@@ -24,27 +23,12 @@ const MarkersList = ({
   onDeleteMarker,
   onSaveMarker,
   setMarkerName,
-  setMarkerType,
-  isProcessingMarker = false
+  setMarkerType
 }: MarkersListProps) => {
-  // Use a stable ref for temp marker key to prevent unnecessary re-renders
-  const tempMarkerKeyRef = useRef<string>('');
+  // Generate a unique key for the temp marker that changes when position changes
+  const tempMarkerKey = tempMarker ? `temp-marker-${tempMarker[0]}-${tempMarker[1]}-${Date.now()}` : '';
   
-  // Only update the key when temp marker position actually changes
-  const tempMarkerKey = useMemo(() => {
-    if (!tempMarker) {
-      tempMarkerKeyRef.current = '';
-      return '';
-    }
-    
-    const newKey = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
-    if (tempMarkerKeyRef.current !== newKey) {
-      tempMarkerKeyRef.current = newKey;
-    }
-    return tempMarkerKeyRef.current;
-  }, [tempMarker]);
-  
-  // Use useMemo to deduplicate markers by ID and prevent unnecessary recalculations
+  // Use useMemo to deduplicate markers by ID
   const uniqueMarkers = useMemo(() => {
     const markerMap = new Map<string, LocationMarker>();
     if (Array.isArray(markers)) {
@@ -55,34 +39,17 @@ const MarkersList = ({
     return Array.from(markerMap.values());
   }, [markers]);
   
-  // Check if temp marker position matches any existing marker position
-  const isTemporaryMarkerDuplicate = useMemo(() => {
-    if (!tempMarker) return false;
-    
-    return uniqueMarkers.some(marker => {
-      const [lat1, lng1] = marker.position;
-      const [lat2, lng2] = tempMarker;
-      
-      // Use a small threshold for floating point comparison
-      const threshold = 0.00001;
-      return Math.abs(lat1 - lat2) < threshold && Math.abs(lng1 - lng2) < threshold;
-    });
-  }, [tempMarker, uniqueMarkers]);
-
   // Safe delete handler that prevents unwanted marker creation
   const handleDeleteMarker = (id: string) => {
-    if (isProcessingMarker) return;
-    
-    console.log(`MarkersList: Initiating delete for marker ${id}`);
-    
     // Set global flag to prevent map click events temporarily
     window.preventMapClick = true;
     
     // Call the delete handler
     onDeleteMarker(id);
     
-    // Clean up DOM elements without triggering additional events
+    // Clear any active DOM elements that might trigger marker creation
     setTimeout(() => {
+      // Remove any leftover marker icons that might be causing duplicates
       const markerId = `marker-${id}`;
       const duplicateIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
       duplicateIcons.forEach(icon => {
@@ -91,6 +58,7 @@ const MarkersList = ({
         }
       });
       
+      // Clean up any active popups
       const activePopups = document.querySelectorAll('.leaflet-popup');
       activePopups.forEach(popup => {
         try {
@@ -100,9 +68,10 @@ const MarkersList = ({
         }
       });
       
+      // Reset preventMapClick flag after a short delay
       setTimeout(() => {
         window.preventMapClick = false;
-      }, 300);
+      }, 500);
     }, 0);
   };
   
@@ -116,7 +85,7 @@ const MarkersList = ({
         />
       ))}
       
-      {tempMarker && Array.isArray(tempMarker) && !isProcessingMarker && !isTemporaryMarkerDuplicate && (
+      {tempMarker && Array.isArray(tempMarker) && (
         <TempMarker 
           key={tempMarkerKey}
           position={tempMarker}
@@ -125,7 +94,6 @@ const MarkersList = ({
           markerType={markerType}
           setMarkerType={setMarkerType}
           onSave={onSaveMarker}
-          isProcessing={isProcessingMarker}
         />
       )}
     </>

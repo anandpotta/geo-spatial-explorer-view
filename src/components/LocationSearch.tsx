@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,14 +19,13 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const { toast } = useToast();
 
-  // Memoize the online status handler to prevent recreating on every render
-  const handleOnlineStatusChange = useCallback(() => {
-    setIsOfflineMode(!navigator.onLine);
-  }, []);
-
   useEffect(() => {
     // Check if we're online or offline
     setIsOfflineMode(!navigator.onLine);
+    
+    const handleOnlineStatusChange = () => {
+      setIsOfflineMode(!navigator.onLine);
+    };
     
     window.addEventListener('online', handleOnlineStatusChange);
     window.addEventListener('offline', handleOnlineStatusChange);
@@ -36,57 +36,51 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     };
   }, []);
 
-  // Memoize the search function to prevent infinite loops
-  const performSearch = useCallback(async (searchQuery: string) => {
-    if (searchQuery.length < 3) {
-      setResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const locations = await searchLocations(searchQuery);
-      setResults(locations);
-      setShowResults(true);
-      
-      if (locations.length === 0) {
-        toast({
-          title: "No results found",
-          description: "Try a different search term",
-          duration: 3000,
-        });
-      }
-      
-      if (isOfflineMode && locations.length > 0) {
-        toast({
-          title: "Using offline data",
-          description: "Limited locations are available in offline mode",
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      console.error("Error during search:", error);
-      toast({
-        title: "Search error",
-        description: "Could not complete the search request",
-        variant: "destructive",
-        duration: 3000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isOfflineMode, toast]);
-
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      performSearch(query);
+    const delayDebounceFn = setTimeout(async () => {
+      if (query.length >= 3) {
+        setIsLoading(true);
+        try {
+          const locations = await searchLocations(query);
+          setResults(locations);
+          setShowResults(true);
+          
+          if (locations.length === 0) {
+            toast({
+              title: "No results found",
+              description: "Try a different search term",
+              duration: 3000,
+            });
+          }
+          
+          if (isOfflineMode && locations.length > 0) {
+            toast({
+              title: "Using offline data",
+              description: "Limited locations are available in offline mode",
+              duration: 3000,
+            });
+          }
+        } catch (error) {
+          console.error("Error during search:", error);
+          toast({
+            title: "Search error",
+            description: "Could not complete the search request",
+            variant: "destructive",
+            duration: 3000,
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setResults([]);
+        setShowResults(false);
+      }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query, performSearch]);
+  }, [query, isOfflineMode, toast]);
 
-  const handleSelect = useCallback((location: Location) => {
+  const handleSelect = (location: Location) => {
     console.log('Location selected in search component:', location);
     setSelectedLocation(location);
     setQuery(location.label);
@@ -99,16 +93,16 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     });
     
     onLocationSelect(location);
-  }, [onLocationSelect, toast]);
+  };
 
-  const handleClear = useCallback(() => {
+  const handleClear = () => {
     setQuery('');
     setSelectedLocation(null);
     setResults([]);
     setShowResults(false);
-  }, []);
+  };
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedLocation) {
       onLocationSelect(selectedLocation);
@@ -121,9 +115,29 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     } else if (results.length > 0) {
       handleSelect(results[0]);
     } else if (query.length >= 3) {
-      performSearch(query);
+      setIsLoading(true);
+      searchLocations(query).then(locations => {
+        setIsLoading(false);
+        if (locations.length > 0) {
+          handleSelect(locations[0]);
+        } else {
+          toast({
+            title: "No locations found",
+            description: "Try entering a more specific address",
+            variant: "destructive"
+          });
+        }
+      }).catch(error => {
+        setIsLoading(false);
+        toast({
+          title: "Search error",
+          description: "Could not complete the search request",
+          variant: "destructive",
+          duration: 3000,
+        });
+      });
     }
-  }, [selectedLocation, results, query, onLocationSelect, toast, handleSelect, performSearch]);
+  };
 
   return (
     <div className="w-full p-2 z-[10000] bg-background rounded-md shadow-lg">

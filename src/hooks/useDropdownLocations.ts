@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LocationMarker, getSavedMarkers } from '@/utils/marker-utils';
 
 export const useDropdownLocations = () => {
@@ -8,64 +8,40 @@ export const useDropdownLocations = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  const hasLoadedRef = useRef(false);
-  const lastUpdateRef = useRef<number>(0);
   
-  const loadMarkers = useCallback(() => {
-    const now = Date.now();
-    
-    // Prevent rapid successive loads
-    if (now - lastUpdateRef.current < 3000) {
-      return;
-    }
-    
-    lastUpdateRef.current = now;
-    
-    try {
-      const savedMarkers = getSavedMarkers();
-      setMarkers(savedMarkers);
-      const pinned = savedMarkers.filter(marker => marker.isPinned === true);
-      setPinnedMarkers(pinned);
-    } catch (error) {
-      console.error('Error loading markers:', error);
-    }
-  }, []);
+  const loadMarkers = () => {
+    console.log("Loading markers for dropdown");
+    const savedMarkers = getSavedMarkers();
+    setMarkers(savedMarkers);
+    const pinned = savedMarkers.filter(marker => marker.isPinned === true);
+    setPinnedMarkers(pinned);
+  };
 
   useEffect(() => {
-    // Load once on mount
-    if (!hasLoadedRef.current) {
+    loadMarkers();
+    
+    const handleStorage = () => {
+      console.log("Storage event detected");
       loadMarkers();
-      hasLoadedRef.current = true;
-    }
-    
-    // Listen only to the custom markersSaved event with throttling
-    let updateTimeout: NodeJS.Timeout;
-    
-    const handleMarkersSaved = (event: Event) => {
-      if (event instanceof CustomEvent && event.detail?.source === 'storage') {
-        // Clear any existing timeout
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-        
-        // Debounce the update
-        updateTimeout = setTimeout(() => {
-          loadMarkers();
-        }, 2000);
-      }
     };
     
-    window.addEventListener('markersSaved', handleMarkersSaved);
+    const handleMarkersUpdated = () => {
+      console.log("Markers updated event detected");
+      loadMarkers();
+    };
+    
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
     
     return () => {
-      window.removeEventListener('markersSaved', handleMarkersSaved);
-      if (updateTimeout) {
-        clearTimeout(updateTimeout);
-      }
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
     };
-  }, [loadMarkers]);
+  }, []);
 
-  const cleanupMarkerReferences = useCallback(() => {
+  // Add this function to help with proper cleanup of elements when a marker is deleted
+  const cleanupMarkerReferences = () => {
+    // Force cleanup of any stale elements that might be causing issues
     const staleDialogs = document.querySelectorAll('[role="dialog"][aria-hidden="true"]');
     staleDialogs.forEach(dialog => {
       if (dialog.parentNode) {
@@ -77,9 +53,10 @@ export const useDropdownLocations = () => {
       }
     });
     
+    // Ensure body is not restricted
     document.body.style.pointerEvents = '';
     document.body.removeAttribute('aria-hidden');
-  }, []);
+  };
 
   return {
     markers,

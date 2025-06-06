@@ -16,13 +16,11 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
   
-  // Create a stable marker ID for DOM element tracking
+  // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
-  
-  // Create a stable tooltip key that only changes when marker name changes
-  const tooltipKey = `tooltip-${marker.id}-${marker.name}`;
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
@@ -92,42 +90,15 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       
       localStorage.setItem('savedMarkers', JSON.stringify(updatedMarkers));
       
-      // Dispatch event to update other components - but prevent loops
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('markersUpdated'));
-      }, 100);
+      // Dispatch event to update other components
+      window.dispatchEvent(new CustomEvent('markersUpdated'));
       
+      // Update tooltip key to force re-render
+      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
   }, [marker.id, isDeleting, originalPosition]);
-
-  // Handler for clicking on marker - fixed with proper event handling
-  const handleMarkerClick = useCallback((e: L.LeafletMouseEvent) => {
-    // Stop propagation to prevent map click
-    if (e.originalEvent) {
-      e.originalEvent.stopPropagation();
-      e.originalEvent.preventDefault();
-    }
-    
-    console.log('UserMarker: Marker clicked, opening popup');
-    const clickedMarker = e.target as L.Marker;
-    
-    if (clickedMarker && !isDeleting) {
-      // Force close any existing popups first
-      clickedMarker.closePopup();
-      
-      // Open popup with a slight delay to ensure proper rendering
-      setTimeout(() => {
-        try {
-          clickedMarker.openPopup();
-          console.log('UserMarker: Popup opened successfully');
-        } catch (error) {
-          console.error('Error opening popup:', error);
-        }
-      }, 50);
-    }
-  }, [isDeleting]);
 
   // Handler for deleting a marker safely
   const handleDelete = useCallback((id: string) => {
@@ -202,8 +173,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       eventHandlers={{ 
         dragstart: handleDragStart,
         drag: handleDrag,
-        dragend: handleDragEnd,
-        click: handleMarkerClick
+        dragend: handleDragEnd 
       }}
       attribution={`marker-${marker.id}`}
     >
