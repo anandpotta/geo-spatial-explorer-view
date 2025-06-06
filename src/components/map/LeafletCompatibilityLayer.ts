@@ -5,10 +5,114 @@ import { EditControl as OriginalEditControl } from "react-leaflet-draw";
 import React, { forwardRef, useEffect } from 'react';
 import L from 'leaflet';
 
+// Enhanced layer patching function
+const patchLayerForEdit = (layer: any) => {
+  if (!layer) return layer;
+  
+  // Add enableEdit method if missing
+  if (!layer.enableEdit || typeof layer.enableEdit !== 'function') {
+    layer.enableEdit = function() { 
+      console.log('Edit enabled on layer:', this);
+      if (this.editing && this.editing.enable) {
+        try {
+          this.editing.enable();
+        } catch (err) {
+          console.warn('Error enabling layer editing:', err);
+        }
+      }
+      return this; 
+    };
+  }
+  
+  // Add disableEdit method if missing
+  if (!layer.disableEdit || typeof layer.disableEdit !== 'function') {
+    layer.disableEdit = function() { 
+      console.log('Edit disabled on layer:', this);
+      if (this.editing && this.editing.disable) {
+        try {
+          this.editing.disable();
+        } catch (err) {
+          console.warn('Error disabling layer editing:', err);
+        }
+      }
+      return this; 
+    };
+  }
+  
+  // Add enable method if missing (for toolbar compatibility)
+  if (!layer.enable || typeof layer.enable !== 'function') {
+    layer.enable = function() { 
+      return this.enableEdit();
+    };
+  }
+  
+  // Add disable method if missing (for toolbar compatibility)  
+  if (!layer.disable || typeof layer.disable !== 'function') {
+    layer.disable = function() { 
+      return this.disableEdit();
+    };
+  }
+  
+  return layer;
+};
+
 // Apply patches to leaflet-draw to fix known issues
 const applyLeafletDrawPatches = () => {
-  // Fix for the "type is not defined" error in readableArea
   try {
+    // Patch the edit toolbar to safely handle layers without edit methods
+    if (L.EditToolbar && L.EditToolbar.Edit) {
+      const editProto = L.EditToolbar.Edit.prototype as any;
+      
+      // Patch _enableLayerEdit to safely handle layers
+      if (editProto && editProto._enableLayerEdit) {
+        const original_enableLayerEdit = editProto._enableLayerEdit;
+        editProto._enableLayerEdit = function(layer: any) {
+          try {
+            // Patch the layer first
+            patchLayerForEdit(layer);
+            // Then call original function
+            return original_enableLayerEdit.call(this, layer);
+          } catch (err) {
+            console.warn('Error in _enableLayerEdit:', err);
+            return layer;
+          }
+        };
+      }
+      
+      // Patch _disableLayerEdit to safely handle layers
+      if (editProto && editProto._disableLayerEdit) {
+        const original_disableLayerEdit = editProto._disableLayerEdit;
+        editProto._disableLayerEdit = function(layer: any) {
+          try {
+            // Ensure layer has disable methods
+            patchLayerForEdit(layer);
+            // Then call original function
+            return original_disableLayerEdit.call(this, layer);
+          } catch (err) {
+            console.warn('Error in _disableLayerEdit:', err);
+            return layer;
+          }
+        };
+      }
+      
+      // Enhanced addHooks method to patch all layers
+      if (editProto && editProto.addHooks) {
+        const originalAddHooks = editProto.addHooks;
+        editProto.addHooks = function() {
+          // Patch all layers in the feature group before enabling edit
+          const featureGroup = this.options.featureGroup;
+          if (featureGroup && featureGroup.eachLayer) {
+            featureGroup.eachLayer((layer: any) => {
+              patchLayerForEdit(layer);
+            });
+          }
+          
+          return originalAddHooks.call(this);
+        };
+      }
+    }
+    
+    // Fix for the "type is not defined" error in readableArea
     if (L.Draw && L.Draw.Polygon) {
       // Patch the readableArea function to provide a fallback for the missing type variable
       const polygonProto = L.Draw.Polygon.prototype as any;
@@ -175,8 +279,7 @@ export const EditControl = forwardRef((props: any, ref: any) => {
     };
   }
   
-  // Add a patching function to ensure all layers have properly initialized edit handlers
-  // This is necessary because react-leaflet-draw may try to access edit methods on layers that don't have them
+  // Enhanced patching function to ensure all layers have properly initialized edit handlers
   if (featureGroup) {
     try {
       // Safety guard to ensure we don't try to access properties on undefined
@@ -187,13 +290,7 @@ export const EditControl = forwardRef((props: any, ref: any) => {
           
           // Patch each layer to ensure it has the necessary edit methods
           layers.forEach(layer => {
-            // Only add if not already present
-            if (layer && !layer.enableEdit) {
-              layer.enableEdit = function() { return this; };
-            }
-            if (layer && !layer.disableEdit) {
-              layer.disableEdit = function() { return this; };
-            }
+            patchLayerForEdit(layer);
           });
         }
       }, 0);
