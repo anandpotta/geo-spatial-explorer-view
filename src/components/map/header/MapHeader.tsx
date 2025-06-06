@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import SavedLocationsDropdown from '../SavedLocationsDropdown';
 import DownloadButton from './DownloadButton';
@@ -5,9 +6,14 @@ import DownloadButton from './DownloadButton';
 interface MapHeaderProps {
   onLocationSelect: (position: [number, number]) => void;
   isMapReady?: boolean;
+  searchLocation?: {
+    latitude: number;
+    longitude: number;
+    searchString?: string;
+  };
 }
 
-const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false }) => {
+const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false, searchLocation }) => {
   const [isVisible, setIsVisible] = useState(true);
   
   console.log('MapHeader render:', { isMapReady, isVisible });
@@ -46,7 +52,7 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
       data-map-header="true"
       style={{ pointerEvents: 'auto', marginRight: '27px' }}
     >
-      <DownloadButton disabled={false} />
+      <DownloadButton disabled={false} searchLocation={searchLocation} />
       <SavedLocationsDropdown 
         onLocationSelect={handleLocationSelect} 
         isMapReady={isMapReady && isVisible}

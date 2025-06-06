@@ -6,6 +6,28 @@
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/esm/react/index.js",
+      "require": "./dist/cjs/react/index.js",
+      "types": "./dist/types/react/index.d.ts"
+    },
+    "./react-native": {
+      "import": "./dist/esm/react-native/index.js",
+      "require": "./dist/cjs/react-native/index.js",
+      "types": "./dist/types/react-native/index.d.ts"
+    },
+    "./angular": {
+      "import": "./dist/esm/angular/index.js",
+      "require": "./dist/cjs/angular/index.js",
+      "types": "./dist/types/angular/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "LICENSE",
@@ -14,10 +36,11 @@
   "sideEffects": false,
   "scripts": {
     "build": "rimraf dist && npm run build:cjs && npm run build:esm && npm run build:types",
-    "build:cjs": "tsc --module commonjs --outDir dist/cjs --declaration false",
-    "build:esm": "tsc --module es2015 --outDir dist/esm --declaration false",
-    "build:types": "tsc --declaration --declarationDir dist/types --emitDeclarationOnly",
-    "prepublishOnly": "npm run build"
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build:esm": "tsc --project tsconfig.esm.json", 
+    "build:types": "tsc --project tsconfig.types.json",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
     "geospatial",
@@ -27,17 +50,32 @@
     "cross-platform",
     "react",
     "react-native",
-    "angular"
+    "angular",
+    "typescript"
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/geospatial-explorer-lib.git"
+  },
   "peerDependencies": {
     "react": ">=16.8.0",
-    "react-dom": ">=16.8.0",
-    "react-native": ">=0.60.0",
-    "react-native-webview": ">=11.0.0",
-    "@angular/core": ">=13.0.0",
-    "three": ">=0.133.0"
+    "react-dom": ">=16.8.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    },
+    "react-native-webview": {
+      "optional": true
+    },
+    "@angular/core": {
+      "optional": true
+    },
+    "three": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": ">=16.8.0",

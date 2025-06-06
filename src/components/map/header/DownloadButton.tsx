@@ -1,18 +1,23 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { downloadGeoJSON, generateGeoJSON } from '@/utils/geojson-export';
+import { downloadEnhancedGeoJSON, generateEnhancedGeoJSON } from '@/utils/enhanced-geojson-export';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
 
 interface DownloadButtonProps {
   disabled?: boolean;
+  searchLocation?: {
+    latitude: number;
+    longitude: number;
+    searchString?: string;
+  };
 }
 
-const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false }) => {
+const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false, searchLocation }) => {
   const checkIfDataExists = () => {
     try {
-      const geoJSON = generateGeoJSON();
+      const geoJSON = generateEnhancedGeoJSON();
       const hasData = geoJSON.features && geoJSON.features.length > 0;
       console.log('GeoJSON data check:', { hasData, featureCount: geoJSON.features?.length || 0 });
       return hasData;
@@ -34,9 +39,14 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ disabled = false }) => 
       const timestamp = new Date().toISOString().split('T')[0];
       const filename = `map-annotations-${timestamp}.geojson`;
       
-      downloadGeoJSON(filename);
+      // Include search location in the download if available
+      downloadEnhancedGeoJSON({
+        searchLocation,
+        includeSearchMetadata: true,
+        filename
+      });
       
-      toast.success('GeoJSON file downloaded successfully');
+      toast.success('Enhanced GeoJSON file downloaded successfully');
     } catch (error) {
       console.error('Error downloading GeoJSON:', error);
       toast.error('Failed to download GeoJSON file');
