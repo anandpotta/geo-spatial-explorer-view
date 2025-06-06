@@ -1,12 +1,20 @@
+
 import * as React from "react"
 import { OTPInput, OTPInputContext } from "input-otp"
 import { Dot } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const InputOTP = React.forwardRef<
+const InputOTP: React.ForwardRefExoticComponent<
+  React.ComponentPropsWithoutRef<typeof OTPInput> & 
+  React.RefAttributes<React.ElementRef<typeof OTPInput>> & {
+    containerClassName?: string;
+  }
+> = React.forwardRef<
   React.ElementRef<typeof OTPInput>,
-  React.ComponentPropsWithoutRef<typeof OTPInput>
+  React.ComponentPropsWithoutRef<typeof OTPInput> & {
+    containerClassName?: string;
+  }
 >(({ className, containerClassName, ...props }, ref) => (
   <OTPInput
     ref={ref}
@@ -20,7 +28,9 @@ const InputOTP = React.forwardRef<
 ))
 InputOTP.displayName = "InputOTP"
 
-const InputOTPGroup = React.forwardRef<
+const InputOTPGroup: React.ForwardRefExoticComponent<
+  React.ComponentPropsWithoutRef<"div"> & React.RefAttributes<HTMLDivElement>
+> = React.forwardRef<
   React.ElementRef<"div">,
   React.ComponentPropsWithoutRef<"div">
 >(({ className, ...props }, ref) => (
@@ -28,7 +38,11 @@ const InputOTPGroup = React.forwardRef<
 ))
 InputOTPGroup.displayName = "InputOTPGroup"
 
-const InputOTPSlot = React.forwardRef<
+const InputOTPSlot: React.ForwardRefExoticComponent<
+  React.ComponentPropsWithoutRef<"div"> & 
+  React.RefAttributes<HTMLDivElement> & 
+  { index: number }
+> = React.forwardRef<
   React.ElementRef<"div">,
   React.ComponentPropsWithoutRef<"div"> & { index: number }
 >(({ index, className, ...props }, ref) => {
@@ -56,7 +70,9 @@ const InputOTPSlot = React.forwardRef<
 })
 InputOTPSlot.displayName = "InputOTPSlot"
 
-const InputOTPSeparator = React.forwardRef<
+const InputOTPSeparator: React.ForwardRefExoticComponent<
+  React.ComponentPropsWithoutRef<"div"> & React.RefAttributes<HTMLDivElement>
+> = React.forwardRef<
   React.ElementRef<"div">,
   React.ComponentPropsWithoutRef<"div">
 >(({ ...props }, ref) => (
