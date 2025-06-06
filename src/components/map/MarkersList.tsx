@@ -42,7 +42,7 @@ const MarkersList = ({
   // Safe delete handler that prevents unwanted marker creation
   const handleDeleteMarker = (id: string) => {
     // Set global flag to prevent map click events temporarily
-    if (window.preventMapClick !== undefined) {
+    if (typeof window !== 'undefined' && window.preventMapClick !== undefined) {
       window.preventMapClick = true;
     }
     
@@ -72,7 +72,7 @@ const MarkersList = ({
       
       // Reset preventMapClick flag after a short delay
       setTimeout(() => {
-        if (window.preventMapClick !== undefined) {
+        if (typeof window !== 'undefined' && window.preventMapClick !== undefined) {
           window.preventMapClick = false;
         }
       }, 500);

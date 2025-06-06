@@ -31,7 +31,7 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
       clearPathElements();
       
       // Try to access map instance through window featureGroup
-      if (window.featureGroup && (window.featureGroup as any)._map) {
+      if (typeof window !== 'undefined' && window.featureGroup && (window.featureGroup as any)._map) {
         console.log('Found map reference, clearing SVG paths from DOM');
         clearAllMapSvgElements((window.featureGroup as any)._map);
         

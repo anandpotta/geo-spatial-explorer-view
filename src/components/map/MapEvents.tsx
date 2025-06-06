@@ -13,7 +13,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       console.log('Map click detected at:', e.latlng);
       
       // Don't trigger click if we're in the process of deleting a marker
-      if (window.preventMapClick) {
+      if (typeof window !== 'undefined' && window.preventMapClick) {
         console.log('Map click prevented after marker deletion');
         return;
       }
