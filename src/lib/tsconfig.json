@@ -24,7 +24,9 @@
     "declarationMap": true,
     "sourceMap": true,
     "allowJs": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": false
   },
   "include": [
     "./**/*.ts",
