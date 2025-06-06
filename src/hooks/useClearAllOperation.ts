@@ -1,24 +1,20 @@
 
 import { useCallback, useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
 import { clearAllMapSvgElements } from '@/utils/svg-path-utils';
 import L from 'leaflet';
 
 // Global state to track if a confirmation dialog is already showing
-// This prevents multiple dialogs from appearing simultaneously
 let isConfirmationDialogOpen = false;
 
 export function useClearAllOperation(onClearAll?: () => void) {
-  const { isAuthenticated } = useAuth();
   const [showConfirmation, setShowConfirmation] = useState(false);
   
   // Update global state when local state changes
   useEffect(() => {
     isConfirmationDialogOpen = showConfirmation;
     return () => {
-      // When component unmounts, reset global flag if this was the component showing dialog
       if (showConfirmation) {
         isConfirmationDialogOpen = false;
       }
@@ -84,7 +80,6 @@ export function useClearAllOperation(onClearAll?: () => void) {
   
   // Helper function to restore red markers
   const restoreRedMarkers = (redMarkerData: any[], redTooltipData: any[]) => {
-    // Find the marker pane
     const markerPanes = document.querySelectorAll('.leaflet-marker-pane');
     const tooltipPanes = document.querySelectorAll('.leaflet-tooltip-pane');
     
@@ -98,7 +93,6 @@ export function useClearAllOperation(onClearAll?: () => void) {
         img.className = data.className;
         img.setAttribute('style', data.style);
         
-        // Create a wrapper div if needed
         const wrapper = document.createElement('div');
         wrapper.className = 'leaflet-marker-icon leaflet-zoom-animated leaflet-interactive';
         wrapper.appendChild(img);
@@ -126,13 +120,9 @@ export function useClearAllOperation(onClearAll?: () => void) {
   useEffect(() => {
     const handleLeafletClearRequest = () => {
       console.log('Received leaflet clear all request event');
-      if (isAuthenticated) {
-        // Only show dialog if no other dialog is currently open
-        if (!isConfirmationDialogOpen) {
-          setShowConfirmation(true);
-        }
-      } else {
-        toast.error('Please log in to clear drawings');
+      // No auth check needed - proceed directly
+      if (!isConfirmationDialogOpen) {
+        setShowConfirmation(true);
       }
     };
     
@@ -151,22 +141,15 @@ export function useClearAllOperation(onClearAll?: () => void) {
           target.textContent?.trim() === 'Clear All';
         
         if (isDrawActionsParent && isClearAllButton) {
-          console.log('Intercepting Leaflet draw clear all layers button');
+          console.log('Intercepting Leaflet draw clear all layers button - proceeding with clear');
           e.preventDefault();
           e.stopPropagation();
           
-          if (isAuthenticated) {
-            if (!isConfirmationDialogOpen) {
-              // Preserve red markers before showing confirmation
-              const preservedData = preserveRedMarkers();
-              
-              // Store preserved data temporarily
-              (window as any).preservedRedMarkers = preservedData;
-              
-              setShowConfirmation(true);
-            }
-          } else {
-            toast.error('Please log in to clear drawings');
+          // No auth check - proceed directly
+          if (!isConfirmationDialogOpen) {
+            const preservedData = preserveRedMarkers();
+            (window as any).preservedRedMarkers = preservedData;
+            setShowConfirmation(true);
           }
           
           return false;
@@ -182,23 +165,16 @@ export function useClearAllOperation(onClearAll?: () => void) {
       window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
       document.removeEventListener('click', handleLeafletClearAction, true);
     };
-  }, [isAuthenticated]);
+  }, []); // Remove isAuthenticated dependency
   
   const handleClearAllWrapper = useCallback(() => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to clear drawings');
-      return;
-    }
-    
-    // Only show dialog if no other dialog is currently open
+    // No auth check needed - proceed directly
     if (!isConfirmationDialogOpen) {
-      // Preserve red markers before showing confirmation
       const preservedData = preserveRedMarkers();
       (window as any).preservedRedMarkers = preservedData;
-      
       setShowConfirmation(true);
     }
-  }, [isAuthenticated]);
+  }, []); // Remove isAuthenticated dependency
   
   const confirmClearAll = useCallback(() => {
     console.log('Confirming clear all operation');
@@ -234,26 +210,15 @@ export function useClearAllOperation(onClearAll?: () => void) {
         onClearAll
       });
     } else {
-      // Fallback if featureGroup is not available
       console.warn('Feature group not available for clear operation, using localStorage fallback');
       
-      // Preserve authentication data and selected location
-      const authState = localStorage.getItem('geospatial_auth_state');
-      const users = localStorage.getItem('geospatial_users');
-      
-      // Clear specific storages
+      // Clear specific storages but preserve selected location
       localStorage.removeItem('savedDrawings');
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
       
-      // Restore authentication data and selected location
-      if (authState) {
-        localStorage.setItem('geospatial_auth_state', authState);
-      }
-      if (users) {
-        localStorage.setItem('geospatial_users', users);
-      }
+      // Restore selected location
       if (selectedLocation) {
         localStorage.setItem('selectedLocation', selectedLocation);
       }
@@ -279,16 +244,12 @@ export function useClearAllOperation(onClearAll?: () => void) {
       try {
         restoreRedMarkers(preservedData.redMarkerData, preservedData.redTooltipData);
         
-        // Also restore selected location if it exists
         if (selectedLocation) {
           localStorage.setItem('selectedLocation', selectedLocation);
-          // Trigger location marker restoration
           window.dispatchEvent(new Event('storage'));
         }
         
-        // Clean up temporary data
         delete (window as any).preservedRedMarkers;
-        
         console.log('Red markers restored after clear all operation');
       } catch (e) {
         console.error('Error restoring red markers:', e);

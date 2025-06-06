@@ -50,7 +50,6 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
   const handleConfirmClear = () => {
     try {
       if (currentView === 'leaflet' && leafletMapRef.current) {
-        // Validate the map instance before using it
         if (isMapValid(leafletMapRef.current)) {
           // First clear drawn layers
           const layers = leafletMapRef.current._layers;
@@ -66,11 +65,17 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
           // Then clear SVG elements directly from the DOM
           clearAllMapSvgElements(leafletMapRef.current);
           
-          // Clear local storage
+          // Clear local storage but preserve selected location
+          const selectedLocation = localStorage.getItem('selectedLocation');
           localStorage.removeItem('savedDrawings');
           localStorage.removeItem('savedMarkers');
           localStorage.removeItem('floorPlans');
           localStorage.removeItem('svgPaths');
+          
+          // Restore selected location
+          if (selectedLocation) {
+            localStorage.setItem('selectedLocation', selectedLocation);
+          }
           
           // Dispatch events to notify components
           window.dispatchEvent(new Event('storage'));
@@ -85,11 +90,17 @@ const DrawingToolHandler: React.FC<DrawingToolHandlerProps> = ({
           toast.error('Map control error. Please try again.');
         }
       } else if (currentView === 'cesium') {
-        // For Cesium view, just clear localStorage
+        // For Cesium view, just clear localStorage but preserve selected location
+        const selectedLocation = localStorage.getItem('selectedLocation');
         localStorage.removeItem('savedDrawings');
         localStorage.removeItem('savedMarkers');
         localStorage.removeItem('floorPlans');
         localStorage.removeItem('svgPaths');
+        
+        // Restore selected location
+        if (selectedLocation) {
+          localStorage.setItem('selectedLocation', selectedLocation);
+        }
         
         // Dispatch events to notify components
         window.dispatchEvent(new Event('storage'));
