@@ -3,7 +3,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "../../src",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -13,9 +13,9 @@
     "target": "es2015",
     "lib": ["es2015", "dom"],
     "module": "esnext",
-    "baseUrl": "./",
+    "baseUrl": "../../src",
     "paths": {
-      "@/*": ["../../src/*"]
+      "@/*": ["*"]
     },
     "noEmitOnError": false,
     "typeRoots": ["../../node_modules/@types"],
@@ -27,6 +27,8 @@
   "include": [
     "./**/*.ts",
     "./**/*.tsx",
+    "../**/*.ts",
+    "../**/*.tsx",
     "../types/**/*",
     "../vite-env.d.ts"
   ],
@@ -36,6 +38,8 @@
     "../../node_modules/**/*",
     "./**/*.test.*",
     "./**/*.spec.*",
-    "./build.js"
+    "./build.js",
+    "../../server/**/*",
+    "../../public/**/*"
   ]
 }
