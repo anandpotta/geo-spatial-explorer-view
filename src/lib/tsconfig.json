@@ -22,7 +22,9 @@
     "types": ["react", "react-dom", "node"],
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "allowJs": true,
+    "resolveJsonModule": true
   },
   "include": [
     "./**/*.ts",
