@@ -10,6 +10,8 @@ interface MapEventsProps {
 const MapEvents = ({ onMapClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
+      console.log('Map click detected at:', e.latlng);
+      
       // Don't trigger click if we're in the process of deleting a marker
       if (window.preventMapClick) {
         console.log('Map click prevented after marker deletion');
@@ -34,6 +36,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
+      console.log('Calling onMapClick handler');
       onMapClick(e.latlng);
     }
   });

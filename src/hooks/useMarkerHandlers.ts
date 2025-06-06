@@ -2,10 +2,8 @@
 import { toast } from 'sonner';
 import { DrawingData, saveDrawing } from '@/utils/drawing-utils';
 import L from 'leaflet';
-import { useAuth } from '@/contexts/AuthContext';
 
 export function useMarkerHandlers(mapState: any) {
-  const { currentUser } = useAuth();
   
   const handleMapClick = (latlng: L.LatLng) => {
     // Only create markers when explicitly in marker mode or no tool is active
@@ -92,7 +90,7 @@ export function useMarkerHandlers(mapState: any) {
           color: '#3388ff',
           createdAt: new Date()
         },
-        userId: currentUser?.id || '' // Add the user ID
+        userId: 'anonymous' // No auth needed, use anonymous
       };
       
       // Store the safe shape in the current drawing

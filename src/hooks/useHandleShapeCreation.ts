@@ -1,17 +1,11 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 
 export function useHandleShapeCreation(onCreated: (shape: any) => void, onPathsUpdated: (paths: string[]) => void, svgPaths: string[]) {
-  const { isAuthenticated } = useAuth();
   
   const handleCreatedWrapper = useCallback((shape: any) => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to save drawings');
-      return;
-    }
-    
+    // No auth check needed - allow all shape creation
     const wrappedHandler = createShapeCreationHandler({
       onCreated,
       onPathsUpdated,
@@ -19,7 +13,7 @@ export function useHandleShapeCreation(onCreated: (shape: any) => void, onPathsU
     });
     
     wrappedHandler(shape);
-  }, [isAuthenticated, onCreated, onPathsUpdated, svgPaths]);
+  }, [onCreated, onPathsUpdated, svgPaths]);
 
   return {
     handleCreatedWrapper
