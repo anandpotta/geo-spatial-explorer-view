@@ -35,7 +35,7 @@ interface MapViewProps {
   onRegionClick: (drawing: any) => void;
   onClearAll?: () => void;
   isMapReady?: boolean;
-  selectedLocation?: { x: number; y: number; label?: string; searchString?: string };
+  selectedLocation?: { x: number; y: number; label?: string };
   onClearSelectedLocation?: () => void;
 }
 
@@ -80,13 +80,6 @@ const MapView = ({
     }
   };
 
-  // Create search location object for header
-  const searchLocation = selectedLocation ? {
-    latitude: selectedLocation.y,
-    longitude: selectedLocation.x,
-    searchString: selectedLocation.searchString || selectedLocation.label
-  } : undefined;
-
   if (showFloorPlan) {
     return (
       <FloorPlanView 
@@ -100,8 +93,7 @@ const MapView = ({
     <div className="w-full h-full relative">
       <MapHeader 
         onLocationSelect={handleLocationSelect} 
-        isMapReady={isMapReady}
-        searchLocation={searchLocation}
+        isMapReady={isMapReady} 
       />
       
       <MapContainer

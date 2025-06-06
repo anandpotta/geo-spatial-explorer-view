@@ -1,41 +1,55 @@
-
-import React, { useCallback, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import SavedLocationsDropdown from '../SavedLocationsDropdown';
 import DownloadButton from './DownloadButton';
 
 interface MapHeaderProps {
   onLocationSelect: (position: [number, number]) => void;
   isMapReady?: boolean;
-  searchLocation?: {
-    latitude: number;
-    longitude: number;
-    searchString?: string;
-  };
 }
 
-const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false, searchLocation }) => {
-  console.log('MapHeader render:', { isMapReady });
+const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false }) => {
+  const [isVisible, setIsVisible] = useState(true);
+  
+  console.log('MapHeader render:', { isMapReady, isVisible });
+  
+  // Check if the header is actually visible in the DOM
+  useEffect(() => {
+    const checkVisibility = () => {
+      // Simple check if the component is mounted in the DOM
+      const element = document.querySelector('[data-map-header="true"]');
+      setIsVisible(!!element && document.body.contains(element));
+    };
+    
+    checkVisibility();
+    
+    // Set up a mutation observer to detect DOM changes
+    const observer = new MutationObserver(checkVisibility);
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
-  const handleLocationSelect = useCallback((position: [number, number]) => {
+  const handleLocationSelect = (position: [number, number]) => {
+    if (!isVisible) {
+      console.warn("Map header is not visible, cannot select location");
+      return;
+    }
+    
     onLocationSelect(position);
-  }, [onLocationSelect]);
-
-  // Memoize the search location to prevent unnecessary re-renders
-  const memoizedSearchLocation = useMemo(() => searchLocation, [
-    searchLocation?.latitude,
-    searchLocation?.longitude,
-    searchLocation?.searchString
-  ]);
+  };
 
   return (
     <div 
       className="absolute top-4 right-4 z-[1001] flex gap-2" 
+      data-map-header="true"
       style={{ pointerEvents: 'auto', marginRight: '27px' }}
     >
-      <DownloadButton disabled={false} searchLocation={memoizedSearchLocation} />
+      <DownloadButton disabled={false} />
       <SavedLocationsDropdown 
         onLocationSelect={handleLocationSelect} 
-        isMapReady={isMapReady}
+        isMapReady={isMapReady && isVisible}
       />
     </div>
   );

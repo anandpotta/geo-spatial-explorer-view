@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDropdownLocations } from '@/hooks/useDropdownLocations';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -40,21 +40,18 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
   const [newLocationLng, setNewLocationLng] = useState<number | undefined>(undefined);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Memoize markers to prevent unnecessary re-renders
-  const memoizedMarkers = useMemo(() => markers, [markers]);
-
-  const handleDeleteClick = useCallback((id: string, event: React.MouseEvent) => {
+  const handleDeleteClick = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
     event.preventDefault();
     
-    const marker = memoizedMarkers.find(m => m.id === id);
+    const marker = markers.find(m => m.id === id);
     if (marker) {
       setMarkerToDelete(marker);
       setIsDeleteDialogOpen(true);
     }
-  }, [memoizedMarkers, setMarkerToDelete, setIsDeleteDialogOpen]);
+  };
 
-  const handleConfirmDelete = useCallback(() => {
+  const handleConfirmDelete = () => {
     if (markerToDelete) {
       deleteMarker(markerToDelete.id);
       setIsDeleteDialogOpen(false);
@@ -67,9 +64,9 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       cleanupMarkerReferences();
       document.body.focus();
     }
-  }, [markerToDelete, setIsDeleteDialogOpen, setMarkerToDelete, uiToast, cleanupMarkerReferences]);
+  };
 
-  const handleAddLocation = useCallback(async () => {
+  const handleAddLocation = async () => {
     if (!newLocationName || newLocationName.trim() === "") {
       uiToast({
         title: "Error",
@@ -105,9 +102,9 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     setNewLocationLat(undefined);
     setNewLocationLng(undefined);
     setIsAddingLocation(false);
-  }, [newLocationName, newLocationLat, newLocationLng, uiToast]);
+  };
 
-  const handleSelectLocation = useCallback((position: [number, number]) => {
+  const handleSelectLocation = (position: [number, number]) => {
     if (isNavigating) {
       console.log("Navigation already in progress, ignoring request");
       return;
@@ -118,13 +115,19 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       return;
     }
     
+    // Set navigating status to prevent multiple clicks
     setIsNavigating(true);
     
+    // Log to confirm the position data
     console.log("Selected location from dropdown:", position);
+    
+    // Call onLocationSelect with the position
     onLocationSelect(position);
+    
+    // Show success toast
     toast.success(`Navigating to selected location`);
     
-    // Close dropdown
+    // Close dropdown menu after selection
     const dropdownTrigger = document.querySelector('[data-state="open"]');
     if (dropdownTrigger) {
       const closeEvent = new MouseEvent('click', {
@@ -135,10 +138,11 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
       dropdownTrigger.dispatchEvent(closeEvent);
     }
     
+    // Reset navigating status after a delay
     setTimeout(() => {
       setIsNavigating(false);
     }, 1000);
-  }, [isNavigating, isMapReady, onLocationSelect]);
+  };
 
   return (
     <>
@@ -148,9 +152,9 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
             Saved Locations <MoreHorizontal className="ml-2 h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56 bg-white border shadow-lg z-[1002]">
+        <DropdownMenuContent className="w-56">
           <LocationsList
-            markers={memoizedMarkers}
+            markers={markers}
             onSelect={handleSelectLocation}
             onDelete={handleDeleteClick}
           />

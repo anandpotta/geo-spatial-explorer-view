@@ -4,8 +4,10 @@ import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-util
 import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useMapState(selectedLocation?: Location) {
+  const { currentUser, isAuthenticated } = useAuth();
   const [position, setPosition] = useState<[number, number]>(
     selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
   );
@@ -20,65 +22,61 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Load initial data only once
+  // Load existing markers and drawings when user changes or auth state changes
   useEffect(() => {
-    console.log('Loading initial data in useMapState');
+    if (!isAuthenticated || !currentUser) {
+      // Clear data when user logs out
+      setMarkers([]);
+      setDrawings([]);
+      return;
+    }
+    
+    console.log(`Loading data for user: ${currentUser.id}`);
     
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
-  }, []); // Only run once on mount
-
-  // Set up event listeners separately to avoid loops
-  useEffect(() => {
-    let isUpdating = false;
     
+    // Listen for marker updates
     const handleMarkersUpdated = () => {
-      if (isUpdating) return;
-      isUpdating = true;
-      
-      console.log('Markers updated event received in useMapState');
-      const savedMarkers = getSavedMarkers();
-      setMarkers(savedMarkers);
-      
-      setTimeout(() => {
-        isUpdating = false;
-      }, 100);
+      if (isAuthenticated && currentUser) {
+        setMarkers(getSavedMarkers());
+      }
     };
 
+    // Listen for drawing updates
     const handleDrawingsUpdated = () => {
-      if (isUpdating) return;
-      isUpdating = true;
-      
-      console.log('Drawings updated event received in useMapState');
-      const savedDrawings = getSavedDrawings();
-      setDrawings(savedDrawings);
-      
-      setTimeout(() => {
-        isUpdating = false;
-      }, 100);
+      if (isAuthenticated && currentUser) {
+        setDrawings(getSavedDrawings());
+      }
     };
     
+    // Listen for floor plan updates
     const handleFloorPlanUpdated = (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail && customEvent.detail.drawingId) {
-        console.log(`Floor plan updated for drawing ${customEvent.detail.drawingId}`);
+        console.log(`Floor plan updated for drawing ${customEvent.detail.drawingId}, triggering refresh`);
+        // Trigger a refresh of the drawings
         handleDrawingsUpdated();
       }
     };
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+    window.addEventListener('storage', handleDrawingsUpdated);
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+      window.removeEventListener('storage', handleDrawingsUpdated);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
-  }, []); // Only run once
+  }, [isAuthenticated, currentUser]);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -90,6 +88,11 @@ export function useMapState(selectedLocation?: Location) {
   }, []);
 
   const handleSaveMarker = () => {
+    if (!isAuthenticated || !currentUser) {
+      toast.error('Please log in to save locations');
+      return;
+    }
+    
     if (!tempMarker || !markerName.trim()) return;
     
     const newMarker: LocationMarker = {
@@ -99,19 +102,20 @@ export function useMapState(selectedLocation?: Location) {
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: 'default-user'
+      userId: currentUser.id
     };
     
-    // Clear the temporary marker BEFORE saving
+    // Clear the temporary marker BEFORE saving to prevent duplicate rendering
     setTempMarker(null);
-    setMarkerName('');
     
-    // Save the marker without triggering additional events
+    // Save the marker
     saveMarker(newMarker);
     
     if (currentDrawing) {
+      // Create a safe copy of currentDrawing without circular references
       const safeDrawing: DrawingData = {
         ...currentDrawing,
+        // Remove any potential circular references from geoJSON
         geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
           type: currentDrawing.geoJSON.type,
           geometry: currentDrawing.geoJSON.geometry,
@@ -122,28 +126,59 @@ export function useMapState(selectedLocation?: Location) {
           name: markerName,
           associatedMarkerId: newMarker.id
         },
-        userId: 'default-user'
+        userId: currentUser.id
       };
       
+      // Save or update the drawing but don't clear it from the map
       saveDrawing(safeDrawing);
     }
     
+    // Clear and reset UI state
+    setMarkerName('');
+    
+    // Update the markers state with the new marker - use getSavedMarkers to ensure deduplication
+    setMarkers(getSavedMarkers());
+    
     toast.success("Location saved successfully");
+    
+    // Ensure drawings remain visible by dispatching a custom event
+    window.dispatchEvent(new Event('drawingsUpdated'));
+    
+    // Clean up any leftover temporary marker DOM elements after a slight delay
+    setTimeout(() => {
+      if (tempMarker) {
+        const markerId = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
+        const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
+        tempIcons.forEach(icon => {
+          if (icon.parentNode) {
+            icon.parentNode.removeChild(icon);
+          }
+        });
+      }
+    }, 100);
   };
 
   const handleDeleteMarker = (id: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to manage locations');
+      return;
+    }
+    
     deleteMarker(id);
-    // Update local state immediately without waiting for events
-    setMarkers(prev => prev.filter(marker => marker.id !== id));
+    // Update the markers state
+    setMarkers(markers.filter(marker => marker.id !== id));
     toast.success("Location removed");
   };
 
   const handleRenameMarker = (id: string, newName: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to manage locations');
+      return;
+    }
+    
     renameMarker(id, newName);
-    // Update local state immediately
-    setMarkers(prev => prev.map(marker => 
-      marker.id === id ? { ...marker, name: newName } : marker
-    ));
+    // Update the markers state
+    setMarkers(getSavedMarkers());
   };
 
   const handleRegionClick = (drawing: DrawingData) => {

@@ -22,8 +22,8 @@ const LayerManager = ({
   onUploadRequest
 }: LayerManagerProps) => {
   const isMountedRef = useRef<boolean>(true);
-  const lastDrawingsHashRef = useRef<string>('');
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialRenderRef = useRef(true);
+  const lastDrawingsRef = useRef<DrawingData[]>([]);
   
   const {
     removeButtonRoots,
@@ -32,7 +32,7 @@ const LayerManager = ({
     imageControlRoots
   } = useLayerReferences();
 
-  const { updateLayers } = useLayerUpdates({
+  const { updateLayers, debouncedUpdateLayers } = useLayerUpdates({
     featureGroup,
     savedDrawings,
     activeTool,
@@ -46,16 +46,13 @@ const LayerManager = ({
     onUploadRequest
   });
 
-  // Create a hash of the drawings to detect real changes
-  const createDrawingsHash = (drawings: DrawingData[]) => {
-    return drawings.map(d => `${d.id}-${d.geoJSON ? JSON.stringify(d.geoJSON) : ''}`).join('|');
-  };
-
   // Safe unmounting of React roots
   const safeUnmountRoots = () => {
+    // Unmount all React roots in a safe way
     const unmountRoot = (root: any) => {
       if (!root) return;
       try {
+        // Check if the unmount method exists before calling it
         if (root && typeof root.unmount === 'function') {
           root.unmount();
         }
@@ -64,9 +61,11 @@ const LayerManager = ({
       }
     };
     
+    // Safely clear all roots
     const safelyClearRoots = (rootsMap: Map<string, any>) => {
       if (!rootsMap) return;
       
+      // Create array of entries to avoid modification during iteration
       const entries = Array.from(rootsMap.entries());
       entries.forEach(([key, root]) => {
         unmountRoot(root);
@@ -74,6 +73,7 @@ const LayerManager = ({
       });
     };
     
+    // Clear all types of roots
     safelyClearRoots(removeButtonRoots.current);
     safelyClearRoots(uploadButtonRoots.current);
     safelyClearRoots(imageControlRoots.current);
@@ -85,56 +85,88 @@ const LayerManager = ({
     
     return () => {
       isMountedRef.current = false;
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
       safeUnmountRoots();
       layersRef.current.clear();
     };
   }, []);
 
-  // Handle drawings changes with debouncing
+  // Use a more stable approach for detecting real changes to drawings
   useEffect(() => {
     if (!isMountedRef.current) return;
     
-    const currentHash = createDrawingsHash(savedDrawings);
-    
-    // Only update if drawings actually changed
-    if (currentHash !== lastDrawingsHashRef.current) {
-      console.log('Drawings changed, updating layers');
-      lastDrawingsHashRef.current = currentHash;
-      
-      // Clear any pending updates
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
+    // Helper function to check if drawings have actually changed
+    const haveSavedDrawingsChanged = () => {
+      if (savedDrawings.length !== lastDrawingsRef.current.length) {
+        return true;
       }
       
-      // Debounce the update
-      updateTimeoutRef.current = setTimeout(() => {
+      // Check if the IDs match
+      const currentIds = new Set(savedDrawings.map(d => d.id));
+      return lastDrawingsRef.current.some(d => !currentIds.has(d.id));
+    };
+    
+    // First safely unmount any existing roots to prevent conflicts
+    safeUnmountRoots();
+    
+    // Only do a full update if drawings have changed or this is the first render
+    const shouldForceUpdate = isInitialRenderRef.current || haveSavedDrawingsChanged();
+    
+    if (shouldForceUpdate) {
+      // For initial render or when drawings change, use a short delay
+      setTimeout(() => {
         if (isMountedRef.current) {
-          safeUnmountRoots();
           updateLayers();
+          isInitialRenderRef.current = false;
+          lastDrawingsRef.current = [...savedDrawings];
         }
       }, 100);
+    } else if (activeTool === 'edit') {
+      // For edit mode changes, use the debounced version
+      debouncedUpdateLayers();
     }
-  }, [savedDrawings, updateLayers]);
+  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
 
-  // Handle tool changes separately with shorter debounce
+  // Listen for resize events which might affect positioning
   useEffect(() => {
-    if (!isMountedRef.current) return;
-    
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-    
-    updateTimeoutRef.current = setTimeout(() => {
+    const handleResize = () => {
       if (isMountedRef.current) {
-        updateLayers();
+        debouncedUpdateLayers();
       }
-    }, 50);
-  }, [activeTool, updateLayers]);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [debouncedUpdateLayers]);
 
-  return null;
+  // Handle storage events for cross-tab updates
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      if (isMountedRef.current) {
+        debouncedUpdateLayers();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('floorPlanUpdated', handleStorageUpdate);
+    
+    // Also listen for visibility changes to update when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isMountedRef.current) {
+        debouncedUpdateLayers();
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('floorPlanUpdated', handleStorageUpdate);
+      document.removeEventListener('visibilitychange', handleStorageUpdate);
+    };
+  }, [debouncedUpdateLayers]);
+
+  return null; // This is a non-visual component
 };
 
 export default LayerManager;

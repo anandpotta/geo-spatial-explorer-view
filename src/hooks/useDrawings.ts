@@ -1,48 +1,63 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { DrawingData, getSavedDrawings, deleteDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useDrawings() {
   const [savedDrawings, setSavedDrawings] = useState<DrawingData[]>([]);
-  const isLoadingRef = useRef(false);
+  const { currentUser } = useAuth();
   
   const loadDrawings = () => {
-    if (isLoadingRef.current) return;
-    isLoadingRef.current = true;
+    if (!currentUser) {
+      setSavedDrawings([]);
+      return;
+    }
     
     const drawings = getSavedDrawings();
     setSavedDrawings(drawings);
-    console.log(`Loaded ${drawings.length} drawings`);
-    
-    setTimeout(() => {
-      isLoadingRef.current = false;
-    }, 100);
+    console.log(`Loaded ${drawings.length} drawings for user ${currentUser.id}`);
   };
   
   useEffect(() => {
+    // Initial load
     loadDrawings();
     
-    const handleDrawingsUpdated = () => {
-      if (isLoadingRef.current) return;
-      console.log("Drawings updated event received in useDrawings");
+    // Set up listeners for drawing updates
+    const handleStorage = () => {
       loadDrawings();
     };
     
-    // Only listen to specific drawing events, not storage
+    const handleDrawingsUpdated = () => {
+      loadDrawings();
+    };
+    
+    const handleUserChanged = () => {
+      // Short delay to ensure auth state is updated
+      setTimeout(loadDrawings, 50);
+    };
+    
+    window.addEventListener('storage', handleStorage);
     window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
+    window.addEventListener('userChanged', handleUserChanged);
     window.addEventListener('floorPlanUpdated', handleDrawingsUpdated);
     
     return () => {
+      window.removeEventListener('storage', handleStorage);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
+      window.removeEventListener('userChanged', handleUserChanged);
       window.removeEventListener('floorPlanUpdated', handleDrawingsUpdated);
     };
-  }, []);
+  }, [currentUser]);
   
   const handleDeleteDrawing = (id: string) => {
+    if (!currentUser) {
+      toast.error('Please log in to manage drawings');
+      return;
+    }
+    
     deleteDrawing(id);
-    // Update local state immediately
-    setSavedDrawings(prev => prev.filter(drawing => drawing.id !== id));
+    loadDrawings(); // Reload immediately
     toast.success('Drawing deleted');
   };
   
