@@ -34,9 +34,9 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "rimraf dist && npm run build:cjs && npm run build:esm && npm run build:types",
+    "build": "node build.js",
     "build:cjs": "tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false",
-    "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false",
+    "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false", 
     "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly",
     "prepublishOnly": "npm run build",
     "test": "echo \"No tests specified\" && exit 0"
