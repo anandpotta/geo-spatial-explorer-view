@@ -20,13 +20,13 @@ try {
   fs.mkdirSync('./dist/types', { recursive: true });
 
   console.log('Building CommonJS...');
-  execSync('npx tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false --target es2015 --rootDir ../../', { stdio: 'inherit' });
+  execSync('npx tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false --target es2015 --rootDir ../../ --skipLibCheck', { stdio: 'inherit' });
 
   console.log('Building ES Modules...');
-  execSync('npx tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --target es2015 --rootDir ../../', { stdio: 'inherit' });
+  execSync('npx tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --target es2015 --rootDir ../../ --skipLibCheck', { stdio: 'inherit' });
 
   console.log('Building TypeScript definitions...');
-  execSync('npx tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --target es2015 --rootDir ../../', { stdio: 'inherit' });
+  execSync('npx tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --target es2015 --rootDir ../../ --skipLibCheck', { stdio: 'inherit' });
 
   console.log('Build completed successfully!');
 } catch (error) {

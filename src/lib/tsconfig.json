@@ -16,10 +16,11 @@
     "baseUrl": "../../",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "noEmitOnError": false
   },
   "include": [
-    "../../src/**/*"
+    "../../src/lib/**/*"
   ],
   "exclude": [
     "./dist",
@@ -29,6 +30,12 @@
     "./**/*.spec.*",
     "../../src/**/*.test.*",
     "../../src/**/*.spec.*",
-    "./build.js"
+    "./build.js",
+    "../../src/components/**/*",
+    "../../src/hooks/**/*",
+    "../../src/utils/**/*",
+    "../../src/services/**/*",
+    "../../src/contexts/**/*",
+    "../../src/pages/**/*"
   ]
 }
