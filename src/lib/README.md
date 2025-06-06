@@ -1,10 +1,6 @@
-
 # GeoSpatial Explorer Library
 
-A cross-platform library for 3D globe and map visualizations that works on:
-- Web (React)
-- Mobile (React Native)
-- Angular applications
+A cross-platform geospatial library supporting React, React Native, and Angular applications.
 
 ## Installation
 
@@ -14,117 +10,66 @@ npm install geospatial-explorer-lib
 
 ## Usage
 
-### React Web Application
+### React
 
-```jsx
-import { ReactComponents } from 'geospatial-explorer-lib';
-
-const { GlobeComponent } = ReactComponents;
+```tsx
+import { MapComponent, GlobeComponent } from 'geospatial-explorer-lib/react';
 
 function App() {
-  const location = {
-    id: 'nyc',
-    label: 'New York City',
-    x: -74.006, // longitude
-    y: 40.7128  // latitude
-  };
-
   return (
-    <div style={{ width: '100%', height: '500px' }}>
-      <GlobeComponent 
-        selectedLocation={location}
-        onReady={() => console.log('Globe is ready')}
-        onFlyComplete={() => console.log('Flight animation completed')}
+    <div>
+      <MapComponent
+        options={{ initialZoom: 10 }}
+        onLocationSelect={(location) => console.log('Selected:', location)}
+      />
+      <GlobeComponent
+        options={{ earthRadius: 5 }}
+        onReady={(api) => console.log('Globe ready')}
       />
     </div>
   );
 }
 ```
 
-### React Native Application
+### React Native
 
-```jsx
-import { ReactNativeComponents } from 'geospatial-explorer-lib';
+```tsx
+import { MapComponent, GlobeComponent } from 'geospatial-explorer-lib/react-native';
 
-const { GlobeComponent } = ReactNativeComponents;
-
-function GlobeScreen() {
-  const location = {
-    id: 'nyc',
-    label: 'New York City',
-    x: -74.006, // longitude
-    y: 40.7128  // latitude
-  };
-
+function App() {
   return (
     <View style={{ flex: 1 }}>
-      <GlobeComponent 
-        selectedLocation={location}
-        onReady={() => console.log('Globe is ready')}
-        onFlyComplete={() => console.log('Flight animation completed')}
+      <MapComponent
+        options={{ initialZoom: 10 }}
+        onLocationSelect={(location) => console.log('Selected:', location)}
       />
     </View>
   );
 }
 ```
 
-### Angular Application
+### Angular
 
 ```typescript
-// app.module.ts
-import { NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
-import { GeoSpatialExplorerModule } from 'geospatial-explorer-lib-angular';
+import { MapComponentAngular } from 'geospatial-explorer-lib/angular';
 
-@NgModule({
-  imports: [
-    BrowserModule,
-    GeoSpatialExplorerModule
-  ],
-  // ...
-})
-export class AppModule { }
-
-// app.component.ts
-@Component({
-  selector: 'app-root',
-  template: `
-    <div style="width: 100%; height: 500px;">
-      <app-globe 
-        [selectedLocation]="location"
-        (ready)="onGlobeReady($event)"
-        (flyComplete)="onFlyComplete()">
-      </app-globe>
-    </div>
-  `
-})
-export class AppComponent {
-  location = {
-    id: 'nyc',
-    label: 'New York City',
-    x: -74.006,
-    y: 40.7128
-  };
-
-  onGlobeReady(api: any) {
-    console.log('Globe is ready');
-  }
-
-  onFlyComplete() {
-    console.log('Flight animation completed');
-  }
-}
+// Use in your Angular module
 ```
 
-## Platform-Specific Considerations
+## API Reference
 
-### React Native
-- Requires `react-native-webview` dependency
-- For best performance, use a device with good WebGL support
+### Core Types
 
-### Angular
-- Install the companion package `geospatial-explorer-lib-angular`
-- Angular 13+ is required
+- `GeoLocation`: Represents a geographic location
+- `MapViewOptions`: Configuration options for map components
+- `GlobeOptions`: Configuration options for globe components
+
+### Utilities
+
+- `calculateDistance(lat1, lng1, lat2, lng2)`: Calculate distance between two points
+- `formatCoordinate(coord, type)`: Format coordinates for display
+- `isWeb()`: Check if running in web environment
+- `isReactNative()`: Check if running in React Native environment
 
 ## License
 

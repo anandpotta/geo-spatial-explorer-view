@@ -1,27 +1,27 @@
 
 // Main library entry point
 
-// Core exports
+// Core exports - these are the fundamental classes
 export * from './geospatial-core';
 
-// React-specific exports
-import * as ReactComponents from './react';
-export { ReactComponents };
+// Platform-specific exports with proper namespacing
+export * as ReactComponents from './react';
+export * as ReactNativeComponents from './react-native';
+export * as AngularComponents from './angular';
 
-// React Native specific exports
-import * as ReactNativeComponents from './react-native';
-export { ReactNativeComponents };
-
-// Angular-specific exports
-import * as AngularComponents from './angular';
-export { AngularComponents };
-
-// Re-export utils separately to avoid naming conflicts
-import { calculateDistance } from './utils';
+// Utility exports
 export { 
   cn, 
   isWeb, 
   isReactNative, 
   formatCoordinate,
-  calculateDistance as calculateDistanceUtil 
+  calculateDistance
 } from './utils';
+
+// Re-export core types for easier consumption
+export type {
+  GeoLocation,
+  MapViewOptions,
+  GlobeOptions,
+  GlobeEventHandlers
+} from './geospatial-core/types';

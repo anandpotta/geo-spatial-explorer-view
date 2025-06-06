@@ -1,20 +1,11 @@
 
-import { clsx, type ClassValue } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-/**
- * Combines multiple class names or class name objects into a single string
- * Utility function for conditional classnames in components
- */
-export function cn(...inputs: ClassValue[]): string {
+export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/**
- * Cross-platform utility functions for the geospatial library
- */
-
-// Platform detection
 export function isWeb(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
 }
@@ -23,40 +14,27 @@ export function isReactNative(): boolean {
   return typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 }
 
-// Format coordinate to user-friendly string
-export function formatCoordinate(coord: number, isLatitude: boolean = false): string {
-  const direction = isLatitude 
-    ? (coord >= 0 ? 'N' : 'S')
+export function formatCoordinate(coord: number, type: 'lat' | 'lng'): string {
+  const direction = type === 'lat' 
+    ? (coord >= 0 ? 'N' : 'S') 
     : (coord >= 0 ? 'E' : 'W');
   
-  const absCoord = Math.abs(coord);
-  const degrees = Math.floor(absCoord);
-  const minutes = Math.floor((absCoord - degrees) * 60);
-  const seconds = ((absCoord - degrees - minutes / 60) * 3600).toFixed(2);
-  
-  return `${degrees}° ${minutes}' ${seconds}" ${direction}`;
+  return `${Math.abs(coord).toFixed(6)}°${direction}`;
 }
 
-// Calculate distance between two coordinates (in km)
 export function calculateDistance(
   lat1: number, 
-  lon1: number, 
+  lng1: number, 
   lat2: number, 
-  lon2: number
+  lng2: number
 ): number {
-  const R = 6371; // Radius of the earth in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = 
     Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLng/2) * Math.sin(dLng/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const d = R * c; // Distance in km
-  return d;
+  return R * c;
 }
-
-function deg2rad(deg: number): number {
-  return deg * (Math.PI/180);
-}
-

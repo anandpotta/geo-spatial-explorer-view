@@ -2,10 +2,32 @@
 {
   "name": "geospatial-explorer-lib",
   "version": "0.1.0",
-  "description": "Cross-platform GeoSpatial Explorer library",
+  "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/esm/react/index.js",
+      "require": "./dist/cjs/react/index.js",
+      "types": "./dist/types/react/index.d.ts"
+    },
+    "./react-native": {
+      "import": "./dist/esm/react-native/index.js",
+      "require": "./dist/cjs/react-native/index.js",
+      "types": "./dist/types/react-native/index.d.ts"
+    },
+    "./angular": {
+      "import": "./dist/esm/angular/index.js",
+      "require": "./dist/cjs/angular/index.js",
+      "types": "./dist/types/angular/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "LICENSE",
@@ -14,10 +36,11 @@
   "sideEffects": false,
   "scripts": {
     "build": "rimraf dist && npm run build:cjs && npm run build:esm && npm run build:types",
-    "build:cjs": "tsc --module commonjs --outDir dist/cjs --declaration false",
-    "build:esm": "tsc --module es2015 --outDir dist/esm --declaration false",
-    "build:types": "tsc --declaration --declarationDir dist/types --emitDeclarationOnly",
-    "prepublishOnly": "npm run build"
+    "build:cjs": "tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false",
+    "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false",
+    "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
     "geospatial",
@@ -27,7 +50,10 @@
     "cross-platform",
     "react",
     "react-native",
-    "angular"
+    "angular",
+    "leaflet",
+    "cesium",
+    "three.js"
   ],
   "author": "",
   "license": "MIT",
@@ -39,12 +65,35 @@
     "@angular/core": ">=13.0.0",
     "three": ">=0.133.0"
   },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-webview": {
+      "optional": true
+    },
+    "@angular/core": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/react": ">=16.8.0",
     "@types/react-dom": ">=16.8.0",
     "@types/react-native": ">=0.60.0",
     "@types/three": ">=0.133.0",
     "typescript": ">=4.5.0",
-    "rimraf": "^3.0.2"
+    "rimraf": "^3.0.2",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0"
+  },
+  "dependencies": {
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0"
   }
 }
