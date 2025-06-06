@@ -18,8 +18,7 @@
       "@/*": ["src/*"]
     },
     "noEmitOnError": false,
-    "typeRoots": ["../../node_modules/@types", "../../src/types"],
-    "types": ["react", "react-dom", "leaflet", "react-leaflet"]
+    "typeRoots": ["../../node_modules/@types", "../../src/types"]
   },
   "include": [
     "../../src/lib/**/*",
