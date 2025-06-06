@@ -10,16 +10,17 @@
     "skipLibCheck": true,
     "strict": true,
     "jsx": "react-jsx",
-    "target": "es2015",
-    "lib": ["es2015", "dom"],
+    "target": "es2017",
+    "lib": ["es2017", "dom"],
     "module": "esnext",
     "baseUrl": "../../src",
     "paths": {
       "@/*": ["*"]
     },
+    "allowImportingTsExtensions": true,
     "noEmitOnError": false,
     "typeRoots": ["../../node_modules/@types"],
-    "types": ["react", "react-dom"],
+    "types": ["react", "react-dom", "node"],
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
