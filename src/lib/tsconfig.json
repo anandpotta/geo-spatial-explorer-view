@@ -3,7 +3,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "../../",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -12,16 +12,23 @@
     "jsx": "react-jsx",
     "target": "es2015",
     "lib": ["es2015", "dom"],
-    "module": "esnext"
+    "module": "esnext",
+    "baseUrl": "../../",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": [
-    "./**/*"
+    "../../src/**/*"
   ],
   "exclude": [
     "./dist",
     "./node_modules",
+    "../../node_modules",
     "./**/*.test.*",
     "./**/*.spec.*",
+    "../../src/**/*.test.*",
+    "../../src/**/*.spec.*",
     "./build.js"
   ]
 }

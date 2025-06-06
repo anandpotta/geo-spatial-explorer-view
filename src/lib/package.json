@@ -1,30 +1,31 @@
+
 {
   "name": "geospatial-explorer-lib",
   "version": "0.1.0",
   "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular",
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/types/index.d.ts",
+  "main": "dist/cjs/lib/index.js",
+  "module": "dist/esm/lib/index.js",
+  "types": "dist/types/lib/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/types/index.d.ts"
+      "import": "./dist/esm/lib/index.js",
+      "require": "./dist/cjs/lib/index.js",
+      "types": "./dist/types/lib/index.d.ts"
     },
     "./react": {
-      "import": "./dist/esm/react/index.js",
-      "require": "./dist/cjs/react/index.js",
-      "types": "./dist/types/react/index.d.ts"
+      "import": "./dist/esm/lib/react/index.js",
+      "require": "./dist/cjs/lib/react/index.js",
+      "types": "./dist/types/lib/react/index.d.ts"
     },
     "./react-native": {
-      "import": "./dist/esm/react-native/index.js",
-      "require": "./dist/cjs/react-native/index.js",
-      "types": "./dist/types/react-native/index.d.ts"
+      "import": "./dist/esm/lib/react-native/index.js",
+      "require": "./dist/cjs/lib/react-native/index.js",
+      "types": "./dist/types/lib/react-native/index.d.ts"
     },
     "./angular": {
-      "import": "./dist/esm/angular/index.js",
-      "require": "./dist/cjs/angular/index.js",
-      "types": "./dist/types/angular/index.d.ts"
+      "import": "./dist/esm/lib/angular/index.js",
+      "require": "./dist/cjs/lib/angular/index.js",
+      "types": "./dist/types/lib/angular/index.d.ts"
     }
   },
   "files": [
@@ -35,9 +36,9 @@
   "sideEffects": false,
   "scripts": {
     "build": "node build.js",
-    "build:cjs": "tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false",
-    "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false", 
-    "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly",
+    "build:cjs": "tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false --rootDir ../../",
+    "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --rootDir ../../", 
+    "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --rootDir ../../",
     "prepublishOnly": "npm run build",
     "test": "echo \"No tests specified\" && exit 0"
   },
