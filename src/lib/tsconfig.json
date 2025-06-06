@@ -17,7 +17,6 @@
     "paths": {
       "@/*": ["*"]
     },
-    "allowImportingTsExtensions": true,
     "noEmitOnError": false,
     "typeRoots": ["../../node_modules/@types"],
     "types": ["react", "react-dom", "node"],
