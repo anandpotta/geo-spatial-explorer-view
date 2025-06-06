@@ -1,13 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 
 export function useMapState(selectedLocation?: Location) {
-  const { currentUser, isAuthenticated } = useAuth();
   const [position, setPosition] = useState<[number, number]>(
     selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
   );
@@ -22,16 +21,9 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Load existing markers and drawings when user changes or auth state changes
+  // Load existing markers and drawings
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
-      // Clear data when user logs out
-      setMarkers([]);
-      setDrawings([]);
-      return;
-    }
-    
-    console.log(`Loading data for user: ${currentUser.id}`);
+    console.log('Loading data');
     
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
@@ -41,16 +33,12 @@ export function useMapState(selectedLocation?: Location) {
     
     // Listen for marker updates
     const handleMarkersUpdated = () => {
-      if (isAuthenticated && currentUser) {
-        setMarkers(getSavedMarkers());
-      }
+      setMarkers(getSavedMarkers());
     };
 
     // Listen for drawing updates
     const handleDrawingsUpdated = () => {
-      if (isAuthenticated && currentUser) {
-        setDrawings(getSavedDrawings());
-      }
+      setDrawings(getSavedDrawings());
     };
     
     // Listen for floor plan updates
@@ -76,7 +64,7 @@ export function useMapState(selectedLocation?: Location) {
       window.removeEventListener('storage', handleDrawingsUpdated);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
-  }, [isAuthenticated, currentUser]);
+  }, []);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -88,11 +76,6 @@ export function useMapState(selectedLocation?: Location) {
   }, []);
 
   const handleSaveMarker = () => {
-    if (!isAuthenticated || !currentUser) {
-      toast.error('Please log in to save locations');
-      return;
-    }
-    
     if (!tempMarker || !markerName.trim()) return;
     
     const newMarker: LocationMarker = {
@@ -102,7 +85,7 @@ export function useMapState(selectedLocation?: Location) {
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: currentUser.id
+      userId: 'anonymous' // Default user since we removed auth
     };
     
     // Clear the temporary marker BEFORE saving to prevent duplicate rendering
@@ -126,7 +109,7 @@ export function useMapState(selectedLocation?: Location) {
           name: markerName,
           associatedMarkerId: newMarker.id
         },
-        userId: currentUser.id
+        userId: 'anonymous'
       };
       
       // Save or update the drawing but don't clear it from the map
@@ -159,11 +142,6 @@ export function useMapState(selectedLocation?: Location) {
   };
 
   const handleDeleteMarker = (id: string) => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to manage locations');
-      return;
-    }
-    
     deleteMarker(id);
     // Update the markers state
     setMarkers(markers.filter(marker => marker.id !== id));
@@ -171,11 +149,6 @@ export function useMapState(selectedLocation?: Location) {
   };
 
   const handleRenameMarker = (id: string, newName: string) => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to manage locations');
-      return;
-    }
-    
     renameMarker(id, newName);
     // Update the markers state
     setMarkers(getSavedMarkers());

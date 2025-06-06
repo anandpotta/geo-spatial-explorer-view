@@ -1,21 +1,15 @@
 
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export function useDrawingAuth() {
-  const { isAuthenticated, currentUser } = useAuth();
-  
   const checkAuthBeforeAction = (actionName: string): boolean => {
-    if (!isAuthenticated) {
-      toast.error(`Please log in to ${actionName}`);
-      return false;
-    }
+    // Always return true since we removed authentication
     return true;
   };
   
   return {
-    isAuthenticated,
-    currentUser,
+    isAuthenticated: true,
+    currentUser: null,
     checkAuthBeforeAction
   };
 }
