@@ -11,7 +11,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "target": "es2015",
+    "lib": ["es2015", "dom"],
+    "module": "esnext"
   },
   "include": [
     "./**/*"
