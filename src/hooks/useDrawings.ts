@@ -1,36 +1,39 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DrawingData, getSavedDrawings, deleteDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 
 export function useDrawings() {
   const [savedDrawings, setSavedDrawings] = useState<DrawingData[]>([]);
+  const isLoadingRef = useRef(false);
   
   const loadDrawings = () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+    
     const drawings = getSavedDrawings();
     setSavedDrawings(drawings);
     console.log(`Loaded ${drawings.length} drawings`);
+    
+    setTimeout(() => {
+      isLoadingRef.current = false;
+    }, 100);
   };
   
   useEffect(() => {
-    // Initial load
     loadDrawings();
     
-    // Set up listeners for drawing updates
-    const handleStorage = () => {
-      loadDrawings();
-    };
-    
     const handleDrawingsUpdated = () => {
+      if (isLoadingRef.current) return;
+      console.log("Drawings updated event received in useDrawings");
       loadDrawings();
     };
     
-    window.addEventListener('storage', handleStorage);
+    // Only listen to specific drawing events, not storage
     window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
     window.addEventListener('floorPlanUpdated', handleDrawingsUpdated);
     
     return () => {
-      window.removeEventListener('storage', handleStorage);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
       window.removeEventListener('floorPlanUpdated', handleDrawingsUpdated);
     };
@@ -38,7 +41,8 @@ export function useDrawings() {
   
   const handleDeleteDrawing = (id: string) => {
     deleteDrawing(id);
-    loadDrawings(); // Reload immediately
+    // Update local state immediately
+    setSavedDrawings(prev => prev.filter(drawing => drawing.id !== id));
     toast.success('Drawing deleted');
   };
   

@@ -8,40 +8,41 @@ export const useDropdownLocations = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [markerToDelete, setMarkerToDelete] = useState<LocationMarker | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const isLoadingRef = useRef(false);
   
   const loadMarkers = () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+    
     console.log("Loading markers for dropdown");
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     const pinned = savedMarkers.filter(marker => marker.isPinned === true);
     setPinnedMarkers(pinned);
+    
+    setTimeout(() => {
+      isLoadingRef.current = false;
+    }, 100);
   };
 
   useEffect(() => {
     loadMarkers();
     
-    const handleStorage = () => {
-      console.log("Storage event detected");
-      loadMarkers();
-    };
-    
     const handleMarkersUpdated = () => {
-      console.log("Markers updated event detected");
+      if (isLoadingRef.current) return;
+      console.log("Markers updated event detected in dropdown");
       loadMarkers();
     };
     
-    window.addEventListener('storage', handleStorage);
+    // Only listen to markersUpdated, not storage events to avoid loops
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     
     return () => {
-      window.removeEventListener('storage', handleStorage);
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
     };
   }, []);
 
-  // Add this function to help with proper cleanup of elements when a marker is deleted
   const cleanupMarkerReferences = () => {
-    // Force cleanup of any stale elements that might be causing issues
     const staleDialogs = document.querySelectorAll('[role="dialog"][aria-hidden="true"]');
     staleDialogs.forEach(dialog => {
       if (dialog.parentNode) {
@@ -53,7 +54,6 @@ export const useDropdownLocations = () => {
       }
     });
     
-    // Ensure body is not restricted
     document.body.style.pointerEvents = '';
     document.body.removeAttribute('aria-hidden');
   };

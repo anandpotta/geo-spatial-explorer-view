@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -21,25 +20,45 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Load existing markers and drawings on mount only
+  // Load initial data only once
   useEffect(() => {
-    console.log('Loading initial data');
+    console.log('Loading initial data in useMapState');
     
     const savedMarkers = getSavedMarkers();
     setMarkers(savedMarkers);
     
     const savedDrawings = getSavedDrawings();
     setDrawings(savedDrawings);
+  }, []); // Only run once on mount
+
+  // Set up event listeners separately to avoid loops
+  useEffect(() => {
+    let isUpdating = false;
     
-    // Set up event listeners only once
     const handleMarkersUpdated = () => {
-      console.log('Markers updated event received');
-      setMarkers(getSavedMarkers());
+      if (isUpdating) return;
+      isUpdating = true;
+      
+      console.log('Markers updated event received in useMapState');
+      const savedMarkers = getSavedMarkers();
+      setMarkers(savedMarkers);
+      
+      setTimeout(() => {
+        isUpdating = false;
+      }, 100);
     };
 
     const handleDrawingsUpdated = () => {
-      console.log('Drawings updated event received');
-      setDrawings(getSavedDrawings());
+      if (isUpdating) return;
+      isUpdating = true;
+      
+      console.log('Drawings updated event received in useMapState');
+      const savedDrawings = getSavedDrawings();
+      setDrawings(savedDrawings);
+      
+      setTimeout(() => {
+        isUpdating = false;
+      }, 100);
     };
     
     const handleFloorPlanUpdated = (event: Event) => {
@@ -52,16 +71,14 @@ export function useMapState(selectedLocation?: Location) {
     
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
-    window.addEventListener('storage', handleMarkersUpdated);
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
-      window.removeEventListener('storage', handleMarkersUpdated);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     };
-  }, []); // Empty dependency array to run only once
+  }, []); // Only run once
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -82,13 +99,14 @@ export function useMapState(selectedLocation?: Location) {
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: 'default-user' // Use default user since auth is removed
+      userId: 'default-user'
     };
     
-    // Clear the temporary marker BEFORE saving to prevent duplicate rendering
+    // Clear the temporary marker BEFORE saving
     setTempMarker(null);
+    setMarkerName('');
     
-    // Save the marker
+    // Save the marker without triggering additional events
     saveMarker(newMarker);
     
     if (currentDrawing) {
@@ -110,27 +128,22 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Clear and reset UI state
-    setMarkerName('');
-    
-    // Update the markers state
-    setMarkers(getSavedMarkers());
-    
     toast.success("Location saved successfully");
-    
-    // Dispatch update event
-    window.dispatchEvent(new Event('drawingsUpdated'));
   };
 
   const handleDeleteMarker = (id: string) => {
     deleteMarker(id);
-    setMarkers(markers.filter(marker => marker.id !== id));
+    // Update local state immediately without waiting for events
+    setMarkers(prev => prev.filter(marker => marker.id !== id));
     toast.success("Location removed");
   };
 
   const handleRenameMarker = (id: string, newName: string) => {
     renameMarker(id, newName);
-    setMarkers(getSavedMarkers());
+    // Update local state immediately
+    setMarkers(prev => prev.map(marker => 
+      marker.id === id ? { ...marker, name: newName } : marker
+    ));
   };
 
   const handleRegionClick = (drawing: DrawingData) => {
