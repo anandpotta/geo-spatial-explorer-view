@@ -64,9 +64,9 @@ export function useDrawToolsConfiguration(featureGroup: L.FeatureGroup | null) {
       // Patch metric calculation for area display
       if (typeof L.GeometryUtil !== 'undefined' && L.GeometryUtil.readableArea) {
         const originalReadableArea = L.GeometryUtil.readableArea;
-        L.GeometryUtil.readableArea = function(area, isMetric, precision) {
+        L.GeometryUtil.readableArea = function(area: number, isMetric?: boolean, precision?: any) {
           try {
-            return originalReadableArea.apply(this, arguments);
+            return originalReadableArea.call(this, area, isMetric, precision);
           } catch (err) {
             console.log('Patched error in readableArea:', err);
             const metricLabel = isMetric ? 'm²' : 'ft²';
@@ -93,7 +93,7 @@ export const patchLeafletDraw = () => {
     if (L.GeometryUtil) {
       // Override the readableArea method with a safe implementation
       const originalReadableArea = L.GeometryUtil.readableArea;
-      L.GeometryUtil.readableArea = function(area, isMetric, precision) {
+      L.GeometryUtil.readableArea = function(area: number, isMetric?: boolean, precision?: any) {
         try {
           // Try to use original implementation but with safety
           return originalReadableArea.call(this, area, isMetric, precision);
@@ -115,15 +115,15 @@ export const patchLeafletDraw = () => {
       // Store original Circle class initialization
       const originalInitialize = L.Draw.Circle.prototype.initialize;
       if (originalInitialize) {
-        L.Draw.Circle.prototype.initialize = function() {
+        L.Draw.Circle.prototype.initialize = function(map: any, options?: any) {
           // Call the original initialization
-          originalInitialize.apply(this, arguments);
+          originalInitialize.call(this, map, options);
           
           // Force SVG renderer and stroke options
-          if (this.options && this.options.shapeOptions) {
-            this.options.shapeOptions.renderer = L.svg();
-            this.options.shapeOptions.stroke = true;
-            this.options.shapeOptions.opacity = 1;
+          if ((this as any).options && (this as any).options.shapeOptions) {
+            (this as any).options.shapeOptions.renderer = L.svg();
+            (this as any).options.shapeOptions.stroke = true;
+            (this as any).options.shapeOptions.opacity = 1;
           }
         };
       }

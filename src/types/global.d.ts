@@ -1,4 +1,5 @@
 
+
 declare global {
   interface Window {
     featureGroup?: L.FeatureGroup;
@@ -7,3 +8,4 @@ declare global {
 }
 
 export {};
+

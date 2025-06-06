@@ -18,7 +18,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const validityChecksRef = useRef(0);
   const recoveryAttemptRef = useRef(0);
   const initialFlyComplete = useRef(false);
-  const validityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const validityCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
   const isCleaningUpRef = useRef(false);
   
@@ -156,7 +156,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
           }
         }
       } catch (err) {
-        console.warn("Map validation error:", err.message);
+        console.warn("Map validation error:", err instanceof Error ? err.message : String(err));
       }
     };
     
