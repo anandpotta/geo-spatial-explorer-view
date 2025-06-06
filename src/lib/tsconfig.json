@@ -17,10 +17,13 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "noEmitOnError": false
+    "noEmitOnError": false,
+    "typeRoots": ["../../node_modules/@types", "../../src/types"]
   },
   "include": [
-    "../../src/lib/**/*"
+    "../../src/lib/**/*",
+    "../../src/types/**/*",
+    "../../src/vite-env.d.ts"
   ],
   "exclude": [
     "./dist",
