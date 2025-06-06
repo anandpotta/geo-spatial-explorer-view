@@ -19,17 +19,21 @@
     },
     "noEmitOnError": false,
     "typeRoots": ["../../node_modules/@types"],
-    "types": ["react", "react-dom"]
+    "types": ["react", "react-dom"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
   },
   "include": [
-    "./**/*",
+    "./**/*.ts",
+    "./**/*.tsx",
     "../types/**/*",
     "../vite-env.d.ts"
   ],
   "exclude": [
-    "./dist",
-    "./node_modules",
-    "../../node_modules",
+    "./dist/**/*",
+    "./node_modules/**/*",
+    "../../node_modules/**/*",
     "./**/*.test.*",
     "./**/*.spec.*",
     "./build.js"

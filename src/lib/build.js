@@ -20,13 +20,26 @@ try {
   fs.mkdirSync('./dist/types', { recursive: true });
 
   console.log('Building CommonJS...');
-  execSync('npx tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false --target es2015 --skipLibCheck', { stdio: 'inherit' });
+  execSync('npx tsc --project ./tsconfig.json --module commonjs --outDir ./dist/cjs --declaration false --target es2015 --skipLibCheck', { 
+    stdio: 'inherit',
+    cwd: __dirname 
+  });
 
   console.log('Building ES Modules...');
-  execSync('npx tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --target es2015 --skipLibCheck', { stdio: 'inherit' });
+  execSync('npx tsc --project ./tsconfig.json --module es2015 --outDir ./dist/esm --declaration false --target es2015 --skipLibCheck', { 
+    stdio: 'inherit',
+    cwd: __dirname 
+  });
 
   console.log('Building TypeScript definitions...');
-  execSync('npx tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --target es2015 --skipLibCheck', { stdio: 'inherit' });
+  execSync('npx tsc --project ./tsconfig.json --declaration --declarationDir ./dist/types --emitDeclarationOnly --target es2015 --skipLibCheck', { 
+    stdio: 'inherit',
+    cwd: __dirname 
+  });
+
+  // Copy package.json to dist
+  const packageJson = require('./package.json');
+  fs.writeFileSync('./dist/package.json', JSON.stringify(packageJson, null, 2));
 
   console.log('Build completed successfully!');
 } catch (error) {
