@@ -3,7 +3,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "../../",
+    "rootDir": "./",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -13,17 +13,18 @@
     "target": "es2015",
     "lib": ["es2015", "dom"],
     "module": "esnext",
-    "baseUrl": "../../",
+    "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["../../src/*"]
     },
     "noEmitOnError": false,
-    "typeRoots": ["../../node_modules/@types", "../../src/types"]
+    "typeRoots": ["../../node_modules/@types"],
+    "types": ["react", "react-dom"]
   },
   "include": [
-    "../../src/lib/**/*",
-    "../../src/types/**/*",
-    "../../src/vite-env.d.ts"
+    "./**/*",
+    "../types/**/*",
+    "../vite-env.d.ts"
   ],
   "exclude": [
     "./dist",
@@ -31,14 +32,6 @@
     "../../node_modules",
     "./**/*.test.*",
     "./**/*.spec.*",
-    "../../src/**/*.test.*",
-    "../../src/**/*.spec.*",
-    "./build.js",
-    "../../src/components/**/*",
-    "../../src/hooks/**/*",
-    "../../src/utils/**/*",
-    "../../src/services/**/*",
-    "../../src/contexts/**/*",
-    "../../src/pages/**/*"
+    "./build.js"
   ]
 }
