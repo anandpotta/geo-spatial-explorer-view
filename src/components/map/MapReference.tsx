@@ -22,7 +22,7 @@ interface LeafletMapInternal extends L.Map {
 const MapReference = ({ onMapReady }: MapReferenceProps) => {
   const map = useMap() as LeafletMapInternal;
   const hasCalledOnReady = useRef(false);
-  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
+  const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [isStable, setIsStable] = useState(false);
   const isUnmountingRef = useRef(false);
   
