@@ -18,7 +18,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
-      // More precise click detection - only ignore specific interactive elements
+      // More precise click detection - only ignore UI controls, not interactive content
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
@@ -29,30 +29,37 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // Ignore clicks on popup content (not the map behind it)
-        if (target.closest('.leaflet-popup-content') ||
-            target.closest('.leaflet-popup-close-button')) {
-          console.log('Click on popup content ignored');
+        // Ignore clicks on popup close button and popup tip (but allow content clicks)
+        if (target.closest('.leaflet-popup-close-button') ||
+            target.closest('.leaflet-popup-tip')) {
+          console.log('Click on popup close button ignored');
           return;
         }
         
-        // Only ignore clicks on interactive drawing paths, not all paths
-        if (target.tagName === 'path' && 
-            (target.classList.contains('leaflet-interactive') ||
-             target.hasAttribute('data-drawing-id'))) {
-          console.log('Click on interactive drawing path ignored');
-          return;
-        }
-        
-        // Ignore clicks on drawing control buttons and upload interfaces
+        // Ignore clicks on drawing control buttons and toolbars
         if (target.closest('.leaflet-draw-toolbar') ||
             target.closest('.leaflet-draw-actions') ||
+            target.closest('.leaflet-draw-section') ||
+            target.closest('.leaflet-control') ||
             target.closest('.upload-button-container') ||
             target.closest('.upload-button-wrapper') ||
             target.closest('.image-controls-container') ||
             target.closest('.image-controls-wrapper')) {
           console.log('Click on drawing controls ignored');
           return;
+        }
+        
+        // Special handling for SVG paths - allow drawing interaction but prevent map click
+        if (target.tagName === 'path') {
+          // If it's a drawing path with data attributes, let the layer handle it
+          if (target.hasAttribute('data-drawing-id') || 
+              target.hasAttribute('data-svg-uid') ||
+              target.classList.contains('leaflet-interactive')) {
+            console.log('Click on interactive drawing - letting layer handler manage it');
+            // Don't call onMapClick, but don't prevent the event either
+            // This allows the layer's click handler to work
+            return;
+          }
         }
       }
       

@@ -23,14 +23,34 @@ export const setupLayerClickHandlers = (
     return;
   }
   
-  layer.on('click', (e) => {
+  // Enhanced click handler with better event management
+  const handleLayerClick = (e: L.LeafletMouseEvent) => {
+    console.log(`Drawing layer clicked: ${drawing.id}`);
+    
     // Stop event propagation to prevent map click
     if (e.originalEvent) {
       L.DomEvent.stopPropagation(e.originalEvent);
+      e.originalEvent.preventDefault();
     }
     
-    if (isMounted) {
+    // Stop the leaflet event too
+    L.DomEvent.stop(e);
+    
+    if (isMounted && onRegionClick) {
+      console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
       onRegionClick(drawing);
     }
-  });
+  };
+  
+  // Set up the click handler
+  layer.on('click', handleLayerClick);
+  
+  // Also set up handlers for sub-layers if this is a feature group
+  if (typeof (layer as any).eachLayer === 'function') {
+    (layer as any).eachLayer((subLayer: L.Layer) => {
+      subLayer.on('click', handleLayerClick);
+    });
+  }
+  
+  console.log(`Click handler set up for drawing: ${drawing.id}`);
 };
