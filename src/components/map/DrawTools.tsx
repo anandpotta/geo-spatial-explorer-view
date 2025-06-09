@@ -139,36 +139,69 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     return contentFound;
   };
 
+  // More aggressive function to force enable toolbars
+  const forceEnableToolbars = () => {
+    if (!editControlRef.current || !editControlRef.current._toolbars) return;
+    
+    const editToolbar = editControlRef.current._toolbars.edit;
+    const removeToolbar = editControlRef.current._toolbars.remove;
+    
+    // Force enable edit toolbar
+    if (editToolbar) {
+      try {
+        // Remove disabled class and enable
+        if (editToolbar._button) {
+          editToolbar._button.classList.remove('leaflet-disabled');
+          editToolbar._button.removeAttribute('disabled');
+        }
+        
+        // Override the _checkDisabled method to always return false
+        if (editToolbar._checkDisabled) {
+          editToolbar._checkDisabled = () => false;
+        }
+        
+        // Force enable the toolbar
+        editToolbar.enable();
+        console.log('Edit toolbar forcefully enabled');
+      } catch (e) {
+        console.error('Error force enabling edit toolbar:', e);
+      }
+    }
+    
+    // Force enable remove toolbar
+    if (removeToolbar) {
+      try {
+        // Remove disabled class and enable
+        if (removeToolbar._button) {
+          removeToolbar._button.classList.remove('leaflet-disabled');
+          removeToolbar._button.removeAttribute('disabled');
+        }
+        
+        // Override the _checkDisabled method to always return false
+        if (removeToolbar._checkDisabled) {
+          removeToolbar._checkDisabled = () => false;
+        }
+        
+        // Force enable the toolbar
+        removeToolbar.enable();
+        console.log('Remove toolbar forcefully enabled');
+      } catch (e) {
+        console.error('Error force enabling remove toolbar:', e);
+      }
+    }
+  };
+
   // Effect to monitor layer changes and force enable edit/remove controls
   useEffect(() => {
     const updateEditControlState = () => {
       const hasContent = checkForContent();
       setHasLayers(hasContent);
       
-      // Force enable edit and remove toolbars if there's any content
-      if (editControlRef.current && editControlRef.current._toolbars) {
-        const editToolbar = editControlRef.current._toolbars.edit;
-        const removeToolbar = editControlRef.current._toolbars.remove;
-        
-        if (editToolbar) {
-          if (hasContent) {
-            editToolbar.enable();
-            console.log('Edit toolbar enabled');
-          } else {
-            editToolbar.disable();
-            console.log('Edit toolbar disabled');
-          }
-        }
-        
-        if (removeToolbar) {
-          if (hasContent) {
-            removeToolbar.enable();
-            console.log('Remove toolbar enabled');
-          } else {
-            removeToolbar.disable();
-            console.log('Remove toolbar disabled');
-          }
-        }
+      if (hasContent) {
+        // Force enable toolbars when content is present
+        setTimeout(() => {
+          forceEnableToolbars();
+        }, 100);
       }
     };
     
@@ -269,6 +302,11 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
           }
         };
       }
+      
+      // Force enable toolbars after control is ready
+      setTimeout(() => {
+        forceEnableToolbars();
+      }, 1000);
     }
   }, [editControlRef.current]);
 
