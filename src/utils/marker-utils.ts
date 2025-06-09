@@ -1,4 +1,8 @@
+
 import { LocationMarker } from '@/utils/geo-utils';
+
+// Export LocationMarker type for other modules
+export type { LocationMarker } from '@/utils/geo-utils';
 
 export const saveMarker = (marker: LocationMarker) => {
   // Generate unique identifier for the marker if it doesn't exist
@@ -45,6 +49,11 @@ export const deleteMarker = (id: string): void => {
   } catch (error) {
     console.error('Error deleting marker:', error);
   }
+};
+
+export const createMarker = (marker: LocationMarker): LocationMarker => {
+  saveMarker(marker);
+  return marker;
 };
 
 export const renameMarker = (id: string, newName: string): void => {

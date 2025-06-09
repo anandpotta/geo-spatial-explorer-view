@@ -2,18 +2,24 @@
 import { useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { LocationMarker } from '@/utils/geo-utils';
+import { LocationMarker } from '@/utils/marker-utils';
 import MarkerPopup from './MarkerPopup';
 
 interface UserMarkerProps {
   marker: LocationMarker;
   onDelete: (id: string) => void;
-  onRename: (id: string, newName: string) => void;
+  onRename?: (id: string, newName: string) => void;
 }
 
 const UserMarker = ({ marker, onDelete, onRename }: UserMarkerProps) => {
   // Ensure marker has a unique identifier
   const uniqueId = marker.uniqueId || `marker-${marker.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Ensure marker has userId (required by markers/types.ts)
+  const markerWithUserId = {
+    ...marker,
+    userId: marker.userId || 'default-user'
+  };
   
   useEffect(() => {
     console.log(`Rendered user marker with unique ID: ${uniqueId} for marker ID: ${marker.id}`);
@@ -49,7 +55,11 @@ const UserMarker = ({ marker, onDelete, onRename }: UserMarkerProps) => {
       }}
     >
       <Popup>
-        <MarkerPopup marker={marker} onDelete={onDelete} onRename={onRename} />
+        <MarkerPopup 
+          marker={markerWithUserId} 
+          onDelete={onDelete} 
+          onRename={onRename || (() => {})} 
+        />
       </Popup>
     </Marker>
   );

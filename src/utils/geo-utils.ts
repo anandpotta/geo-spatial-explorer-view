@@ -1,4 +1,6 @@
+
 export interface Location {
+  id: string;
   x: number;
   y: number;
   label: string;
@@ -25,9 +27,9 @@ export interface DrawingData {
   options?: any;
   svgPath?: string;
   properties?: {
-    name: string;
+    name?: string; // Make name optional to match other DrawingData types
     description?: string;
-    color: string;
+    color?: string; // Make color optional to match other DrawingData types
     createdAt: Date;
     associatedMarkerId?: string;
   };
