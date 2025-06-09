@@ -4,20 +4,32 @@ import { toast } from 'sonner';
 
 const STORAGE_KEY = 'savedDrawings';
 
-// Debounce mechanism to prevent rapid event dispatching
+// More aggressive debouncing to prevent infinite loops
 let lastEventDispatch = 0;
-const EVENT_DEBOUNCE_MS = 200;
+const EVENT_DEBOUNCE_MS = 1000; // Increased from 200ms to 1000ms
+let pendingEventTimeout: NodeJS.Timeout | null = null;
 
 const dispatchEventsDebounced = () => {
   const now = Date.now();
-  if (now - lastEventDispatch < EVENT_DEBOUNCE_MS) return;
+  if (now - lastEventDispatch < EVENT_DEBOUNCE_MS) {
+    console.log('Event dispatch debounced to prevent loops');
+    return;
+  }
+  
+  // Clear any pending events to prevent stacking
+  if (pendingEventTimeout) {
+    clearTimeout(pendingEventTimeout);
+  }
+  
   lastEventDispatch = now;
   
-  // Use setTimeout to prevent immediate cascading
-  setTimeout(() => {
+  // Use longer timeout to prevent cascading
+  pendingEventTimeout = setTimeout(() => {
+    console.log('Dispatching storage events');
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('drawingsUpdated'));
-  }, 50);
+    pendingEventTimeout = null;
+  }, 300); // Increased delay
 };
 
 export const saveDrawing = (drawing: DrawingData): boolean => {
@@ -39,7 +51,7 @@ export const saveDrawing = (drawing: DrawingData): boolean => {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDrawings));
     
-    // Dispatch events with debouncing
+    // Dispatch events with aggressive debouncing
     dispatchEventsDebounced();
     
     toast.success('Drawing saved successfully');
@@ -71,7 +83,7 @@ export const deleteDrawing = (drawingId: string): boolean => {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredDrawings));
     
-    // Dispatch events with debouncing
+    // Dispatch events with aggressive debouncing
     dispatchEventsDebounced();
     
     toast.success('Drawing deleted successfully');

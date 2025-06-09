@@ -25,6 +25,7 @@ const LayerManager = ({
   const isInitialRenderRef = useRef(true);
   const lastDrawingsRef = useRef<DrawingData[]>([]);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateTime = useRef<number>(0);
   
   const {
     removeButtonRoots,
@@ -89,7 +90,7 @@ const LayerManager = ({
     };
   }, [safeUnmountRoots, layersRef]);
 
-  // Optimized drawing changes detection
+  // Optimized drawing changes detection with aggressive debouncing
   const haveSavedDrawingsChanged = useCallback(() => {
     if (savedDrawings.length !== lastDrawingsRef.current.length) {
       return true;
@@ -99,9 +100,16 @@ const LayerManager = ({
     return lastDrawingsRef.current.some(d => !currentIds.has(d.id));
   }, [savedDrawings]);
 
-  // Main update effect with better loop prevention
+  // Main update effect with aggressive loop prevention
   useEffect(() => {
     if (!isMountedRef.current) return;
+    
+    // More aggressive debouncing to prevent loops
+    const now = Date.now();
+    if (now - lastUpdateTime.current < 2000) { // Increased to 2 seconds
+      console.log('Layer update debounced to prevent loops');
+      return;
+    }
     
     // Clear any pending updates
     if (updateTimeoutRef.current) {
@@ -112,38 +120,46 @@ const LayerManager = ({
     const shouldForceUpdate = isInitialRenderRef.current || haveSavedDrawingsChanged();
     
     if (shouldForceUpdate) {
+      console.log('Scheduling layer update');
+      lastUpdateTime.current = now;
+      
       // First safely unmount any existing roots to prevent conflicts
       safeUnmountRoots();
       
-      // Schedule update with a longer delay to prevent loops
+      // Schedule update with a much longer delay to prevent loops
       updateTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
+          console.log('Executing layer update');
           updateLayers();
           isInitialRenderRef.current = false;
           lastDrawingsRef.current = [...savedDrawings];
         }
-      }, 150);
+      }, 500); // Increased delay
     } else if (activeTool === 'edit') {
-      // For edit mode changes, use the debounced version
+      // For edit mode changes, use even longer debounce
       updateTimeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
+          console.log('Executing debounced layer update for edit mode');
+          lastUpdateTime.current = Date.now();
           debouncedUpdateLayers();
         }
-      }, 100);
+      }, 1000); // Much longer delay for edit mode
     }
   }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers, haveSavedDrawingsChanged, safeUnmountRoots]);
 
-  // Handle resize events with better debouncing
+  // Handle resize events with much more aggressive debouncing
   useEffect(() => {
     let resizeTimeout: NodeJS.Timeout;
     
     const handleResize = () => {
       if (resizeTimeout) clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
+          console.log('Handling resize event');
+          lastUpdateTime.current = Date.now();
           debouncedUpdateLayers();
         }
-      }, 250);
+      }, 1000); // Much longer debounce for resize
     };
     
     window.addEventListener('resize', handleResize);
@@ -154,27 +170,31 @@ const LayerManager = ({
     };
   }, [debouncedUpdateLayers]);
 
-  // Handle storage events with better debouncing
+  // Handle storage events with much more aggressive debouncing
   useEffect(() => {
     let storageTimeout: NodeJS.Timeout;
     
     const handleStorageUpdate = () => {
       if (storageTimeout) clearTimeout(storageTimeout);
       storageTimeout = setTimeout(() => {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
+          console.log('Handling storage event in LayerManager');
+          lastUpdateTime.current = Date.now();
           debouncedUpdateLayers();
         }
-      }, 200);
+      }, 1000); // Much longer debounce
     };
     
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isMountedRef.current) {
         if (storageTimeout) clearTimeout(storageTimeout);
         storageTimeout = setTimeout(() => {
-          if (isMountedRef.current) {
+          if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
+            console.log('Handling visibility change');
+            lastUpdateTime.current = Date.now();
             debouncedUpdateLayers();
           }
-        }, 300);
+        }, 1500); // Even longer delay for visibility change
       }
     };
     

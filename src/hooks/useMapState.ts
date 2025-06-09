@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -21,14 +20,18 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Use refs to prevent infinite loops
+  // Use refs to prevent infinite loops with more aggressive debouncing
   const isLoadingRef = useRef(false);
   const lastUpdateRef = useRef<number>(0);
+  const eventTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load existing markers and drawings with debounce
+  // Load existing markers and drawings with aggressive debounce
   useEffect(() => {
     const loadData = () => {
-      if (isLoadingRef.current) return;
+      if (isLoadingRef.current) {
+        console.log('Data loading already in progress, skipping');
+        return;
+      }
       
       isLoadingRef.current = true;
       console.log('Loading data');
@@ -46,25 +49,49 @@ export function useMapState(selectedLocation?: Location) {
       }
     };
 
-    // Debounced event handlers to prevent loops
+    // Aggressive debounced event handlers to prevent loops
     const handleMarkersUpdated = () => {
       const now = Date.now();
-      if (now - lastUpdateRef.current < 100) return; // Debounce 100ms
+      if (now - lastUpdateRef.current < 1000) { // Increased debounce to 1 second
+        console.log('Markers update debounced to prevent loops');
+        return;
+      }
       lastUpdateRef.current = now;
       
-      if (!isLoadingRef.current) {
-        setMarkers(getSavedMarkers());
+      // Clear any pending updates
+      if (eventTimeoutRef.current) {
+        clearTimeout(eventTimeoutRef.current);
       }
+      
+      eventTimeoutRef.current = setTimeout(() => {
+        if (!isLoadingRef.current) {
+          console.log('Updating markers from event');
+          setMarkers(getSavedMarkers());
+        }
+        eventTimeoutRef.current = null;
+      }, 500); // Longer delay
     };
 
     const handleDrawingsUpdated = () => {
       const now = Date.now();
-      if (now - lastUpdateRef.current < 100) return; // Debounce 100ms
+      if (now - lastUpdateRef.current < 1000) { // Increased debounce to 1 second
+        console.log('Drawings update debounced to prevent loops');
+        return;
+      }
       lastUpdateRef.current = now;
       
-      if (!isLoadingRef.current) {
-        setDrawings(getSavedDrawings());
+      // Clear any pending updates
+      if (eventTimeoutRef.current) {
+        clearTimeout(eventTimeoutRef.current);
       }
+      
+      eventTimeoutRef.current = setTimeout(() => {
+        if (!isLoadingRef.current) {
+          console.log('Updating drawings from event');
+          setDrawings(getSavedDrawings());
+        }
+        eventTimeoutRef.current = null;
+      }, 500); // Longer delay
     };
     
     const handleFloorPlanUpdated = (event: Event) => {
@@ -78,7 +105,7 @@ export function useMapState(selectedLocation?: Location) {
     // Initial load
     loadData();
     
-    // Add event listeners with debounced handlers
+    // Add event listeners with aggressive debounced handlers
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
@@ -87,8 +114,13 @@ export function useMapState(selectedLocation?: Location) {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
+      
+      // Clear any pending timeouts
+      if (eventTimeoutRef.current) {
+        clearTimeout(eventTimeoutRef.current);
+      }
     };
-  }, []); // Remove dependencies to prevent loops
+  }, []); // Keep empty dependencies to prevent loops
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
