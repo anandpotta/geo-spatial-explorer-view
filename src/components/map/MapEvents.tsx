@@ -29,9 +29,11 @@ const MapEvents = ({ onMapClick, onRegionClick }: MapEventsProps) => {
           target.closest('.leaflet-popup') ||
           target.closest('.leaflet-control') ||
           target.closest('.leaflet-draw-toolbar') ||
+          target.closest('.leaflet-draw-actions') ||
           target.closest('.upload-button-container') ||
           target.closest('.image-controls-container') ||
-          target.closest('.leaflet-draw-tooltip')
+          target.closest('.leaflet-draw-tooltip') ||
+          target.closest('.leaflet-tooltip')
         ) {
           console.log('Click on interactive element ignored');
           return;
@@ -42,6 +44,7 @@ const MapEvents = ({ onMapClick, onRegionClick }: MapEventsProps) => {
           // Check if the path/svg is part of a control that should be ignored
           if (target.closest('.leaflet-control') || 
               target.closest('.leaflet-draw-toolbar') ||
+              target.closest('.leaflet-draw-actions') ||
               target.closest('.upload-button-container') ||
               target.closest('.image-controls-container')) {
             console.log('Click on control SVG element ignored');
@@ -92,7 +95,9 @@ const MapEvents = ({ onMapClick, onRegionClick }: MapEventsProps) => {
         // Check if the target has specific classes that indicate it's a control
         if (target.classList.contains('leaflet-marker-icon') ||
             target.classList.contains('leaflet-popup') ||
-            target.classList.contains('leaflet-control')) {
+            target.classList.contains('leaflet-control') ||
+            target.classList.contains('leaflet-draw-actions') ||
+            target.tagName === 'A' && target.closest('.leaflet-draw-actions')) {
           console.log('Click on control element ignored');
           return;
         }

@@ -5,6 +5,8 @@ import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
 import { saveFloorPlan, getFloorPlanById } from "@/utils/floor-plan-utils";
+import { applyImageClipMask } from "@/utils/svg-clip-mask";
+import { findSvgPathByDrawingId } from "@/utils/svg-path-finder";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -90,6 +92,27 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           
           if (success) {
             toast.success(`${file.name} uploaded successfully`);
+            
+            // Apply clip mask to the SVG path if it's an image (not PDF)
+            if (!file.type.includes('pdf')) {
+              console.log('Applying clip mask for drawing:', drawing.id);
+              
+              // Wait a bit for the DOM to update
+              setTimeout(() => {
+                const pathElement = findSvgPathByDrawingId(drawing.id);
+                if (pathElement) {
+                  console.log('Found path element, applying clip mask');
+                  const success = applyImageClipMask(pathElement, dataUrl, drawing.id);
+                  if (success) {
+                    console.log('Clip mask applied successfully');
+                  } else {
+                    console.error('Failed to apply clip mask');
+                  }
+                } else {
+                  console.warn('No path element found for drawing:', drawing.id);
+                }
+              }, 500);
+            }
             
             // Trigger a custom event to ensure clip masks are applied
             window.dispatchEvent(new CustomEvent('floorPlanUpdated', {

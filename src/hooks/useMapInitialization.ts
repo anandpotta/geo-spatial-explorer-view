@@ -21,17 +21,27 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const validityCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
   const isCleaningUpRef = useRef(false);
+  const lastMapInstanceRef = useRef<L.Map | null>(null);
   
   // Reset the map instance with a new key
   const resetMapInstance = useCallback(() => {
     if (isCleaningUpRef.current) return;
     
-    // Clean up the existing map first
+    // Clean up the existing map first with better error handling
     if (mapRef.current) {
       try {
         console.log('Removing existing map instance before reset');
-        mapRef.current.remove();
+        const currentMap = mapRef.current;
         mapRef.current = null;
+        lastMapInstanceRef.current = null;
+        
+        // Only remove if it's still valid and not reused
+        if (currentMap && typeof currentMap.remove === 'function') {
+          const container = currentMap.getContainer();
+          if (container && !container._leaflet_map_reused) {
+            currentMap.remove();
+          }
+        }
       } catch (err) {
         console.warn('Error removing map during reset:', err);
       }
@@ -81,13 +91,12 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       // Clean up map instance if it exists
       if (mapRef.current) {
         try {
-          const map = mapRef.current;
+          const currentMap = mapRef.current;
           const container = containerRef.current;
           
           console.log('Attempting to remove map instance');
           
           // Clear the reference immediately to prevent reuse
-          const currentMap = mapRef.current;
           mapRef.current = null;
           containerRef.current = null;
           mapAttachedRef.current = false;
@@ -95,8 +104,10 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
           
           // Check if map is still valid before trying to remove
           if (currentMap && typeof currentMap.remove === 'function') {
-            // Use a try-catch to safely remove the map
             try {
+              if (container) {
+                container._leaflet_map_reused = true;
+              }
               currentMap.remove();
               console.log('Map instance successfully removed');
             } catch (err) {
@@ -183,13 +194,25 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       return;
     }
     
-    // If we already have a map reference, clean it up first
+    // If we already have a map reference and it's different, clean it up first
     if (mapRef.current && mapRef.current !== map) {
       console.log('New map reference provided, cleaning up old reference');
       try {
-        mapRef.current.remove();
+        const oldMap = mapRef.current;
+        const oldContainer = oldMap.getContainer();
+        
+        // Mark the old container as being reused to prevent the error
+        if (oldContainer) {
+          oldContainer._leaflet_map_reused = true;
+        }
+        
+        // Only remove if it's not the same instance
+        if (oldMap !== map) {
+          oldMap.remove();
+        }
       } catch (err) {
-        console.warn('Error removing old map:', err);
+        // This error is expected when containers are reused, just log it
+        console.warn('Expected error during map cleanup:', err.message);
       }
     }
     
@@ -202,6 +225,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         
         // Store references
         mapRef.current = map;
+        lastMapInstanceRef.current = map;
         containerRef.current = container;
         mapAttachedRef.current = true;
         
