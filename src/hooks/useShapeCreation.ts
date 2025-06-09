@@ -25,7 +25,6 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
         
         // Add unique identifier to the SVG path element
         layer._path.setAttribute('data-svg-uid', uniqueId);
-        layer._path.setAttribute('uid', uniqueId); // Add direct UID attribute
         layer._path.id = `svg-path-${uniqueId}`;
       }
       
