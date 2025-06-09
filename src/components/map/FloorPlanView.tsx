@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
@@ -66,8 +65,8 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
     }
     
     // Check file size - be more restrictive to avoid storage issues
-    if (file.size > 2 * 1024 * 1024) { // 2MB limit instead of 4MB
-      toast.error('File size must be less than 2MB to ensure proper storage');
+    if (file.size > 1 * 1024 * 1024) { // Reduced to 1MB limit
+      toast.error('File size must be less than 1MB to ensure proper storage');
       return;
     }
     
@@ -95,84 +94,142 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             });
           }
           
-          // Update UI immediately for better user experience
-          setSelectedImage(dataUrl);
-          setIsPdf(file.type.includes('pdf'));
-          setFileName(file.name);
-          
-          // Save to storage
-          console.log('Saving floor plan to storage...');
-          const success = saveFloorPlan(
-            drawing.id,
-            {
-              data: dataUrl,
-              isPdf: file.type.includes('pdf'),
-              fileName: file.name
-            }
-          );
-          
-          if (success) {
-            console.log('Floor plan saved successfully');
-            toast.success(`${file.name} uploaded successfully`);
-            
-            // Apply clip mask to the SVG path if it's an image (not PDF)
-            if (!file.type.includes('pdf')) {
-              console.log('Applying clip mask for drawing:', drawing.id);
-              
-              // Check again AFTER storage save
-              console.log('Checking for SVG path AFTER storage save...');
-              const pathElementAfterSave = findSvgPathByDrawingId(drawing.id);
-              console.log('SVG path after storage save:', pathElementAfterSave ? 'EXISTS' : 'NOT FOUND');
-              
-              // Wait a bit for the DOM to update
-              setTimeout(() => {
-                console.log('Attempting to find and apply clip mask...');
-                const pathElement = findSvgPathByDrawingId(drawing.id);
-                if (pathElement) {
-                  console.log('Found path element, applying clip mask');
-                  console.log('Path element details:', {
-                    tagName: pathElement.tagName,
-                    id: pathElement.id,
-                    classList: Array.from(pathElement.classList),
-                    parentElement: pathElement.parentElement?.tagName,
-                    isInDocument: document.contains(pathElement)
-                  });
-                  
-                  const success = applyImageClipMask(pathElement, dataUrl, drawing.id);
-                  if (success) {
-                    console.log('Clip mask applied successfully');
-                  } else {
-                    console.error('Failed to apply clip mask');
+          // Try to compress the image if it's too large
+          let finalDataUrl = dataUrl;
+          if (dataUrl.length > 500000) { // If data URL is larger than 500KB
+            console.log('Data URL is large, attempting to compress...');
+            try {
+              // Create canvas to compress image
+              const img = new Image();
+              img.onload = async () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Calculate new dimensions (max 800px width/height)
+                const maxSize = 800;
+                let { width, height } = img;
+                
+                if (width > height) {
+                  if (width > maxSize) {
+                    height = (height * maxSize) / width;
+                    width = maxSize;
                   }
                 } else {
-                  console.warn('No path element found for drawing:', drawing.id);
-                  
-                  // Try to find all SVG paths in the document
-                  const allPaths = document.querySelectorAll('svg path');
-                  console.log('All SVG paths found in document:', allPaths.length);
-                  allPaths.forEach((path, index) => {
-                    console.log(`Path ${index}:`, {
-                      hasDrawingId: path.getAttribute('data-drawing-id'),
-                      id: path.id,
-                      classList: Array.from(path.classList)
-                    });
-                  });
+                  if (height > maxSize) {
+                    width = (width * maxSize) / height;
+                    height = maxSize;
+                  }
                 }
-              }, 500);
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0, width, height);
+                  finalDataUrl = canvas.toDataURL('image/jpeg', 0.7); // Compress to 70% quality
+                  console.log('Compressed data URL length:', finalDataUrl.length);
+                  
+                  await saveAndApplyFloorPlan(finalDataUrl);
+                }
+              };
+              img.src = dataUrl;
+            } catch (compressionError) {
+              console.error('Error compressing image:', compressionError);
+              await saveAndApplyFloorPlan(dataUrl);
             }
-            
-            // Trigger a custom event to ensure clip masks are applied
-            console.log('Dispatching floorPlanUpdated event');
-            window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-              detail: { drawingId: drawing.id }
-            }));
           } else {
-            console.error('Failed to save floor plan to storage');
-            // Revert UI state if save failed
-            setSelectedImage(null);
-            setIsPdf(false);
-            setFileName('');
-            toast.error('Failed to save floor plan. Please try a smaller file.');
+            await saveAndApplyFloorPlan(dataUrl);
+          }
+          
+          async function saveAndApplyFloorPlan(imageData: string) {
+            // Update UI immediately for better user experience
+            setSelectedImage(imageData);
+            setIsPdf(file.type.includes('pdf'));
+            setFileName(file.name);
+            
+            // Save to storage with better error handling
+            console.log('Saving floor plan to storage...');
+            try {
+              const success = saveFloorPlan(
+                drawing.id,
+                {
+                  data: imageData,
+                  isPdf: file.type.includes('pdf'),
+                  fileName: file.name
+                }
+              );
+              
+              if (success) {
+                console.log('Floor plan saved successfully');
+                toast.success(`${file.name} uploaded successfully`);
+                
+                // Apply clip mask to the SVG path if it's an image (not PDF)
+                if (!file.type.includes('pdf')) {
+                  console.log('Applying clip mask for drawing:', drawing.id);
+                  
+                  // Check again AFTER storage save
+                  console.log('Checking for SVG path AFTER storage save...');
+                  const pathElementAfterSave = findSvgPathByDrawingId(drawing.id);
+                  console.log('SVG path after storage save:', pathElementAfterSave ? 'EXISTS' : 'NOT FOUND');
+                  
+                  // Wait a bit for the DOM to update
+                  setTimeout(() => {
+                    console.log('Attempting to find and apply clip mask...');
+                    const pathElement = findSvgPathByDrawingId(drawing.id);
+                    if (pathElement) {
+                      console.log('Found path element, applying clip mask');
+                      console.log('Path element details:', {
+                        tagName: pathElement.tagName,
+                        id: pathElement.id,
+                        classList: Array.from(pathElement.classList),
+                        parentElement: pathElement.parentElement?.tagName,
+                        isInDocument: document.contains(pathElement)
+                      });
+                      
+                      const success = applyImageClipMask(pathElement, imageData, drawing.id);
+                      if (success) {
+                        console.log('Clip mask applied successfully');
+                      } else {
+                        console.error('Failed to apply clip mask');
+                      }
+                    } else {
+                      console.warn('No path element found for drawing:', drawing.id);
+                      
+                      // Try to find all SVG paths in the document
+                      const allPaths = document.querySelectorAll('svg path');
+                      console.log('All SVG paths found in document:', allPaths.length);
+                      allPaths.forEach((path, index) => {
+                        console.log(`Path ${index}:`, {
+                          hasDrawingId: path.getAttribute('data-drawing-id'),
+                          id: path.id,
+                          classList: Array.from(path.classList)
+                        });
+                      });
+                    }
+                  }, 500);
+                }
+                
+                // Trigger a custom event to ensure clip masks are applied
+                console.log('Dispatching floorPlanUpdated event');
+                window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
+                  detail: { drawingId: drawing.id }
+                }));
+              } else {
+                console.error('Failed to save floor plan to storage');
+                // Revert UI state if save failed
+                setSelectedImage(null);
+                setIsPdf(false);
+                setFileName('');
+                toast.error('Failed to save floor plan. Please try a smaller file.');
+              }
+            } catch (saveError) {
+              console.error('Error during floor plan save:', saveError);
+              // Revert UI state if save failed
+              setSelectedImage(null);
+              setIsPdf(false);
+              setFileName('');
+              toast.error('Storage error. Please try a smaller file or clear some data.');
+            }
           }
         }
         setIsUploading(false);
@@ -290,7 +347,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
               <Upload className="h-12 w-12 text-gray-400" />
               <h3 className="text-lg font-medium">Upload Floor Plan</h3>
               <p className="text-gray-600 text-center max-w-md">
-                Click the Upload Floor Plan button above to add a floor plan image or PDF (max 2MB)
+                Click the Upload Floor Plan button above to add a floor plan image or PDF (max 1MB)
               </p>
               <Button 
                 onClick={triggerFileInput}
