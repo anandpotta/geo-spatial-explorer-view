@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ const NewMarkerForm = ({
   onRename
 }: NewMarkerFormProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [localValue, setLocalValue] = useState(markerName);
   
   useEffect(() => {
     // Focus on input when component mounts
@@ -39,35 +40,48 @@ const NewMarkerForm = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Update local value when markerName prop changes
+  useEffect(() => {
+    setLocalValue(markerName);
+  }, [markerName]);
+
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setMarkerName(e.target.value);
-  }, [setMarkerName]);
+    setLocalValue(e.target.value);
+  }, []);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
       
-      if (markerName.trim()) {
+      if (localValue.trim()) {
+        // Update parent state only when saving
+        setMarkerName(localValue);
+        
         if (isEditing && existingMarkerId && onRename) {
-          onRename(existingMarkerId, markerName);
+          onRename(existingMarkerId, localValue);
         } else {
           onSave();
         }
       }
     }
-  }, [markerName, isEditing, existingMarkerId, onRename, onSave]);
+  }, [localValue, isEditing, existingMarkerId, onRename, onSave, setMarkerName]);
 
   const handleSaveButtonClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (isEditing && existingMarkerId && onRename) {
-      onRename(existingMarkerId, markerName);
-    } else {
-      onSave();
+    if (localValue.trim()) {
+      // Update parent state only when saving
+      setMarkerName(localValue);
+      
+      if (isEditing && existingMarkerId && onRename) {
+        onRename(existingMarkerId, localValue);
+      } else {
+        onSave();
+      }
     }
-  }, [isEditing, existingMarkerId, onRename, markerName, onSave]);
+  }, [isEditing, existingMarkerId, onRename, localValue, onSave, setMarkerName]);
 
   const handleTypeChange = useCallback((type: 'pin' | 'area' | 'building') => {
     setMarkerType(type);
@@ -80,7 +94,7 @@ const NewMarkerForm = ({
           ref={inputRef}
           type="text"
           placeholder="Location name"
-          value={markerName}
+          value={localValue}
           onChange={handleInputChange}
           onKeyPress={handleKeyPress}
           className="mb-2"
@@ -119,7 +133,7 @@ const NewMarkerForm = ({
         )}
         <Button 
           onClick={handleSaveButtonClick}
-          disabled={!markerName.trim()}
+          disabled={!localValue.trim()}
           className="w-full"
         >
           {isEditing ? (
