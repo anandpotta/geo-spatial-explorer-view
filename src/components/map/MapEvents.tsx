@@ -22,7 +22,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Check if click is on specific interactive elements
+        // Check if click is on specific interactive elements that should be ignored
         if (
           target.closest('.leaflet-marker-icon') ||
           target.closest('.leaflet-popup') ||
@@ -30,12 +30,25 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           target.closest('.leaflet-draw-toolbar') ||
           target.closest('.upload-button-container') ||
           target.closest('.image-controls-container') ||
-          target.closest('.leaflet-draw-tooltip') ||
-          target.tagName === 'path' ||
-          target.tagName === 'svg'
+          target.closest('.leaflet-draw-tooltip')
         ) {
           console.log('Click on interactive element ignored');
           return;
+        }
+        
+        // Special handling for SVG elements - allow clicks on paths but not on certain control elements
+        if (target.tagName === 'path' || target.tagName === 'svg') {
+          // Check if the path/svg is part of a control that should be ignored
+          if (target.closest('.leaflet-control') || 
+              target.closest('.leaflet-draw-toolbar') ||
+              target.closest('.upload-button-container') ||
+              target.closest('.image-controls-container')) {
+            console.log('Click on control SVG element ignored');
+            return;
+          }
+          
+          // Allow clicks on drawing paths and other interactive SVG elements
+          console.log('Click on SVG path/element allowed');
         }
         
         // Check if the target has specific classes that indicate it's a control
