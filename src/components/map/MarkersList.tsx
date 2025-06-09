@@ -1,5 +1,5 @@
 
-import { LocationMarker } from '@/utils/marker-utils';
+import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
 import React, { useMemo } from 'react';
@@ -78,12 +78,6 @@ const MarkersList = ({
       }, 500);
     }, 0);
   };
-
-  // Handle marker rename
-  const handleRenameMarker = (id: string, newName: string) => {
-    // Implementation for renaming marker would go here
-    console.log(`Renaming marker ${id} to ${newName}`);
-  };
   
   return (
     <>
@@ -91,8 +85,7 @@ const MarkersList = ({
         <UserMarker 
           key={`user-marker-${marker.id}`} 
           marker={marker} 
-          onDelete={handleDeleteMarker}
-          onRename={handleRenameMarker}
+          onDelete={handleDeleteMarker} 
         />
       ))}
       
@@ -100,6 +93,11 @@ const MarkersList = ({
         <TempMarker 
           key={tempMarkerKey}
           position={tempMarker}
+          markerName={markerName}
+          setMarkerName={setMarkerName}
+          markerType={markerType}
+          setMarkerType={setMarkerType}
+          onSave={onSaveMarker}
         />
       )}
     </>

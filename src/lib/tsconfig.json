@@ -1,33 +1,48 @@
 
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
+    "outDir": "./dist",
+    "rootDir": "../../src",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
     "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true,
+    "jsx": "react-jsx",
+    "target": "es2017",
+    "lib": ["es2017", "dom"],
+    "module": "esnext",
+    "baseUrl": "../../src",
+    "paths": {
+      "@/*": ["*"]
+    },
+    "noEmitOnError": false,
+    "typeRoots": ["../../node_modules/@types"],
+    "types": ["react", "react-dom", "node"],
     "declaration": true,
     "declarationMap": true,
-    "outDir": "./dist",
-    "typeRoots": ["./angular/types", "../../node_modules/@types"]
+    "sourceMap": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "noEmit": false
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "angular/types/**/*.d.ts"
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../**/*.ts",
+    "../**/*.tsx",
+    "../types/**/*",
+    "../vite-env.d.ts"
   ],
   "exclude": [
-    "node_modules",
-    "dist"
+    "./dist/**/*",
+    "./node_modules/**/*",
+    "../../node_modules/**/*",
+    "./**/*.test.*",
+    "./**/*.spec.*",
+    "./build.js",
+    "../../server/**/*",
+    "../../public/**/*"
   ]
 }

@@ -1,37 +1,42 @@
 
-export interface Location {
-  id: string;
-  x: number;
-  y: number;
-  label: string;
-}
+export type { Location } from './location-utils';
+export type { LocationMarker } from './markers/types';
+export type { DrawingData } from './drawing-utils';
+export type { FloorPlanData } from './floor-plan-utils';
 
-export interface LocationMarker {
-  id: string;
-  uniqueId?: string; // Add unique identifier field
-  name: string;
-  position: [number, number];
-  type: 'pin' | 'area' | 'building';
-  description?: string;
-  createdAt: Date;
-  isPinned?: boolean;
-  associatedDrawing?: string;
-  userId?: string;
-}
+export {
+  searchLocations,
+  formatCoordinates,
+  getDistanceFromLatLonInKm,
+} from './location-utils';
 
-export interface DrawingData {
-  id: string;
-  type: string;
-  coordinates: number[][];
-  geoJSON?: any;
-  options?: any;
-  svgPath?: string;
-  properties?: {
-    name?: string; // Make name optional to match other DrawingData types
-    description?: string;
-    color?: string; // Make color optional to match other DrawingData types
-    createdAt: Date;
-    associatedMarkerId?: string;
-  };
-  userId?: string;
-}
+export {
+  saveMarker,
+  getSavedMarkers,
+  deleteMarker,
+} from './markers/index';
+
+export {
+  saveDrawing,
+  getSavedDrawings,
+  deleteDrawing,
+} from './drawing-utils';
+
+export {
+  saveFloorPlan,
+  getFloorPlanById,
+  hasFloorPlan,
+  getDrawingIdsWithFloorPlans,
+} from './floor-plan-utils';
+
+// Export from our refactored SVG utilities
+export {
+  getSvgPathFromElement,
+  simplifyPath,
+  extractPointsFromPath,
+  simplifyPoints,
+  pointsToPathData,
+  getAllSvgPaths,
+  applyImageClipMask,
+  removeClipMask,
+} from './svg-utils';

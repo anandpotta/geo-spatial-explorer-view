@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useRef } from 'react';
-import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/marker-utils';
+import { LocationMarker, getSavedMarkers, deleteMarker } from '@/utils/geo-utils';
 import { toast } from 'sonner';
 
 export const useSavedLocations = () => {

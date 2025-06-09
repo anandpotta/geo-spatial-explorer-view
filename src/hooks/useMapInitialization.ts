@@ -5,12 +5,6 @@ import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 import { toast } from 'sonner';
 
-// Extended interface for HTMLElement with custom Leaflet properties
-interface HTMLElementWithLeafletProps extends HTMLElement {
-  _leaflet_map_reused?: boolean;
-  _leafletMapId?: number;
-}
-
 // Extended interface for Leaflet map with internal properties
 interface LeafletMapWithInternal extends L.Map {
   _leaflet_id?: number;
@@ -25,29 +19,19 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const recoveryAttemptRef = useRef(0);
   const initialFlyComplete = useRef(false);
   const validityCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const containerRef = useRef<HTMLElementWithLeafletProps | null>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
   const isCleaningUpRef = useRef(false);
-  const lastMapInstanceRef = useRef<L.Map | null>(null);
   
   // Reset the map instance with a new key
   const resetMapInstance = useCallback(() => {
     if (isCleaningUpRef.current) return;
     
-    // Clean up the existing map first with better error handling
+    // Clean up the existing map first
     if (mapRef.current) {
       try {
         console.log('Removing existing map instance before reset');
-        const currentMap = mapRef.current;
+        mapRef.current.remove();
         mapRef.current = null;
-        lastMapInstanceRef.current = null;
-        
-        // Only remove if it's still valid and not reused
-        if (currentMap && typeof currentMap.remove === 'function') {
-          const container = currentMap.getContainer() as HTMLElementWithLeafletProps;
-          if (container && !container._leaflet_map_reused) {
-            currentMap.remove();
-          }
-        }
       } catch (err) {
         console.warn('Error removing map during reset:', err);
       }
@@ -97,12 +81,13 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       // Clean up map instance if it exists
       if (mapRef.current) {
         try {
-          const currentMap = mapRef.current;
+          const map = mapRef.current;
           const container = containerRef.current;
           
           console.log('Attempting to remove map instance');
           
           // Clear the reference immediately to prevent reuse
+          const currentMap = mapRef.current;
           mapRef.current = null;
           containerRef.current = null;
           mapAttachedRef.current = false;
@@ -110,10 +95,8 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
           
           // Check if map is still valid before trying to remove
           if (currentMap && typeof currentMap.remove === 'function') {
+            // Use a try-catch to safely remove the map
             try {
-              if (container) {
-                container._leaflet_map_reused = true;
-              }
               currentMap.remove();
               console.log('Map instance successfully removed');
             } catch (err) {
@@ -200,30 +183,18 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       return;
     }
     
-    // If we already have a map reference and it's different, clean it up first
+    // If we already have a map reference, clean it up first
     if (mapRef.current && mapRef.current !== map) {
       console.log('New map reference provided, cleaning up old reference');
       try {
-        const oldMap = mapRef.current;
-        const oldContainer = oldMap.getContainer() as HTMLElementWithLeafletProps;
-        
-        // Mark the old container as being reused to prevent the error
-        if (oldContainer) {
-          oldContainer._leaflet_map_reused = true;
-        }
-        
-        // Only remove if it's not the same instance
-        if (oldMap !== map) {
-          oldMap.remove();
-        }
+        mapRef.current.remove();
       } catch (err) {
-        // This error is expected when containers are reused, just log it
-        console.warn('Expected error during map cleanup:', err.message);
+        console.warn('Error removing old map:', err);
       }
     }
     
     try {
-      const container = map.getContainer() as HTMLElementWithLeafletProps;
+      const container = map.getContainer();
       
       // Verify the container exists and is in the DOM
       if (container && document.body.contains(container)) {
@@ -231,7 +202,6 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         
         // Store references
         mapRef.current = map;
-        lastMapInstanceRef.current = map;
         containerRef.current = container;
         mapAttachedRef.current = true;
         
@@ -241,7 +211,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         
         // Add a custom property to mark this container as used
         const mapWithInternal = map as LeafletMapWithInternal;
-        container._leafletMapId = mapWithInternal._leaflet_id;
+        (container as any)._leafletMapId = mapWithInternal._leaflet_id;
         
         setTimeout(() => {
           if (mapRef.current && !isCleaningUpRef.current) {

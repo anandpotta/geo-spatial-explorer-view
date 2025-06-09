@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useDropdownLocations } from '@/hooks/useDropdownLocations';
 import { useToast } from "@/components/ui/use-toast";
@@ -85,12 +86,9 @@ const SavedLocationsDropdown: React.FC<SavedLocationsDropdownProps> = ({
     }
 
     const newMarker = {
-      id: crypto.randomUUID(),
       name: newLocationName,
       position: [newLocationLat, newLocationLng] as [number, number],
       type: 'pin' as const,
-      createdAt: new Date(),
-      userId: 'default-user'
     };
 
     createMarker(newMarker);

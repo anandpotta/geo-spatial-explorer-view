@@ -130,8 +130,8 @@ export const MapComponent = ({
         onLocationSelect({
           id: `loc-${Date.now()}`,
           label: `Location at ${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)}`,
-          longitude: data.longitude,
-          latitude: data.latitude
+          x: data.longitude,
+          y: data.latitude
         });
       }
     } catch (error) {
@@ -145,15 +145,15 @@ export const MapComponent = ({
     if (webViewRef.current && isReady && selectedLocation) {
       webViewRef.current.postMessage && webViewRef.current.postMessage(JSON.stringify({
         type: 'centerMap',
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
+        latitude: selectedLocation.y,
+        longitude: selectedLocation.x,
         zoom: 13
       }));
       
       webViewRef.current.postMessage && webViewRef.current.postMessage(JSON.stringify({
         type: 'addMarker',
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
+        latitude: selectedLocation.y,
+        longitude: selectedLocation.x,
         label: selectedLocation.label
       }));
     }
@@ -201,3 +201,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

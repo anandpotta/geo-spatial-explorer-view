@@ -8,10 +8,9 @@ import { MapPin, MapPinOff, Trash2 } from 'lucide-react';
 interface MarkerPopupProps {
   marker: LocationMarker;
   onDelete: (id: string) => void;
-  onRename?: (id: string, newName: string) => void;
 }
 
-const MarkerPopup = ({ marker, onDelete, onRename }: MarkerPopupProps) => {
+const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
   const [isPinned, setIsPinned] = useState(marker.isPinned || false);
   const [isDeleting, setIsDeleting] = useState(false);
 
