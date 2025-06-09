@@ -18,22 +18,33 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
-      // Ignore clicks on markers, popups, or SVG paths
-      if (
-        e.originalEvent.target &&
-        ((e.originalEvent.target as HTMLElement).closest('.leaflet-marker-icon') ||
-         (e.originalEvent.target as HTMLElement).closest('.leaflet-popup') ||
-         (e.originalEvent.target as HTMLElement).closest('path') ||
-         (e.originalEvent.target as HTMLElement).tagName === 'path' ||
-         (e.originalEvent.target as HTMLElement).tagName === 'svg' ||
-         // Also ignore clicks on upload buttons or image controls
-         (e.originalEvent.target as HTMLElement).closest('.upload-button-container') ||
-         (e.originalEvent.target as HTMLElement).closest('.upload-button-wrapper') ||
-         (e.originalEvent.target as HTMLElement).closest('.image-controls-container') ||
-         (e.originalEvent.target as HTMLElement).closest('.image-controls-wrapper'))
-      ) {
-        console.log('Click on marker, popup, path or control ignored');
-        return;
+      // More specific checks for what should be ignored
+      if (e.originalEvent.target) {
+        const target = e.originalEvent.target as HTMLElement;
+        
+        // Check if click is on specific interactive elements
+        if (
+          target.closest('.leaflet-marker-icon') ||
+          target.closest('.leaflet-popup') ||
+          target.closest('.leaflet-control') ||
+          target.closest('.leaflet-draw-toolbar') ||
+          target.closest('.upload-button-container') ||
+          target.closest('.image-controls-container') ||
+          target.closest('.leaflet-draw-tooltip') ||
+          target.tagName === 'path' ||
+          target.tagName === 'svg'
+        ) {
+          console.log('Click on interactive element ignored');
+          return;
+        }
+        
+        // Check if the target has specific classes that indicate it's a control
+        if (target.classList.contains('leaflet-marker-icon') ||
+            target.classList.contains('leaflet-popup') ||
+            target.classList.contains('leaflet-control')) {
+          console.log('Click on control element ignored');
+          return;
+        }
       }
       
       console.log('Calling onMapClick handler');
