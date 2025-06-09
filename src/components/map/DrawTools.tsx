@@ -29,6 +29,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   const editControlRef = useRef<any>(null);
   const initializedRef = useRef<boolean>(false);
   const [hasLayers, setHasLayers] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Use hooks for separated functionality
   const { getPathElements, getSVGPathData, clearPathElements } = usePathElements(featureGroup);
@@ -64,7 +65,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
   // Initialize configuration and event handlers using custom hooks
   useDrawToolsConfiguration(featureGroup);
   useDrawToolsEventHandlers(getPathElements);
-  useSavedPathsRestoration(featureGroup);
+  useSavedPathsRestoration(editControlRef, isInitialized);
   usePathElementsCleaner(clearPathElements);
   
   useImperativeHandle(ref, () => ({
@@ -197,6 +198,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       
       // Mark as initialized
       initializedRef.current = true;
+      setIsInitialized(true);
     }
   }, [featureGroup]);
 

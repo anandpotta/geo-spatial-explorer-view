@@ -5,6 +5,12 @@ import { setupLeafletIcons } from '@/components/map/LeafletMapIcons';
 import { isMapValid } from '@/utils/leaflet-type-utils';
 import { toast } from 'sonner';
 
+// Extended interface for HTMLElement with custom Leaflet properties
+interface HTMLElementWithLeafletProps extends HTMLElement {
+  _leaflet_map_reused?: boolean;
+  _leafletMapId?: number;
+}
+
 // Extended interface for Leaflet map with internal properties
 interface LeafletMapWithInternal extends L.Map {
   _leaflet_id?: number;
@@ -19,7 +25,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
   const recoveryAttemptRef = useRef(0);
   const initialFlyComplete = useRef(false);
   const validityCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const containerRef = useRef<HTMLElement | null>(null);
+  const containerRef = useRef<HTMLElementWithLeafletProps | null>(null);
   const isCleaningUpRef = useRef(false);
   const lastMapInstanceRef = useRef<L.Map | null>(null);
   
@@ -37,7 +43,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         
         // Only remove if it's still valid and not reused
         if (currentMap && typeof currentMap.remove === 'function') {
-          const container = currentMap.getContainer();
+          const container = currentMap.getContainer() as HTMLElementWithLeafletProps;
           if (container && !container._leaflet_map_reused) {
             currentMap.remove();
           }
@@ -199,7 +205,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
       console.log('New map reference provided, cleaning up old reference');
       try {
         const oldMap = mapRef.current;
-        const oldContainer = oldMap.getContainer();
+        const oldContainer = oldMap.getContainer() as HTMLElementWithLeafletProps;
         
         // Mark the old container as being reused to prevent the error
         if (oldContainer) {
@@ -217,7 +223,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
     }
     
     try {
-      const container = map.getContainer();
+      const container = map.getContainer() as HTMLElementWithLeafletProps;
       
       // Verify the container exists and is in the DOM
       if (container && document.body.contains(container)) {
@@ -235,7 +241,7 @@ export function useMapInitialization(selectedLocation?: { x: number, y: number }
         
         // Add a custom property to mark this container as used
         const mapWithInternal = map as LeafletMapWithInternal;
-        (container as any)._leafletMapId = mapWithInternal._leaflet_id;
+        container._leafletMapId = mapWithInternal._leaflet_id;
         
         setTimeout(() => {
           if (mapRef.current && !isCleaningUpRef.current) {
