@@ -1,17 +1,16 @@
 
-import React from 'react';
-import { LocationMarker } from '@/utils/markers/types';
-import { Button } from '@/components/ui/button';
+import { LocationMarker } from '@/utils/geo-utils';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { useRef, useEffect } from 'react';
 
 interface DeleteLocationDialogProps {
   isOpen: boolean;
@@ -21,15 +20,42 @@ interface DeleteLocationDialogProps {
   onCancel: () => void;
 }
 
-const DeleteLocationDialog: React.FC<DeleteLocationDialogProps> = ({
+const DeleteLocationDialog = ({
   isOpen,
   onOpenChange,
   markerToDelete,
   onConfirmDelete,
-  onCancel
-}) => {
+  onCancel,
+}: DeleteLocationDialogProps) => {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  
+  // Handle dialog closing and focus management
+  useEffect(() => {
+    if (!isOpen) {
+      // Return focus to the body element if dialog closes
+      setTimeout(() => {
+        document.body.focus();
+      }, 0);
+    }
+
+    // Add escape key handling
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (isOpen && event.key === 'Escape') {
+        onCancel();
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isOpen, onCancel]);
+  
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+    <AlertDialog 
+      open={isOpen} 
+      onOpenChange={onOpenChange}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Location</AlertDialogTitle>
@@ -38,8 +64,25 @@ const DeleteLocationDialog: React.FC<DeleteLocationDialogProps> = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirmDelete}>Delete</AlertDialogAction>
+          <AlertDialogCancel 
+            ref={cancelRef} 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCancel();
+            }}
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onConfirmDelete();
+            }}
+          >
+            Delete
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Location } from '@/utils/geo-utils';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import ExplorerSidebar from './explorer/ExplorerSidebar';
 import MapContent from './explorer/MapContent';
 import SyncStatusIndicator from './SyncStatusIndicator';

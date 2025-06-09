@@ -1,65 +1,79 @@
 
+/**
+ * Core types for the GeoSpatial library
+ * These types are framework-agnostic and used across all implementations
+ */
+
+// Basic location type
 export interface GeoLocation {
   id: string;
   label: string;
   x: number; // longitude
   y: number; // latitude
-  z?: number; // altitude
+  z?: number; // optional altitude
+  metadata?: Record<string, any>;
 }
 
+// Map options interface
+export interface MapOptions {
+  zoom?: number;
+  center?: { lat: number; lng: number };
+  tileProvider?: string;
+  minZoom?: number;
+  maxZoom?: number;
+  showControls?: boolean;
+}
+
+// Globe configuration options
 export interface GlobeOptions {
   earthRadius?: number;
+  texturePath?: string;
+  bumpMapPath?: string;
+  specularMapPath?: string;
+  backgroundColor?: string;
   autoRotate?: boolean;
   rotationSpeed?: number;
-  enableInteraction?: boolean;
-  backgroundColor?: string;
-  texturePath?: string;
 }
 
+// Map view options
 export interface MapViewOptions {
-  initialZoom?: number;
-  enableDrawing?: boolean;
-  showControls?: boolean;
-  theme?: 'light' | 'dark';
   initialCenter?: [number, number];
+  initialZoom?: number;
+  minZoom?: number;
   maxZoom?: number;
+  tileProvider?: string;
+  showControls?: boolean;
 }
 
-export interface MapOptions extends MapViewOptions {
-  // Additional map-specific options
-}
-
+// Event handler types
 export interface GlobeEventHandlers {
   onReady?: (api: any) => void;
   onFlyComplete?: () => void;
+  onLocationSelect?: (location: GeoLocation) => void;
   onError?: (error: Error) => void;
 }
 
-export interface ViewerContext {
-  getElement: () => HTMLElement | null;
-  getDimensions: () => { width: number; height: number };
-  onResize: (callback: () => void) => () => void;
-  onCleanup: (callback: () => void) => void;
-}
-
+// Renderer context - abstraction for platform-specific rendering
 export interface RendererContext {
-  canvas: HTMLCanvasElement;
-  width: number;
-  height: number;
+  getElement: () => any; // Platform-specific element or reference
+  getDimensions: () => { width: number; height: number };
+  onResize?: (callback: () => void) => void;
+  onCleanup?: (callback: () => void) => void;
 }
 
-export interface ViewerOptions {
-  backgroundColor?: string;
-  cameraOptions?: {
-    fov?: number;
-    near?: number;
-    far?: number;
-    position?: [number, number, number];
-  };
-  rendering?: {
-    antialias?: boolean;
-    shadows?: boolean;
-    pixelRatio?: number;
-    alpha?: boolean;
-  };
+// Core API interface that adapters will implement
+export interface GeoSpatialCoreAPI {
+  // Globe methods
+  initGlobe: (context: RendererContext, options?: GlobeOptions) => void;
+  destroyGlobe: () => void;
+  flyToLocation: (longitude: number, latitude: number, callback?: () => void) => void;
+  
+  // Map methods
+  initMap: (context: RendererContext, options?: MapViewOptions) => void;
+  destroyMap: () => void;
+  centerMap: (longitude: number, latitude: number, zoom?: number) => void;
+  
+  // Shared methods
+  setLocation: (location: GeoLocation) => void;
+  getLocation: () => GeoLocation | null;
 }

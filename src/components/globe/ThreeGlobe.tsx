@@ -1,16 +1,8 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import * as THREE from 'three';
-import { toast } from 'sonner';
-import { useToast } from '@/hooks/use-toast';
-import { useThreeGlobe } from '@/hooks/three/useThreeGlobe';
-
-interface Location {
-  id: string;
-  label: string;
-  x: number; // longitude
-  y: number; // latitude
-}
+import { Location } from '@/utils/geo-utils';
+import { useThreeGlobe } from '@/hooks/useThreeGlobe';
+import { toast } from '@/components/ui/use-toast';
 
 interface ThreeGlobeProps {
   selectedLocation?: Location;
@@ -28,7 +20,6 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
   const [isFlying, setIsFlying] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const previousLocationRef = useRef<string | null>(null);
-  const { toast } = useToast();
   
   // Use our custom hook to handle Three.js setup and animation
   const { 
@@ -83,7 +74,9 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         isNaN(selectedLocation.x) || isNaN(selectedLocation.y)) {
       console.error('Invalid coordinates:', selectedLocation);
       toast({
-        description: "Cannot navigate to location due to invalid coordinates"
+        title: "Navigation Error",
+        description: "Cannot navigate to location due to invalid coordinates",
+        variant: "destructive"
       });
       return;
     }
@@ -103,7 +96,7 @@ const ThreeGlobe: React.FC<ThreeGlobeProps> = ({
         }
       }
     );
-  }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete, toast]);
+  }, [selectedLocation, isInitialized, isFlying, flyToLocation, onFlyComplete]);
 
   return (
     <div 

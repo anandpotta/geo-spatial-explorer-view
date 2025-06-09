@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, X, Navigation, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;

@@ -1,23 +1,29 @@
 
 import { LocationMarker } from './types';
+import { getCurrentUser } from '../../services/auth-service';
 import { saveMarker } from './storage';
 
-export function createMarker(markerData: {
-  name: string;
-  position: [number, number];
-  type?: 'pin' | 'area' | 'building';
-  description?: string;
-}): LocationMarker {
+/**
+ * Create a new marker with default values
+ */
+export function createMarker(markerData: Partial<LocationMarker>): LocationMarker {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Cannot create marker: No user is logged in');
+  }
+  
   const marker: LocationMarker = {
-    id: `marker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    name: markerData.name,
-    position: markerData.position,
+    id: markerData.id || crypto.randomUUID(),
+    name: markerData.name || 'Unnamed Location',
+    position: markerData.position || [0, 0],
     type: markerData.type || 'pin',
     description: markerData.description,
-    createdAt: new Date(),
-    isPinned: false
+    createdAt: markerData.createdAt || new Date(),
+    isPinned: markerData.isPinned || false,
+    associatedDrawing: markerData.associatedDrawing,
+    userId: currentUser.id
   };
-
+  
   saveMarker(marker);
   return marker;
 }

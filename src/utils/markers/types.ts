@@ -1,27 +1,14 @@
 
-export interface MarkerData {
-  id: string;
-  position: [number, number];
-  name: string;
-  description?: string;
-  createdAt: Date;
-  userId?: string;
-}
+import { DrawingData } from '../drawing-utils';
 
 export interface LocationMarker {
   id: string;
-  position: [number, number];
   name: string;
+  position: [number, number];
+  type: 'pin' | 'area' | 'building';
   description?: string;
   createdAt: Date;
-  userId?: string;
-  type?: 'pin' | 'area' | 'building';
   isPinned?: boolean;
   associatedDrawing?: string;
-}
-
-export interface MarkerProps {
-  marker: MarkerData;
-  onEdit?: (marker: MarkerData) => void;
-  onDelete?: (id: string) => void;
+  userId: string;
 }
