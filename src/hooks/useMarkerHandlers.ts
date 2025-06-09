@@ -90,16 +90,20 @@ export function useMarkerHandlers(mapState: any) {
           color: '#3388ff',
           createdAt: new Date()
         },
-        userId: 'anonymous' // No auth needed, use anonymous
+        userId: 'anonymous' // Use anonymous user for now
       };
       
       // Store the safe shape in the current drawing
       mapState.setCurrentDrawing(safeShape);
       
-      // Also immediately save the drawing to prevent loss
-      saveDrawing(safeShape);
+      // Save the drawing without authentication check
+      const saveResult = saveDrawing(safeShape);
       
-      toast.success(`${shape.type} created successfully`);
+      if (saveResult) {
+        toast.success(`${shape.type} created and saved successfully`);
+      } else {
+        toast.error(`Failed to save ${shape.type}`);
+      }
       
       // DO NOT call any marker-related functions here
       // DO NOT call setTempMarker
