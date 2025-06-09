@@ -1,7 +1,6 @@
-
 import { LucideIcon } from "lucide-react";
 import React from "react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DrawingToolButtonProps {
   icon: LucideIcon;

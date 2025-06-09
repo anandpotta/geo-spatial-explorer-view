@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 
 const Header: React.FC = () => {
