@@ -1,7 +1,7 @@
 
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular",
   "main": "dist/cjs/lib/index.js",
   "module": "dist/esm/lib/index.js",
@@ -39,6 +39,7 @@
     "build:cjs": "tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false --rootDir ../../",
     "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --rootDir ../../", 
     "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --rootDir ../../",
+    "build:angular": "ng-packagr -p ng-package.json",
     "prepublishOnly": "npm run build",
     "test": "echo \"No tests specified\" && exit 0"
   },
@@ -53,7 +54,9 @@
     "angular",
     "leaflet",
     "cesium",
-    "three.js"
+    "three.js",
+    "abp",
+    "abp-framework"
   ],
   "author": "",
   "license": "MIT",
@@ -63,7 +66,10 @@
     "react-native": ">=0.60.0",
     "react-native-webview": ">=11.0.0",
     "@angular/core": ">=13.0.0",
-    "three": ">=0.133.0"
+    "@angular/common": ">=13.0.0",
+    "@angular/platform-browser": ">=13.0.0",
+    "three": ">=0.133.0",
+    "leaflet": ">=1.7.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -80,6 +86,12 @@
     },
     "@angular/core": {
       "optional": true
+    },
+    "@angular/common": {
+      "optional": true
+    },
+    "@angular/platform-browser": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -87,13 +99,22 @@
     "@types/react-dom": ">=16.8.0",
     "@types/react-native": ">=0.60.0",
     "@types/three": ">=0.133.0",
+    "@types/leaflet": ">=1.7.0",
+    "@angular/core": ">=13.0.0",
+    "@angular/common": ">=13.0.0",
     "typescript": ">=4.5.0",
     "rimraf": "^3.0.2",
+    "ng-packagr": "^15.0.0",
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.0.0"
   },
   "dependencies": {
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.0.0"
+  },
+  "ng-update": {
+    "packageGroup": [
+      "geospatial-explorer-lib"
+    ]
   }
 }
