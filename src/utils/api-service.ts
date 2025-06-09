@@ -1,5 +1,5 @@
+
 import { toast } from 'sonner';
-import { useToast } from '@/hooks/use-toast';
 
 // API configuration
 const API_CONFIG = {
@@ -74,8 +74,7 @@ window.addEventListener('online', async () => {
     const backendAvailable = await checkBackendAvailability();
     
     if (backendAvailable) {
-      toast({
-        title: "Back online",
+      toast("Back online", {
         description: "Connected to backend service. Syncing data...",
       });
     }
@@ -86,8 +85,7 @@ window.addEventListener('offline', () => {
   isOnline = false;
   isBackendAvailable = false;
   
-  toast({
-    title: "Working offline",
+  toast("Working offline", {
     description: "Your data will be stored locally until you reconnect.",
   });
 });

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { MapCore } from '../geospatial-core/map/index';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +9,11 @@ interface StandaloneMapComponentProps {
   initialLocation?: GeoLocation;
   onReady?: (api: any) => void;
   onError?: (error: Error) => void;
+  theme?: string;
+  className?: string;
+  showInternalSearch?: boolean;
+  onLocationChange?: (location: any) => void;
+  onAnnotationsChange?: (annotations: any[]) => void;
 }
 
 /**
@@ -17,7 +23,12 @@ export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
   options,
   initialLocation,
   onReady,
-  onError
+  onError,
+  theme,
+  className,
+  showInternalSearch,
+  onLocationChange,
+  onAnnotationsChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapCore | null>(null);
@@ -58,9 +69,7 @@ export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
     } catch (error) {
       console.error('Failed to initialize map:', error);
       toast({
-        title: "Error",
         description: `Map initialization failed: ${error.message}`,
-        variant: "destructive",
       });
       if (onError) onError(error as Error);
     }
@@ -84,7 +93,7 @@ export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative overflow-hidden"
+      className={`w-full h-full relative overflow-hidden ${className || ''}`}
     >
       {!isReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-700">

@@ -1,7 +1,8 @@
+
 import { LocationMarker } from '@/utils/markers/types';
 import { getCurrentUser } from './auth-service';
 import { toast } from 'sonner';
-import { useToast } from '@/hooks/use-toast';
+import { getConnectionStatus, apiCall } from '@/utils/api-service';
 
 export async function fetchMarkers(): Promise<LocationMarker[]> {
   // Always check local storage first

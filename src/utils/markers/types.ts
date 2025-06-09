@@ -17,6 +17,7 @@ export interface LocationMarker {
   userId?: string;
   type?: 'pin' | 'area' | 'building';
   isPinned?: boolean;
+  associatedDrawing?: string;
 }
 
 export interface MarkerProps {

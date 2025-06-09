@@ -1,44 +1,29 @@
 
-export interface ViewerOptions {
+import { ViewerOptions } from '@/lib/geospatial-core/types';
+
+export function createThreeViewerOptions(): ViewerOptions & {
   textures: {
     earthBaseUrl: string;
     bumpMapUrl: string;
   };
-  globe: {
-    radius: number;
-    segments: number;
-  };
-  camera: {
-    position: [number, number, number];
-    fov: number;
-  };
-  lighting: {
-    ambientColor: number;
-    ambientIntensity: number;
-    directionalColor: number;
-    directionalIntensity: number;
-  };
-}
-
-export function createThreeViewerOptions(): ViewerOptions {
+} {
   return {
+    backgroundColor: '#000011',
+    cameraOptions: {
+      fov: 75,
+      near: 0.1,
+      far: 1000,
+      position: [0, 0, 10]
+    },
+    rendering: {
+      antialias: true,
+      shadows: false,
+      pixelRatio: Math.min(window.devicePixelRatio, 2),
+      alpha: false
+    },
     textures: {
       earthBaseUrl: 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
       bumpMapUrl: 'https://unpkg.com/three-globe/example/img/earth-topology.png'
-    },
-    globe: {
-      radius: 5,
-      segments: 32
-    },
-    camera: {
-      position: [0, 0, 15],
-      fov: 75
-    },
-    lighting: {
-      ambientColor: 0x404040,
-      ambientIntensity: 0.4,
-      directionalColor: 0xffffff,
-      directionalIntensity: 0.8
     }
   };
 }
