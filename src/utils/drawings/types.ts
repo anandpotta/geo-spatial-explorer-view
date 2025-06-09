@@ -8,6 +8,7 @@ export interface DrawingData {
   geoJSON?: any;
   options?: any;
   svgPath?: string; // SVG path data for the drawing
+  uniqueId?: string; // Unique identifier for SVG elements
   properties: {
     name?: string;
     description?: string;
