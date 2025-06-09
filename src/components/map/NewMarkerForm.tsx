@@ -40,10 +40,13 @@ const NewMarkerForm = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Update local value when markerName prop changes
+  // Only update local value when markerName prop changes from outside (not from our own updates)
   useEffect(() => {
-    setLocalValue(markerName);
-  }, [markerName]);
+    // Only sync if the marker name changed from outside and it's different from our local value
+    if (markerName !== localValue && markerName !== '') {
+      setLocalValue(markerName);
+    }
+  }, [markerName]); // Removed localValue dependency to prevent sync loops
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
@@ -55,7 +58,7 @@ const NewMarkerForm = ({
       e.stopPropagation();
       
       if (localValue.trim()) {
-        // Update parent state only when saving
+        // Update parent state immediately before calling save/rename
         setMarkerName(localValue);
         
         if (isEditing && existingMarkerId && onRename) {
@@ -72,7 +75,7 @@ const NewMarkerForm = ({
     e.stopPropagation();
     
     if (localValue.trim()) {
-      // Update parent state only when saving
+      // Update parent state immediately before calling save/rename
       setMarkerName(localValue);
       
       if (isEditing && existingMarkerId && onRename) {
