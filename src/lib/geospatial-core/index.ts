@@ -5,6 +5,6 @@ export * from './map';
 export * from './types';
 export * from './utils';
 
-// Ensure MapCore is explicitly exported
+// Ensure core classes are explicitly exported
 export { MapCore } from './map/index';
 export { ThreeGlobeCore } from './globe/index';

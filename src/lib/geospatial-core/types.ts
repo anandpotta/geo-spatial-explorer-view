@@ -8,9 +8,9 @@
 export interface GeoLocation {
   id: string;
   label: string;
-  x: number; // longitude
-  y: number; // latitude
-  z?: number; // optional altitude
+  latitude: number; // Changed from y to latitude
+  longitude: number; // Changed from x to longitude
+  altitude?: number; // Changed from z to altitude
   metadata?: Record<string, any>;
 }
 
@@ -33,6 +33,7 @@ export interface GlobeOptions {
   backgroundColor?: string;
   autoRotate?: boolean;
   rotationSpeed?: number;
+  enableAtmosphere?: boolean;
 }
 
 // Map view options
