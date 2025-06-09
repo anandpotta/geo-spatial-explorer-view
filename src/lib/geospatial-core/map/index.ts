@@ -2,17 +2,17 @@
 /**
  * Map implementation for GeoSpatial core library
  */
-import { MapViewOptions, GeoLocation } from '../types';
+import { MapViewOptions, GeoLocation, RendererContext } from '../types';
 
 export class MapCore {
-  private container: HTMLElement;
+  private container: HTMLElement | null = null;
   private options: MapViewOptions;
   private isInitialized = false;
   private locations: GeoLocation[] = [];
   private locationSelectCallbacks: ((location: GeoLocation) => void)[] = [];
 
-  constructor(container: HTMLElement, options?: Partial<MapViewOptions>) {
-    this.container = container;
+  constructor(container?: HTMLElement, options?: Partial<MapViewOptions>) {
+    this.container = container || null;
     this.options = {
       initialCenter: [0, 0],
       initialZoom: 2,
@@ -25,7 +25,24 @@ export class MapCore {
   }
 
   /**
-   * Initialize the map
+   * Initialize the map with renderer context
+   */
+  public init(context: RendererContext, eventHandlers?: any): void {
+    this.container = context.getElement();
+    console.log('Initializing MapCore with context');
+    
+    // Simulate initialization process
+    setTimeout(() => {
+      this.isInitialized = true;
+      console.log('MapCore initialized successfully');
+      if (eventHandlers?.onReady) {
+        eventHandlers.onReady(this);
+      }
+    }, 1000);
+  }
+
+  /**
+   * Initialize the map (legacy method for Angular compatibility)
    */
   public async initialize(): Promise<void> {
     console.log('Initializing MapCore with options:', this.options);
@@ -98,6 +115,13 @@ export class MapCore {
     this.locations = [];
     this.locationSelectCallbacks = [];
     console.log('MapCore destroyed');
+  }
+
+  /**
+   * Clean up resources (alternative method name)
+   */
+  public dispose(): void {
+    this.destroy();
   }
 
   /**

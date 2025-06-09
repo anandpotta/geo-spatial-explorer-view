@@ -1,11 +1,11 @@
 
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.2.0",
-  "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular",
-  "main": "dist/cjs/lib/index.js",
-  "module": "dist/esm/lib/index.js",
-  "types": "dist/types/lib/index.d.ts",
+  "version": "1.0.0",
+  "description": "A cross-platform geospatial library supporting React, React Native, and Angular",
+  "main": "./dist/cjs/lib/index.js",
+  "module": "./dist/esm/lib/index.js",
+  "types": "./dist/types/lib/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/esm/lib/index.js",
@@ -23,53 +23,36 @@
       "types": "./dist/types/lib/react-native/index.d.ts"
     },
     "./angular": {
-      "import": "./dist/esm/lib/angular/index.js",
-      "require": "./dist/cjs/lib/angular/index.js",
-      "types": "./dist/types/lib/angular/index.d.ts"
+      "import": "./dist/angular/geospatial-explorer-lib.mjs",
+      "require": "./dist/angular/bundles/geospatial-explorer-lib.umd.js",
+      "types": "./dist/angular/index.d.ts"
     }
   },
   "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
+    "dist/"
   ],
-  "sideEffects": false,
   "scripts": {
     "build": "node build.js",
-    "build:cjs": "tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false --rootDir ../../",
-    "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --rootDir ../../", 
-    "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --rootDir ../../",
-    "build:angular": "ng-packagr -p ng-package.json",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"No tests specified\" && exit 0"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "geospatial",
-    "map",
+    "maps",
     "globe",
-    "3d",
-    "cross-platform",
     "react",
     "react-native",
     "angular",
+    "typescript",
     "leaflet",
-    "cesium",
-    "three.js",
-    "abp",
-    "abp-framework"
+    "threejs"
   ],
-  "author": "",
+  "author": "Your Name",
   "license": "MIT",
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-dom": ">=16.8.0",
-    "react-native": ">=0.60.0",
-    "react-native-webview": ">=11.0.0",
-    "@angular/core": ">=13.0.0",
-    "@angular/common": ">=13.0.0",
-    "@angular/platform-browser": ">=13.0.0",
-    "three": ">=0.133.0",
-    "leaflet": ">=1.7.0"
+    "@angular/core": ">=12.0.0",
+    "@angular/common": ">=12.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -78,43 +61,28 @@
     "react-dom": {
       "optional": true
     },
-    "react-native": {
-      "optional": true
-    },
-    "react-native-webview": {
-      "optional": true
-    },
     "@angular/core": {
       "optional": true
     },
     "@angular/common": {
       "optional": true
-    },
-    "@angular/platform-browser": {
-      "optional": true
     }
   },
-  "devDependencies": {
-    "@types/react": ">=16.8.0",
-    "@types/react-dom": ">=16.8.0",
-    "@types/react-native": ">=0.60.0",
-    "@types/three": ">=0.133.0",
-    "@types/leaflet": ">=1.7.0",
-    "@angular/core": ">=13.0.0",
-    "@angular/common": ">=13.0.0",
-    "typescript": ">=4.5.0",
-    "rimraf": "^3.0.2",
-    "ng-packagr": "^15.0.0",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0"
-  },
   "dependencies": {
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0"
+    "three": "^0.133.1",
+    "leaflet": "^1.9.4"
   },
-  "ng-update": {
-    "packageGroup": [
-      "geospatial-explorer-lib"
-    ]
-  }
+  "devDependencies": {
+    "typescript": "^4.9.5",
+    "@types/three": "^0.133.0",
+    "@types/leaflet": "^1.9.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/geospatial-explorer-lib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/geospatial-explorer-lib/issues"
+  },
+  "homepage": "https://github.com/yourusername/geospatial-explorer-lib#readme"
 }

@@ -2,16 +2,16 @@
 /**
  * Globe implementation for GeoSpatial core library
  */
-import { GlobeOptions, GeoLocation } from '../types';
+import { GlobeOptions, GeoLocation, RendererContext } from '../types';
 
 export class ThreeGlobeCore {
-  private container: HTMLElement;
+  private container: HTMLElement | null = null;
   private options: GlobeOptions;
   private isInitialized = false;
   private locationSelectCallbacks: ((location: GeoLocation) => void)[] = [];
 
-  constructor(container: HTMLElement, options?: Partial<GlobeOptions>) {
-    this.container = container;
+  constructor(container?: HTMLElement, options?: Partial<GlobeOptions>) {
+    this.container = container || null;
     this.options = {
       earthRadius: 5,
       backgroundColor: '#000000',
@@ -23,7 +23,24 @@ export class ThreeGlobeCore {
   }
 
   /**
-   * Initialize the globe
+   * Initialize the globe with renderer context
+   */
+  public init(context: RendererContext, eventHandlers?: any): void {
+    this.container = context.getElement();
+    console.log('Initializing ThreeGlobe with context and handlers');
+    
+    // Simulate initialization process
+    setTimeout(() => {
+      this.isInitialized = true;
+      console.log('ThreeGlobe initialized successfully');
+      if (eventHandlers?.onReady) {
+        eventHandlers.onReady(this);
+      }
+    }, 1000);
+  }
+
+  /**
+   * Initialize the globe (legacy method for Angular compatibility)
    */
   public async initialize(): Promise<void> {
     console.log('Initializing ThreeGlobe with options:', this.options);
@@ -59,6 +76,14 @@ export class ThreeGlobeCore {
   }
 
   /**
+   * Set current location
+   */
+  public setLocation(location: GeoLocation): void {
+    console.log(`Setting location: ${location.label} at ${location.latitude}, ${location.longitude}`);
+    this.flyTo(location.latitude, location.longitude);
+  }
+
+  /**
    * Trigger location selection event
    */
   private triggerLocationSelect(location: GeoLocation): void {
@@ -72,6 +97,13 @@ export class ThreeGlobeCore {
     this.isInitialized = false;
     this.locationSelectCallbacks = [];
     console.log('ThreeGlobe destroyed');
+  }
+
+  /**
+   * Clean up resources (alternative method name)
+   */
+  public dispose(): void {
+    this.destroy();
   }
 
   /**
