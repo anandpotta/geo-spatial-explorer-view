@@ -139,7 +139,7 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     return contentFound;
   };
 
-  // More aggressive function to force enable toolbars
+  // Ultra-aggressive function to force enable toolbars and override all disabled states
   const forceEnableToolbars = () => {
     if (!editControlRef.current || !editControlRef.current._toolbars) return;
     
@@ -149,46 +149,122 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
     // Force enable edit toolbar
     if (editToolbar) {
       try {
-        // Remove disabled class and enable
-        if (editToolbar._button) {
-          editToolbar._button.classList.remove('leaflet-disabled');
-          editToolbar._button.removeAttribute('disabled');
-        }
-        
-        // Override the _checkDisabled method to always return false
-        if (editToolbar._checkDisabled) {
-          editToolbar._checkDisabled = () => false;
-        }
+        // Override all disabled checks
+        editToolbar._checkDisabled = () => false;
         
         // Force enable the toolbar
         editToolbar.enable();
+        
+        // Direct DOM manipulation to ensure button is clickable
+        if (editToolbar._button) {
+          const button = editToolbar._button;
+          button.classList.remove('leaflet-disabled');
+          button.removeAttribute('disabled');
+          button.style.pointerEvents = 'auto';
+          button.style.opacity = '1';
+          
+          // Add click handler to prevent re-disabling
+          button.addEventListener('click', function(e) {
+            console.log('Edit button clicked');
+            if (button.classList.contains('leaflet-disabled')) {
+              e.preventDefault();
+              e.stopPropagation();
+              // Force re-enable
+              button.classList.remove('leaflet-disabled');
+              button.removeAttribute('disabled');
+              button.style.pointerEvents = 'auto';
+              return false;
+            }
+          }, true);
+        }
+        
         console.log('Edit toolbar forcefully enabled');
       } catch (e) {
         console.error('Error force enabling edit toolbar:', e);
       }
     }
     
-    // Force enable remove toolbar
+    // Force enable remove toolbar with click handler for clear all
     if (removeToolbar) {
       try {
-        // Remove disabled class and enable
-        if (removeToolbar._button) {
-          removeToolbar._button.classList.remove('leaflet-disabled');
-          removeToolbar._button.removeAttribute('disabled');
-        }
-        
-        // Override the _checkDisabled method to always return false
-        if (removeToolbar._checkDisabled) {
-          removeToolbar._checkDisabled = () => false;
-        }
+        // Override all disabled checks
+        removeToolbar._checkDisabled = () => false;
         
         // Force enable the toolbar
         removeToolbar.enable();
+        
+        // Direct DOM manipulation to ensure button is clickable
+        if (removeToolbar._button) {
+          const button = removeToolbar._button;
+          button.classList.remove('leaflet-disabled');
+          button.removeAttribute('disabled');
+          button.style.pointerEvents = 'auto';
+          button.style.opacity = '1';
+          
+          // Add custom click handler for remove/clear all functionality
+          button.addEventListener('click', function(e) {
+            console.log('Remove button clicked');
+            if (button.classList.contains('leaflet-disabled')) {
+              e.preventDefault();
+              e.stopPropagation();
+              // Force re-enable
+              button.classList.remove('leaflet-disabled');
+              button.removeAttribute('disabled');
+              button.style.pointerEvents = 'auto';
+              return false;
+            }
+            
+            // Check if this should trigger clear all
+            const hasContent = checkForContent();
+            if (hasContent) {
+              console.log('Triggering clear all from remove button');
+              e.preventDefault();
+              e.stopPropagation();
+              setShowConfirmation(true);
+              return false;
+            }
+          }, true);
+        }
+        
         console.log('Remove toolbar forcefully enabled');
       } catch (e) {
         console.error('Error force enabling remove toolbar:', e);
       }
     }
+    
+    // Also check and enable the actual DOM buttons directly
+    setTimeout(() => {
+      const editButton = document.querySelector('.leaflet-draw-edit-edit');
+      const removeButton = document.querySelector('.leaflet-draw-edit-remove');
+      
+      if (editButton) {
+        editButton.classList.remove('leaflet-disabled');
+        editButton.removeAttribute('disabled');
+        (editButton as HTMLElement).style.pointerEvents = 'auto';
+        (editButton as HTMLElement).style.opacity = '1';
+        console.log('Edit button DOM element enabled');
+      }
+      
+      if (removeButton) {
+        removeButton.classList.remove('leaflet-disabled');
+        removeButton.removeAttribute('disabled');
+        (removeButton as HTMLElement).style.pointerEvents = 'auto';
+        (removeButton as HTMLElement).style.opacity = '1';
+        console.log('Remove button DOM element enabled');
+        
+        // Add direct click handler to the remove button
+        removeButton.addEventListener('click', function(e) {
+          console.log('Direct remove button click detected');
+          const hasContent = checkForContent();
+          if (hasContent) {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowConfirmation(true);
+            return false;
+          }
+        }, true);
+      }
+    }, 50);
   };
 
   // Effect to monitor layer changes and force enable edit/remove controls
@@ -307,6 +383,16 @@ const DrawTools = forwardRef(({ onCreated, activeTool, onClearAll, featureGroup 
       setTimeout(() => {
         forceEnableToolbars();
       }, 1000);
+      
+      // Set up continuous monitoring of button states
+      const buttonMonitor = setInterval(() => {
+        const hasContent = checkForContent();
+        if (hasContent) {
+          forceEnableToolbars();
+        }
+      }, 2000);
+      
+      return () => clearInterval(buttonMonitor);
     }
   }, [editControlRef.current]);
 
