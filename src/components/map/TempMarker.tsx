@@ -1,132 +1,48 @@
 
-import React, { useRef, useEffect, useState } from 'react';
-import { Marker, Tooltip, Popup } from 'react-leaflet';
+import { useEffect } from 'react';
+import { Marker } from 'react-leaflet';
 import L from 'leaflet';
-import NewMarkerForm from './NewMarkerForm';
 
 interface TempMarkerProps {
   position: [number, number];
-  markerName: string;
-  setMarkerName: (name: string) => void;
-  markerType: 'pin' | 'area' | 'building';
-  setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
 }
 
-const TempMarker: React.FC<TempMarkerProps> = ({
-  position,
-  markerName,
-  setMarkerName,
-  markerType,
-  setMarkerType,
-  onSave
-}) => {
-  const markerRef = useRef<L.Marker | null>(null);
-  const [markerReady, setMarkerReady] = useState(false);
-  const markerId = `temp-marker-${position[0]}-${position[1]}`;
-
-  // Handle cleanup when component unmounts
-  useEffect(() => {
-    return () => {
-      if (markerRef.current) {
-        try {
-          // Safely close any open UI elements
-          markerRef.current.closeTooltip();
-          markerRef.current.closePopup();
-          
-          // Clean up any DOM elements
-          const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
-          tempIcons.forEach(icon => {
-            if (icon.parentNode) {
-              icon.parentNode.removeChild(icon);
-            }
-          });
-        } catch (error) {
-          console.error("Error cleaning up temp marker:", error);
-        }
-      }
-    };
-  }, [markerId]);
-
-  // Update marker position in parent when dragged
-  const handleDragEnd = (e: L.LeafletEvent) => {
-    const marker = e.target;
-    if (marker && marker.getLatLng) {
-      const position = marker.getLatLng();
-      // Update the position through the global handler if available
-      if (window.tempMarkerPositionUpdate) {
-        window.tempMarkerPositionUpdate([position.lat, position.lng]);
-        console.log("Marker position updated:", [position.lat, position.lng]);
-      }
-    }
-  };
+const TempMarker = ({ position }: TempMarkerProps) => {
+  // Generate unique identifier for this temporary marker
+  const uniqueId = `temp-marker-${position[0]}-${position[1]}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
-  // Custom save handler to ensure cleanup before saving
-  const handleSave = () => {
-    // Clean up the marker DOM elements before saving
-    const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
-    tempIcons.forEach(icon => {
-      if (icon.parentNode) {
-        icon.parentNode.removeChild(icon);
-      }
-    });
-    
-    // Call the original save handler
-    onSave();
-  };
+  useEffect(() => {
+    console.log(`Created temporary marker with unique ID: ${uniqueId} at position:`, position);
+  }, [uniqueId, position]);
 
-  // Set up marker references
-  const setMarkerInstance = (marker: L.Marker) => {
-    if (marker) {
-      markerRef.current = marker;
-      
-      // Add data attribute for easy identification
-      const element = marker.getElement();
-      if (element) {
-        element.setAttribute('data-marker-id', markerId);
-      }
-      
-      setMarkerReady(true);
-    }
-  };
+  // Create custom icon for temporary marker with unique identifier
+  const tempIcon = L.divIcon({
+    className: 'temp-marker-icon',
+    html: `<div data-temp-marker-id="${uniqueId}" data-marker-type="temporary" style="
+      width: 25px;
+      height: 41px;
+      background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iNDEiIHZpZXdCb3g9IjAgMCAyNSA0MSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyLjUgMEMxOS40MDM2IDAgMjUgNS41OTY0NCAyNSAxMi41QzI1IDE5LjQwMzYgMTkuNDAzNiAyNSAxMi41IDI1QzUuNTk2NDQgMjUgMCAxOS40MDM2IDAgMTIuNUMwIDUuNTk2NDQgNS41OTY0NCAwIDEyLjUgMFoiIGZpbGw9IiNGRjAwMDAiLz4KPHBhdGggZD0iTTEyLjUgNEM5LjQ2MjQzIDQgNyA2LjQ2MjQzIDcgOS41QzcgMTIuNTM3NiA5LjQ2MjQzIDE1IDEyLjUgMTVDMTUuNTM3NiAxNSAxOCAxMi41Mzc2IDE4IDkuNUMxOCA2LjQ2MjQzIDE1LjUzNzYgNCAxMi41IDRaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K') no-repeat center;
+      background-size: contain;
+    ">
+      <span style="display: none;">${uniqueId}</span>
+    </div>`,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+  });
 
   return (
-    <Marker
-      position={position}
-      ref={setMarkerInstance}
-      draggable={true}
-      eventHandlers={{
-        dragend: handleDragEnd,
-        add: () => {
-          // Wait for marker to be added to DOM before showing popup
-          setTimeout(() => {
-            try {
-              if (markerRef.current) {
-                markerRef.current.openPopup();
-              }
-            } catch (error) {
-              console.error("Error opening popup:", error);
-            }
-          }, 100);
+    <Marker 
+      position={position} 
+      icon={tempIcon}
+      // Add unique identifier as a custom property
+      ref={(marker) => {
+        if (marker) {
+          (marker as any).uniqueId = uniqueId;
+          (marker as any).markerType = 'temporary';
         }
       }}
-    >
-      <NewMarkerForm
-        markerName={markerName}
-        setMarkerName={setMarkerName}
-        markerType={markerType}
-        setMarkerType={setMarkerType}
-        onSave={handleSave}
-      />
-      <Tooltip
-        direction="top"
-        offset={[0, -10]}
-        opacity={0.9}
-        permanent={true}
-      >
-        <span className="font-medium">{markerName || 'New Location'}</span>
-      </Tooltip>
-    </Marker>
+    />
   );
 };
 

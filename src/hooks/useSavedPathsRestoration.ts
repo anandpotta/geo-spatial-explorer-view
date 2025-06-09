@@ -10,9 +10,15 @@ export function saveSvgPaths(paths: string[]) {
   
   try {
     const userKey = `${STORAGE_KEY}_${currentUser.id}`;
-    // Store paths as array of strings, not as JSON objects
-    localStorage.setItem(userKey, JSON.stringify(paths));
-    console.log(`Saved ${paths.length} SVG paths for user ${currentUser.id}`);
+    // Store paths with metadata including unique identifiers
+    const pathsWithMetadata = paths.map((path, index) => ({
+      pathData: path,
+      uniqueId: `svg-path-${currentUser.id}-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now()
+    }));
+    
+    localStorage.setItem(userKey, JSON.stringify(pathsWithMetadata));
+    console.log(`Saved ${pathsWithMetadata.length} SVG paths with unique identifiers for user ${currentUser.id}`);
   } catch (error) {
     console.error('Error saving SVG paths:', error);
   }
@@ -27,9 +33,28 @@ export function getSavedSvgPaths(): string[] {
     const saved = localStorage.getItem(userKey);
     if (!saved) return [];
     
-    const paths = JSON.parse(saved);
-    console.log(`Loaded ${paths.length} SVG paths for user ${currentUser.id}`);
-    return Array.isArray(paths) ? paths : [];
+    const pathsData = JSON.parse(saved);
+    
+    // Handle both old format (array of strings) and new format (array of objects)
+    if (Array.isArray(pathsData)) {
+      if (pathsData.length > 0 && typeof pathsData[0] === 'string') {
+        // Old format - just return the strings
+        console.log(`Loaded ${pathsData.length} SVG paths (old format) for user ${currentUser.id}`);
+        return pathsData;
+      } else {
+        // New format - extract path data and log unique IDs
+        const paths = pathsData.map(item => {
+          if (item.uniqueId) {
+            console.log(`Loading SVG path with unique ID: ${item.uniqueId}`);
+          }
+          return item.pathData || item;
+        });
+        console.log(`Loaded ${paths.length} SVG paths (new format) for user ${currentUser.id}`);
+        return paths;
+      }
+    }
+    
+    return [];
   } catch (error) {
     console.error('Error loading SVG paths:', error);
     return [];
