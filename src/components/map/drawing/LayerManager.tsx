@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
@@ -24,8 +24,6 @@ const LayerManager = ({
   const isMountedRef = useRef<boolean>(true);
   const isInitialRenderRef = useRef(true);
   const lastDrawingsRef = useRef<DrawingData[]>([]);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateTime = useRef<number>(0);
   
   const {
     removeButtonRoots,
@@ -49,10 +47,12 @@ const LayerManager = ({
   });
 
   // Safe unmounting of React roots
-  const safeUnmountRoots = useCallback(() => {
+  const safeUnmountRoots = () => {
+    // Unmount all React roots in a safe way
     const unmountRoot = (root: any) => {
       if (!root) return;
       try {
+        // Check if the unmount method exists before calling it
         if (root && typeof root.unmount === 'function') {
           root.unmount();
         }
@@ -61,9 +61,11 @@ const LayerManager = ({
       }
     };
     
+    // Safely clear all roots
     const safelyClearRoots = (rootsMap: Map<string, any>) => {
       if (!rootsMap) return;
       
+      // Create array of entries to avoid modification during iteration
       const entries = Array.from(rootsMap.entries());
       entries.forEach(([key, root]) => {
         unmountRoot(root);
@@ -71,10 +73,11 @@ const LayerManager = ({
       });
     };
     
+    // Clear all types of roots
     safelyClearRoots(removeButtonRoots.current);
     safelyClearRoots(uploadButtonRoots.current);
     safelyClearRoots(imageControlRoots.current);
-  }, [removeButtonRoots, uploadButtonRoots, imageControlRoots]);
+  };
 
   // Component lifecycle
   useEffect(() => {
@@ -82,135 +85,88 @@ const LayerManager = ({
     
     return () => {
       isMountedRef.current = false;
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
       safeUnmountRoots();
       layersRef.current.clear();
     };
-  }, [safeUnmountRoots, layersRef]);
+  }, []);
 
-  // Optimized drawing changes detection with aggressive debouncing
-  const haveSavedDrawingsChanged = useCallback(() => {
-    if (savedDrawings.length !== lastDrawingsRef.current.length) {
-      return true;
-    }
-    
-    const currentIds = new Set(savedDrawings.map(d => d.id));
-    return lastDrawingsRef.current.some(d => !currentIds.has(d.id));
-  }, [savedDrawings]);
-
-  // Main update effect with aggressive loop prevention
+  // Use a more stable approach for detecting real changes to drawings
   useEffect(() => {
     if (!isMountedRef.current) return;
     
-    // More aggressive debouncing to prevent loops
-    const now = Date.now();
-    if (now - lastUpdateTime.current < 2000) { // Increased to 2 seconds
-      console.log('Layer update debounced to prevent loops');
-      return;
-    }
+    // Helper function to check if drawings have actually changed
+    const haveSavedDrawingsChanged = () => {
+      if (savedDrawings.length !== lastDrawingsRef.current.length) {
+        return true;
+      }
+      
+      // Check if the IDs match
+      const currentIds = new Set(savedDrawings.map(d => d.id));
+      return lastDrawingsRef.current.some(d => !currentIds.has(d.id));
+    };
     
-    // Clear any pending updates
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
+    // First safely unmount any existing roots to prevent conflicts
+    safeUnmountRoots();
     
-    // Check if we actually need to update
+    // Only do a full update if drawings have changed or this is the first render
     const shouldForceUpdate = isInitialRenderRef.current || haveSavedDrawingsChanged();
     
     if (shouldForceUpdate) {
-      console.log('Scheduling layer update');
-      lastUpdateTime.current = now;
-      
-      // First safely unmount any existing roots to prevent conflicts
-      safeUnmountRoots();
-      
-      // Schedule update with a much longer delay to prevent loops
-      updateTimeoutRef.current = setTimeout(() => {
+      // For initial render or when drawings change, use a short delay
+      setTimeout(() => {
         if (isMountedRef.current) {
-          console.log('Executing layer update');
           updateLayers();
           isInitialRenderRef.current = false;
           lastDrawingsRef.current = [...savedDrawings];
         }
-      }, 500); // Increased delay
+      }, 100);
     } else if (activeTool === 'edit') {
-      // For edit mode changes, use even longer debounce
-      updateTimeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
-          console.log('Executing debounced layer update for edit mode');
-          lastUpdateTime.current = Date.now();
-          debouncedUpdateLayers();
-        }
-      }, 1000); // Much longer delay for edit mode
+      // For edit mode changes, use the debounced version
+      debouncedUpdateLayers();
     }
-  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers, haveSavedDrawingsChanged, safeUnmountRoots]);
+  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
 
-  // Handle resize events with much more aggressive debouncing
+  // Listen for resize events which might affect positioning
   useEffect(() => {
-    let resizeTimeout: NodeJS.Timeout;
-    
     const handleResize = () => {
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
-          console.log('Handling resize event');
-          lastUpdateTime.current = Date.now();
-          debouncedUpdateLayers();
-        }
-      }, 1000); // Much longer debounce for resize
+      if (isMountedRef.current) {
+        debouncedUpdateLayers();
+      }
     };
     
     window.addEventListener('resize', handleResize);
     
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (resizeTimeout) clearTimeout(resizeTimeout);
     };
   }, [debouncedUpdateLayers]);
 
-  // Handle storage events with much more aggressive debouncing
+  // Handle storage events for cross-tab updates
   useEffect(() => {
-    let storageTimeout: NodeJS.Timeout;
-    
     const handleStorageUpdate = () => {
-      if (storageTimeout) clearTimeout(storageTimeout);
-      storageTimeout = setTimeout(() => {
-        if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
-          console.log('Handling storage event in LayerManager');
-          lastUpdateTime.current = Date.now();
-          debouncedUpdateLayers();
-        }
-      }, 1000); // Much longer debounce
-    };
-    
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isMountedRef.current) {
-        if (storageTimeout) clearTimeout(storageTimeout);
-        storageTimeout = setTimeout(() => {
-          if (isMountedRef.current && (Date.now() - lastUpdateTime.current >= 2000)) {
-            console.log('Handling visibility change');
-            lastUpdateTime.current = Date.now();
-            debouncedUpdateLayers();
-          }
-        }, 1500); // Even longer delay for visibility change
+      if (isMountedRef.current) {
+        debouncedUpdateLayers();
       }
     };
     
     window.addEventListener('storage', handleStorageUpdate);
     window.addEventListener('floorPlanUpdated', handleStorageUpdate);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also listen for visibility changes to update when tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && isMountedRef.current) {
+        debouncedUpdateLayers();
+      }
+    });
     
     return () => {
       window.removeEventListener('storage', handleStorageUpdate);
       window.removeEventListener('floorPlanUpdated', handleStorageUpdate);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (storageTimeout) clearTimeout(storageTimeout);
+      document.removeEventListener('visibilitychange', handleStorageUpdate);
     };
   }, [debouncedUpdateLayers]);
 
-  return null;
+  return null; // This is a non-visual component
 };
 
 export default LayerManager;

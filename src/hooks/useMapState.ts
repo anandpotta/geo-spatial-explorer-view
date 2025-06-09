@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
@@ -20,107 +21,50 @@ export function useMapState(selectedLocation?: Location) {
   const [selectedDrawing, setSelectedDrawing] = useState<DrawingData | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Use refs to prevent infinite loops with more aggressive debouncing
-  const isLoadingRef = useRef(false);
-  const lastUpdateRef = useRef<number>(0);
-  const eventTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Load existing markers and drawings with aggressive debounce
+  // Load existing markers and drawings
   useEffect(() => {
-    const loadData = () => {
-      if (isLoadingRef.current) {
-        console.log('Data loading already in progress, skipping');
-        return;
-      }
-      
-      isLoadingRef.current = true;
-      console.log('Loading data');
-      
-      try {
-        const savedMarkers = getSavedMarkers();
-        const savedDrawings = getSavedDrawings();
-        
-        setMarkers(savedMarkers);
-        setDrawings(savedDrawings);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        isLoadingRef.current = false;
-      }
-    };
-
-    // Aggressive debounced event handlers to prevent loops
+    console.log('Loading data');
+    
+    const savedMarkers = getSavedMarkers();
+    setMarkers(savedMarkers);
+    
+    const savedDrawings = getSavedDrawings();
+    setDrawings(savedDrawings);
+    
+    // Listen for marker updates
     const handleMarkersUpdated = () => {
-      const now = Date.now();
-      if (now - lastUpdateRef.current < 1000) { // Increased debounce to 1 second
-        console.log('Markers update debounced to prevent loops');
-        return;
-      }
-      lastUpdateRef.current = now;
-      
-      // Clear any pending updates
-      if (eventTimeoutRef.current) {
-        clearTimeout(eventTimeoutRef.current);
-      }
-      
-      eventTimeoutRef.current = setTimeout(() => {
-        if (!isLoadingRef.current) {
-          console.log('Updating markers from event');
-          setMarkers(getSavedMarkers());
-        }
-        eventTimeoutRef.current = null;
-      }, 500); // Longer delay
+      setMarkers(getSavedMarkers());
     };
 
+    // Listen for drawing updates
     const handleDrawingsUpdated = () => {
-      const now = Date.now();
-      if (now - lastUpdateRef.current < 1000) { // Increased debounce to 1 second
-        console.log('Drawings update debounced to prevent loops');
-        return;
-      }
-      lastUpdateRef.current = now;
-      
-      // Clear any pending updates
-      if (eventTimeoutRef.current) {
-        clearTimeout(eventTimeoutRef.current);
-      }
-      
-      eventTimeoutRef.current = setTimeout(() => {
-        if (!isLoadingRef.current) {
-          console.log('Updating drawings from event');
-          setDrawings(getSavedDrawings());
-        }
-        eventTimeoutRef.current = null;
-      }, 500); // Longer delay
+      setDrawings(getSavedDrawings());
     };
     
+    // Listen for floor plan updates
     const handleFloorPlanUpdated = (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail && customEvent.detail.drawingId) {
         console.log(`Floor plan updated for drawing ${customEvent.detail.drawingId}, triggering refresh`);
+        // Trigger a refresh of the drawings
         handleDrawingsUpdated();
       }
     };
-
-    // Initial load
-    loadData();
     
-    // Add event listeners with aggressive debounced handlers
     window.addEventListener('markersUpdated', handleMarkersUpdated);
     window.addEventListener('drawingsUpdated', handleDrawingsUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+    window.addEventListener('storage', handleDrawingsUpdated);
     window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
     
     return () => {
       window.removeEventListener('markersUpdated', handleMarkersUpdated);
       window.removeEventListener('drawingsUpdated', handleDrawingsUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+      window.removeEventListener('storage', handleDrawingsUpdated);
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
-      
-      // Clear any pending timeouts
-      if (eventTimeoutRef.current) {
-        clearTimeout(eventTimeoutRef.current);
-      }
     };
-  }, []); // Keep empty dependencies to prevent loops
+  }, []);
 
   // Set up global position update handler for draggable markers
   useEffect(() => {
@@ -141,7 +85,7 @@ export function useMapState(selectedLocation?: Location) {
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: 'anonymous'
+      userId: 'anonymous' // Default user since we removed auth
     };
     
     // Clear the temporary marker BEFORE saving to prevent duplicate rendering
@@ -154,6 +98,7 @@ export function useMapState(selectedLocation?: Location) {
       // Create a safe copy of currentDrawing without circular references
       const safeDrawing: DrawingData = {
         ...currentDrawing,
+        // Remove any potential circular references from geoJSON
         geoJSON: currentDrawing.geoJSON ? JSON.parse(JSON.stringify({
           type: currentDrawing.geoJSON.type,
           geometry: currentDrawing.geoJSON.geometry,
@@ -174,10 +119,13 @@ export function useMapState(selectedLocation?: Location) {
     // Clear and reset UI state
     setMarkerName('');
     
-    // Update the markers state directly to avoid event loops
-    setMarkers(prev => [...prev.filter(m => m.id !== newMarker.id), newMarker]);
+    // Update the markers state with the new marker - use getSavedMarkers to ensure deduplication
+    setMarkers(getSavedMarkers());
     
     toast.success("Location saved successfully");
+    
+    // Ensure drawings remain visible by dispatching a custom event
+    window.dispatchEvent(new Event('drawingsUpdated'));
     
     // Clean up any leftover temporary marker DOM elements after a slight delay
     setTimeout(() => {
@@ -195,14 +143,14 @@ export function useMapState(selectedLocation?: Location) {
 
   const handleDeleteMarker = (id: string) => {
     deleteMarker(id);
-    // Update the markers state directly to avoid event loops
-    setMarkers(prev => prev.filter(marker => marker.id !== id));
+    // Update the markers state
+    setMarkers(markers.filter(marker => marker.id !== id));
     toast.success("Location removed");
   };
 
   const handleRenameMarker = (id: string, newName: string) => {
     renameMarker(id, newName);
-    // Update the markers state directly to avoid event loops
+    // Update the markers state
     setMarkers(getSavedMarkers());
   };
 

@@ -1,96 +1,115 @@
 
 import { DrawingData } from './types';
+import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
+import { syncDrawingsWithBackend, fetchDrawingsFromBackend, deleteDrawingFromBackend } from './sync';
+import { getConnectionStatus } from '../api-service';
 
-const STORAGE_KEY = 'savedDrawings';
-
-// More aggressive debouncing to prevent infinite loops
-let lastEventDispatch = 0;
-const EVENT_DEBOUNCE_MS = 1000; // Increased from 200ms to 1000ms
-let pendingEventTimeout: NodeJS.Timeout | null = null;
-
-const dispatchEventsDebounced = () => {
-  const now = Date.now();
-  if (now - lastEventDispatch < EVENT_DEBOUNCE_MS) {
-    console.log('Event dispatch debounced to prevent loops');
+export function saveDrawing(drawing: DrawingData): void {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot save drawing: No user is logged in');
+    toast.error('Please log in to save your drawings');
     return;
   }
   
-  // Clear any pending events to prevent stacking
-  if (pendingEventTimeout) {
-    clearTimeout(pendingEventTimeout);
+  // Ensure the drawing has the current user's ID
+  const drawingWithUser = {
+    ...drawing,
+    userId: currentUser.id
+  };
+  
+  const savedDrawings = getSavedDrawings();
+  
+  // Check if drawing with same ID exists and update it
+  const existingIndex = savedDrawings.findIndex(d => d.id === drawingWithUser.id);
+  
+  if (existingIndex >= 0) {
+    savedDrawings[existingIndex] = drawingWithUser;
+  } else {
+    savedDrawings.push(drawingWithUser);
   }
   
-  lastEventDispatch = now;
+  localStorage.setItem('savedDrawings', JSON.stringify(savedDrawings));
   
-  // Use longer timeout to prevent cascading
-  pendingEventTimeout = setTimeout(() => {
-    console.log('Dispatching storage events');
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('drawingsUpdated'));
-    pendingEventTimeout = null;
-  }, 300); // Increased delay
-};
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  
+  // Only attempt to sync if we're online
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    syncDrawingsWithBackend(savedDrawings)
+      .catch(err => {
+        // Don't show toast for expected offline errors
+        if (navigator.onLine) {
+          console.warn('Failed to sync drawings, will retry later:', err);
+        }
+      });
+  }
+}
 
-export const saveDrawing = (drawing: DrawingData): boolean => {
-  try {
-    console.log('Saving drawing:', drawing.id);
-    
-    const existingDrawings = getSavedDrawings();
-    
-    // Check if drawing already exists
-    const existingIndex = existingDrawings.findIndex(d => d.id === drawing.id);
-    
-    if (existingIndex >= 0) {
-      // Update existing drawing
-      existingDrawings[existingIndex] = drawing;
-    } else {
-      // Add new drawing
-      existingDrawings.push(drawing);
+export function getSavedDrawings(): DrawingData[] {
+  const currentUser = getCurrentUser();
+  const drawingsJson = localStorage.getItem('savedDrawings');
+  
+  if (!drawingsJson) {
+    // Try to fetch from backend first if localStorage is empty
+    const { isOnline, isBackendAvailable } = getConnectionStatus();
+    if (isOnline && isBackendAvailable) {
+      fetchDrawingsFromBackend().catch(err => {
+        // Silent fail for initial load
+        console.log('Could not fetch drawings from backend, using local storage');
+      });
     }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDrawings));
-    
-    // Dispatch events with aggressive debouncing
-    dispatchEventsDebounced();
-    
-    toast.success('Drawing saved successfully');
-    return true;
-  } catch (error) {
-    console.error('Error saving drawing:', error);
-    toast.error('Failed to save drawing');
-    return false;
-  }
-};
-
-export const getSavedDrawings = (): DrawingData[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    
-    const drawings = JSON.parse(stored);
-    return Array.isArray(drawings) ? drawings : [];
-  } catch (error) {
-    console.error('Error loading drawings:', error);
     return [];
   }
-};
-
-export const deleteDrawing = (drawingId: string): boolean => {
+  
   try {
-    const existingDrawings = getSavedDrawings();
-    const filteredDrawings = existingDrawings.filter(d => d.id !== drawingId);
+    let drawings = JSON.parse(drawingsJson);
+    // Map the dates
+    drawings = drawings.map((drawing: any) => ({
+      ...drawing,
+      properties: {
+        ...drawing.properties,
+        createdAt: new Date(drawing.properties.createdAt)
+      }
+    }));
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredDrawings));
+    // Filter drawings by user if a user is logged in
+    if (currentUser) {
+      drawings = drawings.filter((drawing: DrawingData) => drawing.userId === currentUser.id);
+    }
     
-    // Dispatch events with aggressive debouncing
-    dispatchEventsDebounced();
-    
-    toast.success('Drawing deleted successfully');
-    return true;
-  } catch (error) {
-    console.error('Error deleting drawing:', error);
-    toast.error('Failed to delete drawing');
-    return false;
+    return drawings;
+  } catch (e) {
+    console.error('Failed to parse saved drawings', e);
+    return [];
   }
-};
+}
+
+export function deleteDrawing(id: string): void {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot delete drawing: No user is logged in');
+    toast.error('Please log in to manage your drawings');
+    return;
+  }
+  
+  const savedDrawings = getSavedDrawings();
+  const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);
+  localStorage.setItem('savedDrawings', JSON.stringify(filteredDrawings));
+  
+  // Notify components about storage changes
+  window.dispatchEvent(new Event('storage'));
+  
+  // Only attempt to sync delete if we're online
+  const { isOnline, isBackendAvailable } = getConnectionStatus();
+  if (isOnline && isBackendAvailable) {
+    deleteDrawingFromBackend(id).catch(err => {
+      // Don't show toast for expected offline errors
+      if (navigator.onLine) {
+        console.warn('Failed to delete drawing from backend, will retry later:', err);
+      }
+    });
+  }
+}

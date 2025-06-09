@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Location, searchLocations } from '@/utils/location-utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,11 +18,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   const [showResults, setShowResults] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const { toast } = useToast();
-  
-  // Add refs to prevent multiple simultaneous operations
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSearchRef = useRef<string>('');
-  const isSearchingRef = useRef(false);
 
   useEffect(() => {
     // Check if we're online or offline
@@ -41,19 +37,9 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
   }, []);
 
   useEffect(() => {
-    // Clear any existing timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (query.length >= 3 && query !== lastSearchRef.current && !isSearchingRef.current) {
-      searchTimeoutRef.current = setTimeout(async () => {
-        if (isSearchingRef.current) return; // Prevent concurrent searches
-        
-        isSearchingRef.current = true;
-        lastSearchRef.current = query;
+    const delayDebounceFn = setTimeout(async () => {
+      if (query.length >= 3) {
         setIsLoading(true);
-        
         try {
           const locations = await searchLocations(query);
           setResults(locations);
@@ -84,20 +70,14 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
           });
         } finally {
           setIsLoading(false);
-          isSearchingRef.current = false;
         }
-      }, 500);
-    } else if (query.length < 3) {
-      setResults([]);
-      setShowResults(false);
-      lastSearchRef.current = '';
-    }
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
+      } else {
+        setResults([]);
+        setShowResults(false);
       }
-    };
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [query, isOfflineMode, toast]);
 
   const handleSelect = (location: Location) => {
@@ -112,10 +92,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
       duration: 3000,
     });
     
-    // Use setTimeout to prevent immediate state conflicts
-    setTimeout(() => {
-      onLocationSelect(location);
-    }, 100);
+    onLocationSelect(location);
   };
 
   const handleClear = () => {
@@ -123,21 +100,12 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     setSelectedLocation(null);
     setResults([]);
     setShowResults(false);
-    lastSearchRef.current = '';
-    
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSearchingRef.current) return; // Prevent submission during search
-    
     if (selectedLocation) {
-      setTimeout(() => {
-        onLocationSelect(selectedLocation);
-      }, 100);
+      onLocationSelect(selectedLocation);
       
       toast({
         title: "Starting navigation",
@@ -147,15 +115,9 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
     } else if (results.length > 0) {
       handleSelect(results[0]);
     } else if (query.length >= 3) {
-      if (isSearchingRef.current) return;
-      
-      isSearchingRef.current = true;
       setIsLoading(true);
-      
       searchLocations(query).then(locations => {
         setIsLoading(false);
-        isSearchingRef.current = false;
-        
         if (locations.length > 0) {
           handleSelect(locations[0]);
         } else {
@@ -167,7 +129,6 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
         }
       }).catch(error => {
         setIsLoading(false);
-        isSearchingRef.current = false;
         toast({
           title: "Search error",
           description: "Could not complete the search request",
@@ -208,7 +169,7 @@ const LocationSearch = ({ onLocationSelect }: LocationSearchProps) => {
               </button>
             )}
           </div>
-          <Button type="submit" size="icon" variant="default" disabled={isLoading || isSearchingRef.current}>
+          <Button type="submit" size="icon" variant="default">
             {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
           </Button>
         </div>
