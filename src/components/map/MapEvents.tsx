@@ -18,22 +18,42 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
-      // Ignore clicks on markers, popups, or SVG paths
-      if (
-        e.originalEvent.target &&
-        ((e.originalEvent.target as HTMLElement).closest('.leaflet-marker-icon') ||
-         (e.originalEvent.target as HTMLElement).closest('.leaflet-popup') ||
-         (e.originalEvent.target as HTMLElement).closest('path') ||
-         (e.originalEvent.target as HTMLElement).tagName === 'path' ||
-         (e.originalEvent.target as HTMLElement).tagName === 'svg' ||
-         // Also ignore clicks on upload buttons or image controls
-         (e.originalEvent.target as HTMLElement).closest('.upload-button-container') ||
-         (e.originalEvent.target as HTMLElement).closest('.upload-button-wrapper') ||
-         (e.originalEvent.target as HTMLElement).closest('.image-controls-container') ||
-         (e.originalEvent.target as HTMLElement).closest('.image-controls-wrapper'))
-      ) {
-        console.log('Click on marker, popup, path or control ignored');
-        return;
+      // More precise click detection - only ignore specific interactive elements
+      if (e.originalEvent.target) {
+        const target = e.originalEvent.target as HTMLElement;
+        
+        // Ignore clicks on actual marker icons (not their containers)
+        if (target.closest('.leaflet-marker-icon img') || 
+            target.classList.contains('leaflet-marker-icon')) {
+          console.log('Click on marker icon ignored');
+          return;
+        }
+        
+        // Ignore clicks on popup content (not the map behind it)
+        if (target.closest('.leaflet-popup-content') ||
+            target.closest('.leaflet-popup-close-button')) {
+          console.log('Click on popup content ignored');
+          return;
+        }
+        
+        // Only ignore clicks on interactive drawing paths, not all paths
+        if (target.tagName === 'path' && 
+            (target.classList.contains('leaflet-interactive') ||
+             target.hasAttribute('data-drawing-id'))) {
+          console.log('Click on interactive drawing path ignored');
+          return;
+        }
+        
+        // Ignore clicks on drawing control buttons and upload interfaces
+        if (target.closest('.leaflet-draw-toolbar') ||
+            target.closest('.leaflet-draw-actions') ||
+            target.closest('.upload-button-container') ||
+            target.closest('.upload-button-wrapper') ||
+            target.closest('.image-controls-container') ||
+            target.closest('.image-controls-wrapper')) {
+          console.log('Click on drawing controls ignored');
+          return;
+        }
       }
       
       console.log('Calling onMapClick handler');
