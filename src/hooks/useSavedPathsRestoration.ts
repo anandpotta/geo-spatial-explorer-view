@@ -45,21 +45,27 @@ export function useSavedPathsRestoration(
     
     const restorePaths = () => {
       try {
+        console.log('Starting SVG paths restoration process...');
         const savedPaths = getSavedSvgPaths();
         if (savedPaths.length > 0) {
           console.log('Restoring saved paths:', savedPaths.length);
+          
+          // Check current SVG paths in the DOM before restoration
+          const currentPaths = document.querySelectorAll('svg path');
+          console.log('Current SVG paths in DOM before restoration:', currentPaths.length);
           
           // Dispatch event to restore paths
           window.dispatchEvent(new CustomEvent('restoreSavedPaths', {
             detail: { paths: savedPaths }
           }));
           
-          console.log('Received restore paths event with', savedPaths.length, 'paths');
+          console.log('Dispatched restoreSavedPaths event with', savedPaths.length, 'paths');
           
           // Apply each path correctly - don't try to parse as JSON
           savedPaths.forEach((pathData, index) => {
             try {
               if (typeof pathData === 'string' && pathData.trim()) {
+                console.log(`Restoring path ${index + 1}/${savedPaths.length}:`, pathData.substring(0, 50) + '...');
                 // Create SVG path element directly from path data
                 if (drawToolsRef.current && typeof drawToolsRef.current.restorePath === 'function') {
                   drawToolsRef.current.restorePath(pathData);
@@ -69,6 +75,24 @@ export function useSavedPathsRestoration(
               console.error(`Failed to restore path ${index}:`, error);
             }
           });
+          
+          // Check SVG paths in the DOM after restoration
+          setTimeout(() => {
+            const pathsAfterRestore = document.querySelectorAll('svg path');
+            console.log('SVG paths in DOM after restoration:', pathsAfterRestore.length);
+            
+            // Log details about each path
+            pathsAfterRestore.forEach((path, index) => {
+              console.log(`Path ${index + 1}:`, {
+                hasDrawingId: path.getAttribute('data-drawing-id'),
+                hasClipMask: path.getAttribute('data-has-clip-mask'),
+                classList: Array.from(path.classList),
+                isInDocument: document.contains(path)
+              });
+            });
+          }, 1000);
+        } else {
+          console.log('No saved SVG paths found to restore');
         }
       } catch (error) {
         console.error('Error in path restoration:', error);
