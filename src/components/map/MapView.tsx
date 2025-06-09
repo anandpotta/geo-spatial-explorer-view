@@ -131,7 +131,10 @@ const MapView = ({
           setMarkerType={setMarkerType}
         />
         
-        <MapEvents onMapClick={onMapClick} />
+        <MapEvents 
+          onMapClick={onMapClick} 
+          onRegionClick={handleRegionClick}
+        />
       </MapContainer>
     </div>
   );
