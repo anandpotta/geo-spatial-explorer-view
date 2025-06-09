@@ -8,6 +8,17 @@ export interface MarkerData {
   userId?: string;
 }
 
+export interface LocationMarker {
+  id: string;
+  position: [number, number];
+  name: string;
+  description?: string;
+  createdAt: Date;
+  userId?: string;
+  type?: 'pin' | 'area' | 'building';
+  isPinned?: boolean;
+}
+
 export interface MarkerProps {
   marker: MarkerData;
   onEdit?: (marker: MarkerData) => void;

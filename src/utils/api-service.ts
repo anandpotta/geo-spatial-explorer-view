@@ -1,5 +1,5 @@
-
-import { toast } from "@/components/ui/use-toast";
+import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 // API configuration
 const API_CONFIG = {
