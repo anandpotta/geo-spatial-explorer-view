@@ -86,6 +86,9 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
           l._path.setAttribute('data-drawing-id', drawing.id);
           l._path.id = `svg-path-${uniqueId}`;
           
+          // Add the UID directly as an SVG attribute
+          l._path.setAttribute('uid', uniqueId);
+          
           // Store the path data as a backup
           l._path.setAttribute('data-original-path', drawing.svgPath);
           
@@ -122,6 +125,7 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       // Add multiple ways to identify this path
       path.setAttribute('data-drawing-id', drawingId);
       path.setAttribute('data-svg-uid', uniqueId);
+      path.setAttribute('uid', uniqueId); // Add direct UID attribute
       path.classList.add('drawing-path-' + drawingId.substring(0, 8));
       path.id = `svg-path-${uniqueId}`;
       
@@ -150,6 +154,7 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
           // Add multiple ways to identify this path
           path.setAttribute('data-drawing-id', drawingId);
           path.setAttribute('data-svg-uid', subUniqueId);
+          path.setAttribute('uid', subUniqueId); // Add direct UID attribute
           path.classList.add('drawing-path-' + drawingId.substring(0, 8));
           path.id = `svg-path-${subUniqueId}`;
           path.classList.add('visible-path-stroke');
