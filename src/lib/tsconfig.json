@@ -18,14 +18,15 @@
     "noFallthroughCasesInSwitch": true,
     "declaration": true,
     "declarationMap": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "typeRoots": ["./angular/types", "../../node_modules/@types"]
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "angular/types/**/*.d.ts"
   ],
   "exclude": [
-    "angular/**/*",
     "node_modules",
     "dist"
   ]
