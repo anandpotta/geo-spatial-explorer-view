@@ -61,11 +61,14 @@ const NewMarkerForm = ({
         // Update parent state immediately before calling save/rename
         setMarkerName(localValue);
         
-        if (isEditing && existingMarkerId && onRename) {
-          onRename(existingMarkerId, localValue);
-        } else {
-          onSave();
-        }
+        // Use setTimeout to ensure state update happens first
+        setTimeout(() => {
+          if (isEditing && existingMarkerId && onRename) {
+            onRename(existingMarkerId, localValue);
+          } else {
+            onSave();
+          }
+        }, 0);
       }
     }
   }, [localValue, isEditing, existingMarkerId, onRename, onSave, setMarkerName]);
@@ -78,11 +81,14 @@ const NewMarkerForm = ({
       // Update parent state immediately before calling save/rename
       setMarkerName(localValue);
       
-      if (isEditing && existingMarkerId && onRename) {
-        onRename(existingMarkerId, localValue);
-      } else {
-        onSave();
-      }
+      // Use setTimeout to ensure state update happens first
+      setTimeout(() => {
+        if (isEditing && existingMarkerId && onRename) {
+          onRename(existingMarkerId, localValue);
+        } else {
+          onSave();
+        }
+      }, 0);
     }
   }, [isEditing, existingMarkerId, onRename, localValue, onSave, setMarkerName]);
 
