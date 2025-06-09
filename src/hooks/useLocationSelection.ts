@@ -14,46 +14,24 @@ export function useLocationSelection(
   isMapReady: boolean,
   onLocationSelect?: (location: Location) => void
 ) {
+  // Add debouncing to prevent rapid location selections
+  let lastLocationUpdate = 0;
+  const LOCATION_UPDATE_DEBOUNCE = 1000; // 1 second
+
   const handleLocationSelect = (position: [number, number]) => {
+    const now = Date.now();
+    if (now - lastLocationUpdate < LOCATION_UPDATE_DEBOUNCE) {
+      console.log("Location selection debounced");
+      return;
+    }
+    lastLocationUpdate = now;
+
     console.log("Location selected in useLocationSelection:", position);
     
     // Use utility function to validate map
     if (!mapRef.current || !isMapValid(mapRef.current) || !isMapReady) {
       console.warn("Map is not ready yet, cannot navigate");
       toast.error("Map is not fully loaded yet. Please try again in a moment.");
-      
-      // Try to recover with a delayed retry
-      setTimeout(() => {
-        if (mapRef.current && isMapValid(mapRef.current)) {
-          try {
-            console.log("Retrying location selection after delay");
-            mapRef.current.invalidateSize(true);
-            
-            // Retry the fly operation after a short delay
-            setTimeout(() => {
-              if (mapRef.current && isMapValid(mapRef.current)) {
-                mapRef.current.flyTo(position, 18, {
-                  animate: true,
-                  duration: 1.5
-                });
-                
-                if (onLocationSelect) {
-                  const location: Location = {
-                    id: `loc-${position[0]}-${position[1]}`,
-                    label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
-                    x: position[1],
-                    y: position[0]
-                  };
-                  onLocationSelect(location);
-                }
-              }
-            }, 500);
-          } catch (err) {
-            console.error('Retry failed:', err);
-          }
-        }
-      }, 1000);
-      
       return;
     }
     
@@ -73,7 +51,6 @@ export function useLocationSelection(
       }
       
       // Additional check to ensure the map is properly initialized
-      // Cast to internal map type to access private properties
       const internalMap = mapRef.current as LeafletMapInternal;
       if (!internalMap._loaded) {
         console.warn("Map is not fully loaded yet, cannot navigate");
@@ -81,7 +58,24 @@ export function useLocationSelection(
         return;
       }
       
-      // Add a try-catch inside the actual fly operation
+      // Check if we're already at this position to prevent unnecessary updates
+      const currentCenter = mapRef.current.getCenter();
+      const distance = Math.abs(currentCenter.lat - position[0]) + Math.abs(currentCenter.lng - position[1]);
+      
+      if (distance < 0.001) {
+        console.log("Already at target location, skipping navigation");
+        if (onLocationSelect) {
+          const location: Location = {
+            id: `loc-${position[0]}-${position[1]}`,
+            label: `Location at ${position[0].toFixed(4)}, ${position[1].toFixed(4)}`,
+            x: position[1],
+            y: position[0]
+          };
+          onLocationSelect(location);
+        }
+        return;
+      }
+      
       try {
         mapRef.current.flyTo(position, 18, {
           animate: true,
@@ -101,17 +95,6 @@ export function useLocationSelection(
       } catch (flyError) {
         console.error('Error during map navigation:', flyError);
         toast.error("Navigation failed. The map may be in an invalid state.");
-        
-        // Try to recover the map state
-        setTimeout(() => {
-          if (mapRef.current) {
-            try {
-              mapRef.current.invalidateSize(true);
-            } catch (err) {
-              // Ignore recovery errors
-            }
-          }
-        }, 500);
       }
     } catch (err) {
       console.error('Error handling location selection:', err);
@@ -122,7 +105,6 @@ export function useLocationSelection(
   const handleClearAll = () => {
     if (mapRef.current && isMapReady) {
       try {
-        // Cast to internal map type to access private properties
         const internalMap = mapRef.current as LeafletMapInternal;
         if (internalMap._loaded) {
           mapRef.current.invalidateSize();
