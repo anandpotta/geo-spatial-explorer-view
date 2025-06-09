@@ -218,11 +218,23 @@ export function useClearAllOperation(onClearAll?: () => void) {
     } else {
       console.warn('Feature group not available for clear operation, using localStorage fallback');
       
-      // Clear specific storages but preserve selected location
+      // Clear ALL storages that contain saved data
+      console.log('Clearing all saved data from localStorage...');
       localStorage.removeItem('savedDrawings');
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
+      
+      // Also clear user-specific marker storage
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      if (currentUser?.id) {
+        localStorage.removeItem(`geospatial_markers_${currentUser.id}`);
+        localStorage.removeItem(`geospatial_svg_paths_${currentUser.id}`);
+      }
+      
+      // Clear generic marker storage as well
+      localStorage.removeItem('geospatial_markers');
+      localStorage.removeItem('geospatial_svg_paths');
       
       // Restore selected location
       if (selectedLocation) {
