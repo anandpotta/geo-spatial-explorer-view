@@ -4,9 +4,24 @@ import { toast } from 'sonner';
 
 const STORAGE_KEY = 'savedDrawings';
 
+// Debounce mechanism to prevent rapid event dispatching
+let lastEventDispatch = 0;
+const EVENT_DEBOUNCE_MS = 200;
+
+const dispatchEventsDebounced = () => {
+  const now = Date.now();
+  if (now - lastEventDispatch < EVENT_DEBOUNCE_MS) return;
+  lastEventDispatch = now;
+  
+  // Use setTimeout to prevent immediate cascading
+  setTimeout(() => {
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('drawingsUpdated'));
+  }, 50);
+};
+
 export const saveDrawing = (drawing: DrawingData): boolean => {
   try {
-    // Remove the authentication check - allow anonymous saving
     console.log('Saving drawing:', drawing.id);
     
     const existingDrawings = getSavedDrawings();
@@ -24,9 +39,8 @@ export const saveDrawing = (drawing: DrawingData): boolean => {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDrawings));
     
-    // Dispatch event to notify other components
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('drawingsUpdated'));
+    // Dispatch events with debouncing
+    dispatchEventsDebounced();
     
     toast.success('Drawing saved successfully');
     return true;
@@ -57,9 +71,8 @@ export const deleteDrawing = (drawingId: string): boolean => {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredDrawings));
     
-    // Dispatch events
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('drawingsUpdated'));
+    // Dispatch events with debouncing
+    dispatchEventsDebounced();
     
     toast.success('Drawing deleted successfully');
     return true;
