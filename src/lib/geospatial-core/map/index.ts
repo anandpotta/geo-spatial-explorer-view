@@ -131,3 +131,6 @@ export class MapCore {
     return this.isInitialized;
   }
 }
+
+// Ensure MapCore is explicitly exported as default as well
+export default MapCore;

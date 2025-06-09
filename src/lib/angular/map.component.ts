@@ -1,6 +1,6 @@
 
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { MapCore } from '../geospatial-core/map';
+import { MapCore } from '../geospatial-core/map/index';
 import { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 
 @Component({
