@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +39,26 @@ const NewMarkerForm = ({
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSaveButtonClick = (e: React.MouseEvent) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setMarkerName(e.target.value);
+  }, [setMarkerName]);
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (markerName.trim()) {
+        if (isEditing && existingMarkerId && onRename) {
+          onRename(existingMarkerId, markerName);
+        } else {
+          onSave();
+        }
+      }
+    }
+  }, [markerName, isEditing, existingMarkerId, onRename, onSave]);
+
+  const handleSaveButtonClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -48,7 +67,11 @@ const NewMarkerForm = ({
     } else {
       onSave();
     }
-  };
+  }, [isEditing, existingMarkerId, onRename, markerName, onSave]);
+
+  const handleTypeChange = useCallback((type: 'pin' | 'area' | 'building') => {
+    setMarkerType(type);
+  }, [setMarkerType]);
 
   return (
     <Popup>
@@ -58,7 +81,8 @@ const NewMarkerForm = ({
           type="text"
           placeholder="Location name"
           value={markerName}
-          onChange={(e) => setMarkerName(e.target.value)}
+          onChange={handleInputChange}
+          onKeyPress={handleKeyPress}
           className="mb-2"
           autoFocus
         />
@@ -69,7 +93,7 @@ const NewMarkerForm = ({
               size="sm"
               variant={markerType === 'pin' ? 'default' : 'outline'}
               className="flex-1"
-              onClick={() => setMarkerType('pin')}
+              onClick={() => handleTypeChange('pin')}
             >
               Pin
             </Button>
@@ -78,7 +102,7 @@ const NewMarkerForm = ({
               size="sm"
               variant={markerType === 'area' ? 'default' : 'outline'}
               className="flex-1"
-              onClick={() => setMarkerType('area')}
+              onClick={() => handleTypeChange('area')}
             >
               Area
             </Button>
@@ -87,7 +111,7 @@ const NewMarkerForm = ({
               size="sm"
               variant={markerType === 'building' ? 'default' : 'outline'}
               className="flex-1"
-              onClick={() => setMarkerType('building')}
+              onClick={() => handleTypeChange('building')}
             >
               Building
             </Button>
