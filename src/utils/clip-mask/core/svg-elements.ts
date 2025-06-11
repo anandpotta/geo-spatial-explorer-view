@@ -62,7 +62,7 @@ export const createClipMaskSvgElements = (
 };
 
 /**
- * Applies a pattern and clip path to an SVG path element
+ * Applies a pattern and clip path to an SVG path element with improved persistence
  */
 export const applyPatternAndClipPath = (
   pathElement: SVGPathElement,
@@ -70,44 +70,85 @@ export const applyPatternAndClipPath = (
   clipPathId: string
 ): boolean => {
   try {
-    requestAnimationFrame(() => {
-      if (!pathElement || !document.contains(pathElement)) return;
-      
-      // Apply all changes in a single batch to reduce visual flickering
-      const fill = `url(#${patternId})`;
-      const clipPathUrl = `url(#${clipPathId})`;
-      
-      console.log(`Setting fill to: ${fill}`);
-      console.log(`Setting clip-path to: ${clipPathUrl}`);
-      
-      // Set attributes directly to ensure they take effect
-      pathElement.style.fill = fill;
-      pathElement.setAttribute('fill', fill);
-      pathElement.style.clipPath = clipPathUrl;
-      pathElement.setAttribute('clip-path', clipPathUrl);
-      
-      // Add extra visibility classes
-      pathElement.classList.add('has-image-fill');
-      
-      // Force a repaint
-      window.dispatchEvent(new Event('resize'));
-      
-      // Check again after a short delay to ensure attributes haven't been overridden
-      setTimeout(() => {
-        if (!pathElement || !document.contains(pathElement)) return;
-        
-        // Re-apply if the fill was lost
-        if (!pathElement.style.fill || !pathElement.style.fill.includes(patternId)) {
-          console.log(`Fill lost for ${patternId}, reapplying`);
-          pathElement.style.fill = fill;
-          pathElement.setAttribute('fill', fill);
+    // Apply all changes in a single batch to reduce visual flickering
+    const fill = `url(#${patternId})`;
+    const clipPathUrl = `url(#${clipPathId})`;
+    
+    console.log(`Setting fill to: ${fill}`);
+    console.log(`Setting clip-path to: ${clipPathUrl}`);
+    
+    // Set attributes directly to ensure they take effect
+    pathElement.style.fill = fill;
+    pathElement.setAttribute('fill', fill);
+    pathElement.style.clipPath = clipPathUrl;
+    pathElement.setAttribute('clip-path', clipPathUrl);
+    
+    // Add extra visibility classes
+    pathElement.classList.add('has-image-fill');
+    
+    // Mark the element as having stable fill to prevent overwrites
+    pathElement.setAttribute('data-fill-locked', 'true');
+    pathElement.setAttribute('data-fill-pattern-id', patternId);
+    
+    // Set up a MutationObserver to watch for attribute changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && 
+            (mutation.attributeName === 'fill' || mutation.attributeName === 'style')) {
+          
+          // Check if the fill was lost or changed
+          const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
+          const expectedFill = `url(#${patternId})`;
+          
+          if (currentFill !== expectedFill && pathElement.getAttribute('data-fill-locked') === 'true') {
+            console.log(`Fill protection: restoring ${expectedFill} for ${patternId}`);
+            pathElement.style.fill = expectedFill;
+            pathElement.setAttribute('fill', expectedFill);
+          }
         }
-      }, 300);
+      });
+    });
+    
+    // Start observing
+    observer.observe(pathElement, {
+      attributes: true,
+      attributeFilter: ['fill', 'style']
+    });
+    
+    // Store the observer reference for cleanup
+    (pathElement as any)._fillObserver = observer;
+    
+    // Force a repaint
+    requestAnimationFrame(() => {
+      if (pathElement && document.contains(pathElement)) {
+        pathElement.getBoundingClientRect();
+        window.dispatchEvent(new Event('resize'));
+      }
     });
     
     return true;
   } catch (err) {
     console.error('Error applying pattern and clip path:', err);
     return false;
+  }
+};
+
+/**
+ * Clean up fill protection for a path element
+ */
+export const cleanupFillProtection = (pathElement: SVGPathElement): void => {
+  try {
+    // Stop observing
+    const observer = (pathElement as any)._fillObserver;
+    if (observer) {
+      observer.disconnect();
+      delete (pathElement as any)._fillObserver;
+    }
+    
+    // Remove protection attributes
+    pathElement.removeAttribute('data-fill-locked');
+    pathElement.removeAttribute('data-fill-pattern-id');
+  } catch (err) {
+    console.error('Error cleaning up fill protection:', err);
   }
 };

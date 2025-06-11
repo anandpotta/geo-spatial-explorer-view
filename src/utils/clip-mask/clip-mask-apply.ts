@@ -89,17 +89,21 @@ export const applyImageClipMask = (
       loadingImages.set(id, false);
       pathElement.classList.remove('loading-clip-mask');
       
-      // Ensure the fill is still properly applied
+      // Ensure the fill is still properly applied - but don't force reapplication
       const patternId = `pattern-${id}`;
-      const fill = `url(#${patternId})`;
-      pathElement.style.fill = fill;
-      pathElement.setAttribute('fill', fill);
+      const expectedFill = `url(#${patternId})`;
+      const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
+      
+      if (currentFill !== expectedFill) {
+        console.log(`Restoring fill for existing clip mask: ${expectedFill}`);
+        pathElement.style.fill = expectedFill;
+        pathElement.setAttribute('fill', expectedFill);
+      }
       
       // Force a repaint
       requestAnimationFrame(() => {
         if (pathElement && document.contains(pathElement)) {
           pathElement.getBoundingClientRect();
-          window.dispatchEvent(new Event('resize'));
         }
       });
       
@@ -158,7 +162,6 @@ export const applyImageClipMask = (
         requestAnimationFrame(() => {
           if (pathElement && document.contains(pathElement)) {
             pathElement.getBoundingClientRect();
-            window.dispatchEvent(new Event('resize'));
             // Trigger a custom event that the floor plan was updated
             window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
               detail: { drawingId: id, userId: currentUser.id }
