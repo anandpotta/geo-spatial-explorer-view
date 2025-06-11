@@ -12,38 +12,67 @@ export const setupSvgPathAttributes = (
 ): boolean => {
   console.log(`=== SETTING UP SVG PATH ATTRIBUTES for drawing: ${drawing.id} ===`);
   
-  // Get the layer's DOM element
+  // Get the layer's DOM element with improved detection
   let pathElement: Element | null = null;
   
-  // Check if the layer has a direct path element
-  if ((layer as any)._path) {
-    pathElement = (layer as any)._path;
-    console.log(`Found path element via layer._path for drawing: ${drawing.id}`);
-  }
-  
-  // If no direct path, try to find it through the container
-  if (!pathElement && (layer as any)._container) {
-    const container = (layer as any)._container;
-    pathElement = container.querySelector('path');
-    if (pathElement) {
-      console.log(`Found path element via container query for drawing: ${drawing.id}`);
+  // Function to search for path elements more thoroughly
+  const findPathElement = (searchLayer: L.Layer): Element | null => {
+    // Check if the layer has a direct path element
+    if ((searchLayer as any)._path) {
+      const pathEl = (searchLayer as any)._path;
+      if (pathEl && pathEl.tagName && (pathEl.tagName.toLowerCase() === 'path')) {
+        console.log(`Found path element via layer._path for drawing: ${drawing.id}`);
+        return pathEl;
+      }
     }
-  }
+    
+    // Check if the layer has a container with path elements
+    if ((searchLayer as any)._container) {
+      const container = (searchLayer as any)._container;
+      const pathEl = container.querySelector('path');
+      if (pathEl) {
+        console.log(`Found path element via container query for drawing: ${drawing.id}`);
+        return pathEl;
+      }
+    }
+    
+    // Check if the layer has a renderer with path elements
+    if ((searchLayer as any)._renderer && (searchLayer as any)._renderer._container) {
+      const rendererContainer = (searchLayer as any)._renderer._container;
+      const pathEl = rendererContainer.querySelector(`path[stroke-linejoin="round"]`);
+      if (pathEl) {
+        console.log(`Found path element via renderer container for drawing: ${drawing.id}`);
+        return pathEl;
+      }
+    }
+    
+    return null;
+  };
   
-  // If still no path, search through sub-layers
+  // Try to find the path element
+  pathElement = findPathElement(layer);
+  
+  // If no direct path, search through sub-layers
   if (!pathElement && typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((subLayer: L.Layer) => {
       if (!pathElement) {
-        if ((subLayer as any)._path) {
-          pathElement = (subLayer as any)._path;
-          console.log(`Found path element via sublayer._path for drawing: ${drawing.id}`);
-        } else if ((subLayer as any)._container) {
-          const subContainer = (subLayer as any)._container;
-          const foundPath = subContainer.querySelector('path');
-          if (foundPath) {
-            pathElement = foundPath;
-            console.log(`Found path element via sublayer container for drawing: ${drawing.id}`);
-          }
+        pathElement = findPathElement(subLayer);
+      }
+    });
+  }
+  
+  // If still no path, try a more aggressive DOM search
+  if (!pathElement) {
+    // Look for any SVG path elements that might be related to this drawing
+    const allPaths = document.querySelectorAll('svg path');
+    allPaths.forEach((path) => {
+      if (!pathElement) {
+        // Check if this path might belong to our drawing by checking its position or attributes
+        const existingDrawingId = path.getAttribute('data-drawing-id');
+        if (!existingDrawingId) {
+          // This might be our new path that hasn't been attributed yet
+          pathElement = path;
+          console.log(`Found unattributed path element for drawing: ${drawing.id}`);
         }
       }
     });
@@ -67,7 +96,10 @@ export const setupSvgPathAttributes = (
       
       // Call the global handler
       if ((window as any)[globalHandlerName]) {
+        console.log(`=== CALLING GLOBAL HANDLER: ${globalHandlerName} ===`);
         (window as any)[globalHandlerName]();
+      } else {
+        console.warn(`Global handler ${globalHandlerName} not found on window object`);
       }
     };
     
@@ -77,7 +109,7 @@ export const setupSvgPathAttributes = (
       pathElement.removeEventListener('click', (pathElement as any)._drawingClickHandler, false);
     }
     
-    // Add the new click handler
+    // Add the new click handler with proper event capture
     pathElement.addEventListener('click', domClickHandler, { capture: true, passive: false });
     pathElement.addEventListener('click', domClickHandler, { passive: false });
     
@@ -99,7 +131,7 @@ export const setupSvgPathAttributes = (
 };
 
 /**
- * Retries SVG path setup with delays
+ * Retries SVG path setup with delays and more aggressive searches
  */
 export const retrySetupWithDelays = (
   layer: L.Layer,
@@ -108,14 +140,30 @@ export const retrySetupWithDelays = (
 ): void => {
   console.log(`Setting up retries for SVG setup for drawing: ${drawing.id}`);
   
-  const retryDelays = [100, 300, 500, 1000, 2000];
+  const retryDelays = [100, 300, 500, 1000, 2000, 3000];
+  let successfulSetup = false;
+  
   retryDelays.forEach((delay, index) => {
     setTimeout(() => {
-      const success = setupSvgPathAttributes(layer, drawing, globalHandlerName);
-      if (success) {
-        console.log(`SVG setup succeeded on retry ${index + 1} for drawing: ${drawing.id}`);
-      } else if (index === retryDelays.length - 1) {
-        console.warn(`All SVG setup retries failed for drawing: ${drawing.id}`);
+      if (!successfulSetup) {
+        const success = setupSvgPathAttributes(layer, drawing, globalHandlerName);
+        if (success) {
+          console.log(`SVG setup succeeded on retry ${index + 1} for drawing: ${drawing.id}`);
+          successfulSetup = true;
+        } else if (index === retryDelays.length - 1) {
+          console.warn(`All SVG setup retries failed for drawing: ${drawing.id}`);
+          // Last resort: try to find any unattributed paths and set them up
+          setTimeout(() => {
+            const allPaths = document.querySelectorAll('svg path:not([data-drawing-id])');
+            if (allPaths.length > 0) {
+              console.log(`Found ${allPaths.length} unattributed paths, attempting to attribute the first one to drawing: ${drawing.id}`);
+              const pathElement = allPaths[0];
+              pathElement.setAttribute('data-drawing-id', drawing.id);
+              pathElement.setAttribute('data-interactive', 'true');
+              pathElement.setAttribute('data-global-handler', globalHandlerName);
+            }
+          }, 1000);
+        }
       }
     }, delay);
   });
