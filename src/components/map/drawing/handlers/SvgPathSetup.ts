@@ -82,6 +82,12 @@ export const setupSvgPathAttributes = (
   if (pathElement) {
     console.log(`=== SETTING ATTRIBUTES ON PATH ELEMENT for drawing: ${drawing.id} ===`);
     
+    // Validate that we have all required data before marking as interactive
+    if (!drawing.id || !globalHandlerName) {
+      console.warn(`Cannot set up interactive path - missing required data: drawingId=${drawing.id}, globalHandler=${globalHandlerName}`);
+      return false;
+    }
+    
     // Set the required attributes
     pathElement.setAttribute('data-drawing-id', drawing.id);
     pathElement.setAttribute('data-interactive', 'true');
@@ -94,12 +100,12 @@ export const setupSvgPathAttributes = (
       domEvent.preventDefault();
       domEvent.stopImmediatePropagation();
       
-      // Call the global handler
-      if ((window as any)[globalHandlerName]) {
+      // Validate global handler exists before calling
+      if ((window as any)[globalHandlerName] && typeof (window as any)[globalHandlerName] === 'function') {
         console.log(`=== CALLING GLOBAL HANDLER: ${globalHandlerName} ===`);
         (window as any)[globalHandlerName]();
       } else {
-        console.warn(`Global handler ${globalHandlerName} not found on window object`);
+        console.warn(`Global handler ${globalHandlerName} not found or not a function`);
       }
     };
     

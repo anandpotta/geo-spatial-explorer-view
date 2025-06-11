@@ -65,53 +65,35 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           console.log(`=== INTERACTIVE PATH DETECTED ===`);
           console.log(`Drawing ID: ${drawingId}, Interactive: ${isInteractive}, Global Handler: ${globalHandler}`);
           
-          if (drawingId || isInteractive || globalHandler) {
+          // Only block map click if we have valid attributes AND a working global handler
+          if (drawingId && isInteractive === 'true' && globalHandler && (window as any)[globalHandler]) {
             console.log(`=== BLOCKING MAP CLICK === Interactive drawing element detected`);
             
-            // Try to call the global handler if it exists
-            if (globalHandler && (window as any)[globalHandler]) {
-              console.log(`=== CALLING GLOBAL HANDLER: ${globalHandler} ===`);
-              try {
-                (window as any)[globalHandler]();
-                console.log(`=== Global handler called successfully: ${globalHandler} ===`);
-                handlerCalled = true;
-              } catch (error) {
-                console.error(`Error calling global handler ${globalHandler}:`, error);
-              }
-            } else if (globalHandler) {
-              console.warn(`Global handler ${globalHandler} not found on window object`);
-              // List available global handlers for debugging
-              const availableHandlers = Object.keys(window).filter(key => key.startsWith('triggerDrawingClick_'));
-              console.log('Available global handlers:', availableHandlers);
+            console.log(`=== CALLING GLOBAL HANDLER: ${globalHandler} ===`);
+            try {
+              (window as any)[globalHandler]();
+              console.log(`=== Global handler called successfully: ${globalHandler} ===`);
+              handlerCalled = true;
+            } catch (error) {
+              console.error(`Error calling global handler ${globalHandler}:`, error);
             }
             
-            // If we have a drawing ID but no specific global handler, try to construct one
-            if (!handlerCalled && drawingId) {
-              const constructedHandler = `triggerDrawingClick_${drawingId}`;
-              console.log(`=== TRYING CONSTRUCTED HANDLER: ${constructedHandler} ===`);
-              if ((window as any)[constructedHandler]) {
-                try {
-                  (window as any)[constructedHandler]();
-                  console.log(`=== Constructed handler called successfully: ${constructedHandler} ===`);
-                  handlerCalled = true;
-                } catch (error) {
-                  console.error(`Error calling constructed handler ${constructedHandler}:`, error);
-                }
-              } else {
-                console.warn(`Constructed handler ${constructedHandler} not found`);
-              }
-            }
-            
-            // Completely block map click for drawing paths
+            // Completely block map click for valid drawing paths
             return;
+          } else if (drawingId || isInteractive || globalHandler) {
+            // If we have partial attributes but missing critical ones, warn and don't block
+            console.warn(`Path has incomplete attributes - not blocking map click. DrawingId: ${drawingId}, Interactive: ${isInteractive}, Handler: ${globalHandler}`);
+            
+            // Clean up incomplete attributes to prevent future confusion
+            if (!drawingId) pathElement.removeAttribute('data-drawing-id');
+            if (!isInteractive || isInteractive !== 'true') pathElement.removeAttribute('data-interactive');
+            if (!globalHandler || !(window as any)[globalHandler]) pathElement.removeAttribute('data-global-handler');
           }
           
-          // If it's any interactive SVG element, block map click
+          // If it's any other interactive SVG element without proper attribution, don't block
           if (target.hasAttribute('data-svg-uid') ||
-              target.classList.contains('leaflet-interactive') ||
-              target.closest('g[class*="leaflet"]')) {
-            console.log('Click on interactive drawing element - blocking map click');
-            return;
+              target.classList.contains('leaflet-interactive')) {
+            console.log('Click on general interactive SVG element - allowing map click to proceed');
           }
         }
       }
