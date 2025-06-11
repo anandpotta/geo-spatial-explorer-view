@@ -73,6 +73,8 @@ export const createLayerFromDrawing = async ({
       return;
     }
 
+    console.log(`Creating new layer for drawing ${drawing.id}`);
+
     // Prepare layer options - this is now async
     const options = await prepareLayerOptions(drawing);
     
@@ -92,47 +94,25 @@ export const createLayerFromDrawing = async ({
         // Add the ID at the sublayer level too
         (l as any).drawingId = drawing.id;
         
-        // Store the layer reference FIRST
+        // Store the layer reference
         layersRef.set(drawing.id, l);
       }
     });
     
-    // Add the layer to the feature group FIRST
+    // Add the layer to the feature group
     if (isMounted && layer) {
       featureGroup.addLayer(layer);
       
-      console.log(`Adding layer for drawing ${drawing.id} to feature group`);
+      console.log(`Successfully added layer for drawing ${drawing.id} to feature group`);
       
-      // Apply drawing attributes with multiple attempts
-      const applyAttributesWithRetry = (attempt = 1) => {
-        if (attempt > 5 || !isMounted) return;
-        
-        console.log(`Applying drawing attributes for ${drawing.id}, attempt ${attempt}`);
-        
-        layer.eachLayer((l: L.Layer) => {
-          if (l && isMounted) {
-            addDrawingAttributesToLayer(l, drawing.id);
-          }
-        });
-        
-        // Verify if attributes were applied
-        setTimeout(() => {
-          if (!isMounted) return;
-          
-          const pathWithId = document.querySelector(`[data-drawing-id="${drawing.id}"]`);
-          if (!pathWithId && attempt < 5) {
-            console.log(`Attributes not applied yet for ${drawing.id}, retrying...`);
-            applyAttributesWithRetry(attempt + 1);
-          } else if (pathWithId) {
-            console.log(`Successfully verified attributes for ${drawing.id}`);
-          }
-        }, 200 * attempt);
-      };
+      // Apply drawing attributes immediately after adding to feature group
+      layer.eachLayer((l: L.Layer) => {
+        if (l && isMounted) {
+          addDrawingAttributesToLayer(l, drawing.id);
+        }
+      });
       
-      // Start the retry process
-      applyAttributesWithRetry();
-      
-      // Add controls and event handlers after attributes are set
+      // Add controls and event handlers
       setTimeout(() => {
         if (!isMounted) return;
         
@@ -158,7 +138,7 @@ export const createLayerFromDrawing = async ({
             setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
           }
         });
-      }, 1000);
+      }, 500);
       
       // Check if we've recently applied a floor plan to this drawing
       const lastApplied = floorPlanApplied.get(drawing.id) || 0;
@@ -168,40 +148,27 @@ export const createLayerFromDrawing = async ({
       const hasFloorPlanResult = await hasFloorPlan(drawing.id);
       console.log(`Drawing ${drawing.id} has floor plan: ${hasFloorPlanResult}`);
       
-      // Add a small delay before applying clip mask to ensure the path is rendered
+      // Apply clip mask if needed
       if (hasFloorPlanResult && isMounted && shouldApply) {
         floorPlanApplied.set(drawing.id, now);
         
-        // Apply with increasing timeouts to ensure SVG is ready
-        const attemptApplication = (attempt = 1) => {
-          if (attempt > 3 || !isMounted) return;
-          
-          console.log(`Attempting to apply clip mask for ${drawing.id}, attempt ${attempt}`);
-          
-          setTimeout(() => {
-            // Apply clip mask if a floor plan exists
-            if (isMounted) {
-              applyClipMaskToDrawing({
-                drawingId: drawing.id,
-                isMounted,
-                layer
-              }).then(success => {
-                if (!success && isMounted) {
-                  console.log(`Attempt ${attempt} failed, trying again with longer timeout`);
-                  attemptApplication(attempt + 1);
-                } else if (success) {
-                  console.log(`Successfully applied clip mask on attempt ${attempt}`);
-                  // Force an update
-                  window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-                    detail: { drawingId: drawing.id }
-                  }));
-                }
-              });
-            }
-          }, 600 * attempt); // Increased base delay
-        };
-        
-        attemptApplication();
+        setTimeout(() => {
+          if (isMounted) {
+            applyClipMaskToDrawing({
+              drawingId: drawing.id,
+              isMounted,
+              layer
+            }).then(success => {
+              if (success) {
+                console.log(`Successfully applied clip mask for ${drawing.id}`);
+                // Force an update
+                window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+                  detail: { drawingId: drawing.id }
+                }));
+              }
+            });
+          }
+        }, 1000);
       }
     }
   } catch (err) {
