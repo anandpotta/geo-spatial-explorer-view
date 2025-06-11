@@ -98,50 +98,46 @@ export function createLayerFromDrawing({
     setTimeout(() => {
       if (!isMounted) return;
       
-      const pathElement = document.querySelector(`path[data-drawing-id="${drawing.id}"]`) as SVGPathElement;
+      console.log(`Setting up SVG path for drawing: ${drawing.id}`);
+      
+      // Try multiple approaches to find the SVG path element
+      let pathElement = document.querySelector(`path[data-drawing-id="${drawing.id}"]`) as SVGPathElement;
+      
       if (!pathElement) {
-        // Try to find by other attributes
+        // Try to find by other attributes or SVG data matching
         const allPaths = document.querySelectorAll('path');
-        let foundPath: SVGPathElement | null = null;
+        console.log(`Found ${allPaths.length} path elements, searching for drawing ${drawing.id}`);
         
-        allPaths.forEach(path => {
+        allPaths.forEach((path, index) => {
           const pathData = path.getAttribute('d');
+          console.log(`Path ${index}: data=${pathData?.substring(0, 50)}...`);
+          
           if (pathData && drawing.svgPath && pathData.includes(drawing.svgPath.split(' ')[0])) {
-            foundPath = path as SVGPathElement;
+            pathElement = path as SVGPathElement;
+            console.log(`Found matching path for drawing ${drawing.id} by SVG data`);
           }
         });
+      }
+      
+      if (pathElement) {
+        console.log(`Setting up click handler for SVG path of drawing ${drawing.id}`);
         
-        if (foundPath) {
-          console.log(`Found path element for drawing ${drawing.id} by SVG data matching`);
-          foundPath.setAttribute('data-drawing-id', drawing.id);
-          foundPath.style.cursor = 'pointer';
-          
-          // Add click event to the SVG path
-          foundPath.addEventListener('click', (e: MouseEvent) => {
-            console.log(`SVG Path clicked for drawing: ${drawing.id}`);
-            e.stopPropagation();
-            
-            if (onRegionClick) {
-              console.log(`Calling onRegionClick from SVG path for drawing: ${drawing.id}`);
-              onRegionClick(drawing);
-            }
-            
-            if (onUploadRequest) {
-              console.log(`Calling onUploadRequest from SVG path for drawing: ${drawing.id}`);
-              onUploadRequest(drawing.id);
-            }
-          });
-        } else {
-          console.warn(`Could not find path element for drawing: ${drawing.id}`);
-        }
-      } else {
-        console.log(`Found path element for drawing ${drawing.id}`);
+        // Set drawing ID attribute
+        pathElement.setAttribute('data-drawing-id', drawing.id);
         pathElement.style.cursor = 'pointer';
+        pathElement.style.pointerEvents = 'all';
         
-        // Add click event to the SVG path
-        pathElement.addEventListener('click', (e: MouseEvent) => {
+        // Remove any existing click listeners to avoid duplicates
+        const existingHandler = (pathElement as any).__clickHandler;
+        if (existingHandler) {
+          pathElement.removeEventListener('click', existingHandler);
+        }
+        
+        // Create new click handler
+        const clickHandler = (e: MouseEvent) => {
           console.log(`SVG Path clicked for drawing: ${drawing.id}`);
           e.stopPropagation();
+          e.preventDefault();
           
           if (onRegionClick) {
             console.log(`Calling onRegionClick from SVG path for drawing: ${drawing.id}`);
@@ -152,7 +148,17 @@ export function createLayerFromDrawing({
             console.log(`Calling onUploadRequest from SVG path for drawing: ${drawing.id}`);
             onUploadRequest(drawing.id);
           }
-        });
+        };
+        
+        // Store reference to handler for cleanup
+        (pathElement as any).__clickHandler = clickHandler;
+        
+        // Add the click event listener
+        pathElement.addEventListener('click', clickHandler, { passive: false });
+        
+        console.log(`SVG path click handler successfully set up for drawing ${drawing.id}`);
+      } else {
+        console.warn(`Could not find SVG path element for drawing: ${drawing.id}`);
       }
 
       // Apply floor plan if exists
@@ -164,14 +170,14 @@ export function createLayerFromDrawing({
         }
       };
       loadFloorPlan();
-    }, 100);
+    }, 200); // Increased timeout to ensure DOM is ready
 
     // Add buttons for edit mode
     if (activeTool === 'edit') {
       setTimeout(() => {
         if (!isMounted) return;
         addEditModeButtons();
-      }, 200);
+      }, 300);
     }
 
     function addEditModeButtons() {
