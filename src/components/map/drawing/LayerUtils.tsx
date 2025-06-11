@@ -61,13 +61,11 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
         // Store drawing ID on the layer
         (layer as any).drawingId = drawing.id;
         
-        // Hook into the path creation process
+        // Apply attributes immediately when layer is created
         if (layer && typeof (layer as any).on === 'function') {
+          // Hook into the layer's add event
           (layer as any).on('add', () => {
-            // Apply attributes when the layer is added to the map
-            setTimeout(() => {
-              applyAttributesToPath(layer, drawing.id);
-            }, 0);
+            applyAttributesToLayer(layer, drawing.id);
           });
         }
       }
@@ -91,22 +89,24 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
 };
 
 /**
- * Applies attributes to a specific path element for a layer
+ * Applies attributes to a layer's SVG path element
  */
-const applyAttributesToPath = (layer: L.Layer, drawingId: string): void => {
+const applyAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
   try {
+    console.log(`Applying attributes to layer for drawing ${drawingId}`);
+    
     // Store drawing ID on the layer object itself
     (layer as any).drawingId = drawingId;
     
-    console.log(`Applying attributes to path for drawing ${drawingId}`);
-    
     // Function to apply attributes to a path element
-    const setPathAttributes = (pathElement: SVGPathElement) => {
+    const applyToPath = (pathElement: SVGPathElement) => {
       console.log(`Setting attributes on path element for ${drawingId}`);
+      
+      const uid = `uid-${drawingId}-${Date.now()}`;
       
       pathElement.setAttribute('data-drawing-id', drawingId);
       pathElement.setAttribute('id', `drawing-path-${drawingId}`);
-      pathElement.setAttribute('data-path-uid', `uid-${drawingId}-${Date.now()}`);
+      pathElement.setAttribute('data-path-uid', uid);
       pathElement.classList.add('drawing-path-' + drawingId.substring(0, 8));
       pathElement.classList.add('visible-path-stroke');
       pathElement.setAttribute('data-drawing-type', 'user-drawn');
@@ -119,29 +119,35 @@ const applyAttributesToPath = (layer: L.Layer, drawingId: string): void => {
       });
     };
 
-    // Direct access to the layer's path element
+    // Strategy 1: Direct access to the layer's path element
     if ((layer as any)._path && (layer as any)._path.tagName === 'path') {
-      setPathAttributes((layer as any)._path);
+      applyToPath((layer as any)._path);
       return;
     }
     
-    // For layers that might not have _path directly, look for it in the DOM
-    const map = (layer as any)._map;
-    if (map) {
-      const container = map.getContainer();
-      if (container) {
-        // Find recently added paths that don't have drawing IDs yet
-        const recentPaths = container.querySelectorAll('.leaflet-overlay-pane path:not([data-drawing-id])');
-        
-        // Apply to the most recently added path(s)
-        recentPaths.forEach((path: SVGPathElement) => {
-          setPathAttributes(path);
-        });
+    // Strategy 2: Use a more immediate approach with proper timing
+    const checkForPath = () => {
+      if ((layer as any)._path && (layer as any)._path.tagName === 'path') {
+        applyToPath((layer as any)._path);
+        return true;
       }
+      return false;
+    };
+    
+    // Check immediately
+    if (!checkForPath()) {
+      // If not found immediately, check a few more times with short delays
+      setTimeout(() => {
+        if (!checkForPath()) {
+          setTimeout(() => {
+            checkForPath();
+          }, 50);
+        }
+      }, 10);
     }
     
   } catch (err) {
-    console.error('Error applying attributes to path:', err);
+    console.error('Error applying attributes to layer:', err);
   }
 };
 
@@ -152,64 +158,18 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
   if (!layer) return;
 
   try {
+    console.log(`Adding drawing attributes for ${drawingId}`);
+    
     // Store drawing ID on the layer object itself
     (layer as any).drawingId = drawingId;
     
-    console.log(`Adding drawing attributes for ${drawingId}`);
+    // Apply attributes immediately
+    applyAttributesToLayer(layer, drawingId);
     
-    // Strategy 1: Direct path element targeting
-    const processLayer = (targetLayer: any) => {
-      if (targetLayer._path && targetLayer._path.tagName === 'path') {
-        applyAttributesToPath(targetLayer, drawingId);
-        return true;
-      }
-      return false;
-    };
-
-    // Process the main layer
-    let processed = processLayer(layer);
-    
-    // Strategy 2: If it's a feature group, process each sublayer
-    if (!processed && typeof (layer as any).eachLayer === 'function') {
-      (layer as any).eachLayer((subLayer: L.Layer) => {
-        (subLayer as any).drawingId = drawingId;
-        const success = processLayer(subLayer);
-        if (success) processed = true;
-      });
-    }
-    
-    // Strategy 3: Use a more targeted DOM approach
-    if (!processed) {
-      setTimeout(() => {
-        const map = (layer as any)._map;
-        if (map) {
-          const container = map.getContainer();
-          if (container) {
-            // Look for paths that were just added and don't have drawing IDs
-            const untaggedPaths = container.querySelectorAll('.leaflet-overlay-pane path:not([data-drawing-id])');
-            
-            untaggedPaths.forEach((path: SVGPathElement) => {
-              // Apply attributes to untagged paths
-              console.log(`Applying attributes to untagged path for ${drawingId}`);
-              
-              path.setAttribute('data-drawing-id', drawingId);
-              path.setAttribute('id', `drawing-path-${drawingId}`);
-              path.setAttribute('data-path-uid', `uid-${drawingId}-${Date.now()}`);
-              path.classList.add('drawing-path-' + drawingId.substring(0, 8));
-              path.classList.add('visible-path-stroke');
-              path.setAttribute('data-drawing-type', 'user-drawn');
-              path.setAttribute('data-clickable', 'true');
-              
-              console.log(`Applied attributes to path:`, {
-                'data-drawing-id': path.getAttribute('data-drawing-id'),
-                'id': path.getAttribute('id'),
-                'data-path-uid': path.getAttribute('data-path-uid')
-              });
-            });
-          }
-        }
-      }, 100);
-    }
+    // Also set up a fallback check
+    setTimeout(() => {
+      applyAttributesToLayer(layer, drawingId);
+    }, 100);
     
   } catch (err) {
     console.error('Error adding drawing attributes to layer:', err);
