@@ -24,6 +24,15 @@ const LayerManager = ({
   const isMountedRef = useRef<boolean>(true);
   const isInitialRenderRef = useRef(true);
   const lastDrawingsRef = useRef<DrawingData[]>([]);
+  const renderCountRef = useRef(0);
+  
+  // Debug: Track renders
+  renderCountRef.current += 1;
+  console.log(`LayerManager render #${renderCountRef.current}`, {
+    savedDrawingsLength: savedDrawings.length,
+    activeTool,
+    featureGroupLayerCount: featureGroup ? Object.keys(featureGroup._layers || {}).length : 0
+  });
   
   const {
     removeButtonRoots,
@@ -81,9 +90,11 @@ const LayerManager = ({
 
   // Component lifecycle
   useEffect(() => {
+    console.log('LayerManager: Component mounted');
     isMountedRef.current = true;
     
     return () => {
+      console.log('LayerManager: Component unmounting');
       isMountedRef.current = false;
       safeUnmountRoots();
       layersRef.current.clear();
@@ -92,6 +103,12 @@ const LayerManager = ({
 
   // Use a more stable approach for detecting real changes to drawings
   useEffect(() => {
+    console.log('LayerManager: savedDrawings/activeTool effect triggered', {
+      isMounted: isMountedRef.current,
+      savedDrawingsLength: savedDrawings.length,
+      activeTool
+    });
+    
     if (!isMountedRef.current) return;
     
     // Helper function to check if drawings have actually changed
@@ -111,10 +128,17 @@ const LayerManager = ({
     // Only do a full update if drawings have changed or this is the first render
     const shouldForceUpdate = isInitialRenderRef.current || haveSavedDrawingsChanged();
     
+    console.log('LayerManager: Update decision', {
+      shouldForceUpdate,
+      isInitialRender: isInitialRenderRef.current,
+      drawingsChanged: haveSavedDrawingsChanged()
+    });
+    
     if (shouldForceUpdate) {
       // For initial render or when drawings change, use a short delay
       setTimeout(() => {
         if (isMountedRef.current) {
+          console.log('LayerManager: Calling updateLayers (forced)');
           updateLayers();
           isInitialRenderRef.current = false;
           lastDrawingsRef.current = [...savedDrawings];
@@ -122,13 +146,17 @@ const LayerManager = ({
       }, 100);
     } else if (activeTool === 'edit') {
       // For edit mode changes, use the debounced version
+      console.log('LayerManager: Calling debouncedUpdateLayers (edit mode)');
       debouncedUpdateLayers();
     }
   }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
 
   // Listen for resize events which might affect positioning
   useEffect(() => {
+    console.log('LayerManager: Setting up resize listener');
+    
     const handleResize = () => {
+      console.log('LayerManager: Resize event triggered');
       if (isMountedRef.current) {
         debouncedUpdateLayers();
       }
@@ -137,13 +165,17 @@ const LayerManager = ({
     window.addEventListener('resize', handleResize);
     
     return () => {
+      console.log('LayerManager: Removing resize listener');
       window.removeEventListener('resize', handleResize);
     };
   }, [debouncedUpdateLayers]);
 
   // Handle storage events for cross-tab updates
   useEffect(() => {
+    console.log('LayerManager: Setting up storage listeners');
+    
     const handleStorageUpdate = () => {
+      console.log('LayerManager: Storage update event triggered');
       if (isMountedRef.current) {
         debouncedUpdateLayers();
       }
@@ -153,16 +185,22 @@ const LayerManager = ({
     window.addEventListener('floorPlanUpdated', handleStorageUpdate);
     
     // Also listen for visibility changes to update when tab becomes visible
-    document.addEventListener('visibilitychange', () => {
+    const handleVisibilityChange = () => {
+      console.log('LayerManager: Visibility change event triggered', {
+        visibilityState: document.visibilityState
+      });
       if (document.visibilityState === 'visible' && isMountedRef.current) {
         debouncedUpdateLayers();
       }
-    });
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      console.log('LayerManager: Removing storage listeners');
       window.removeEventListener('storage', handleStorageUpdate);
       window.removeEventListener('floorPlanUpdated', handleStorageUpdate);
-      document.removeEventListener('visibilitychange', handleStorageUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [debouncedUpdateLayers]);
 
