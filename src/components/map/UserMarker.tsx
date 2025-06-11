@@ -26,6 +26,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   useEffect(() => {
     console.log('UserMarker: marker name changed to:', marker.name);
     setTooltipText(marker.name);
+    // Force tooltip re-render with new key
     setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
   }, [marker.name, marker.id]);
 
@@ -43,7 +44,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         }
       }, 100);
     }
-  }, [isReady, marker.id, marker.name]);
+  }, [isReady, marker.id, marker.name, tooltipKey]);
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
@@ -219,3 +220,5 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
 };
 
 export default React.memo(UserMarker);
+
+</edits_to_apply>

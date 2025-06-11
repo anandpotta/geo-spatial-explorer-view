@@ -115,13 +115,15 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Clear temp marker and reset form immediately
-    setTempMarker(null);
-    setMarkerName('');
-    
-    // Update the markers state with the new marker
+    // Update the markers state with the new marker BEFORE clearing temp marker
     const updatedMarkers = getSavedMarkers();
     setMarkers(updatedMarkers);
+    
+    // Clear temp marker and reset form after a small delay to ensure the new marker is rendered
+    setTimeout(() => {
+      setTempMarker(null);
+      setMarkerName('');
+    }, 100);
     
     toast.success("Location saved successfully");
     
@@ -131,7 +133,7 @@ export function useMapState(selectedLocation?: Location) {
     // Force a markers update event to ensure all components refresh
     setTimeout(() => {
       window.dispatchEvent(new Event('markersUpdated'));
-    }, 50);
+    }, 150);
   };
 
   const handleDeleteMarker = (id: string) => {
