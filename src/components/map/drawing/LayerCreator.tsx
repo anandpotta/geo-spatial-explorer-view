@@ -62,16 +62,16 @@ export const createLayerFromDrawing = ({
       },
       // Make sure each feature is interactive
       onEachFeature: (feature, layer) => {
-        // Ensure the layer is interactive
-        if (layer.setStyle) {
-          layer.setStyle({
+        // Ensure the layer is interactive - properly type cast
+        if ((layer as any).setStyle) {
+          (layer as any).setStyle({
             interactive: true,
             bubblingMouseEvents: false
           });
         }
         
         // Add click handler directly to each feature
-        layer.on('click', (e) => {
+        layer.on('click', (e: L.LeafletMouseEvent) => {
           console.log(`Feature clicked for drawing: ${drawing.id}`);
           L.DomEvent.stopPropagation(e);
           
@@ -92,7 +92,7 @@ export const createLayerFromDrawing = ({
         });
         
         // Add context menu handler for right-click upload
-        layer.on('contextmenu', (e) => {
+        layer.on('contextmenu', (e: L.LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(e);
           L.DomEvent.preventDefault(e);
           
