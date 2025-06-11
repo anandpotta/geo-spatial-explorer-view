@@ -38,7 +38,7 @@ export function useHandleShapeCreation(
       } else {
         console.log('Creating polygon shape - no marker creation');
         
-        // Save the drawing
+        // Save the drawing and get the result
         const drawingData = saveDrawing(shape);
         
         if (drawingData) {
