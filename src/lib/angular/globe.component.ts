@@ -1,136 +1,106 @@
 
-/**
- * Example Angular component for the globe
- * This would be in a separate Angular project with its own build system
- */
-
-/* 
-// This is how the Angular component would look:
-
-import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
-import { ThreeGlobeCore } from '../geospatial-core';
-import { GlobeOptions, GeoLocation } from '../geospatial-core/types';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { ThreeGlobeCore } from '../geospatial-core/globe';
+import { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 @Component({
-  selector: 'app-globe',
+  selector: 'geo-globe',
   template: `
-    <div #container 
-         class="globe-container"
-         [ngStyle]="{
-           'width': '100%',
-           'height': '100%',
-           'position': 'relative',
-           'background-color': 'black'
-         }">
-      <div *ngIf="!isReady" 
-           class="loading-overlay"
-           style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.8);">
-        <div class="loading-content" style="text-align: center; color: white;">
-          <div class="spinner"></div>
-          <h3>Loading Globe</h3>
-        </div>
+    <div #globeContainer class="geo-globe-container" [style.width]="'100%'" [style.height]="'100%'">
+      <div *ngIf="!isReady" class="geo-globe-loading">
+        <div class="geo-globe-spinner"></div>
+        <p>Loading Globe...</p>
       </div>
     </div>
   `,
   styles: [`
-    .globe-container {
-      overflow: hidden;
+    .geo-globe-container {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background: #000;
     }
-    
-    .spinner {
-      border: 4px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top: 4px solid #3498db;
+    .geo-globe-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: white;
+    }
+    .geo-globe-spinner {
       width: 40px;
       height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid #ffffff;
+      border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin: 0 auto 15px;
     }
-    
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
   `]
 })
-export class GlobeComponent implements OnInit, OnDestroy {
-  @ViewChild('container', { static: true }) containerRef: ElementRef;
-  
+export class GlobeComponentAngular implements OnInit, AfterViewInit, OnDestroy {
   @Input() options: Partial<GlobeOptions> = {};
-  @Input() selectedLocation: GeoLocation | null = null;
+  @Input() selectedLocation?: GeoLocation;
   
   @Output() ready = new EventEmitter<any>();
-  @Output() flyComplete = new EventEmitter<void>();
-  @Output() error = new EventEmitter<Error>();
-  
-  private globe: ThreeGlobeCore | null = null;
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() error = new EventEmitter<string>();
+
+  @ViewChild('globeContainer', { static: true }) globeContainer!: ElementRef<HTMLDivElement>;
+
   isReady = false;
-  
+  private globeCore?: ThreeGlobeCore;
+
   ngOnInit() {
+    console.log('Angular Globe Component initialized');
+  }
+
+  ngAfterViewInit() {
     this.initGlobe();
   }
-  
-  ngOnDestroy() {
-    if (this.globe) {
-      this.globe.dispose();
-      this.globe = null;
-    }
-  }
-  
-  private initGlobe() {
+
+  private async initGlobe() {
     try {
-      this.globe = new ThreeGlobeCore(this.options);
+      if (!this.globeContainer?.nativeElement) {
+        throw new Error('Globe container not found');
+      }
+
+      this.globeCore = new ThreeGlobeCore(this.globeContainer.nativeElement, this.options);
+      await this.globeCore.initialize();
       
-      this.globe.init({
-        getElement: () => this.containerRef.nativeElement,
-        getDimensions: () => ({
-          width: this.containerRef.nativeElement.clientWidth,
-          height: this.containerRef.nativeElement.clientHeight
-        }),
-        onResize: (callback) => {
-          const resizeObserver = new ResizeObserver(() => callback());
-          resizeObserver.observe(this.containerRef.nativeElement);
-          return () => resizeObserver.disconnect();
-        },
-        onCleanup: (callback) => {}
-      }, {
-        onReady: (api) => {
-          this.isReady = true;
-          this.ready.emit(api);
-        },
-        onFlyComplete: () => {
-          this.flyComplete.emit();
-        },
-        onError: (error) => {
-          this.error.emit(error);
-        }
+      this.isReady = true;
+      this.ready.emit(this.globeCore);
+
+      // Set up event listeners
+      this.globeCore.onLocationSelect((location: GeoLocation) => {
+        this.locationSelect.emit(location);
       });
-      
+
     } catch (error) {
       console.error('Failed to initialize globe:', error);
-      this.error.emit(error as Error);
+      this.error.emit(error instanceof Error ? error.message : 'Unknown error');
     }
   }
-  
-  ngOnChanges() {
-    if (this.globe && this.isReady && this.selectedLocation) {
-      this.globe.setLocation(this.selectedLocation);
+
+  ngOnChanges(changes: any) {
+    if (changes.selectedLocation && !changes.selectedLocation.firstChange && this.globeCore) {
+      this.flyToLocation(this.selectedLocation);
     }
   }
-}
-*/
 
-// This file would need to be in an Angular library project
-// Here we're just providing a placeholder file
-export const ANGULAR_COMPONENT_PLACEHOLDER = `
-// GlobeComponent implementation for Angular would go here
-// See commented code above for reference implementation
-`;
+  private flyToLocation(location?: GeoLocation) {
+    if (location && this.globeCore) {
+      this.globeCore.flyTo(location.latitude, location.longitude);
+    }
+  }
 
-// Export the GlobeComponent for Angular
-export class GlobeComponent {
-  // Placeholder implementation for TypeScript compatibility
-  constructor() {
-    console.log('Angular GlobeComponent instantiated');
+  ngOnDestroy() {
+    if (this.globeCore) {
+      this.globeCore.destroy();
+    }
   }
 }

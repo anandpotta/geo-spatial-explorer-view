@@ -1,161 +1,87 @@
 
 import { LocationMarker } from './types';
-import { getCurrentUser } from '../../services/auth-service';
-import { toast } from 'sonner';
-import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
-import { getConnectionStatus } from '../api-service';
+import { getCurrentUser } from '@/services/auth-service';
 
-export function getSavedMarkers(): LocationMarker[] {
-  const currentUser = getCurrentUser();
-  const markersJson = localStorage.getItem('savedMarkers');
-  
-  if (!markersJson) {
-    // Try to fetch from backend first if localStorage is empty
-    const { isOnline, isBackendAvailable } = getConnectionStatus();
-    if (isOnline && isBackendAvailable && currentUser) {
-      fetchMarkersFromBackend().catch(err => {
-        // Silent fail for initial load
-        console.log('Could not fetch markers from backend, using local storage');
-      });
-    }
-    return [];
-  }
-  
-  try {
-    let markers = JSON.parse(markersJson);
-    
-    // Map the dates
-    markers = markers.map((marker: any) => ({
-      ...marker,
-      createdAt: new Date(marker.createdAt)
-    }));
-    
-    // Filter markers by user if a user is logged in
-    if (currentUser) {
-      markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
-    } else {
-      // For anonymous users, show markers with userId 'anonymous'
-      markers = markers.filter((marker: LocationMarker) => marker.userId === 'anonymous');
-    }
-    
-    // Deduplicate markers by ID - this helps prevent duplicates
-    const uniqueMarkers = new Map<string, LocationMarker>();
-    markers.forEach((marker: LocationMarker) => {
-      uniqueMarkers.set(marker.id, marker);
-    });
-    
-    return Array.from(uniqueMarkers.values());
-  } catch (e) {
-    console.error('Failed to parse saved markers', e);
-    return [];
-  }
-}
+const STORAGE_KEY = 'geospatial_markers';
 
 export function saveMarker(marker: LocationMarker): void {
+  console.log('Saving marker:', marker);
+  
+  // Allow saving for anonymous users - don't require login
   const currentUser = getCurrentUser();
+  const userId = currentUser?.id || 'anonymous';
   
-  // Allow saving for both authenticated and anonymous users
-  const userId = currentUser ? currentUser.id : 'anonymous';
-  
-  // Ensure the marker has a user ID
-  const markerWithUser = {
+  // Ensure the marker has a userId
+  const markerToSave = {
     ...marker,
-    userId: userId
+    userId: marker.userId || userId
   };
   
-  // Get existing markers and deduplicate before saving
-  const savedMarkers = getSavedMarkers();
-  
-  // Check if marker with same ID exists and update it
-  const existingIndex = savedMarkers.findIndex(m => m.id === markerWithUser.id);
-  
-  if (existingIndex >= 0) {
-    // Update existing marker
-    savedMarkers[existingIndex] = markerWithUser;
-  } else {
-    // Add new marker
-    savedMarkers.push(markerWithUser);
-  }
-  
-  // Deduplicate markers before saving to ensure no duplicates
-  const uniqueMarkers = new Map<string, LocationMarker>();
-  savedMarkers.forEach(m => uniqueMarkers.set(m.id, m));
-  
-  localStorage.setItem('savedMarkers', JSON.stringify(Array.from(uniqueMarkers.values())));
-  
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
-  
-  // Only attempt to sync if we're online and have a logged-in user
-  const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable && currentUser) {
-    syncMarkersWithBackend(Array.from(uniqueMarkers.values()))
-      .catch(err => {
-        if (navigator.onLine) {
-          console.warn('Failed to sync markers, will retry later:', err);
-        }
-      });
+  try {
+    const existingMarkers = getSavedMarkers();
+    
+    // Remove any existing marker with the same ID to prevent duplicates
+    const filteredMarkers = existingMarkers.filter(m => m.id !== markerToSave.id);
+    
+    // Add the new/updated marker
+    filteredMarkers.push(markerToSave);
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredMarkers));
+    console.log('Marker saved successfully');
+    
+    // Dispatch event to notify components
+    window.dispatchEvent(new Event('markersUpdated'));
+  } catch (error) {
+    console.error('Error saving marker:', error);
   }
 }
 
-export function renameMarker(id: string, newName: string): void {
-  const currentUser = getCurrentUser();
-  
-  const savedMarkers = getSavedMarkers();
-  const markerIndex = savedMarkers.findIndex(marker => marker.id === id);
-  
-  if (markerIndex === -1) {
-    console.error('Marker not found');
-    toast.error('Location not found');
-    return;
+export function getSavedMarkers(): LocationMarker[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const markers = saved ? JSON.parse(saved) : [];
+    
+    // Remove duplicates based on ID
+    const uniqueMarkers = markers.filter((marker: LocationMarker, index: number, self: LocationMarker[]) => 
+      index === self.findIndex(m => m.id === marker.id)
+    );
+    
+    return uniqueMarkers;
+  } catch (error) {
+    console.error('Error loading markers:', error);
+    return [];
   }
-  
-  // Update the marker name
-  savedMarkers[markerIndex] = {
-    ...savedMarkers[markerIndex],
-    name: newName
-  };
-  
-  localStorage.setItem('savedMarkers', JSON.stringify(savedMarkers));
-  
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
-  
-  // Only attempt to sync if we're online and have a logged-in user
-  const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable && currentUser) {
-    syncMarkersWithBackend(savedMarkers)
-      .catch(err => {
-        if (navigator.onLine) {
-          console.warn('Failed to sync renamed marker, will retry later:', err);
-        }
-      });
-  }
-  
-  toast.success('Location renamed successfully');
 }
 
-export function deleteMarker(id: string): void {
-  const currentUser = getCurrentUser();
-  
-  const savedMarkers = getSavedMarkers();
-  const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
-  localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
-  
-  // Notify components about storage changes
-  window.dispatchEvent(new Event('storage'));
-  window.dispatchEvent(new Event('markersUpdated'));
-  
-  // Only attempt to sync delete if we're online and have a logged-in user
-  const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable && currentUser) {
-    deleteMarkerFromBackend(id)
-      .catch(err => {
-        if (navigator.onLine) {
-          console.warn('Failed to delete marker from backend, will retry later:', err);
-        }
-      });
+export function deleteMarker(markerId: string): void {
+  try {
+    const existingMarkers = getSavedMarkers();
+    const updatedMarkers = existingMarkers.filter(m => m.id !== markerId);
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMarkers));
+    console.log('Marker deleted successfully');
+    
+    // Dispatch event to notify components
+    window.dispatchEvent(new Event('markersUpdated'));
+  } catch (error) {
+    console.error('Error deleting marker:', error);
+  }
+}
+
+export function renameMarker(markerId: string, newName: string): void {
+  try {
+    const existingMarkers = getSavedMarkers();
+    const markerIndex = existingMarkers.findIndex(m => m.id === markerId);
+    
+    if (markerIndex !== -1) {
+      existingMarkers[markerIndex].name = newName;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existingMarkers));
+      console.log('Marker renamed successfully');
+      
+      // Dispatch event to notify components
+      window.dispatchEvent(new Event('markersUpdated'));
+    }
+  } catch (error) {
+    console.error('Error renaming marker:', error);
   }
 }

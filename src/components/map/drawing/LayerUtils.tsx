@@ -80,12 +80,6 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
           console.log(`Setting SVG path data for drawing ${drawing.id}`);
           l._path.setAttribute('d', drawing.svgPath);
           
-          // Add unique identifier to the SVG path element
-          const uniqueId = drawing.uniqueId || drawing.id || crypto.randomUUID();
-          l._path.setAttribute('data-svg-uid', uniqueId);
-          l._path.setAttribute('data-drawing-id', drawing.id);
-          l._path.id = `svg-path-${uniqueId}`;
-          
           // Store the path data as a backup
           l._path.setAttribute('data-original-path', drawing.svgPath);
           
@@ -111,19 +105,15 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
   if (!layer) return;
 
   try {
-    // Generate a unique identifier for this layer
-    const uniqueId = crypto.randomUUID();
-    
     // Check for SVG path element in the layer
     if ((layer as any)._path) {
       const path = (layer as any)._path;
-      console.log(`Setting data-drawing-id=${drawingId} and data-svg-uid=${uniqueId} on path element`);
+      console.log(`Setting data-drawing-id=${drawingId} on path element`);
       
       // Add multiple ways to identify this path
       path.setAttribute('data-drawing-id', drawingId);
-      path.setAttribute('data-svg-uid', uniqueId);
       path.classList.add('drawing-path-' + drawingId.substring(0, 8));
-      path.id = `svg-path-${uniqueId}`;
+      path.id = `drawing-path-${drawingId}`;
       
       // Add class for visible stroke
       path.classList.add('visible-path-stroke');
@@ -134,8 +124,7 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       // Make sure we also add ID on the parent element if it exists
       if (path.parentElement) {
         path.parentElement.setAttribute('data-drawing-container', drawingId);
-        path.parentElement.setAttribute('data-container-uid', uniqueId);
-        path.parentElement.id = `drawing-container-${uniqueId}`;
+        path.parentElement.id = `drawing-container-${drawingId}`;
       }
     }
 
@@ -144,14 +133,12 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       (layer as any).eachLayer((subLayer: L.Layer) => {
         if ((subLayer as any)._path) {
           const path = (subLayer as any)._path;
-          const subUniqueId = crypto.randomUUID();
-          console.log(`Setting data-drawing-id=${drawingId} and data-svg-uid=${subUniqueId} on sub-path element`);
+          console.log(`Setting data-drawing-id=${drawingId} on sub-path element`);
           
           // Add multiple ways to identify this path
           path.setAttribute('data-drawing-id', drawingId);
-          path.setAttribute('data-svg-uid', subUniqueId);
           path.classList.add('drawing-path-' + drawingId.substring(0, 8));
-          path.id = `svg-path-${subUniqueId}`;
+          path.id = `drawing-path-${drawingId}`;
           path.classList.add('visible-path-stroke');
           
           path.getBoundingClientRect();
@@ -159,8 +146,7 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
           // Make sure we also add ID on the parent element if it exists
           if (path.parentElement) {
             path.parentElement.setAttribute('data-drawing-container', drawingId);
-            path.parentElement.setAttribute('data-container-uid', subUniqueId);
-            path.parentElement.id = `drawing-container-${subUniqueId}`;
+            path.parentElement.id = `drawing-container-${drawingId}`;
           }
         }
       });

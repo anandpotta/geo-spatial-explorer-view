@@ -49,31 +49,13 @@ export function createShapeCreationHandler({
   }, 2000); // Increased to 2 second debounce
   
   const handleCreatedWrapper = (shape: any) => {
-    // Generate a unique ID for this shape if it doesn't have one
-    const shapeId = shape.id || crypto.randomUUID();
-    shape.id = shapeId;
-    shape.uniqueId = shapeId; // Add unique identifier
-    
     // Skip processing if we've already handled this exact shape
-    if (shapeId === lastShapeId) {
+    if (shape.id && shape.id === lastShapeId) {
       return;
     }
     
     // Track this shape ID
-    lastShapeId = shapeId;
-    
-    // Add unique ID to SVG path if present
-    if (shape.svgPath) {
-      // Create a path object with unique identifier
-      const pathWithId = {
-        id: shapeId,
-        path: shape.svgPath,
-        timestamp: Date.now()
-      };
-      
-      // Store the enhanced path data
-      shape.svgPathData = pathWithId;
-    }
+    lastShapeId = shape.id || null;
     
     // First call the original handler
     onCreated(shape);

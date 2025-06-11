@@ -1,6 +1,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ThreeGlobeCore, GlobeOptions } from '../geospatial-core';
+import { ThreeGlobeCore } from '../geospatial-core/globe';
+import { GlobeOptions } from '../geospatial-core/types';
 import type { GeoLocation, GlobeEventHandlers } from '../geospatial-core/types';
 
 interface GlobeComponentProps {
@@ -29,7 +30,7 @@ export const GlobeComponent: React.FC<GlobeComponentProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
     
-    const globe = new ThreeGlobeCore(options);
+    const globe = new ThreeGlobeCore(containerRef.current, options);
     globeRef.current = globe;
     
     const eventHandlers: GlobeEventHandlers = {

@@ -1,11 +1,37 @@
+# Core Architecture
 
-import { useState, useEffect } from 'react';
-import { Location, LocationMarker } from '@/utils/geo-utils';
-import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
-import { saveMarker, deleteMarker, getSavedMarkers, renameMarker } from '@/utils/marker-utils';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from 'sonner';
+## System Design Overview
 
+The GeoSpatial Explorer follows a layered architecture with clear separation between presentation, business logic, and data management. This design enables maintainability, testability, and cross-platform compatibility.
+
+## Architectural Layers
+
+### 1. Presentation Layer
+**Location**: `src/components/`
+
+The presentation layer handles all user interface concerns and user interactions.
+
+#### Key Components:
+- **GeoSpatialExplorer**: Main application orchestrator
+- **LeafletMap**: 2D mapping interface
+- **ThreeGlobeMap**: 3D globe visualization
+- **LocationSearch**: Geocoding and location discovery
+- **DrawingControls**: Interactive drawing tools
+
+#### Responsibilities:
+- Rendering UI components
+- Handling user interactions
+- Managing component-level state
+- Delegating business logic to custom hooks
+
+### 2. Business Logic Layer
+**Location**: `src/hooks/`, `src/utils/`
+
+This layer contains all business rules, calculations, and stateful logic.
+
+#### Custom Hooks:
+```typescript
+// Example hook structure
 export function useMapState(selectedLocation?: Location) {
   const [position, setPosition] = useState<[number, number]>(
     selectedLocation ? [selectedLocation.y, selectedLocation.x] : [51.505, -0.09]
@@ -188,10 +214,186 @@ export function useMapState(selectedLocation?: Location) {
     handleRegionClick
   };
 }
+```
 
-// Extend the Window interface to include our custom property
-declare global {
-  interface Window {
-    tempMarkerPositionUpdate?: (pos: [number, number]) => void;
+#### Utility Functions:
+- **geo-utils.ts**: Geographic calculations and transformations
+- **marker-utils.ts**: Marker creation, storage, and management
+- **drawing-utils.ts**: Drawing operations and persistence
+- **svg-utils.ts**: SVG manipulation and path operations
+
+### 3. Data Layer
+**Location**: `src/services/`, `src/utils/*/storage.ts`
+
+Manages data persistence, API communications, and caching.
+
+#### Storage Strategy:
+```typescript
+// Local storage with sync capabilities
+interface StorageService {
+  saveMarker(marker: LocationMarker): void;
+  getSavedMarkers(): LocationMarker[];
+  syncWithBackend(): Promise<void>;
+}
+```
+
+## Cross-Platform Library Architecture
+
+### Core Library Structure
+**Location**: `src/lib/`
+
+```
+lib/
+├── geospatial-core/     # Platform-agnostic core
+│   ├── globe/          # 3D globe functionality
+│   ├── map/            # 2D map functionality
+│   ├── types/          # Type definitions
+│   └── utils/          # Utility functions
+├── react/              # React-specific implementations
+├── react-native/       # React Native adaptations
+└── angular/            # Angular wrappers
+```
+
+### Platform Abstraction Pattern
+
+The library uses platform abstraction to provide consistent APIs across different frameworks:
+
+```typescript
+// Core interface (platform-agnostic)
+interface MapCore {
+  init(config: MapConfig): void;
+  addMarker(marker: GeoLocation): void;
+  dispose(): void;
+}
+
+// React implementation
+export function MapComponent(props: MapProps) {
+  const mapCore = useRef<MapCore>();
+  // React-specific lifecycle and state management
+}
+
+// Angular implementation
+export class MapComponentAngular implements OnInit, OnDestroy {
+  private mapCore: MapCore;
+  // Angular-specific lifecycle and dependency injection
+}
+```
+
+## State Management Strategy
+
+### Local Component State
+- Used for UI-specific state (form inputs, toggle states)
+- Managed with `useState` and `useReducer`
+
+### Shared State (Context)
+- Authentication state
+- Global settings and preferences
+- Cross-component communication
+
+### Persistent State
+- Location markers and drawings
+- User preferences
+- Cached map data
+
+### State Flow Diagram
+```
+User Interaction
+       ↓
+Component Event Handler
+       ↓
+Custom Hook (Business Logic)
+       ↓
+Utility Function (Data Operation)
+       ↓
+Storage Service (Persistence)
+       ↓
+State Update
+       ↓
+Component Re-render
+```
+
+## Event System
+
+### Component Communication
+The application uses several patterns for component communication:
+
+1. **Props Down, Events Up**: Standard React pattern
+2. **Custom Events**: For cross-component notifications
+3. **Context Providers**: For global state sharing
+
+### Custom Event Examples
+```typescript
+// Drawing created event
+window.dispatchEvent(new CustomEvent('drawingCreated', {
+  detail: { drawingId: 'drawing-123' }
+}));
+
+// Storage updated event
+window.dispatchEvent(new Event('markersUpdated'));
+```
+
+## Performance Optimizations
+
+### Rendering Optimizations
+- **React.memo**: Prevent unnecessary re-renders
+- **useMemo/useCallback**: Expensive calculations and stable references
+- **Virtualization**: For large lists of markers/drawings
+
+### Map Optimizations
+- **Lazy Loading**: Load map tiles and assets on demand
+- **Debouncing**: Reduce API calls during user interactions
+- **Caching**: Store frequently accessed data
+
+### Memory Management
+- **Cleanup Functions**: Proper disposal of resources
+- **Event Listener Removal**: Prevent memory leaks
+- **Three.js Resource Disposal**: Explicit geometry/material cleanup
+
+## Error Handling Strategy
+
+### Error Boundaries
+React error boundaries catch and handle component errors gracefully.
+
+### Async Error Handling
+```typescript
+export async function safeApiCall<T>(
+  operation: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    console.error('API call failed:', error);
+    return fallback;
   }
 }
+```
+
+### User Feedback
+- Toast notifications for operation results
+- Loading states for async operations
+- Error messages with actionable information
+
+## Security Considerations
+
+### Data Sanitization
+- Input validation for user-generated content
+- XSS prevention in dynamic content
+- Safe parsing of external data
+
+### API Security
+- Authentication token management
+- CORS configuration
+- Rate limiting and request validation
+
+## Scalability Patterns
+
+### Code Splitting
+- Route-based splitting for different views
+- Component-based splitting for large features
+- Dynamic imports for optional functionality
+
+### Modular Architecture
+- Feature-based folder organization
+- Plugin-style component registration
+- Configurable functionality through props/options
