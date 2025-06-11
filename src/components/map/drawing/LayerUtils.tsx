@@ -62,6 +62,13 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
     // Create layer with corrected options
     const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
     
+    if (!layer) {
+      return null;
+    }
+    
+    // Store the drawing ID at the layer level as well for easier reference
+    (layer as any).drawingId = drawing.id;
+    
     // After creation, apply SVG renderer to each layer
     layer.eachLayer((l: any) => {
       if (l && l.options) {
@@ -102,7 +109,7 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
 };
 
 /**
- * Adds drawing ID attributes to SVG paths in a layer - Enhanced version
+ * Adds drawing ID attributes to SVG paths in a layer - Enhanced version with multiple retry attempts
  */
 export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
   if (!layer) return;
@@ -113,9 +120,9 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
     
     // Function to add attributes to a path element
     const addAttributesToPath = (path: SVGPathElement) => {
-      if (!path) return;
+      if (!path) return false;
       
-      console.log(`Setting data-drawing-id=${drawingId} on path element`);
+      console.log(`Adding drawing ID ${drawingId} to SVG path element`);
       
       // Add multiple ways to identify this path
       path.setAttribute('data-drawing-id', drawingId);
@@ -133,53 +140,67 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       path.setAttribute('data-drawing-type', 'user-drawn');
       path.setAttribute('data-clickable', 'true');
       
-      // Force browser to recognize the attributes by triggering a reflow
-      path.getBoundingClientRect();
-      
       // Make sure we also add ID on the parent element if it exists
       if (path.parentElement) {
         path.parentElement.setAttribute('data-drawing-container', drawingId);
         path.parentElement.setAttribute('id', `drawing-container-${drawingId}`);
       }
       
-      console.log(`Successfully added drawing attributes to path for ${drawingId}`);
+      console.log(`Successfully added drawing attributes to path for ${drawingId}:`, {
+        'data-drawing-id': path.getAttribute('data-drawing-id'),
+        'data-path-uid': path.getAttribute('data-path-uid'),
+        id: path.getAttribute('id')
+      });
+      
+      return true;
     };
 
-    // Check for SVG path element in the layer
-    if ((layer as any)._path) {
-      addAttributesToPath((layer as any)._path);
-    }
+    // Function to attempt adding attributes with retry logic
+    const attemptAddAttributes = (attempt = 1, maxAttempts = 5) => {
+      console.log(`Attempt ${attempt} to add attributes for drawing ${drawingId}`);
+      
+      let success = false;
+      
+      // Check for SVG path element in the layer
+      if ((layer as any)._path) {
+        success = addAttributesToPath((layer as any)._path);
+      }
 
-    // If it's a feature group, process each layer
-    if (typeof (layer as any).eachLayer === 'function') {
-      (layer as any).eachLayer((subLayer: L.Layer) => {
-        // Store drawing ID on sublayer too
-        (subLayer as any).drawingId = drawingId;
-        
-        if ((subLayer as any)._path) {
-          addAttributesToPath((subLayer as any)._path);
-        }
-      });
-    }
+      // If it's a feature group, process each layer
+      if (typeof (layer as any).eachLayer === 'function') {
+        (layer as any).eachLayer((subLayer: L.Layer) => {
+          // Store drawing ID on sublayer too
+          (subLayer as any).drawingId = drawingId;
+          
+          if ((subLayer as any)._path) {
+            const subSuccess = addAttributesToPath((subLayer as any)._path);
+            success = success || subSuccess;
+          }
+        });
+      }
+      
+      // If we didn't succeed and haven't reached max attempts, try again
+      if (!success && attempt < maxAttempts) {
+        setTimeout(() => {
+          attemptAddAttributes(attempt + 1, maxAttempts);
+        }, 100 * attempt); // Increasing delay
+      } else if (success) {
+        console.log(`Successfully added attributes on attempt ${attempt}`);
+      } else {
+        console.warn(`Failed to add attributes after ${maxAttempts} attempts for drawing ${drawingId}`);
+      }
+    };
     
-    // Also handle the case where the layer might be added to the map later
-    // We'll set up an event listener to catch when the path is actually rendered
+    // Start the attempt process
+    attemptAddAttributes();
+    
+    // Also set up an event listener to catch when the path is actually rendered
     if ((layer as any).on) {
       (layer as any).on('add', () => {
+        console.log(`Layer 'add' event fired for drawing ${drawingId}, attempting to add attributes`);
         setTimeout(() => {
-          // Try again after the layer is added to ensure the DOM elements exist
-          if ((layer as any)._path) {
-            addAttributesToPath((layer as any)._path);
-          }
-          
-          if (typeof (layer as any).eachLayer === 'function') {
-            (layer as any).eachLayer((subLayer: L.Layer) => {
-              if ((subLayer as any)._path) {
-                addAttributesToPath((subLayer as any)._path);
-              }
-            });
-          }
-        }, 100);
+          attemptAddAttributes(1, 3); // Fewer attempts on the add event
+        }, 50);
       });
     }
     

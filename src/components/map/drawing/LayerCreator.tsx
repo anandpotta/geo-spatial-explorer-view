@@ -102,13 +102,33 @@ export const createLayerFromDrawing = async ({
     if (isMounted && layer) {
       featureGroup.addLayer(layer);
       
-      // THEN add drawing ID attributes after the layer is added to the map
-      // This ensures the DOM elements exist
+      // Immediately try to add drawing attributes
+      console.log(`Adding layer for drawing ${drawing.id} to feature group, attempting to add attributes`);
+      
+      // Add drawing ID attributes immediately after adding to map
+      layer.eachLayer((l: L.Layer) => {
+        if (l && isMounted) {
+          // Add drawing ID attribute to the SVG path for identification
+          addDrawingAttributesToLayer(l, drawing.id);
+        }
+      });
+      
+      // THEN add controls and event handlers after a short delay to ensure DOM is ready
       setTimeout(() => {
         layer.eachLayer((l: L.Layer) => {
           if (l && isMounted) {
-            // Add drawing ID attribute to the SVG path for identification
-            addDrawingAttributesToLayer(l, drawing.id);
+            // Verify the attributes were added
+            const pathElement = (l as any)._path;
+            if (pathElement) {
+              const drawingId = pathElement.getAttribute('data-drawing-id');
+              console.log(`Verifying drawing ID attribute: ${drawingId} for drawing ${drawing.id}`);
+              
+              // If attributes weren't added, try again
+              if (!drawingId) {
+                console.log(`Attributes missing, retrying for drawing ${drawing.id}`);
+                addDrawingAttributesToLayer(l, drawing.id);
+              }
+            }
             
             // Add controls when in edit mode
             if (onRemoveShape && onUploadRequest) {
@@ -130,7 +150,7 @@ export const createLayerFromDrawing = async ({
             setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
           }
         });
-      }, 200); // Give time for the layer to be fully added to DOM
+      }, 300); // Increased delay to ensure DOM is ready
       
       // Check if we've recently applied a floor plan to this drawing
       const lastApplied = floorPlanApplied.get(drawing.id) || 0;
@@ -170,7 +190,7 @@ export const createLayerFromDrawing = async ({
                 }
               });
             }
-          }, 300 * attempt); // Increasing delay with each attempt
+          }, 400 * attempt); // Increased base delay
         };
         
         attemptApplication();
