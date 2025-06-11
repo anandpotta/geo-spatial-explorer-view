@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
@@ -9,11 +10,10 @@ interface NewMarkerFormProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: (nameOverride?: string) => void;
+  onSave: () => void;
   isEditing?: boolean;
   existingMarkerId?: string;
   onRename?: (id: string, newName: string) => void;
-  onInputUpdate?: (value: string) => void;
 }
 
 const NewMarkerForm = ({
@@ -24,8 +24,7 @@ const NewMarkerForm = ({
   onSave,
   isEditing = false,
   existingMarkerId,
-  onRename,
-  onInputUpdate
+  onRename
 }: NewMarkerFormProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState(markerName || '');
@@ -51,30 +50,10 @@ const NewMarkerForm = ({
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
-    
-    // Only update tooltip in real-time if callback is provided
-    if (onInputUpdate) {
-      onInputUpdate(newValue);
-    }
-    console.log('Input changed to:', newValue, '(parent state NOT updated yet)');
-  }, [onInputUpdate]);
-
-  const performSave = useCallback((nameToSave: string) => {
-    console.log('Performing save with name:', nameToSave);
-    
-    // Update tooltip immediately
-    if (onInputUpdate) {
-      onInputUpdate(nameToSave);
-    }
-    
-    // Then perform the actual save operation, passing the name directly
-    if (isEditing && existingMarkerId && onRename) {
-      onRename(existingMarkerId, nameToSave);
-    } else {
-      // Pass the name directly to onSave instead of relying on parent state
-      onSave(nameToSave);
-    }
-  }, [isEditing, existingMarkerId, onRename, onSave, onInputUpdate]);
+    // Immediately update parent state
+    setMarkerName(newValue);
+    console.log('Input changed to:', newValue);
+  }, [setMarkerName]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -83,10 +62,17 @@ const NewMarkerForm = ({
       
       if (localValue.trim()) {
         console.log('Enter pressed, saving with name:', localValue.trim());
-        performSave(localValue.trim());
+        // Ensure parent state is updated with trimmed value
+        setMarkerName(localValue.trim());
+        
+        if (isEditing && existingMarkerId && onRename) {
+          onRename(existingMarkerId, localValue.trim());
+        } else {
+          onSave();
+        }
       }
     }
-  }, [localValue, performSave]);
+  }, [localValue, isEditing, existingMarkerId, onRename, onSave, setMarkerName]);
 
   const handleSaveButtonClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -94,9 +80,16 @@ const NewMarkerForm = ({
     
     if (localValue.trim()) {
       console.log('Save button clicked, saving with name:', localValue.trim());
-      performSave(localValue.trim());
+      // Ensure parent state is updated with trimmed value
+      setMarkerName(localValue.trim());
+      
+      if (isEditing && existingMarkerId && onRename) {
+        onRename(existingMarkerId, localValue.trim());
+      } else {
+        onSave();
+      }
     }
-  }, [localValue, performSave]);
+  }, [isEditing, existingMarkerId, onRename, localValue, onSave, setMarkerName]);
 
   const handleTypeChange = useCallback((type: 'pin' | 'area' | 'building') => {
     setMarkerType(type);

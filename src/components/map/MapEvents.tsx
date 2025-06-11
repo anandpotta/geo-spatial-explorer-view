@@ -5,10 +5,9 @@ import L from 'leaflet';
 
 interface MapEventsProps {
   onMapClick: (latlng: L.LatLng) => void;
-  onPathClick?: (drawingId: string) => void;
 }
 
-const MapEvents = ({ onMapClick, onPathClick }: MapEventsProps) => {
+const MapEvents = ({ onMapClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
       console.log('Map click detected at:', e.latlng);
@@ -19,7 +18,7 @@ const MapEvents = ({ onMapClick, onPathClick }: MapEventsProps) => {
         return;
       }
       
-      // More precise click detection - prioritize drawing paths
+      // More precise click detection - only ignore UI controls, not interactive content
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
@@ -50,26 +49,17 @@ const MapEvents = ({ onMapClick, onPathClick }: MapEventsProps) => {
           return;
         }
         
-        // Check for SVG path clicks
-        const pathElement = target.tagName === 'path' || target.tagName === 'PATH' 
-          ? target 
-          : target.closest('path');
-        
-        if (pathElement) {
-          const drawingId = pathElement.getAttribute('data-drawing-id');
-          
-          console.log(`=== SVG PATH CLICKED ===`);
-          console.log(`Drawing ID: ${drawingId}`);
-          
-          // If we have a drawing ID and the onPathClick handler, call it
-          if (drawingId && onPathClick) {
-            console.log(`=== OPENING UPLOAD POPUP for drawing: ${drawingId} ===`);
-            onPathClick(drawingId);
-            return; // Block map click when path is clicked
+        // Special handling for SVG paths - allow drawing interaction but prevent map click
+        if (target.tagName === 'path') {
+          // If it's a drawing path with data attributes, let the layer handle it
+          if (target.hasAttribute('data-drawing-id') || 
+              target.hasAttribute('data-svg-uid') ||
+              target.classList.contains('leaflet-interactive')) {
+            console.log('Click on interactive drawing - letting layer handler manage it');
+            // Don't call onMapClick, but don't prevent the event either
+            // This allows the layer's click handler to work
+            return;
           }
-          
-          // If no drawing ID, allow map click to proceed
-          console.log('SVG path clicked but no drawing ID found, allowing map click');
         }
       }
       

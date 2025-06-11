@@ -65,6 +65,7 @@ const MapViews: React.FC<MapViewsProps> = ({
         {currentView === 'leaflet' && (
           <LeafletMap 
             selectedLocation={selectedLocation} 
+            onMapReady={handleLeafletMapRef}
             activeTool={activeTool}
             key={`leaflet-${mapKey}`}
             onClearAll={handleClearAll}

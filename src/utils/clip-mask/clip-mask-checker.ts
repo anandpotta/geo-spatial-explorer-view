@@ -1,73 +1,83 @@
 
 /**
- * Utilities for checking clip mask state on SVG elements
+ * Utilities for checking if clip masks are applied to SVG elements
  */
 
 /**
- * Check if a path element already has a clip mask applied
+ * Checks if an SVG path element has a clip mask applied
  */
-export const hasClipMaskApplied = (pathElement: SVGPathElement): boolean => {
-  if (!pathElement) return false;
+export const hasClipMaskApplied = (svgPath: SVGPathElement): boolean => {
+  if (!svgPath) return false;
   
-  // Check for the data attribute that marks it as having a clip mask
-  const hasClipMaskAttr = pathElement.getAttribute('data-has-clip-mask') === 'true';
+  // Check for data attribute first (most reliable)
+  if (svgPath.getAttribute('data-has-clip-mask') === 'true') {
+    return true;
+  }
   
-  // Also check if it has the fill pattern applied
-  const fill = pathElement.style.fill || pathElement.getAttribute('fill');
-  const hasPatternFill = fill && fill.includes('url(#pattern-');
+  // Check for fill attribute with pattern
+  const fillAttr = svgPath.getAttribute('fill');
+  if (fillAttr && fillAttr.includes('url(#pattern-')) {
+    return true;
+  }
   
-  // Check if it has a clip-path applied
-  const clipPath = pathElement.style.clipPath || pathElement.getAttribute('clip-path');
-  const hasClipPath = clipPath && clipPath.includes('url(#clip-');
+  // Check for style.fill with pattern
+  if (svgPath.style.fill && svgPath.style.fill.includes('url(#pattern-')) {
+    return true;
+  }
   
-  return hasClipMaskAttr && hasPatternFill && hasClipPath;
+  // Check for class that indicates image fill
+  if (svgPath.classList.contains('has-image-fill')) {
+    return true;
+  }
+  
+  // Check for clip-path attribute
+  const clipPathAttr = svgPath.getAttribute('clip-path');
+  if (clipPathAttr && clipPathAttr.includes('url(#clip-')) {
+    return true;
+  }
+  
+  // Check for parent containing a pattern with this path's ID
+  try {
+    const svg = svgPath.closest('svg');
+    if (svg) {
+      const drawingId = svgPath.getAttribute('data-drawing-id');
+      if (drawingId) {
+        const pattern = svg.querySelector(`pattern[id^="pattern-${drawingId}"]`);
+        if (pattern) {
+          return true;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error checking for pattern in SVG:', e);
+  }
+  
+  return false;
 };
 
 /**
- * Remove clip mask from a path element
+ * Checks if an image exists in the clip mask pattern
  */
-export const removeClipMask = (pathElement: SVGPathElement): void => {
-  if (!pathElement) return;
+export const hasImageInClipMask = (svgPath: SVGPathElement): boolean => {
+  if (!svgPath) return false;
   
   try {
-    // Clean up fill protection first
-    const { cleanupFillProtection } = require('./core/svg-elements');
-    cleanupFillProtection(pathElement);
+    const svg = svgPath.closest('svg');
+    if (!svg) return false;
     
-    // Remove clip mask attributes and styles
-    pathElement.removeAttribute('data-has-clip-mask');
-    pathElement.removeAttribute('data-image-url');
-    pathElement.removeAttribute('data-image-rotation');
-    pathElement.removeAttribute('data-image-scale');
-    pathElement.removeAttribute('data-image-offset-x');
-    pathElement.removeAttribute('data-image-offset-y');
-    pathElement.removeAttribute('data-last-updated');
-    pathElement.removeAttribute('data-user-id');
+    const drawingId = svgPath.getAttribute('data-drawing-id');
+    if (!drawingId) return false;
     
-    // Remove styles
-    pathElement.style.removeProperty('fill');
-    pathElement.style.removeProperty('clip-path');
-    pathElement.removeAttribute('fill');
-    pathElement.removeAttribute('clip-path');
+    const patternId = `pattern-${drawingId}`;
+    const pattern = svg.querySelector(`#${patternId}`);
     
-    // Remove classes
-    pathElement.classList.remove('has-image-fill');
-    pathElement.classList.remove('loading-clip-mask');
-    pathElement.classList.remove('visible-path-stroke');
-    
-    // Restore original attributes if they exist
-    const originalFill = pathElement.getAttribute('data-original-fill');
-    if (originalFill) {
-      pathElement.setAttribute('fill', originalFill);
+    if (pattern) {
+      const image = pattern.querySelector('image');
+      return !!image;
     }
-    
-    const originalStroke = pathElement.getAttribute('data-original-stroke');
-    if (originalStroke) {
-      pathElement.setAttribute('stroke', originalStroke);
-    }
-    
-    console.log('Clip mask removed successfully');
-  } catch (err) {
-    console.error('Error removing clip mask:', err);
+  } catch (e) {
+    console.warn('Error checking for image in clip mask:', e);
   }
+  
+  return false;
 };
