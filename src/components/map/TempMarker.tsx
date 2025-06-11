@@ -27,11 +27,13 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   const [tooltipKey, setTooltipKey] = useState(0);
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
 
-  // Update tooltip text when marker name changes
+  // Only update tooltip text when marker name changes externally (not on every keystroke)
   useEffect(() => {
+    // Only update if this is the initial load or an external change
+    if (!markerName || markerName === tooltipText) return;
+    
     const newTooltipText = markerName || 'New Location';
     setTooltipText(newTooltipText);
-    // Force tooltip re-render by updating key
     setTooltipKey(prev => prev + 1);
   }, [markerName]);
 
@@ -71,8 +73,13 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   };
   
-  // Custom save handler to ensure cleanup before saving
+  // Custom save handler to update tooltip and then save
   const handleSave = () => {
+    // Update tooltip with current marker name on save
+    const newTooltipText = markerName || 'New Location';
+    setTooltipText(newTooltipText);
+    setTooltipKey(prev => prev + 1);
+    
     // Clean up the marker DOM elements before saving
     const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
     tempIcons.forEach(icon => {
@@ -83,15 +90,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     
     // Call the original save handler
     onSave();
-  };
-
-  // Handle marker name change to update tooltip immediately
-  const handleMarkerNameChange = (name: string) => {
-    setMarkerName(name);
-    const newTooltipText = name || 'New Location';
-    setTooltipText(newTooltipText);
-    // Force tooltip re-render
-    setTooltipKey(prev => prev + 1);
   };
 
   // Set up marker references
@@ -132,7 +130,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     >
       <NewMarkerForm
         markerName={markerName}
-        setMarkerName={handleMarkerNameChange}
+        setMarkerName={setMarkerName}
         markerType={markerType}
         setMarkerType={setMarkerType}
         onSave={handleSave}

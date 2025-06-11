@@ -23,7 +23,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
 
-  // Update tooltip text when marker name changes
+  // Update tooltip text only when marker name changes (from saved data, not input)
   useEffect(() => {
     setTooltipText(marker.name);
     setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
