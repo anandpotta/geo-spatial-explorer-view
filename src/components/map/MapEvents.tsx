@@ -52,18 +52,25 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         // HIGH PRIORITY: Check for interactive drawing elements
         let handlerCalled = false;
         
-        if (target.tagName === 'path' || target.tagName === 'PATH') {
-          const drawingId = target.getAttribute('data-drawing-id');
-          const isInteractive = target.getAttribute('data-interactive');
-          const globalHandler = target.getAttribute('data-global-handler');
+        // Check if the target itself is a path or find the closest path
+        const pathElement = target.tagName === 'path' || target.tagName === 'PATH' 
+          ? target 
+          : target.closest('path');
+        
+        if (pathElement) {
+          const drawingId = pathElement.getAttribute('data-drawing-id');
+          const isInteractive = pathElement.getAttribute('data-interactive');
+          const globalHandler = pathElement.getAttribute('data-global-handler');
+          
+          console.log(`=== INTERACTIVE PATH DETECTED ===`);
+          console.log(`Drawing ID: ${drawingId}, Interactive: ${isInteractive}, Global Handler: ${globalHandler}`);
           
           if (drawingId || isInteractive || globalHandler) {
             console.log(`=== BLOCKING MAP CLICK === Interactive drawing element detected`);
-            console.log(`Drawing ID: ${drawingId}, Interactive: ${isInteractive}, Global Handler: ${globalHandler}`);
             
             // Try to call the global handler if it exists
             if (globalHandler && (window as any)[globalHandler]) {
-              console.log(`=== CALLING GLOBAL HANDLER FROM MAP CLICK: ${globalHandler} ===`);
+              console.log(`=== CALLING GLOBAL HANDLER: ${globalHandler} ===`);
               try {
                 (window as any)[globalHandler]();
                 console.log(`=== Global handler called successfully: ${globalHandler} ===`);
@@ -90,6 +97,8 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
                 } catch (error) {
                   console.error(`Error calling constructed handler ${constructedHandler}:`, error);
                 }
+              } else {
+                console.warn(`Constructed handler ${constructedHandler} not found`);
               }
             }
             
@@ -102,53 +111,6 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
               target.classList.contains('leaflet-interactive') ||
               target.closest('g[class*="leaflet"]')) {
             console.log('Click on interactive drawing element - blocking map click');
-            return;
-          }
-        }
-        
-        // Also check parent elements for drawing attributes
-        const pathParent = target.closest('path');
-        if (pathParent && !handlerCalled) {
-          const drawingId = pathParent.getAttribute('data-drawing-id');
-          const isInteractive = pathParent.getAttribute('data-interactive');
-          const globalHandler = pathParent.getAttribute('data-global-handler');
-          
-          if (drawingId || isInteractive || globalHandler) {
-            console.log(`=== BLOCKING MAP CLICK === Parent interactive drawing element detected`);
-            console.log(`Parent Drawing ID: ${drawingId}, Interactive: ${isInteractive}, Global Handler: ${globalHandler}`);
-            
-            // Try to call the global handler if it exists
-            if (globalHandler && (window as any)[globalHandler]) {
-              console.log(`=== CALLING GLOBAL HANDLER FROM MAP CLICK (PARENT): ${globalHandler} ===`);
-              try {
-                (window as any)[globalHandler]();
-                console.log(`=== Global handler called successfully from parent: ${globalHandler} ===`);
-                handlerCalled = true;
-              } catch (error) {
-                console.error(`Error calling global handler from parent ${globalHandler}:`, error);
-              }
-            } else if (globalHandler) {
-              console.warn(`Global handler from parent ${globalHandler} not found on window object`);
-              // List available global handlers for debugging
-              const availableHandlers = Object.keys(window).filter(key => key.startsWith('triggerDrawingClick_'));
-              console.log('Available global handlers:', availableHandlers);
-            }
-            
-            // If we have a drawing ID but no specific global handler, try to construct one
-            if (!handlerCalled && drawingId) {
-              const constructedHandler = `triggerDrawingClick_${drawingId}`;
-              console.log(`=== TRYING CONSTRUCTED HANDLER FROM PARENT: ${constructedHandler} ===`);
-              if ((window as any)[constructedHandler]) {
-                try {
-                  (window as any)[constructedHandler]();
-                  console.log(`=== Constructed handler from parent called successfully: ${constructedHandler} ===`);
-                  handlerCalled = true;
-                } catch (error) {
-                  console.error(`Error calling constructed handler from parent ${constructedHandler}:`, error);
-                }
-              }
-            }
-            
             return;
           }
         }
