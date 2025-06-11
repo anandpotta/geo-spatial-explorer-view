@@ -35,16 +35,18 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // Check for SVG elements - allow clicks on paths with drawing IDs (these should trigger region clicks)
+        // For SVG elements (drawn shapes), don't prevent the click
+        // Let both the layer click handler AND the map click handler work
+        // The layer click handler will handle region clicks, map click will handle new markers
         if (target.tagName === 'path' || target.tagName === 'svg') {
           const hasDrawingId = target.getAttribute('data-drawing-id') !== null;
           const isInteractiveDrawing = target.closest('[data-drawing-id]') !== null;
           
-          // If it's a drawing with an ID, let the layer click handler deal with it
-          // Don't call onMapClick for these as they should trigger region clicks instead
           if (hasDrawingId || isInteractiveDrawing) {
-            console.log('Click on drawing path - letting layer handler manage it');
-            return;
+            console.log('Click on drawing path - allowing both layer and map handlers');
+            // Don't return here - allow the click to proceed
+            // The layer's click handler should handle the region click
+            // But if that fails, the map click can still create a marker
           }
           
           // For other SVG elements without drawing IDs, check if they have interactive attributes
