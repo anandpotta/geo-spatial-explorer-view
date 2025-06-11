@@ -18,7 +18,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
-      // More precise click detection - only ignore UI controls, not interactive content
+      // More precise click detection - prioritize drawing paths
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
@@ -49,21 +49,22 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // Special handling for SVG paths - check if they have drawing IDs
+        // HIGH PRIORITY: Block map click for ANY interactive drawing elements
         if (target.tagName === 'path') {
           const drawingId = target.getAttribute('data-drawing-id');
           const isInteractive = target.getAttribute('data-interactive');
           
           if (drawingId || isInteractive) {
-            console.log(`Click on interactive SVG path with drawing ID: ${drawingId} - blocking map click to let layer handler manage it`);
-            // Completely block map click for drawing paths
+            console.log(`=== BLOCKING MAP CLICK === SVG path with drawing ID: ${drawingId} - DOM handler will manage this`);
+            // Completely block map click for drawing paths - DOM handler takes priority
             return;
           }
           
-          // If it's an interactive path without drawing ID, still let layer handle it
+          // If it's any interactive SVG element, block map click
           if (target.hasAttribute('data-svg-uid') ||
-              target.classList.contains('leaflet-interactive')) {
-            console.log('Click on interactive drawing path - blocking map click to let layer handler manage it');
+              target.classList.contains('leaflet-interactive') ||
+              target.closest('g[class*="leaflet"]')) {
+            console.log('=== BLOCKING MAP CLICK === Interactive drawing element detected');
             return;
           }
         }

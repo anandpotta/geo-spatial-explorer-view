@@ -33,6 +33,7 @@ export const setupLayerClickHandlers = (
   
   // Enhanced click handler with better event management
   const handleLayerClick = (e: L.LeafletMouseEvent) => {
+    console.log(`=== LAYER CLICK HANDLER TRIGGERED ===`);
     console.log(`Drawing layer clicked: ${drawing.id}`);
     console.log('Event details:', { type: e.type, target: e.target });
     
@@ -47,11 +48,11 @@ export const setupLayerClickHandlers = (
     L.DomEvent.stop(e);
     
     if (isMounted && onRegionClick) {
-      console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
+      console.log(`=== CALLING onRegionClick for drawing: ${drawing.id} ===`);
       console.log('Drawing data being passed:', drawing);
       try {
         onRegionClick(drawing);
-        console.log(`onRegionClick called successfully for drawing: ${drawing.id}`);
+        console.log(`=== onRegionClick called successfully for drawing: ${drawing.id} ===`);
       } catch (error) {
         console.error(`Error calling onRegionClick for drawing ${drawing.id}:`, error);
       }
@@ -60,7 +61,8 @@ export const setupLayerClickHandlers = (
     }
   };
   
-  // Set up the click handler on the layer
+  // Set up the click handler on the layer with high priority
+  layer.off('click'); // Remove any existing handlers first
   layer.on('click', handleLayerClick);
   console.log(`Main layer click handler attached for drawing: ${drawing.id}`);
   
@@ -68,9 +70,12 @@ export const setupLayerClickHandlers = (
   if (typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((subLayer: L.Layer) => {
       console.log(`Setting up click handler for sublayer of drawing: ${drawing.id}`);
+      
+      // Remove any existing handlers
+      subLayer.off('click');
       subLayer.on('click', handleLayerClick);
       
-      // For SVG paths, also attach to the DOM element directly
+      // For SVG paths, also attach to the DOM element directly with immediate trigger
       if (subLayer instanceof L.Path) {
         const pathElement = (subLayer as any)._path;
         if (pathElement) {
@@ -86,26 +91,33 @@ export const setupLayerClickHandlers = (
           }
           
           const domClickHandler = (domEvent: Event) => {
-            console.log(`DOM click detected on SVG path for drawing: ${drawing.id}`);
+            console.log(`=== DOM CLICK DETECTED on SVG path for drawing: ${drawing.id} ===`);
             console.log('DOM event details:', domEvent);
             
+            // Immediately stop all propagation
             domEvent.stopPropagation();
             domEvent.preventDefault();
             domEvent.stopImmediatePropagation();
             
-            // Create a mock leaflet event
-            const mockEvent = {
-              originalEvent: domEvent,
-              target: subLayer,
-              type: 'click',
-              latlng: null
-            } as L.LeafletMouseEvent;
-            
-            console.log(`Triggering handleLayerClick from DOM event for drawing: ${drawing.id}`);
-            handleLayerClick(mockEvent);
+            // Directly call the region click handler instead of creating mock event
+            console.log(`=== DIRECTLY CALLING onRegionClick from DOM event for drawing: ${drawing.id} ===`);
+            if (isMounted && onRegionClick) {
+              try {
+                onRegionClick(drawing);
+                console.log(`=== onRegionClick called successfully from DOM handler for drawing: ${drawing.id} ===`);
+              } catch (error) {
+                console.error(`Error calling onRegionClick from DOM handler for drawing ${drawing.id}:`, error);
+              }
+            } else {
+              console.warn(`Cannot call onRegionClick from DOM - isMounted: ${isMounted}, onRegionClick: ${!!onRegionClick}`);
+            }
           };
           
-          pathElement.addEventListener('click', domClickHandler, { capture: true });
+          // Use capture phase and immediate priority
+          pathElement.addEventListener('click', domClickHandler, { 
+            capture: true, 
+            passive: false 
+          });
           
           // Store reference for cleanup
           (pathElement as any)._drawingClickHandler = domClickHandler;
