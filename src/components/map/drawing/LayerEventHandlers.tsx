@@ -40,7 +40,7 @@ export const setupLayerClickHandlers = (
     L.DomEvent.stop(e);
     
     if (isMounted && onRegionClick) {
-      console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
+      console.log(`Calling onRegionClick for drawing: ${drawing.id}, drawing data:`, drawing);
       onRegionClick(drawing);
     }
   };
@@ -55,5 +55,5 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  console.log(`Click handler set up for drawing: ${drawing.id}`);
+  console.log(`Click handler set up for drawing: ${drawing.id}, onRegionClick is:`, !!onRegionClick);
 };

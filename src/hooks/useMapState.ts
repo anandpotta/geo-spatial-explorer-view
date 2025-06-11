@@ -172,8 +172,10 @@ export function useMapState(selectedLocation?: Location) {
   };
 
   const handleRegionClick = (drawing: DrawingData) => {
+    console.log('handleRegionClick called with drawing:', drawing.id);
     setSelectedDrawing(drawing);
     setShowFloorPlan(true);
+    console.log('Floor plan should now be visible, showFloorPlan set to true');
   };
 
   return {
