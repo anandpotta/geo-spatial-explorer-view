@@ -6,7 +6,7 @@ import { createUploadButtonControl } from './controls/UploadButtonControl';
 import { createRemoveButtonControl } from './controls/RemoveButtonControl';
 import { createImageControlsLayer } from './controls/ImageControlsLayer';
 import { getCurrentUser } from '@/services/auth-service';
-import { getFloorPlan } from '@/utils/floor-plan-utils';
+import { getFloorPlanById } from '@/utils/floor-plan-utils';
 
 interface LayerCreatorProps {
   drawing: DrawingData;
@@ -35,7 +35,7 @@ export const createLayerFromDrawing = ({
   onRemoveShape,
   onUploadRequest
 }: LayerCreatorProps): void => {
-  if (!drawing || !drawing.geoJson || !isMounted) return;
+  if (!drawing || !drawing.geoJSON || !isMounted) return;
   
   const currentUser = getCurrentUser();
   if (!currentUser || drawing.userId !== currentUser.id) {
@@ -47,7 +47,7 @@ export const createLayerFromDrawing = ({
     console.log(`Creating layer for drawing: ${drawing.id}`);
     
     // Parse the drawing data
-    const geoJsonData = typeof drawing.geoJson === 'string' ? JSON.parse(drawing.geoJson) : drawing.geoJson;
+    const geoJsonData = typeof drawing.geoJSON === 'string' ? JSON.parse(drawing.geoJSON) : drawing.geoJSON;
     
     // Create the layer from GeoJSON
     const layer = L.geoJSON(geoJsonData, {
@@ -114,18 +114,21 @@ export const createLayerFromDrawing = ({
         }
         
         // Create image controls if there's a floor plan
-        const floorPlan = getFloorPlan(drawing.id);
-        if (floorPlan) {
-          const imageControlPosition = L.latLng(center.lat - 0.0001, center.lng - 0.0001);
-          createImageControlsLayer({
-            drawingId: drawing.id,
-            imageControlsPosition: imageControlPosition,
-            featureGroup,
-            imageControlRoots,
-            isMounted,
-            onRemoveShape: onRemoveShape || (() => {})
-          });
-        }
+        const checkFloorPlan = async () => {
+          const floorPlan = await getFloorPlanById(drawing.id);
+          if (floorPlan) {
+            const imageControlPosition = L.latLng(center.lat - 0.0001, center.lng - 0.0001);
+            createImageControlsLayer({
+              drawingId: drawing.id,
+              imageControlsPosition: imageControlPosition,
+              featureGroup,
+              imageControlRoots,
+              isMounted,
+              onRemoveShape: onRemoveShape || (() => {})
+            });
+          }
+        };
+        checkFloorPlan();
       }
     }
     
