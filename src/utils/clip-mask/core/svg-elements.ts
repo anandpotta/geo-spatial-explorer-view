@@ -90,23 +90,49 @@ export const applyPatternAndClipPath = (
     pathElement.setAttribute('data-fill-locked', 'true');
     pathElement.setAttribute('data-fill-pattern-id', patternId);
     
-    // Set up a MutationObserver to watch for attribute changes
+    // Set up a MutationObserver to watch for attribute changes with debouncing
+    let debounceTimeout: NodeJS.Timeout | null = null;
+    let isRestoring = false;
+    
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && 
-            (mutation.attributeName === 'fill' || mutation.attributeName === 'style')) {
-          
-          // Check if the fill was lost or changed
-          const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
-          const expectedFill = `url(#${patternId})`;
-          
-          if (currentFill !== expectedFill && pathElement.getAttribute('data-fill-locked') === 'true') {
-            console.log(`Fill protection: restoring ${expectedFill} for ${patternId}`);
-            pathElement.style.fill = expectedFill;
-            pathElement.setAttribute('fill', expectedFill);
+      // Skip if we're currently restoring to prevent loops
+      if (isRestoring) return;
+      
+      // Clear any existing timeout
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+      }
+      
+      // Debounce the restoration to prevent rapid fire changes
+      debounceTimeout = setTimeout(() => {
+        let needsRestore = false;
+        
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && 
+              (mutation.attributeName === 'fill' || mutation.attributeName === 'style')) {
+            
+            // Check if the fill was lost or changed
+            const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
+            const expectedFill = `url(#${patternId})`;
+            
+            if (currentFill !== expectedFill && pathElement.getAttribute('data-fill-locked') === 'true') {
+              needsRestore = true;
+            }
           }
+        });
+        
+        if (needsRestore) {
+          isRestoring = true;
+          console.log(`Fill protection: restoring ${fill} for ${patternId}`);
+          pathElement.style.fill = fill;
+          pathElement.setAttribute('fill', fill);
+          
+          // Reset the restoring flag after a short delay
+          setTimeout(() => {
+            isRestoring = false;
+          }, 100);
         }
-      });
+      }, 50); // 50ms debounce
     });
     
     // Start observing
