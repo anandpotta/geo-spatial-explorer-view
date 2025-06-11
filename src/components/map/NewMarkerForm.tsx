@@ -71,14 +71,14 @@ const NewMarkerForm = ({
       onInputUpdate(nameToSave);
     }
     
-    // Then perform the actual save operation
+    // Then perform the actual save operation with a slight delay to ensure parent state is updated
     if (isEditing && existingMarkerId && onRename) {
       onRename(existingMarkerId, nameToSave);
     } else {
-      // Small delay to ensure parent state is updated before save
+      // Use a longer delay to ensure parent state is fully updated
       setTimeout(() => {
         onSave();
-      }, 10);
+      }, 50);
     }
   }, [isEditing, existingMarkerId, onRename, onSave, setMarkerName, onInputUpdate]);
 
