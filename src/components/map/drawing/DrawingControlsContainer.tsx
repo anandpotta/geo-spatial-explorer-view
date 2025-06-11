@@ -138,8 +138,6 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
               <FileUploadInput
                 ref={fileInputRef}
                 onChange={handleFileUpload}
-                accept="image/*"
-                disabled={isUploading}
               />
               
               {uploadError && (
