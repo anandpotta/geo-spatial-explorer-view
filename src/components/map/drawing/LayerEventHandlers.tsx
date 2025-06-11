@@ -61,8 +61,28 @@ export const setupLayerClickHandlers = (
     }
   };
   
-  // Enhanced DOM click handler that directly calls onRegionClick
-  const createDomClickHandler = (drawingData: DrawingData) => {
+  // Create a global function to trigger drawing clicks from DOM events
+  const createGlobalDrawingClickHandler = (drawingData: DrawingData) => {
+    const handlerName = `triggerDrawingClick_${drawingData.id}`;
+    
+    // Store the handler globally so DOM events can access it
+    (window as any)[handlerName] = () => {
+      console.log(`=== GLOBAL DRAWING CLICK TRIGGERED for drawing: ${drawingData.id} ===`);
+      if (isMounted && onRegionClick) {
+        try {
+          onRegionClick(drawingData);
+          console.log(`=== onRegionClick called successfully from global handler for drawing: ${drawingData.id} ===`);
+        } catch (error) {
+          console.error(`Error calling onRegionClick from global handler for drawing ${drawingData.id}:`, error);
+        }
+      }
+    };
+    
+    return handlerName;
+  };
+  
+  // Enhanced DOM click handler that calls the global function
+  const createDomClickHandler = (drawingData: DrawingData, globalHandlerName: string) => {
     return (domEvent: Event) => {
       console.log(`=== DOM CLICK DETECTED on SVG path for drawing: ${drawingData.id} ===`);
       console.log('DOM event details:', {
@@ -76,20 +96,18 @@ export const setupLayerClickHandlers = (
       domEvent.preventDefault();
       domEvent.stopImmediatePropagation();
       
-      // Directly call the region click handler
-      console.log(`=== DIRECTLY CALLING onRegionClick from DOM event for drawing: ${drawingData.id} ===`);
-      if (isMounted && onRegionClick) {
-        try {
-          onRegionClick(drawingData);
-          console.log(`=== onRegionClick called successfully from DOM handler for drawing: ${drawingData.id} ===`);
-        } catch (error) {
-          console.error(`Error calling onRegionClick from DOM handler for drawing ${drawingData.id}:`, error);
-        }
+      // Call the global handler
+      console.log(`=== CALLING GLOBAL HANDLER: ${globalHandlerName} ===`);
+      if ((window as any)[globalHandlerName]) {
+        (window as any)[globalHandlerName]();
       } else {
-        console.warn(`Cannot call onRegionClick from DOM - isMounted: ${isMounted}, onRegionClick: ${!!onRegionClick}`);
+        console.error(`Global handler ${globalHandlerName} not found`);
       }
     };
   };
+  
+  // Create the global handler
+  const globalHandlerName = createGlobalDrawingClickHandler(drawing);
   
   // Set up the click handler on the layer with high priority
   layer.off('click'); // Remove any existing handlers first
@@ -105,7 +123,7 @@ export const setupLayerClickHandlers = (
       subLayer.off('click');
       subLayer.on('click', handleLayerClick);
       
-      // For SVG paths, also attach to the DOM element directly with immediate trigger
+      // For SVG paths, also attach to the DOM element directly with global handler
       if (subLayer instanceof L.Path) {
         const pathElement = (subLayer as any)._path;
         if (pathElement) {
@@ -114,6 +132,7 @@ export const setupLayerClickHandlers = (
           // Set data attributes for identification
           pathElement.setAttribute('data-drawing-id', drawing.id);
           pathElement.setAttribute('data-interactive', 'true');
+          pathElement.setAttribute('data-global-handler', globalHandlerName);
           
           // Remove any existing click handlers first
           if ((pathElement as any)._drawingClickHandler) {
@@ -121,7 +140,7 @@ export const setupLayerClickHandlers = (
           }
           
           // Create the DOM click handler
-          const domClickHandler = createDomClickHandler(drawing);
+          const domClickHandler = createDomClickHandler(drawing, globalHandlerName);
           
           // Use capture phase and immediate priority
           pathElement.addEventListener('click', domClickHandler, { 
@@ -132,13 +151,14 @@ export const setupLayerClickHandlers = (
           // Store reference for cleanup
           (pathElement as any)._drawingClickHandler = domClickHandler;
           (pathElement as any)._drawingId = drawing.id;
+          (pathElement as any)._globalHandlerName = globalHandlerName;
           
           // Also add the handler for the normal phase as backup
           pathElement.addEventListener('click', domClickHandler, { 
             passive: false 
           });
           
-          console.log(`DOM click handler fully attached to SVG path for drawing: ${drawing.id}`);
+          console.log(`DOM click handler fully attached to SVG path for drawing: ${drawing.id} with global handler: ${globalHandlerName}`);
         } else {
           console.warn(`No path element found for drawing: ${drawing.id}`);
         }
@@ -146,5 +166,5 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  console.log(`Click handler fully set up for drawing: ${drawing.id}`);
+  console.log(`Click handler fully set up for drawing: ${drawing.id} with global handler: ${globalHandlerName}`);
 };
