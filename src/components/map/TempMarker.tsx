@@ -88,7 +88,9 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 
   // Handle real-time input updates for tooltip
   const handleInputUpdate = (value: string) => {
-    setCurrentInputValue(value || 'New Location');
+    const displayValue = value || 'New Location';
+    console.log('Tooltip updating to:', displayValue);
+    setCurrentInputValue(displayValue);
   };
 
   // Set up marker references
@@ -140,7 +142,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         offset={[0, -10]}
         opacity={0.9}
         permanent={true}
-        key={`tooltip-${currentInputValue}`}
+        key={currentInputValue}
       >
         <span className="font-medium">{currentInputValue}</span>
       </Tooltip>
