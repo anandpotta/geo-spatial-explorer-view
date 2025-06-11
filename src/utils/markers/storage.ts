@@ -1,3 +1,4 @@
+
 import { LocationMarker } from './types';
 import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
@@ -11,7 +12,7 @@ export function getSavedMarkers(): LocationMarker[] {
   if (!markersJson) {
     // Try to fetch from backend first if localStorage is empty
     const { isOnline, isBackendAvailable } = getConnectionStatus();
-    if (isOnline && isBackendAvailable) {
+    if (isOnline && isBackendAvailable && currentUser) {
       fetchMarkersFromBackend().catch(err => {
         // Silent fail for initial load
         console.log('Could not fetch markers from backend, using local storage');
@@ -32,6 +33,9 @@ export function getSavedMarkers(): LocationMarker[] {
     // Filter markers by user if a user is logged in
     if (currentUser) {
       markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
+    } else {
+      // For anonymous users, show markers with userId 'anonymous'
+      markers = markers.filter((marker: LocationMarker) => marker.userId === 'anonymous');
     }
     
     // Deduplicate markers by ID - this helps prevent duplicates
@@ -49,16 +53,14 @@ export function getSavedMarkers(): LocationMarker[] {
 
 export function saveMarker(marker: LocationMarker): void {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot save marker: No user is logged in');
-    toast.error('Please log in to save your markers');
-    return;
-  }
+  
+  // Allow saving for both authenticated and anonymous users
+  const userId = currentUser ? currentUser.id : 'anonymous';
   
   // Ensure the marker has a user ID
   const markerWithUser = {
     ...marker,
-    userId: currentUser.id
+    userId: userId
   };
   
   // Get existing markers and deduplicate before saving
@@ -85,9 +87,9 @@ export function saveMarker(marker: LocationMarker): void {
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('markersUpdated'));
   
-  // Only attempt to sync if we're online
+  // Only attempt to sync if we're online and have a logged-in user
   const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable) {
+  if (isOnline && isBackendAvailable && currentUser) {
     syncMarkersWithBackend(Array.from(uniqueMarkers.values()))
       .catch(err => {
         if (navigator.onLine) {
@@ -99,11 +101,6 @@ export function saveMarker(marker: LocationMarker): void {
 
 export function renameMarker(id: string, newName: string): void {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot rename marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
-    return;
-  }
   
   const savedMarkers = getSavedMarkers();
   const markerIndex = savedMarkers.findIndex(marker => marker.id === id);
@@ -126,9 +123,9 @@ export function renameMarker(id: string, newName: string): void {
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('markersUpdated'));
   
-  // Only attempt to sync if we're online
+  // Only attempt to sync if we're online and have a logged-in user
   const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable) {
+  if (isOnline && isBackendAvailable && currentUser) {
     syncMarkersWithBackend(savedMarkers)
       .catch(err => {
         if (navigator.onLine) {
@@ -142,11 +139,6 @@ export function renameMarker(id: string, newName: string): void {
 
 export function deleteMarker(id: string): void {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot delete marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
-    return;
-  }
   
   const savedMarkers = getSavedMarkers();
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
@@ -156,9 +148,9 @@ export function deleteMarker(id: string): void {
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('markersUpdated'));
   
-  // Only attempt to sync delete if we're online
+  // Only attempt to sync delete if we're online and have a logged-in user
   const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable) {
+  if (isOnline && isBackendAvailable && currentUser) {
     deleteMarkerFromBackend(id)
       .catch(err => {
         if (navigator.onLine) {

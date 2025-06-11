@@ -8,9 +8,9 @@ import { saveMarker } from './storage';
  */
 export function createMarker(markerData: Partial<LocationMarker>): LocationMarker {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Cannot create marker: No user is logged in');
-  }
+  
+  // Allow creation for both authenticated and anonymous users
+  const userId = currentUser ? currentUser.id : 'anonymous';
   
   const marker: LocationMarker = {
     id: markerData.id || crypto.randomUUID(),
@@ -21,7 +21,7 @@ export function createMarker(markerData: Partial<LocationMarker>): LocationMarke
     createdAt: markerData.createdAt || new Date(),
     isPinned: markerData.isPinned || false,
     associatedDrawing: markerData.associatedDrawing,
-    userId: currentUser.id
+    userId: userId
   };
   
   saveMarker(marker);
