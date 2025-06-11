@@ -61,6 +61,36 @@ export const setupLayerClickHandlers = (
     }
   };
   
+  // Enhanced DOM click handler that directly calls onRegionClick
+  const createDomClickHandler = (drawingData: DrawingData) => {
+    return (domEvent: Event) => {
+      console.log(`=== DOM CLICK DETECTED on SVG path for drawing: ${drawingData.id} ===`);
+      console.log('DOM event details:', {
+        type: domEvent.type,
+        target: domEvent.target,
+        currentTarget: domEvent.currentTarget
+      });
+      
+      // Immediately stop all propagation
+      domEvent.stopPropagation();
+      domEvent.preventDefault();
+      domEvent.stopImmediatePropagation();
+      
+      // Directly call the region click handler
+      console.log(`=== DIRECTLY CALLING onRegionClick from DOM event for drawing: ${drawingData.id} ===`);
+      if (isMounted && onRegionClick) {
+        try {
+          onRegionClick(drawingData);
+          console.log(`=== onRegionClick called successfully from DOM handler for drawing: ${drawingData.id} ===`);
+        } catch (error) {
+          console.error(`Error calling onRegionClick from DOM handler for drawing ${drawingData.id}:`, error);
+        }
+      } else {
+        console.warn(`Cannot call onRegionClick from DOM - isMounted: ${isMounted}, onRegionClick: ${!!onRegionClick}`);
+      }
+    };
+  };
+  
   // Set up the click handler on the layer with high priority
   layer.off('click'); // Remove any existing handlers first
   layer.on('click', handleLayerClick);
@@ -90,28 +120,8 @@ export const setupLayerClickHandlers = (
             pathElement.removeEventListener('click', (pathElement as any)._drawingClickHandler, true);
           }
           
-          const domClickHandler = (domEvent: Event) => {
-            console.log(`=== DOM CLICK DETECTED on SVG path for drawing: ${drawing.id} ===`);
-            console.log('DOM event details:', domEvent);
-            
-            // Immediately stop all propagation
-            domEvent.stopPropagation();
-            domEvent.preventDefault();
-            domEvent.stopImmediatePropagation();
-            
-            // Directly call the region click handler instead of creating mock event
-            console.log(`=== DIRECTLY CALLING onRegionClick from DOM event for drawing: ${drawing.id} ===`);
-            if (isMounted && onRegionClick) {
-              try {
-                onRegionClick(drawing);
-                console.log(`=== onRegionClick called successfully from DOM handler for drawing: ${drawing.id} ===`);
-              } catch (error) {
-                console.error(`Error calling onRegionClick from DOM handler for drawing ${drawing.id}:`, error);
-              }
-            } else {
-              console.warn(`Cannot call onRegionClick from DOM - isMounted: ${isMounted}, onRegionClick: ${!!onRegionClick}`);
-            }
-          };
+          // Create the DOM click handler
+          const domClickHandler = createDomClickHandler(drawing);
           
           // Use capture phase and immediate priority
           pathElement.addEventListener('click', domClickHandler, { 
@@ -122,6 +132,11 @@ export const setupLayerClickHandlers = (
           // Store reference for cleanup
           (pathElement as any)._drawingClickHandler = domClickHandler;
           (pathElement as any)._drawingId = drawing.id;
+          
+          // Also add the handler for the normal phase as backup
+          pathElement.addEventListener('click', domClickHandler, { 
+            passive: false 
+          });
           
           console.log(`DOM click handler fully attached to SVG path for drawing: ${drawing.id}`);
         } else {

@@ -49,14 +49,15 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // HIGH PRIORITY: Block map click for ANY interactive drawing elements
-        if (target.tagName === 'path') {
+        // HIGH PRIORITY: Check for interactive drawing elements
+        if (target.tagName === 'path' || target.tagName === 'PATH') {
           const drawingId = target.getAttribute('data-drawing-id');
           const isInteractive = target.getAttribute('data-interactive');
           
           if (drawingId || isInteractive) {
-            console.log(`=== BLOCKING MAP CLICK === SVG path with drawing ID: ${drawingId} - DOM handler will manage this`);
-            // Completely block map click for drawing paths - DOM handler takes priority
+            console.log(`Click on interactive drawing path - blocking map click to let layer handler manage it`);
+            console.log(`Drawing ID: ${drawingId}, Interactive: ${isInteractive}`);
+            // Completely block map click for drawing paths - DOM handler should handle this
             return;
           }
           
@@ -64,7 +65,20 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           if (target.hasAttribute('data-svg-uid') ||
               target.classList.contains('leaflet-interactive') ||
               target.closest('g[class*="leaflet"]')) {
-            console.log('=== BLOCKING MAP CLICK === Interactive drawing element detected');
+            console.log('Click on interactive drawing element - blocking map click');
+            return;
+          }
+        }
+        
+        // Also check parent elements for drawing attributes
+        const pathParent = target.closest('path');
+        if (pathParent) {
+          const drawingId = pathParent.getAttribute('data-drawing-id');
+          const isInteractive = pathParent.getAttribute('data-interactive');
+          
+          if (drawingId || isInteractive) {
+            console.log(`Click on child of interactive drawing path - blocking map click`);
+            console.log(`Parent Drawing ID: ${drawingId}, Interactive: ${isInteractive}`);
             return;
           }
         }
