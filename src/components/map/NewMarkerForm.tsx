@@ -59,6 +59,28 @@ const NewMarkerForm = ({
     console.log('Input changed to:', newValue);
   }, [onInputUpdate]);
 
+  const performSave = useCallback((nameToSave: string) => {
+    console.log('Performing save with name:', nameToSave);
+    
+    // Update parent state first
+    setMarkerName(nameToSave);
+    
+    // Update tooltip immediately
+    if (onInputUpdate) {
+      onInputUpdate(nameToSave);
+    }
+    
+    // Then perform the actual save operation
+    if (isEditing && existingMarkerId && onRename) {
+      onRename(existingMarkerId, nameToSave);
+    } else {
+      // Small delay to ensure parent state is updated before save
+      setTimeout(() => {
+        onSave();
+      }, 10);
+    }
+  }, [isEditing, existingMarkerId, onRename, onSave, setMarkerName, onInputUpdate]);
+
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -66,21 +88,10 @@ const NewMarkerForm = ({
       
       if (localValue.trim()) {
         console.log('Enter pressed, saving with name:', localValue.trim());
-        // Update parent state before saving
-        setMarkerName(localValue.trim());
-        // Also update tooltip immediately
-        if (onInputUpdate) {
-          onInputUpdate(localValue.trim());
-        }
-        
-        if (isEditing && existingMarkerId && onRename) {
-          onRename(existingMarkerId, localValue.trim());
-        } else {
-          onSave();
-        }
+        performSave(localValue.trim());
       }
     }
-  }, [localValue, isEditing, existingMarkerId, onRename, onSave, setMarkerName, onInputUpdate]);
+  }, [localValue, performSave]);
 
   const handleSaveButtonClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -88,20 +99,9 @@ const NewMarkerForm = ({
     
     if (localValue.trim()) {
       console.log('Save button clicked, saving with name:', localValue.trim());
-      // Update parent state before saving
-      setMarkerName(localValue.trim());
-      // Also update tooltip immediately
-      if (onInputUpdate) {
-        onInputUpdate(localValue.trim());
-      }
-      
-      if (isEditing && existingMarkerId && onRename) {
-        onRename(existingMarkerId, localValue.trim());
-      } else {
-        onSave();
-      }
+      performSave(localValue.trim());
     }
-  }, [isEditing, existingMarkerId, onRename, localValue, onSave, setMarkerName, onInputUpdate]);
+  }, [localValue, performSave]);
 
   const handleTypeChange = useCallback((type: 'pin' | 'area' | 'building') => {
     setMarkerType(type);
