@@ -5,6 +5,20 @@ import L from 'leaflet';
 const iconUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png';
 const iconShadowUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png';
 
+// Create a custom icon class that adds UIDs
+const createIconWithUID = () => {
+  const iconUID = crypto.randomUUID();
+  
+  return L.icon({
+    iconUrl: iconUrl,
+    shadowUrl: iconShadowUrl,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    // Add custom options to track UIDs
+    className: `leaflet-marker-icon-${iconUID}`,
+  });
+};
+
 const DefaultIcon = L.icon({
   iconUrl: iconUrl,
   shadowUrl: iconShadowUrl,
@@ -15,6 +29,51 @@ const DefaultIcon = L.icon({
 export const setupLeafletIcons = () => {
   // Set default marker icon
   L.Marker.prototype.options.icon = DefaultIcon;
+  
+  // Override the marker creation to add UIDs to all marker elements
+  const originalMarkerInitialize = L.Marker.prototype.initialize;
+  L.Marker.prototype.initialize = function(latlng, options) {
+    // Call the original initialize method
+    originalMarkerInitialize.call(this, latlng, options);
+    
+    // Add UID tracking
+    this._markerUID = crypto.randomUUID();
+    this._iconUID = crypto.randomUUID();
+    this._imageUID = crypto.randomUUID();
+    
+    // Override the _initIcon method to add UIDs
+    const originalInitIcon = this._initIcon;
+    this._initIcon = function() {
+      originalInitIcon.call(this);
+      
+      // Add UIDs to the marker icon element
+      if (this._icon) {
+        this._icon.setAttribute('data-marker-uid', this._markerUID);
+        this._icon.setAttribute('data-icon-uid', this._iconUID);
+        this._icon.setAttribute('data-marker-type', 'leaflet-default');
+        this._icon.id = `marker-icon-${this._iconUID}`;
+        
+        // Add UID to the image element inside the icon
+        const imgElement = this._icon.querySelector('img');
+        if (imgElement) {
+          imgElement.setAttribute('data-image-uid', this._imageUID);
+          imgElement.setAttribute('data-marker-img-uid', this._imageUID);
+          imgElement.setAttribute('data-image-type', 'marker-icon');
+          imgElement.id = `marker-image-${this._imageUID}`;
+        }
+        
+        console.log(`Leaflet marker icon configured with UIDs: marker=${this._markerUID}, icon=${this._iconUID}, image=${this._imageUID}`);
+      }
+      
+      // Add UID to shadow element
+      if (this._shadow) {
+        this._shadow.setAttribute('data-marker-uid', this._markerUID);
+        this._shadow.setAttribute('data-shadow-for', this._markerUID);
+        this._shadow.setAttribute('data-image-uid', `${this._imageUID}-shadow`);
+        this._shadow.id = `marker-shadow-${this._markerUID}`;
+      }
+    };
+  };
   
   // Fix Leaflet Draw icons by setting the correct icon path
   if (L.drawVersion && typeof L.drawLocal !== 'undefined') {
@@ -38,3 +97,5 @@ export const setupLeafletIcons = () => {
     }
   }
 };
+
+export { createIconWithUID };

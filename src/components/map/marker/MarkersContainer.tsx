@@ -24,12 +24,17 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
-  // Deduplicate markers by ID to prevent duplicates
+  // Deduplicate markers by ID to prevent duplicates and ensure each has a UID
   const uniqueMarkers = useMemo(() => {
     const markerMap = new Map<string, LocationMarker>();
     if (Array.isArray(markers)) {
       markers.forEach(marker => {
-        markerMap.set(marker.id, marker);
+        // Ensure each marker has a UID for tracking
+        const markerWithUID = {
+          ...marker,
+          _uid: marker._uid || crypto.randomUUID()
+        };
+        markerMap.set(marker.id, markerWithUID);
       });
     }
     return Array.from(markerMap.values());
