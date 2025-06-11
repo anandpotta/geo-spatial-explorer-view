@@ -30,7 +30,7 @@ const MarkersContainer = memo(({
     if (Array.isArray(markers)) {
       markers.forEach(marker => {
         // Ensure each marker has a UID for tracking
-        const markerWithUID = {
+        const markerWithUID: LocationMarker = {
           ...marker,
           _uid: marker._uid || crypto.randomUUID()
         };

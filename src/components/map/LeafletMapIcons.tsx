@@ -26,13 +26,22 @@ const DefaultIcon = L.icon({
   iconAnchor: [12, 41]
 });
 
+// Extend the Leaflet Marker type to include our custom properties
+declare module 'leaflet' {
+  interface Marker {
+    _markerUID?: string;
+    _iconUID?: string;
+    _imageUID?: string;
+  }
+}
+
 export const setupLeafletIcons = () => {
   // Set default marker icon
-  L.Marker.prototype.options.icon = DefaultIcon;
+  (L.Marker.prototype as any).options.icon = DefaultIcon;
   
   // Override the marker creation to add UIDs to all marker elements
-  const originalMarkerInitialize = L.Marker.prototype.initialize;
-  L.Marker.prototype.initialize = function(latlng, options) {
+  const originalMarkerInitialize = (L.Marker.prototype as any).initialize;
+  (L.Marker.prototype as any).initialize = function(latlng: L.LatLngExpression, options?: L.MarkerOptions) {
     // Call the original initialize method
     originalMarkerInitialize.call(this, latlng, options);
     
@@ -76,10 +85,10 @@ export const setupLeafletIcons = () => {
   };
   
   // Fix Leaflet Draw icons by setting the correct icon path
-  if (L.drawVersion && typeof L.drawLocal !== 'undefined') {
+  if ((L as any).drawVersion && typeof (L as any).drawLocal !== 'undefined') {
     // Only run if Leaflet Draw is loaded
     // Set default path for icons
-    if (L.Draw && L.Draw.Polyline) {
+    if ((L as any).Draw && (L as any).Draw.Polyline) {
       // This ensures the draw control icons are properly displayed
       const elementStyles = document.createElement('style');
       elementStyles.textContent = `
