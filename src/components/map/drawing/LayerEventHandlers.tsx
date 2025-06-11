@@ -81,183 +81,6 @@ export const setupLayerClickHandlers = (
   
   console.log(`=== GLOBAL HANDLER CREATED: ${globalHandlerName} ===`);
   
-  // Enhanced DOM click handler that calls the global function
-  const createDomClickHandler = (drawingData: DrawingData, globalHandlerName: string) => {
-    return (domEvent: Event) => {
-      console.log(`=== DOM CLICK DETECTED on SVG path for drawing: ${drawingData.id} ===`);
-      console.log('DOM event details:', {
-        type: domEvent.type,
-        target: domEvent.target,
-        currentTarget: domEvent.currentTarget
-      });
-      
-      // Immediately stop all propagation
-      domEvent.stopPropagation();
-      domEvent.preventDefault();
-      domEvent.stopImmediatePropagation();
-      
-      // Call the global handler
-      console.log(`=== CALLING GLOBAL HANDLER: ${globalHandlerName} ===`);
-      if ((window as any)[globalHandlerName]) {
-        (window as any)[globalHandlerName]();
-      } else {
-        console.error(`Global handler ${globalHandlerName} not found`);
-        // List available global handlers for debugging
-        const availableHandlers = Object.keys(window).filter(key => key.startsWith('triggerDrawingClick_'));
-        console.log('Available global handlers:', availableHandlers);
-      }
-    };
-  };
-  
-  // More robust function to find and setup SVG path elements
-  const findAndSetupSvgPaths = (retryCount = 0) => {
-    const maxRetries = 10;
-    const retryDelay = 200;
-    
-    console.log(`=== SEARCHING FOR SVG PATHS for drawing: ${drawing.id}, attempt ${retryCount + 1} ===`);
-    
-    // Search in multiple locations for SVG paths
-    const searchLocations = [
-      // Search in the map container
-      () => {
-        const mapContainer = document.querySelector('.leaflet-map-pane');
-        return mapContainer ? mapContainer.querySelectorAll('path') : [];
-      },
-      // Search in overlay pane
-      () => {
-        const overlayPane = document.querySelector('.leaflet-overlay-pane');
-        return overlayPane ? overlayPane.querySelectorAll('path') : [];
-      },
-      // Search in SVG container
-      () => {
-        const svgContainer = document.querySelector('svg');
-        return svgContainer ? svgContainer.querySelectorAll('path') : [];
-      },
-      // Search globally
-      () => document.querySelectorAll('path')
-    ];
-    
-    let pathsFound = 0;
-    
-    for (const searchMethod of searchLocations) {
-      try {
-        const pathElements = searchMethod();
-        console.log(`Found ${pathElements.length} path elements in search location`);
-        
-        for (const pathElement of pathElements) {
-          // Skip paths that already have drawing IDs assigned to avoid conflicts
-          const existingDrawingId = pathElement.getAttribute('data-drawing-id');
-          if (existingDrawingId && existingDrawingId !== drawing.id) {
-            continue;
-          }
-          
-          // Skip if this path already has our drawing ID
-          if (existingDrawingId === drawing.id) {
-            console.log(`Path already has drawing ID ${drawing.id}, skipping setup`);
-            continue;
-          }
-          
-          // Try to determine if this path belongs to our drawing
-          // Check if the path is associated with our layer
-          let belongsToOurLayer = false;
-          
-          // Method 1: Check if path has a reference to our layer
-          if ((pathElement as any)._leaflet_layer === layer) {
-            belongsToOurLayer = true;
-            console.log(`Found path belonging to our layer via _leaflet_layer reference`);
-          }
-          
-          // Method 2: Check parent relationships for layer group
-          if (!belongsToOurLayer && typeof (layer as any).eachLayer === 'function') {
-            (layer as any).eachLayer((subLayer: L.Layer) => {
-              if ((pathElement as any)._leaflet_layer === subLayer) {
-                belongsToOurLayer = true;
-                console.log(`Found path belonging to our layer via sublayer reference`);
-              }
-            });
-          }
-          
-          // Method 3: If no other paths have been set up yet and this is the first retry, assume it's ours
-          if (!belongsToOurLayer && retryCount === 0 && !pathElement.hasAttribute('data-drawing-id')) {
-            const allPathsWithDrawingIds = document.querySelectorAll('path[data-drawing-id]');
-            if (allPathsWithDrawingIds.length === 0) {
-              belongsToOurLayer = true;
-              console.log(`Assuming path belongs to our layer (first unassigned path)`);
-            }
-          }
-          
-          if (belongsToOurLayer) {
-            console.log(`=== SETTING UP PATH ELEMENT for drawing: ${drawing.id} ===`);
-            
-            // Set the required attributes
-            pathElement.setAttribute('data-drawing-id', drawing.id);
-            pathElement.setAttribute('data-interactive', 'true');
-            pathElement.setAttribute('data-global-handler', globalHandlerName);
-            
-            // Verify attributes were set
-            const verifyDrawingId = pathElement.getAttribute('data-drawing-id');
-            const verifyInteractive = pathElement.getAttribute('data-interactive');
-            const verifyGlobalHandler = pathElement.getAttribute('data-global-handler');
-            
-            console.log(`=== ATTRIBUTES SET ===`);
-            console.log(`Drawing ID: ${verifyDrawingId}`);
-            console.log(`Interactive: ${verifyInteractive}`);
-            console.log(`Global Handler: ${verifyGlobalHandler}`);
-            
-            if (verifyDrawingId === drawing.id && verifyInteractive === 'true' && verifyGlobalHandler === globalHandlerName) {
-              // Remove any existing click handlers first
-              if ((pathElement as any)._drawingClickHandler) {
-                pathElement.removeEventListener('click', (pathElement as any)._drawingClickHandler, true);
-                pathElement.removeEventListener('click', (pathElement as any)._drawingClickHandler, false);
-              }
-              
-              // Create the DOM click handler
-              const domClickHandler = createDomClickHandler(drawing, globalHandlerName);
-              
-              // Add event listeners
-              pathElement.addEventListener('click', domClickHandler, { 
-                capture: true, 
-                passive: false 
-              });
-              pathElement.addEventListener('click', domClickHandler, { 
-                passive: false 
-              });
-              
-              // Store reference for cleanup
-              (pathElement as any)._drawingClickHandler = domClickHandler;
-              (pathElement as any)._drawingId = drawing.id;
-              (pathElement as any)._globalHandlerName = globalHandlerName;
-              
-              console.log(`=== DOM HANDLER ATTACHED to SVG path for drawing: ${drawing.id} ===`);
-              pathsFound++;
-            } else {
-              console.error(`=== FAILED TO SET ATTRIBUTES PROPERLY for drawing: ${drawing.id} ===`);
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Error in search method:`, error);
-      }
-    }
-    
-    if (pathsFound > 0) {
-      console.log(`=== SUCCESSFULLY SETUP ${pathsFound} PATH(S) for drawing: ${drawing.id} ===`);
-      return true;
-    }
-    
-    // If we couldn't find any paths and we have retries left, try again
-    if (retryCount < maxRetries) {
-      console.log(`No paths found for drawing: ${drawing.id}, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
-      setTimeout(() => {
-        findAndSetupSvgPaths(retryCount + 1);
-      }, retryDelay);
-      return false;
-    } else {
-      console.warn(`Could not find any SVG paths for drawing: ${drawing.id} after ${maxRetries} attempts`);
-      return false;
-    }
-  };
-  
   // Set up the click handler on the layer with high priority
   layer.off('click'); // Remove any existing handlers first
   layer.on('click', handleLayerClick);
@@ -274,10 +97,115 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  // Start the search for SVG paths after a short delay to ensure DOM is ready
-  setTimeout(() => {
-    findAndSetupSvgPaths();
-  }, 100);
+  // Simplified and more reliable SVG path setup
+  const setupSvgPathAttributes = () => {
+    console.log(`=== SETTING UP SVG PATH ATTRIBUTES for drawing: ${drawing.id} ===`);
+    
+    // Get the layer's DOM element
+    let pathElement: Element | null = null;
+    
+    // Check if the layer has a direct path element
+    if ((layer as any)._path) {
+      pathElement = (layer as any)._path;
+      console.log(`Found path element via layer._path for drawing: ${drawing.id}`);
+    }
+    
+    // If no direct path, try to find it through the container
+    if (!pathElement && (layer as any)._container) {
+      const container = (layer as any)._container;
+      pathElement = container.querySelector('path');
+      if (pathElement) {
+        console.log(`Found path element via container query for drawing: ${drawing.id}`);
+      }
+    }
+    
+    // If still no path, search through sub-layers
+    if (!pathElement && typeof (layer as any).eachLayer === 'function') {
+      (layer as any).eachLayer((subLayer: L.Layer) => {
+        if (!pathElement) {
+          if ((subLayer as any)._path) {
+            pathElement = (subLayer as any)._path;
+            console.log(`Found path element via sublayer._path for drawing: ${drawing.id}`);
+          } else if ((subLayer as any)._container) {
+            const subContainer = (subLayer as any)._container;
+            const foundPath = subContainer.querySelector('path');
+            if (foundPath) {
+              pathElement = foundPath;
+              console.log(`Found path element via sublayer container for drawing: ${drawing.id}`);
+            }
+          }
+        }
+      });
+    }
+    
+    // If we found a path element, set up the attributes
+    if (pathElement) {
+      console.log(`=== SETTING ATTRIBUTES ON PATH ELEMENT for drawing: ${drawing.id} ===`);
+      
+      // Set the required attributes
+      pathElement.setAttribute('data-drawing-id', drawing.id);
+      pathElement.setAttribute('data-interactive', 'true');
+      pathElement.setAttribute('data-global-handler', globalHandlerName);
+      
+      // Create DOM click handler
+      const domClickHandler = (domEvent: Event) => {
+        console.log(`=== DOM CLICK on SVG path for drawing: ${drawing.id} ===`);
+        domEvent.stopPropagation();
+        domEvent.preventDefault();
+        domEvent.stopImmediatePropagation();
+        
+        // Call the global handler
+        if ((window as any)[globalHandlerName]) {
+          (window as any)[globalHandlerName]();
+        }
+      };
+      
+      // Remove any existing click handlers
+      if ((pathElement as any)._drawingClickHandler) {
+        pathElement.removeEventListener('click', (pathElement as any)._drawingClickHandler, true);
+        pathElement.removeEventListener('click', (pathElement as any)._drawingClickHandler, false);
+      }
+      
+      // Add the new click handler
+      pathElement.addEventListener('click', domClickHandler, { capture: true, passive: false });
+      pathElement.addEventListener('click', domClickHandler, { passive: false });
+      
+      // Store reference for cleanup
+      (pathElement as any)._drawingClickHandler = domClickHandler;
+      (pathElement as any)._drawingId = drawing.id;
+      (pathElement as any)._globalHandlerName = globalHandlerName;
+      
+      console.log(`=== SUCCESSFULLY SET UP SVG PATH for drawing: ${drawing.id} ===`);
+      console.log(`Drawing ID: ${pathElement.getAttribute('data-drawing-id')}`);
+      console.log(`Interactive: ${pathElement.getAttribute('data-interactive')}`);
+      console.log(`Global Handler: ${pathElement.getAttribute('data-global-handler')}`);
+      
+      return true;
+    } else {
+      console.warn(`Could not find SVG path element for drawing: ${drawing.id}`);
+      return false;
+    }
+  };
   
-  console.log(`=== CLICK HANDLER SETUP COMPLETE for drawing: ${drawing.id} with global handler: ${globalHandlerName} ===`);
+  // Try to set up SVG path attributes immediately
+  const immediate = setupSvgPathAttributes();
+  
+  // If immediate setup failed, retry with delays
+  if (!immediate) {
+    console.log(`Immediate SVG setup failed for drawing: ${drawing.id}, setting up retries`);
+    
+    const retryDelays = [100, 300, 500, 1000, 2000];
+    retryDelays.forEach((delay, index) => {
+      setTimeout(() => {
+        const success = setupSvgPathAttributes();
+        if (success) {
+          console.log(`SVG setup succeeded on retry ${index + 1} for drawing: ${drawing.id}`);
+        } else if (index === retryDelays.length - 1) {
+          console.warn(`All SVG setup retries failed for drawing: ${drawing.id}`);
+        }
+      }, delay);
+    });
+  }
+  
+  console.log(`=== CLICK HANDLER SETUP COMPLETE for drawing: ${drawing.id} ===`);
 };
