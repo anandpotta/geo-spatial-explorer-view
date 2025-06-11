@@ -103,42 +103,34 @@ export const createLayerFromDrawing = async ({
       
       console.log(`Adding layer for drawing ${drawing.id} to feature group`);
       
-      // Apply drawing attributes immediately after adding to feature group
-      layer.eachLayer((l: L.Layer) => {
-        if (l && isMounted) {
-          console.log(`Immediately applying drawing attributes for ${drawing.id}`);
-          addDrawingAttributesToLayer(l, drawing.id);
-        }
-      });
-      
-      // Also apply with a short delay to catch any delayed rendering
-      setTimeout(() => {
-        if (!isMounted) return;
+      // Apply drawing attributes with multiple attempts
+      const applyAttributesWithRetry = (attempt = 1) => {
+        if (attempt > 5 || !isMounted) return;
+        
+        console.log(`Applying drawing attributes for ${drawing.id}, attempt ${attempt}`);
         
         layer.eachLayer((l: L.Layer) => {
           if (l && isMounted) {
-            console.log(`Applying drawing attributes with delay for ${drawing.id}`);
             addDrawingAttributesToLayer(l, drawing.id);
-            
-            // Force verification
-            const pathElement = (l as any)._path;
-            if (pathElement) {
-              const drawingId = pathElement.getAttribute('data-drawing-id');
-              console.log(`Drawing ID attribute verification after delay: ${drawingId} for drawing ${drawing.id}`);
-              
-              // If still not applied, force it
-              if (!drawingId) {
-                console.log(`Force applying attributes directly to path element for ${drawing.id}`);
-                pathElement.setAttribute('data-drawing-id', drawing.id);
-                pathElement.setAttribute('id', `drawing-path-${drawing.id}`);
-                pathElement.setAttribute('data-path-uid', `uid-${drawing.id}-${Date.now()}`);
-                pathElement.classList.add('drawing-path-' + drawing.id.substring(0, 8));
-                pathElement.classList.add('visible-path-stroke');
-              }
-            }
           }
         });
-      }, 200);
+        
+        // Verify if attributes were applied
+        setTimeout(() => {
+          if (!isMounted) return;
+          
+          const pathWithId = document.querySelector(`[data-drawing-id="${drawing.id}"]`);
+          if (!pathWithId && attempt < 5) {
+            console.log(`Attributes not applied yet for ${drawing.id}, retrying...`);
+            applyAttributesWithRetry(attempt + 1);
+          } else if (pathWithId) {
+            console.log(`Successfully verified attributes for ${drawing.id}`);
+          }
+        }, 200 * attempt);
+      };
+      
+      // Start the retry process
+      applyAttributesWithRetry();
       
       // Add controls and event handlers after attributes are set
       setTimeout(() => {
@@ -166,7 +158,7 @@ export const createLayerFromDrawing = async ({
             setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
           }
         });
-      }, 400);
+      }, 1000);
       
       // Check if we've recently applied a floor plan to this drawing
       const lastApplied = floorPlanApplied.get(drawing.id) || 0;
