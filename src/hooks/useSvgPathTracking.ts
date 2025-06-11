@@ -33,10 +33,8 @@ export function useSvgPathTracking({
         trackingCountRef.current += 1;
         console.log(`useSvgPathTracking: trackPaths called #${trackingCountRef.current}`);
         
-        if (!mountedRef.current) {
-          console.log('useSvgPathTracking: Component not mounted, skipping');
-          return;
-        }
+        // Remove the mounted check that was causing the skip
+        // The effect itself being active means we should track
         
         try {
           if (drawToolsRef.current && typeof drawToolsRef.current.getSVGPathData === 'function') {
@@ -65,8 +63,6 @@ export function useSvgPathTracking({
       // Set up tracking on drawing events
       const handlePathsUpdated = () => {
         console.log('useSvgPathTracking: Event-triggered path update');
-        
-        if (!mountedRef.current) return;
         
         // Debounce path tracking to prevent excessive saves
         if (pathsTimeoutRef.current) {
@@ -100,7 +96,7 @@ export function useSvgPathTracking({
         }
       };
     }
-  }, [isInitialized, drawToolsRef, mountedRef, onPathsUpdated]);
+  }, [isInitialized, drawToolsRef, onPathsUpdated]); // Removed mountedRef dependency
   
   // Make sure we re-initialize when user changes
   useEffect(() => {
