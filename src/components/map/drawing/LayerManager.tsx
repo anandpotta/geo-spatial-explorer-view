@@ -28,10 +28,19 @@ const LayerManager = ({
   
   // Debug: Track renders
   renderCountRef.current += 1;
+  
+  // Get layer count using proper API
+  let layerCount = 0;
+  if (featureGroup) {
+    featureGroup.eachLayer(() => {
+      layerCount++;
+    });
+  }
+  
   console.log(`LayerManager render #${renderCountRef.current}`, {
     savedDrawingsLength: savedDrawings.length,
     activeTool,
-    featureGroupLayerCount: featureGroup ? Object.keys(featureGroup._layers || {}).length : 0
+    featureGroupLayerCount: layerCount
   });
   
   const {
