@@ -29,28 +29,17 @@ export const setupLayerClickHandlers = (
     console.log(`Drawing layer clicked: ${drawing.id}`, e);
     
     // Stop event propagation to prevent map click
-    e.originalEvent?.stopPropagation();
-    e.originalEvent?.preventDefault();
+    if (e.originalEvent) {
+      e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
+    }
     
     // Stop the leaflet event too
     L.DomEvent.stop(e);
     
-    // Check if this is a request to upload an image (right-click or ctrl+click)
-    const isUploadRequest = e.originalEvent && (
-      (e.originalEvent as MouseEvent).ctrlKey || 
-      (e.originalEvent as MouseEvent).button === 2 || // right click
-      (e.originalEvent as MouseEvent).metaKey // cmd on mac
-    );
-    
-    if (isUploadRequest && onUploadRequest) {
-      console.log(`Upload request for drawing: ${drawing.id}`);
-      onUploadRequest(drawing.id);
-      return;
-    }
-    
-    // For normal clicks, trigger upload request immediately
+    // Always trigger upload request on any click
     if (isMounted && onUploadRequest) {
-      console.log(`Normal click upload request for drawing: ${drawing.id}`);
+      console.log(`Triggering upload request for drawing: ${drawing.id}`);
       onUploadRequest(drawing.id);
     } else if (isMounted && onRegionClick) {
       console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
@@ -62,8 +51,10 @@ export const setupLayerClickHandlers = (
   const handleContextMenu = (e: L.LeafletMouseEvent) => {
     console.log(`Context menu triggered for drawing: ${drawing.id}`, e);
     
-    e.originalEvent?.stopPropagation();
-    e.originalEvent?.preventDefault();
+    if (e.originalEvent) {
+      e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
+    }
     L.DomEvent.stop(e);
     
     if (onUploadRequest) {
@@ -76,9 +67,9 @@ export const setupLayerClickHandlers = (
   layer.off('click');
   layer.off('contextmenu');
   
-  // Set up the click handlers with higher priority
-  layer.on('click', handleLayerClick, { priority: 1000 });
-  layer.on('contextmenu', handleContextMenu, { priority: 1000 });
+  // Set up the click handlers
+  layer.on('click', handleLayerClick);
+  layer.on('contextmenu', handleContextMenu);
   
   // Also set up handlers for sub-layers if this is a feature group
   if (typeof (layer as any).eachLayer === 'function') {
@@ -88,11 +79,11 @@ export const setupLayerClickHandlers = (
       subLayer.off('contextmenu');
       
       // Add new handlers
-      subLayer.on('click', handleLayerClick, { priority: 1000 });
-      subLayer.on('contextmenu', handleContextMenu, { priority: 1000 });
+      subLayer.on('click', handleLayerClick);
+      subLayer.on('contextmenu', handleContextMenu);
       
       // Make sure the sublayer is interactive and has proper styling
-      if ((subLayer as any).setStyle) {
+      if ('setStyle' in subLayer && typeof (subLayer as any).setStyle === 'function') {
         (subLayer as any).setStyle({
           interactive: true,
           bubblingMouseEvents: false,

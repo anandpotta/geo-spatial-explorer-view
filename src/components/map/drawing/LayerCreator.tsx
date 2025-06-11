@@ -63,7 +63,7 @@ export const createLayerFromDrawing = ({
       // Make sure each feature is interactive
       onEachFeature: (feature, featureLayer) => {
         // Ensure the layer is interactive with proper casting
-        if ((featureLayer as any).setStyle) {
+        if ('setStyle' in featureLayer && typeof (featureLayer as any).setStyle === 'function') {
           (featureLayer as any).setStyle({
             interactive: true,
             bubblingMouseEvents: false,
@@ -76,8 +76,10 @@ export const createLayerFromDrawing = ({
           console.log(`Feature clicked directly for drawing: ${drawing.id}`);
           
           // Stop all propagation
-          e.originalEvent?.stopPropagation();
-          e.originalEvent?.preventDefault();
+          if (e.originalEvent) {
+            e.originalEvent.stopPropagation();
+            e.originalEvent.preventDefault();
+          }
           L.DomEvent.stop(e);
           
           // Always trigger upload request on feature click
@@ -90,9 +92,9 @@ export const createLayerFromDrawing = ({
         const handleFeatureContextMenu = (e: L.LeafletMouseEvent) => {
           console.log(`Feature context menu for drawing: ${drawing.id}`);
           
-          e.originalEvent?.stopPropagation();
           if (e.originalEvent) {
-            L.DomEvent.preventDefault(e.originalEvent);
+            e.originalEvent.stopPropagation();
+            e.originalEvent.preventDefault();
           }
           L.DomEvent.stop(e);
           
@@ -106,7 +108,7 @@ export const createLayerFromDrawing = ({
         featureLayer.off('click');
         featureLayer.off('contextmenu');
         
-        // Add new handlers with high priority
+        // Add new handlers
         featureLayer.on('click', handleFeatureClick);
         featureLayer.on('contextmenu', handleFeatureContextMenu);
         
@@ -192,7 +194,7 @@ export const createLayerFromDrawing = ({
       }
     }
     
-    console.log(`Successfully created interactive layer for drawing: ${drawing.id}`);
+    console.log(`Successfully created interactive layer for drawing: ${drawing.id} with upload handlers`);
   } catch (error) {
     console.error(`Error creating layer for drawing ${drawing.id}:`, error);
   }
