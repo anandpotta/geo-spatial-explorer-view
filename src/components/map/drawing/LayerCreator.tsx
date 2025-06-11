@@ -93,36 +93,44 @@ export const createLayerFromDrawing = async ({
         // Add the ID at the sublayer level too
         (l as any).drawingId = drawing.id;
         
-        // Add drawing ID attribute to the SVG path for identification
-        addDrawingAttributesToLayer(l, drawing.id);
-        
-        // Store the layer reference
+        // Store the layer reference FIRST
         layersRef.set(drawing.id, l);
-        
-        // Add controls when in edit mode
-        if (onRemoveShape && onUploadRequest) {
-          createLayerControls({
-            layer: l,
-            drawingId: drawing.id,
-            activeTool,
-            featureGroup,
-            removeButtonRoots,
-            uploadButtonRoots,
-            imageControlRoots,
-            isMounted,
-            onRemoveShape,
-            onUploadRequest
-          });
-        }
-        
-        // Setup click handlers
-        setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
       }
     });
     
-    // Add the layer to the feature group
+    // Add the layer to the feature group FIRST
     if (isMounted && layer) {
       featureGroup.addLayer(layer);
+      
+      // THEN add drawing ID attributes after the layer is added to the map
+      // This ensures the DOM elements exist
+      setTimeout(() => {
+        layer.eachLayer((l: L.Layer) => {
+          if (l && isMounted) {
+            // Add drawing ID attribute to the SVG path for identification
+            addDrawingAttributesToLayer(l, drawing.id);
+            
+            // Add controls when in edit mode
+            if (onRemoveShape && onUploadRequest) {
+              createLayerControls({
+                layer: l,
+                drawingId: drawing.id,
+                activeTool,
+                featureGroup,
+                removeButtonRoots,
+                uploadButtonRoots,
+                imageControlRoots,
+                isMounted,
+                onRemoveShape,
+                onUploadRequest
+              });
+            }
+            
+            // Setup click handlers
+            setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
+          }
+        });
+      }, 200); // Give time for the layer to be fully added to DOM
       
       // Check if we've recently applied a floor plan to this drawing
       const lastApplied = floorPlanApplied.get(drawing.id) || 0;
