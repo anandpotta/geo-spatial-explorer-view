@@ -1,4 +1,3 @@
-
 import { LocationMarker } from '@/utils/geo-utils';
 import UserMarker from './UserMarker';
 import TempMarker from './TempMarker';
@@ -10,6 +9,7 @@ interface MarkersListProps {
   markerName: string;
   markerType: 'pin' | 'area' | 'building';
   onDeleteMarker: (id: string) => void;
+  onRenameMarker: (id: string, newName: string) => void;
   onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
@@ -21,6 +21,7 @@ const MarkersList = ({
   markerName,
   markerType,
   onDeleteMarker,
+  onRenameMarker,
   onSaveMarker,
   setMarkerName,
   setMarkerType
@@ -85,7 +86,8 @@ const MarkersList = ({
         <UserMarker 
           key={`user-marker-${marker.id}`} 
           marker={marker} 
-          onDelete={handleDeleteMarker} 
+          onDelete={handleDeleteMarker}
+          onRename={onRenameMarker}
         />
       ))}
       
@@ -105,3 +107,5 @@ const MarkersList = ({
 };
 
 export default React.memo(MarkersList);
+
+undefined
