@@ -17,9 +17,13 @@ const applyAttributesToPath = (pathElement: SVGPathElement, drawingId: string): 
   pathElement.setAttribute('data-drawing-type', 'user-drawn');
   pathElement.setAttribute('data-clickable', 'true');
   
-  // Make sure the path is clickable
+  // Make sure the path is clickable with high priority
   pathElement.style.pointerEvents = 'auto';
   pathElement.style.cursor = 'pointer';
+  pathElement.style.zIndex = '1000';
+  
+  // Add a class to help with CSS targeting
+  pathElement.classList.add('interactive-drawing-path');
   
   console.log(`Successfully applied attributes to path:`, {
     'data-drawing-id': pathElement.getAttribute('data-drawing-id'),

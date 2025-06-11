@@ -25,22 +25,29 @@ export const setupLayerClickHandlers = (
   
   console.log(`Setting up click handlers for drawing ${drawing.id}`);
   
-  // Set up Leaflet layer click handler
+  // Set up Leaflet layer click handler with higher priority
   layer.on('click', (e) => {
-    console.log(`Layer click detected for drawing ${drawing.id}`);
+    console.log(`Layer click detected for drawing ${drawing.id} - preventing map click`);
     
-    // Stop event propagation to prevent map click
+    // Stop event propagation immediately
     if (e.originalEvent) {
+      e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
       L.DomEvent.stopPropagation(e.originalEvent);
+      L.DomEvent.preventDefault(e.originalEvent);
     }
+    
+    // Stop the leaflet event as well
+    L.DomEvent.stopPropagation(e);
+    L.DomEvent.preventDefault(e);
     
     if (isMounted) {
       onRegionClick(drawing);
     }
   });
   
-  // Also set up DOM event handler for SVG paths
-  setTimeout(() => {
+  // Set up DOM event handler for SVG paths with immediate application
+  const setupPathClickHandlers = () => {
     if (!isMounted) return;
     
     // Find SVG paths with this drawing ID
@@ -49,24 +56,42 @@ export const setupLayerClickHandlers = (
     
     paths.forEach((path) => {
       if (path instanceof SVGPathElement) {
-        // Remove any existing click handlers to avoid duplicates
-        path.removeEventListener('click', handlePathClick);
-        
-        // Add new click handler
-        path.addEventListener('click', handlePathClick);
-        
-        function handlePathClick(event: Event) {
-          console.log(`SVG path click detected for drawing ${drawing.id}`);
+        // Create a named function to avoid closure issues
+        const handlePathClick = (event: Event) => {
+          console.log(`SVG path click detected for drawing ${drawing.id} - preventing map click`);
           
-          // Stop propagation to prevent map click
+          // Stop all propagation immediately
           event.stopPropagation();
+          event.stopImmediatePropagation();
           event.preventDefault();
           
           if (isMounted && onRegionClick) {
             onRegionClick(drawing);
           }
-        }
+        };
+        
+        // Remove any existing handlers first
+        path.removeEventListener('click', handlePathClick, true);
+        path.removeEventListener('click', handlePathClick, false);
+        
+        // Add new click handler with capture=true for higher priority
+        path.addEventListener('click', handlePathClick, true);
+        
+        // Also add a non-capturing handler as fallback
+        path.addEventListener('click', handlePathClick, false);
+        
+        // Ensure the path is properly set up for clicking
+        path.style.pointerEvents = 'auto';
+        path.style.cursor = 'pointer';
+        
+        // Store the handler function for potential cleanup
+        (path as any).__clickHandler = handlePathClick;
       }
     });
-  }, 500);
+  };
+  
+  // Set up path handlers immediately and with delays
+  setupPathClickHandlers();
+  setTimeout(setupPathClickHandlers, 100);
+  setTimeout(setupPathClickHandlers, 500);
 };
