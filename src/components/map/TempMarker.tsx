@@ -23,7 +23,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [markerReady, setMarkerReady] = useState(false);
+  const [tooltipName, setTooltipName] = useState(markerName || 'New Location');
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
+
+  // Initialize tooltip name when marker name is first set
+  useEffect(() => {
+    if (markerName && !tooltipName) {
+      setTooltipName(markerName);
+    }
+  }, [markerName]);
 
   // Handle cleanup when component unmounts
   useEffect(() => {
@@ -61,8 +69,12 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     }
   };
   
-  // Custom save handler to ensure cleanup before saving
+  // Custom save handler to ensure cleanup before saving and update tooltip
   const handleSave = () => {
+    // Update the tooltip with the final name before saving
+    const finalName = markerName.trim() || 'Unnamed Location';
+    setTooltipName(finalName);
+    
     // Clean up the marker DOM elements before saving
     const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
     tempIcons.forEach(icon => {
@@ -124,7 +136,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         opacity={0.9}
         permanent={true}
       >
-        <span className="font-medium">{markerName || 'New Location'}</span>
+        <span className="font-medium">{tooltipName}</span>
       </Tooltip>
     </Marker>
   );
