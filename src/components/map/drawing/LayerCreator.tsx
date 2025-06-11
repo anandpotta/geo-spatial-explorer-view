@@ -49,11 +49,12 @@ export function createLayerFromDrawing({
     } else if (drawing.type === 'rectangle') {
       layer = L.rectangle(drawing.coordinates as L.LatLngBoundsExpression);
     } else if (drawing.type === 'circle') {
-      // Fix: Handle circle coordinates properly
-      const coords = drawing.coordinates as [L.LatLngExpression, number];
-      if (coords && coords.length >= 2) {
+      // Fix: Handle circle coordinates properly - circle has center and radius
+      const coords = drawing.coordinates as any;
+      if (Array.isArray(coords) && coords.length >= 2) {
+        // For circle, coordinates should be [center, radius] where center is [lat, lng]
         const [center, radius] = coords;
-        layer = L.circle(center, { radius });
+        layer = L.circle(center as L.LatLngExpression, { radius: radius as number });
       }
     } else if (drawing.type === 'polyline') {
       layer = L.polyline(drawing.coordinates as L.LatLngExpression[]);
@@ -180,8 +181,8 @@ export function createLayerFromDrawing({
         const bounds = (layer as any).getBounds();
         if (!bounds) return;
 
-        // Fix: Use getMap() method instead of accessing protected _map
-        const map = featureGroup.getMap();
+        // Fix: Access map through the feature group's internal structure
+        const map = (featureGroup as any)._map;
         if (!map) return;
 
         const center = bounds.getCenter();
