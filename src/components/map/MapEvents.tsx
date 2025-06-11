@@ -34,19 +34,24 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // Check for SVG elements more specifically - only ignore if they have interactive attributes
-        // but allow clicks on drawing shapes which should trigger their handlers
+        // For SVG elements, check if it's a drawing path - if so, let it handle its own click
         if (target.tagName === 'path' || target.tagName === 'svg') {
+          // Check if this is a drawing path with a drawing ID
+          const isDrawingPath = target.closest('[data-drawing-id]') !== null ||
+                               target.getAttribute('data-drawing-id') !== null;
+          
+          if (isDrawingPath) {
+            console.log('Click on drawing path detected, letting drawing handle it');
+            return; // Let the drawing's click handler take care of it
+          }
+          
+          // For other SVG elements with interactive attributes, block the click
           const hasClickHandler = target.onclick !== null || 
                                  target.getAttribute('onclick') !== null ||
                                  target.style.cursor === 'pointer' ||
                                  target.closest('[data-interactive="true"]') !== null;
           
-          // Allow clicks on drawing paths (they have their own click handlers)
-          const isDrawingPath = target.closest('[data-drawing-id]') !== null ||
-                               target.getAttribute('data-drawing-id') !== null;
-          
-          if (hasClickHandler && !isDrawingPath) {
+          if (hasClickHandler) {
             console.log('Click on interactive SVG element ignored');
             return;
           }
