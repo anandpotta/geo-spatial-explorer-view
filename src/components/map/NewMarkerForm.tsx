@@ -45,19 +45,18 @@ const NewMarkerForm = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Update parent marker name whenever local input changes
+  // Handle input changes without updating parent state
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalInputValue(newValue);
-    // Immediately update the parent state so tooltip can react
-    setMarkerName(newValue);
+    // Don't update parent state on every keystroke
   };
 
   const handleSaveButtonClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Ensure the marker name is set to the current input value
+    // Update the marker name with the final input value only when saving
     setMarkerName(localInputValue);
     
     if (isEditing && existingMarkerId && onRename) {
