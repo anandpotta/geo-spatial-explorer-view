@@ -1,161 +1,133 @@
-
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Location } from '@/utils/geo-utils';
-import { useMapState } from '@/hooks/useMapState';
-import { useMapInitialization } from '@/hooks/useMapInitialization';
-import { useLocationSelection } from '@/hooks/useLocationSelection';
-import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
-import { getSavedMarkers } from '@/utils/marker-utils';
-import MapView from './MapView';
-import FloorPlanView from './FloorPlanView';
-import { setupLeafletIcons } from './LeafletMapIcons';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+import { LocationMarker } from '@/utils/marker-utils';
+import { DrawingData } from '@/utils/drawing-utils';
+import { useMapInitialization } from '@/hooks/useMapInitialization';
+import { useMapEvents } from '@/hooks/useMapEvents';
+import { useSavedLocations } from '@/hooks/useSavedLocations';
+import { useMarkerHandlers } from '@/hooks/useMarkerHandlers';
+import { useDrawings } from '@/hooks/useDrawings';
+import { useDrawingFileUpload } from '@/hooks/useDrawingFileUpload';
+import MapEvents from './MapEvents';
+import UserMarker from './UserMarker';
+import TempMarker from './TempMarker';
+import SelectedLocationMarker from './SelectedLocationMarker';
+import DrawingControls from './DrawingControls';
+import { DrawingControlsRef } from '@/hooks/useDrawingControls';
+import MarkersList from './MarkersList';
 
 interface LeafletMapProps {
-  selectedLocation?: Location;
-  onMapReady?: (map: L.Map) => void;
-  activeTool?: string | null;
-  onLocationSelect?: (location: Location) => void;
+  selectedLocation?: { x: number; y: number };
+  tempMarker?: { x: number; y: number };
+  userLocation?: { x: number; y: number };
+  activeTool: string | null;
+  onLocationSelect?: (location: { x: number; y: number }) => void;
+  onMarkerCreate?: (marker: LocationMarker) => void;
   onClearAll?: () => void;
-  onClearSelectedLocation?: () => void;
+  onRemoveShape?: (drawingId: string) => void;
+  onUploadToDrawing?: (drawingId: string, file: File) => void;
+  onPathsUpdated?: (paths: string[]) => void;
 }
 
-const LeafletMap = ({ 
-  selectedLocation, 
-  onMapReady, 
-  activeTool, 
-  onLocationSelect, 
+const LeafletMap: React.FC<LeafletMapProps> = ({
+  selectedLocation,
+  tempMarker,
+  userLocation,
+  activeTool,
+  onLocationSelect,
+  onMarkerCreate,
   onClearAll,
-  onClearSelectedLocation 
-}: LeafletMapProps) => {
-  const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
-  const [instanceKey, setInstanceKey] = useState<number>(Date.now());
+  onRemoveShape,
+  onUploadToDrawing,
+  onPathsUpdated
+}) => {
+  const mapRef = useRef<L.Map>(null);
+  const drawingControlsRef = useRef<DrawingControlsRef>(null);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   
-  // Initialize Leaflet icons
-  useEffect(() => {
-    setupLeafletIcons();
+  const { savedLocations } = useSavedLocations();
+  const { savedDrawings } = useDrawings();
+  
+  const { handleMarkerCreation, handleMarkerDeletion, handleMarkerRename } = useMarkerHandlers(onMarkerCreate);
+  
+  useMapInitialization(mapRef, savedLocations, savedDrawings);
+  useMapEvents(mapInstance, selectedLocation);
+  
+  const { handleUploadToDrawing } = useDrawingFileUpload();
+
+  const handleMapClick = useCallback((latlng: L.LatLng) => {
+    if (activeTool === 'marker') {
+      handleMarkerCreation(latlng);
+    } else if (onLocationSelect) {
+      onLocationSelect({ x: latlng.lng, y: latlng.lat });
+    }
+  }, [activeTool, handleMarkerCreation, onLocationSelect]);
+
+  const handleShapeCreated = (shape: any) => {
+    console.log('Shape Created:', shape);
+  };
+
+  const handleRegionClick = (drawing: DrawingData) => {
+    console.log('Region Clicked:', drawing);
+  };
+
+  const handlePathClick = useCallback((drawingId: string) => {
+    console.log(`Path clicked for drawing: ${drawingId}`);
+    if (drawingControlsRef.current) {
+      drawingControlsRef.current.openFileUploadDialog(drawingId);
+    }
   }, []);
-  
-  // Generate a unique instance ID for this component instance to avoid container reuse
-  const uniqueInstanceId = useMemo(() => `leaflet-map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, []);
-  
-  // Custom hooks
-  const mapState = useMapState(selectedLocation);
-  const { 
-    mapRef, 
-    mapInstanceKey, 
-    isMapReady, 
-    handleSetMapRef,
-    resetMapInstance 
-  } = useMapInitialization(selectedLocation);
-  const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
-  const { handleLocationSelect, handleClearAll } = useLocationSelection(mapRef, isMapReady, onLocationSelect);
-
-  // Reset map if there are errors
-  const forceReset = useCallback(() => {
-    console.log("Forcing map reset");
-    setInstanceKey(Date.now());
-    resetMapInstance();
-    setIsMapReferenceSet(false);
-  }, [resetMapInstance]);
-
-  // Handle markers updates
-  useEffect(() => {
-    const handleMarkersUpdated = () => {
-      const savedMarkers = getSavedMarkers();
-      mapState.setMarkers(savedMarkers);
-    };
-    
-    window.addEventListener('markersUpdated', handleMarkersUpdated);
-    window.addEventListener('storage', handleMarkersUpdated);
-    
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkersUpdated);
-      window.removeEventListener('storage', handleMarkersUpdated);
-    };
-  }, [mapState]);
-
-  // Handle selected location changes
-  useEffect(() => {
-    if (selectedLocation && mapRef.current && isMapReady && isMapReferenceSet) {
-      try {
-        const container = mapRef.current.getContainer();
-        if (container && document.body.contains(container)) {
-          console.log('Flying to selected location:', selectedLocation);
-          mapRef.current.flyTo([selectedLocation.y, selectedLocation.x], 18, {
-            animate: true,
-            duration: 1.5
-          });
-        }
-      } catch (err) {
-        console.error('Error flying to location:', err);
-      }
-    }
-  }, [selectedLocation, isMapReady, isMapReferenceSet]);
-
-  // Custom map reference handler
-  const handleMapRefWrapper = useCallback((map: L.Map) => {
-    console.log('Map ref wrapper called');
-    handleSetMapRef(map);
-    setIsMapReferenceSet(true);
-    
-    // Only call parent onMapReady once when the map is first ready
-    if (onMapReady && !isMapReferenceSet) {
-      onMapReady(map);
-    }
-  }, [handleSetMapRef, onMapReady, isMapReferenceSet]);
-
-  // Clear all layers and reset state (but preserve selected location)
-  const handleClearAllWrapper = useCallback(() => {
-    mapState.setTempMarker(null);
-    mapState.setMarkerName('');
-    mapState.setMarkerType('building');
-    mapState.setCurrentDrawing(null);
-    mapState.setShowFloorPlan(false);
-    mapState.setSelectedDrawing(null);
-    
-    if (onClearAll) {
-      onClearAll();
-    }
-    
-    handleClearAll();
-  }, [mapState, onClearAll, handleClearAll]);
-
-  if (mapState.showFloorPlan) {
-    return (
-      <FloorPlanView 
-        onBack={() => mapState.setShowFloorPlan(false)} 
-        drawing={mapState.selectedDrawing}
-      />
-    );
-  }
 
   return (
-    <MapView
-      key={`map-view-${uniqueInstanceId}-${mapInstanceKey}-${instanceKey}`}
-      position={mapState.position}
-      zoom={mapState.zoom}
-      markers={mapState.markers}
-      tempMarker={mapState.tempMarker}
-      markerName={mapState.markerName}
-      markerType={mapState.markerType}
-      onMapReady={handleMapRefWrapper}
-      onLocationSelect={handleLocationSelect}
-      onMapClick={handleMapClick}
-      onDeleteMarker={mapState.handleDeleteMarker}
-      onSaveMarker={mapState.handleSaveMarker}
-      setMarkerName={mapState.setMarkerName}
-      setMarkerType={mapState.setMarkerType}
-      onShapeCreated={handleShapeCreated}
-      activeTool={activeTool || mapState.activeTool}
-      onRegionClick={mapState.handleRegionClick}
-      onClearAll={handleClearAllWrapper}
-      isMapReady={isMapReady}
-      selectedLocation={selectedLocation}
-      onClearSelectedLocation={onClearSelectedLocation}
-    />
+    <div className="w-full h-full relative">
+      <MapContainer
+        center={[20, 0]}
+        zoom={2}
+        className="h-full w-full"
+        ref={mapRef}
+        zoomControl={true}
+        attributionControl={true}
+        whenCreated={setMapInstance}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        
+        <MapEvents 
+          onMapClick={handleMapClick} 
+          onPathClick={handlePathClick}
+        />
+
+        {userLocation && (
+          <UserMarker position={[userLocation.y, userLocation.x]} />
+        )}
+
+        {tempMarker && (
+          <TempMarker position={[tempMarker.y, tempMarker.x]} />
+        )}
+
+        {selectedLocation && (
+          <SelectedLocationMarker position={[selectedLocation.y, selectedLocation.x]} />
+        )}
+        
+        <DrawingControls
+          ref={drawingControlsRef}
+          onCreated={handleShapeCreated}
+          activeTool={activeTool}
+          onRegionClick={handleRegionClick}
+          onClearAll={onClearAll}
+          onRemoveShape={onRemoveShape}
+          onUploadToDrawing={handleUploadToDrawing}
+          onPathsUpdated={onPathsUpdated}
+        />
+        
+        <MarkersList />
+      </MapContainer>
+    </div>
   );
 };
 

@@ -5,9 +5,10 @@ import L from 'leaflet';
 
 interface MapEventsProps {
   onMapClick: (latlng: L.LatLng) => void;
+  onPathClick?: (drawingId: string) => void;
 }
 
-const MapEvents = ({ onMapClick }: MapEventsProps) => {
+const MapEvents = ({ onMapClick, onPathClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
       console.log('Map click detected at:', e.latlng);
@@ -49,52 +50,26 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // HIGH PRIORITY: Check for interactive drawing elements
-        let handlerCalled = false;
-        
-        // Check if the target itself is a path or find the closest path
+        // Check for SVG path clicks
         const pathElement = target.tagName === 'path' || target.tagName === 'PATH' 
           ? target 
           : target.closest('path');
         
         if (pathElement) {
           const drawingId = pathElement.getAttribute('data-drawing-id');
-          const isInteractive = pathElement.getAttribute('data-interactive');
-          const globalHandler = pathElement.getAttribute('data-global-handler');
           
-          console.log(`=== INTERACTIVE PATH DETECTED ===`);
-          console.log(`Drawing ID: ${drawingId}, Interactive: ${isInteractive}, Global Handler: ${globalHandler}`);
+          console.log(`=== SVG PATH CLICKED ===`);
+          console.log(`Drawing ID: ${drawingId}`);
           
-          // Only block map click if we have valid attributes AND a working global handler
-          if (drawingId && isInteractive === 'true' && globalHandler && (window as any)[globalHandler]) {
-            console.log(`=== BLOCKING MAP CLICK === Interactive drawing element detected`);
-            
-            console.log(`=== CALLING GLOBAL HANDLER: ${globalHandler} ===`);
-            try {
-              (window as any)[globalHandler]();
-              console.log(`=== Global handler called successfully: ${globalHandler} ===`);
-              handlerCalled = true;
-            } catch (error) {
-              console.error(`Error calling global handler ${globalHandler}:`, error);
-            }
-            
-            // Completely block map click for valid drawing paths
-            return;
-          } else if (drawingId || isInteractive || globalHandler) {
-            // If we have partial attributes but missing critical ones, warn and don't block
-            console.warn(`Path has incomplete attributes - not blocking map click. DrawingId: ${drawingId}, Interactive: ${isInteractive}, Handler: ${globalHandler}`);
-            
-            // Clean up incomplete attributes to prevent future confusion
-            if (!drawingId) pathElement.removeAttribute('data-drawing-id');
-            if (!isInteractive || isInteractive !== 'true') pathElement.removeAttribute('data-interactive');
-            if (!globalHandler || !(window as any)[globalHandler]) pathElement.removeAttribute('data-global-handler');
+          // If we have a drawing ID and the onPathClick handler, call it
+          if (drawingId && onPathClick) {
+            console.log(`=== OPENING UPLOAD POPUP for drawing: ${drawingId} ===`);
+            onPathClick(drawingId);
+            return; // Block map click when path is clicked
           }
           
-          // If it's any other interactive SVG element without proper attribution, don't block
-          if (target.hasAttribute('data-svg-uid') ||
-              target.classList.contains('leaflet-interactive')) {
-            console.log('Click on general interactive SVG element - allowing map click to proceed');
-          }
+          // If no drawing ID, allow map click to proceed
+          console.log('SVG path clicked but no drawing ID found, allowing map click');
         }
       }
       
