@@ -49,10 +49,9 @@ export function createLayerFromDrawing({
     } else if (drawing.type === 'rectangle') {
       layer = L.rectangle(drawing.coordinates as L.LatLngBoundsExpression);
     } else if (drawing.type === 'circle') {
-      // Fix: Handle circle coordinates properly - circle has center and radius
+      // Handle circle coordinates properly - circle has center and radius
       const coords = drawing.coordinates as any;
       if (Array.isArray(coords) && coords.length >= 2) {
-        // For circle, coordinates should be [center, radius] where center is [lat, lng]
         const [center, radius] = coords;
         layer = L.circle(center as L.LatLngExpression, { radius: radius as number });
       }
@@ -79,14 +78,15 @@ export function createLayerFromDrawing({
       // Stop event propagation to prevent map click
       L.DomEvent.stopPropagation(e);
       
-      if (onRegionClick) {
-        console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
-        onRegionClick(drawing);
-      }
-      
+      // Trigger upload request first
       if (onUploadRequest) {
         console.log(`Calling onUploadRequest for drawing: ${drawing.id}`);
         onUploadRequest(drawing.id);
+      }
+      
+      if (onRegionClick) {
+        console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
+        onRegionClick(drawing);
       }
     });
 
@@ -133,20 +133,21 @@ export function createLayerFromDrawing({
           pathElement.removeEventListener('click', existingHandler);
         }
         
-        // Create new click handler
+        // Create new click handler that prioritizes upload request
         const clickHandler = (e: MouseEvent) => {
           console.log(`SVG Path clicked for drawing: ${drawing.id}`);
           e.stopPropagation();
           e.preventDefault();
           
-          if (onRegionClick) {
-            console.log(`Calling onRegionClick from SVG path for drawing: ${drawing.id}`);
-            onRegionClick(drawing);
-          }
-          
+          // Trigger upload request first - this is the main action
           if (onUploadRequest) {
             console.log(`Calling onUploadRequest from SVG path for drawing: ${drawing.id}`);
             onUploadRequest(drawing.id);
+          }
+          
+          if (onRegionClick) {
+            console.log(`Calling onRegionClick from SVG path for drawing: ${drawing.id}`);
+            onRegionClick(drawing);
           }
         };
         
@@ -187,7 +188,7 @@ export function createLayerFromDrawing({
         const bounds = (layer as any).getBounds();
         if (!bounds) return;
 
-        // Fix: Access map through the feature group's internal structure
+        // Access map through the feature group's internal structure
         const map = (featureGroup as any)._map;
         if (!map) return;
 
