@@ -1,7 +1,7 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
-import { memo, useMemo, useEffect } from 'react';
+import { memo, useMemo } from 'react';
 
 interface MarkersContainerProps {
   markers: LocationMarker[];
@@ -24,17 +24,12 @@ const MarkersContainer = memo(({
   setMarkerName,
   setMarkerType
 }: MarkersContainerProps) => {
-  // Deduplicate markers by ID to prevent duplicates and ensure each has a UID
+  // Deduplicate markers by ID to prevent duplicates
   const uniqueMarkers = useMemo(() => {
     const markerMap = new Map<string, LocationMarker>();
     if (Array.isArray(markers)) {
       markers.forEach(marker => {
-        // Ensure each marker has a UID for tracking
-        const markerWithUID: LocationMarker = {
-          ...marker,
-          _uid: marker._uid || crypto.randomUUID()
-        };
-        markerMap.set(marker.id, markerWithUID);
+        markerMap.set(marker.id, marker);
       });
     }
     return Array.from(markerMap.values());
@@ -54,25 +49,8 @@ const MarkersContainer = memo(({
     });
   }, [tempMarker, uniqueMarkers]);
 
-  // Listen for marker updates to force re-render
-  useEffect(() => {
-    const handleMarkerUpdate = () => {
-      // Force component to re-evaluate by triggering a state change
-      console.log('Marker update detected, refreshing container');
-    };
-    
-    window.addEventListener('markersUpdated', handleMarkerUpdate);
-    window.addEventListener('storage', handleMarkerUpdate);
-    
-    return () => {
-      window.removeEventListener('markersUpdated', handleMarkerUpdate);
-      window.removeEventListener('storage', handleMarkerUpdate);
-    };
-  }, []);
-
   return (
     <MarkersList
-      key={`markers-${uniqueMarkers.length}-${Date.now()}`} // Force re-render when markers change
       markers={uniqueMarkers}
       // Only pass tempMarker if it's not a duplicate of an existing marker
       tempMarker={isTemporaryMarkerDuplicate ? null : tempMarker}

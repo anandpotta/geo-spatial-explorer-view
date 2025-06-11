@@ -7,11 +7,16 @@ import { getConnectionStatus } from '../api-service';
 
 export function saveDrawing(drawing: DrawingData): void {
   const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot save drawing: No user is logged in');
+    toast.error('Please log in to save your drawings');
+    return;
+  }
   
-  // Ensure the drawing has a user ID (use 'anonymous' if no user is logged in)
+  // Ensure the drawing has the current user's ID
   const drawingWithUser = {
     ...drawing,
-    userId: currentUser ? currentUser.id : 'anonymous'
+    userId: currentUser.id
   };
   
   const savedDrawings = getSavedDrawings();
@@ -70,12 +75,9 @@ export function getSavedDrawings(): DrawingData[] {
       }
     }));
     
-    // Filter drawings by user if a user is logged in, otherwise show all drawings for anonymous users
+    // Filter drawings by user if a user is logged in
     if (currentUser) {
       drawings = drawings.filter((drawing: DrawingData) => drawing.userId === currentUser.id);
-    } else {
-      // For anonymous users, show drawings with 'anonymous' userId
-      drawings = drawings.filter((drawing: DrawingData) => drawing.userId === 'anonymous');
     }
     
     return drawings;
@@ -87,6 +89,11 @@ export function getSavedDrawings(): DrawingData[] {
 
 export function deleteDrawing(id: string): void {
   const currentUser = getCurrentUser();
+  if (!currentUser) {
+    console.error('Cannot delete drawing: No user is logged in');
+    toast.error('Please log in to manage your drawings');
+    return;
+  }
   
   const savedDrawings = getSavedDrawings();
   const filteredDrawings = savedDrawings.filter(drawing => drawing.id !== id);

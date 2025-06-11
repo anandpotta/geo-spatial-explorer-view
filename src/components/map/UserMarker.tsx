@@ -18,20 +18,9 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
-  const [currentMarkerName, setCurrentMarkerName] = useState(marker.name);
-  const [imageUid] = useState(() => crypto.randomUUID());
-  const [iconUid] = useState(() => crypto.randomUUID());
   
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
-
-  // Update current marker name when marker prop changes
-  useEffect(() => {
-    if (marker.name !== currentMarkerName) {
-      setCurrentMarkerName(marker.name);
-      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
-    }
-  }, [marker.name, currentMarkerName, marker.id]);
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
@@ -153,60 +142,22 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
               icon.parentNode.removeChild(icon);
             }
           });
-          
-          // Clean up marker image elements
-          const duplicateImages = document.querySelectorAll(`[data-image-uid="${imageUid}"]`);
-          duplicateImages.forEach(img => {
-            if (img.parentNode) {
-              img.parentNode.removeChild(img);
-            }
-          });
-
-          // Clean up leaflet-marker-icon elements
-          const duplicateMarkerIcons = document.querySelectorAll(`[data-icon-uid="${iconUid}"]`);
-          duplicateMarkerIcons.forEach(icon => {
-            if (icon.parentNode) {
-              icon.parentNode.removeChild(icon);
-            }
-          });
         } catch (error) {
           console.error('Error cleaning up marker:', error);
         }
       }
     };
-  }, [markerId, imageUid, iconUid]);
+  }, [markerId]);
 
   // Set up marker references
-  const setMarkerInstance = (leafletMarker: L.Marker) => {
-    if (leafletMarker && !markerRef.current) {
-      markerRef.current = leafletMarker;
+  const setMarkerInstance = (marker: L.Marker) => {
+    if (marker && !markerRef.current) {
+      markerRef.current = marker;
       
       // Add a custom data attribute to help identify this marker's DOM elements
-      const element = leafletMarker.getElement();
+      const element = marker.getElement();
       if (element) {
         element.setAttribute('data-marker-id', markerId);
-        element.setAttribute('data-marker-uid', iconUid);
-        
-        // Add UID to the leaflet-marker-icon element
-        if (element.classList.contains('leaflet-marker-icon')) {
-          element.setAttribute('data-icon-uid', iconUid);
-          element.setAttribute('data-marker-icon-id', markerId);
-          element.setAttribute('data-marker-type', 'user');
-          element.id = `marker-icon-${iconUid}`;
-          console.log(`User marker icon configured with UID: ${iconUid} for marker: ${marker.id}`);
-        }
-        
-        // Add UID to the marker image element
-        const imgElement = element.querySelector('img');
-        if (imgElement) {
-          imgElement.setAttribute('data-image-uid', imageUid);
-          imgElement.setAttribute('data-marker-image-id', markerId);
-          imgElement.setAttribute('data-image-type', 'marker-icon');
-          imgElement.setAttribute('data-marker-type', 'user');
-          imgElement.setAttribute('data-marker-img-uid', imageUid);
-          imgElement.id = `marker-image-${imageUid}`;
-          console.log(`User marker image configured with UID: ${imageUid} for marker: ${marker.id}`);
-        }
       }
       
       setIsReady(true);
@@ -238,7 +189,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         opacity={0.9}
         permanent={true}
       >
-        <span className="font-medium">{currentMarkerName}</span>
+        <span className="font-medium">{marker.name}</span>
       </Tooltip>
     </Marker>
   );

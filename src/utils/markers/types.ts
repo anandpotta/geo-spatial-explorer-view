@@ -11,5 +11,4 @@ export interface LocationMarker {
   isPinned?: boolean;
   associatedDrawing?: string;
   userId: string;
-  _uid?: string; // Add optional UID for tracking
 }

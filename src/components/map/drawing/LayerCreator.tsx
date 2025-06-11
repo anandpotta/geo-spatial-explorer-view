@@ -1,14 +1,16 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
+import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
+import { getSavedMarkers } from '@/utils/marker-utils';
+import { createLayerControls } from './LayerControls';
+import { toast } from 'sonner';
+import { prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
-import { createUploadButtonControl } from './controls/UploadButtonControl';
-import { createRemoveButtonControl } from './controls/RemoveButtonControl';
-import { createImageControlsLayer } from './controls/ImageControlsLayer';
-import { getCurrentUser } from '@/services/auth-service';
-import { getFloorPlanById } from '@/utils/floor-plan-utils';
+import { applyClipMaskToDrawing } from './clip-mask';
+import { hasFloorPlan } from '@/utils/floor-plan-utils';
 
-interface LayerCreatorProps {
+interface CreateLayerOptions {
   drawing: DrawingData;
   featureGroup: L.FeatureGroup;
   activeTool: string | null;
@@ -22,7 +24,12 @@ interface LayerCreatorProps {
   onUploadRequest?: (drawingId: string) => void;
 }
 
-export const createLayerFromDrawing = ({
+// Keep track of layer creation to prevent repeated attempts
+const layersCreated = new Map<string, number>();
+// Track floor plan applications to prevent repeated attempts
+const floorPlanApplied = new Map<string, number>();
+
+export const createLayerFromDrawing = async ({
   drawing,
   featureGroup,
   activeTool,
@@ -34,168 +41,134 @@ export const createLayerFromDrawing = ({
   onRegionClick,
   onRemoveShape,
   onUploadRequest
-}: LayerCreatorProps): void => {
-  if (!drawing || !drawing.geoJSON || !isMounted) return;
+}: CreateLayerOptions) => {
+  if (!drawing.geoJSON || !isMounted) return;
   
-  const currentUser = getCurrentUser();
-  if (!currentUser || drawing.userId !== currentUser.id) {
-    console.log(`Skipping layer creation for drawing ${drawing.id} - not owned by current user`);
+  // Check if we've already created this layer recently
+  const now = Date.now();
+  const lastCreated = layersCreated.get(drawing.id) || 0;
+  if (now - lastCreated < 1000) { // Debounce layer creation
     return;
   }
   
+  // Update the creation timestamp
+  layersCreated.set(drawing.id, now);
+
   try {
-    console.log(`Creating interactive layer for drawing: ${drawing.id}`);
-    
-    // Parse the drawing data
-    const geoJsonData = typeof drawing.geoJSON === 'string' ? JSON.parse(drawing.geoJSON) : drawing.geoJSON;
-    
-    // Create the layer from GeoJSON with enhanced interactivity
-    const layer = L.geoJSON(geoJsonData, {
-      style: {
-        color: '#3388ff',
-        weight: 3,
-        opacity: 0.8,
-        fillColor: '#3388ff',
-        fillOpacity: 0.2,
-        interactive: true,
-        className: `drawing-layer drawing-${drawing.id}`
-      },
-      // Make sure each feature is interactive
-      onEachFeature: (feature, featureLayer) => {
-        // Ensure the layer is interactive with proper casting
-        if ('setStyle' in featureLayer && typeof (featureLayer as any).setStyle === 'function') {
-          (featureLayer as any).setStyle({
-            interactive: true,
-            bubblingMouseEvents: false,
-            pane: 'overlayPane'
-          });
-        }
-        
-        // Set up direct click handler on each feature
-        const handleFeatureClick = (e: L.LeafletMouseEvent) => {
-          console.log(`Feature clicked directly for drawing: ${drawing.id}`);
-          
-          // Stop all propagation
-          if (e.originalEvent) {
-            e.originalEvent.stopPropagation();
-            e.originalEvent.preventDefault();
-          }
-          L.DomEvent.stop(e);
-          
-          // Always trigger upload request on feature click
-          if (onUploadRequest) {
-            console.log(`Triggering upload request for drawing: ${drawing.id}`);
-            onUploadRequest(drawing.id);
-          }
-        };
-        
-        const handleFeatureContextMenu = (e: L.LeafletMouseEvent) => {
-          console.log(`Feature context menu for drawing: ${drawing.id}`);
-          
-          if (e.originalEvent) {
-            e.originalEvent.stopPropagation();
-            e.originalEvent.preventDefault();
-          }
-          L.DomEvent.stop(e);
-          
-          if (onUploadRequest) {
-            console.log(`Context menu upload request for drawing: ${drawing.id}`);
-            onUploadRequest(drawing.id);
-          }
-        };
-        
-        // Remove any existing handlers
-        featureLayer.off('click');
-        featureLayer.off('contextmenu');
-        
-        // Add new handlers
-        featureLayer.on('click', handleFeatureClick);
-        featureLayer.on('contextmenu', handleFeatureContextMenu);
-        
-        // Ensure DOM element is properly configured for interaction
-        featureLayer.on('add', () => {
-          const element = (featureLayer as any)._path;
-          if (element) {
-            element.style.pointerEvents = 'all';
-            element.style.cursor = 'pointer';
-            element.classList.add('leaflet-interactive');
-          }
-        });
+    // Check if the feature group is attached to a valid map
+    const map = getMapFromLayer(featureGroup);
+    if (!isMapValid(map)) {
+      return;
+    }
+
+    // Check if this layer already exists
+    let existingLayer = false;
+    featureGroup.eachLayer(layer => {
+      if ((layer as any).drawingId === drawing.id) {
+        existingLayer = true;
       }
     });
     
-    // Store the drawing ID and user ID on the layer for reference
+    if (existingLayer) {
+      console.log(`Layer for drawing ${drawing.id} already exists, skipping creation`);
+      return;
+    }
+
+    // Prepare layer options - this is now async
+    const options = await prepareLayerOptions(drawing);
+    
+    // Create the layer
+    const layer = createGeoJSONLayer(drawing, options);
+    
+    if (!layer) {
+      return;
+    }
+    
+    // Store the drawing ID at the layer level as well for easier reference
     (layer as any).drawingId = drawing.id;
-    (layer as any).userId = drawing.userId;
-    (layer as any).options = {
-      ...(layer as any).options,
-      id: drawing.id,
-      isDrawn: true,
-      interactive: true
-    };
     
-    // Set up additional click handlers using the existing system
-    setupLayerClickHandlers(layer, drawing, isMounted, onRegionClick, onUploadRequest);
-    
-    // Add the layer to the feature group
-    featureGroup.addLayer(layer);
-    layersRef.set(drawing.id, layer);
-    
-    // Create control buttons if in edit mode
-    if (activeTool === 'edit') {
-      // Get the bounds of the layer to position buttons
-      const bounds = layer.getBounds();
-      if (bounds && bounds.isValid()) {
-        const center = bounds.getCenter();
+    // Process the layer and add it to the feature group
+    layer.eachLayer((l: L.Layer) => {
+      if (l && isMounted) {
+        // Add the ID at the sublayer level too
+        (l as any).drawingId = drawing.id;
         
-        // Create remove button
-        if (onRemoveShape) {
-          createRemoveButtonControl({
-            layer,
+        // Add drawing ID attribute to the SVG path for identification
+        addDrawingAttributesToLayer(l, drawing.id);
+        
+        // Store the layer reference
+        layersRef.set(drawing.id, l);
+        
+        // Add controls when in edit mode
+        if (onRemoveShape && onUploadRequest) {
+          createLayerControls({
+            layer: l,
             drawingId: drawing.id,
-            buttonPosition: center,
+            activeTool,
             featureGroup,
             removeButtonRoots,
-            isMounted,
-            onRemoveShape
-          });
-        }
-        
-        // Create upload button
-        if (onUploadRequest) {
-          // Position upload button slightly offset from remove button
-          const uploadPosition = L.latLng(center.lat + 0.0001, center.lng + 0.0001);
-          createUploadButtonControl({
-            drawingId: drawing.id,
-            uploadButtonPosition: uploadPosition,
-            featureGroup,
             uploadButtonRoots,
+            imageControlRoots,
             isMounted,
+            onRemoveShape,
             onUploadRequest
           });
         }
         
-        // Create image controls if there's a floor plan
-        const checkFloorPlan = async () => {
-          const floorPlan = await getFloorPlanById(drawing.id);
-          if (floorPlan) {
-            const imageControlPosition = L.latLng(center.lat - 0.0001, center.lng - 0.0001);
-            createImageControlsLayer({
-              drawingId: drawing.id,
-              imageControlsPosition: imageControlPosition,
-              featureGroup,
-              imageControlRoots,
-              isMounted,
-              onRemoveShape: onRemoveShape || (() => {})
-            });
-          }
+        // Setup click handlers
+        setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
+      }
+    });
+    
+    // Add the layer to the feature group
+    if (isMounted && layer) {
+      featureGroup.addLayer(layer);
+      
+      // Check if we've recently applied a floor plan to this drawing
+      const lastApplied = floorPlanApplied.get(drawing.id) || 0;
+      const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
+      
+      // Check if this drawing has a floor plan
+      const hasFloorPlanResult = await hasFloorPlan(drawing.id);
+      console.log(`Drawing ${drawing.id} has floor plan: ${hasFloorPlanResult}`);
+      
+      // Add a small delay before applying clip mask to ensure the path is rendered
+      if (hasFloorPlanResult && isMounted && shouldApply) {
+        floorPlanApplied.set(drawing.id, now);
+        
+        // Apply with increasing timeouts to ensure SVG is ready
+        const attemptApplication = (attempt = 1) => {
+          if (attempt > 3 || !isMounted) return;
+          
+          console.log(`Attempting to apply clip mask for ${drawing.id}, attempt ${attempt}`);
+          
+          setTimeout(() => {
+            // Apply clip mask if a floor plan exists
+            if (isMounted) {
+              applyClipMaskToDrawing({
+                drawingId: drawing.id,
+                isMounted,
+                layer
+              }).then(success => {
+                if (!success && isMounted) {
+                  console.log(`Attempt ${attempt} failed, trying again with longer timeout`);
+                  attemptApplication(attempt + 1);
+                } else if (success) {
+                  console.log(`Successfully applied clip mask on attempt ${attempt}`);
+                  // Force an update
+                  window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+                    detail: { drawingId: drawing.id }
+                  }));
+                }
+              });
+            }
+          }, 300 * attempt); // Increasing delay with each attempt
         };
-        checkFloorPlan();
+        
+        attemptApplication();
       }
     }
-    
-    console.log(`Successfully created interactive layer for drawing: ${drawing.id} with upload handlers`);
-  } catch (error) {
-    console.error(`Error creating layer for drawing ${drawing.id}:`, error);
+  } catch (err) {
+    console.error('Error creating layer for drawing:', err);
   }
 };
