@@ -33,7 +33,8 @@ export function useMapState(selectedLocation?: Location) {
     
     // Listen for marker updates
     const handleMarkersUpdated = () => {
-      setMarkers(getSavedMarkers());
+      const updatedMarkers = getSavedMarkers();
+      setMarkers(updatedMarkers);
     };
 
     // Listen for drawing updates
@@ -119,13 +120,19 @@ export function useMapState(selectedLocation?: Location) {
     // Clear and reset UI state
     setMarkerName('');
     
-    // Update the markers state with the new marker - use getSavedMarkers to ensure deduplication
-    setMarkers(getSavedMarkers());
+    // Update the markers state immediately with the fresh data from storage
+    const updatedMarkers = getSavedMarkers();
+    setMarkers(updatedMarkers);
     
     toast.success("Location saved successfully");
     
     // Ensure drawings remain visible by dispatching a custom event
     window.dispatchEvent(new Event('drawingsUpdated'));
+    
+    // Dispatch a specific event to trigger marker updates with the new marker
+    window.dispatchEvent(new CustomEvent('markersUpdated', { 
+      detail: { newMarker, action: 'saved' } 
+    }));
     
     // Clean up any leftover temporary marker DOM elements after a slight delay
     setTimeout(() => {
@@ -143,15 +150,17 @@ export function useMapState(selectedLocation?: Location) {
 
   const handleDeleteMarker = (id: string) => {
     deleteMarker(id);
-    // Update the markers state
-    setMarkers(markers.filter(marker => marker.id !== id));
+    // Update the markers state immediately
+    const updatedMarkers = getSavedMarkers();
+    setMarkers(updatedMarkers);
     toast.success("Location removed");
   };
 
   const handleRenameMarker = (id: string, newName: string) => {
     renameMarker(id, newName);
-    // Update the markers state
-    setMarkers(getSavedMarkers());
+    // Update the markers state immediately
+    const updatedMarkers = getSavedMarkers();
+    setMarkers(updatedMarkers);
   };
 
   const handleRegionClick = (drawing: DrawingData) => {

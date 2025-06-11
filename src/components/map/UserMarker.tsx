@@ -18,9 +18,19 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
+  const [currentMarkerName, setCurrentMarkerName] = useState(marker.name);
   
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
+
+  // Update the marker name when the prop changes
+  useEffect(() => {
+    if (marker.name !== currentMarkerName) {
+      setCurrentMarkerName(marker.name);
+      // Force tooltip to re-render with new name
+      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
+    }
+  }, [marker.name, currentMarkerName, marker.id]);
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
@@ -167,7 +177,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   return (
     <Marker 
       position={marker.position} 
-      key={`marker-${marker.id}`}
+      key={`marker-${marker.id}-${currentMarkerName}`}
       draggable={true}
       ref={setMarkerInstance}
       eventHandlers={{ 
@@ -189,7 +199,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         opacity={0.9}
         permanent={true}
       >
-        <span className="font-medium">{marker.name}</span>
+        <span className="font-medium">{currentMarkerName}</span>
       </Tooltip>
     </Marker>
   );
