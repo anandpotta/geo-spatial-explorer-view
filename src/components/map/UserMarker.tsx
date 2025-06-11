@@ -1,4 +1,3 @@
-
 import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
@@ -23,27 +22,28 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
 
-  // Update tooltip text only when marker name changes (from saved data, not input)
+  // Update tooltip text when marker name changes
   useEffect(() => {
+    console.log('UserMarker: marker name changed to:', marker.name);
     setTooltipText(marker.name);
     setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
   }, [marker.name, marker.id]);
 
-  // Force tooltip to be visible when marker is first created
+  // Force tooltip to be visible when marker is ready
   useEffect(() => {
     if (markerRef.current && isReady) {
       setTimeout(() => {
         try {
           if (markerRef.current) {
-            // Ensure tooltip is open and visible
             markerRef.current.openTooltip();
+            console.log('UserMarker: tooltip opened for marker:', marker.name);
           }
         } catch (error) {
           console.error('Error opening tooltip:', error);
         }
       }, 100);
     }
-  }, [isReady, marker.id]);
+  }, [isReady, marker.id, marker.name]);
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {

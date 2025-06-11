@@ -80,13 +80,15 @@ export function useMapState(selectedLocation?: Location) {
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
-      name: markerName,
+      name: markerName.trim(),
       position: tempMarker,
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: 'anonymous' // Default user since we removed auth
+      userId: 'anonymous'
     };
+    
+    console.log('Saving marker with name:', newMarker.name);
     
     // Save the marker first
     saveMarker(newMarker);
@@ -103,7 +105,7 @@ export function useMapState(selectedLocation?: Location) {
         })) : undefined,
         properties: {
           ...currentDrawing.properties,
-          name: markerName,
+          name: markerName.trim(),
           associatedMarkerId: newMarker.id
         },
         userId: 'anonymous'
@@ -113,35 +115,23 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Update the markers state with the new marker first
+    // Clear temp marker and reset form immediately
+    setTempMarker(null);
+    setMarkerName('');
+    
+    // Update the markers state with the new marker
     const updatedMarkers = getSavedMarkers();
     setMarkers(updatedMarkers);
-    
-    // Clear the temporary marker AFTER updating the markers state
-    setTimeout(() => {
-      setTempMarker(null);
-    }, 100);
-    
-    // Clear and reset UI state
-    setMarkerName('');
     
     toast.success("Location saved successfully");
     
     // Ensure drawings remain visible by dispatching a custom event
     window.dispatchEvent(new Event('drawingsUpdated'));
     
-    // Clean up any leftover temporary marker DOM elements after a delay
+    // Force a markers update event to ensure all components refresh
     setTimeout(() => {
-      if (tempMarker) {
-        const markerId = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
-        const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
-        tempIcons.forEach(icon => {
-          if (icon.parentNode) {
-            icon.parentNode.removeChild(icon);
-          }
-        });
-      }
-    }, 200);
+      window.dispatchEvent(new Event('markersUpdated'));
+    }, 50);
   };
 
   const handleDeleteMarker = (id: string) => {
