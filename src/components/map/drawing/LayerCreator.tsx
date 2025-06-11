@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
@@ -43,7 +44,7 @@ export const createLayerFromDrawing = ({
   }
   
   try {
-    console.log(`Creating layer for drawing: ${drawing.id}`);
+    console.log(`Creating interactive layer for drawing: ${drawing.id}`);
     
     // Parse the drawing data
     const geoJsonData = typeof drawing.geoJSON === 'string' ? JSON.parse(drawing.geoJSON) : drawing.geoJSON;
@@ -56,50 +57,66 @@ export const createLayerFromDrawing = ({
         opacity: 0.8,
         fillColor: '#3388ff',
         fillOpacity: 0.2,
-        // Add interactive styling
+        interactive: true,
         className: `drawing-layer drawing-${drawing.id}`
       },
       // Make sure each feature is interactive
-      onEachFeature: (feature, layer) => {
-        // Ensure the layer is interactive - properly type cast
-        if ((layer as any).setStyle) {
-          (layer as any).setStyle({
+      onEachFeature: (feature, featureLayer) => {
+        // Ensure the layer is interactive with proper casting
+        if ((featureLayer as any).setStyle) {
+          (featureLayer as any).setStyle({
             interactive: true,
-            bubblingMouseEvents: false
+            bubblingMouseEvents: false,
+            pane: 'overlayPane'
           });
         }
         
-        // Add click handler directly to each feature
-        layer.on('click', (e: L.LeafletMouseEvent) => {
-          console.log(`Feature clicked for drawing: ${drawing.id}`);
-          L.DomEvent.stopPropagation(e);
+        // Set up direct click handler on each feature
+        const handleFeatureClick = (e: L.LeafletMouseEvent) => {
+          console.log(`Feature clicked directly for drawing: ${drawing.id}`);
           
-          // Check for upload request (right-click, ctrl+click, or cmd+click)
-          const isUploadRequest = e.originalEvent && (
-            (e.originalEvent as MouseEvent).ctrlKey || 
-            (e.originalEvent as MouseEvent).button === 2 || 
-            (e.originalEvent as MouseEvent).metaKey
-          );
+          // Stop all propagation
+          e.originalEvent?.stopPropagation();
+          e.originalEvent?.preventDefault();
+          L.DomEvent.stop(e);
           
-          if (isUploadRequest && onUploadRequest) {
-            console.log(`Upload request triggered for drawing: ${drawing.id}`);
+          // Always trigger upload request on feature click
+          if (onUploadRequest) {
+            console.log(`Triggering upload request for drawing: ${drawing.id}`);
             onUploadRequest(drawing.id);
-          } else if (onRegionClick) {
-            console.log(`Region click triggered for drawing: ${drawing.id}`);
-            onRegionClick(drawing);
           }
-        });
+        };
         
-        // Add context menu handler for right-click upload
-        layer.on('contextmenu', (e: L.LeafletMouseEvent) => {
-          L.DomEvent.stopPropagation(e);
+        const handleFeatureContextMenu = (e: L.LeafletMouseEvent) => {
+          console.log(`Feature context menu for drawing: ${drawing.id}`);
+          
+          e.originalEvent?.stopPropagation();
           if (e.originalEvent) {
             L.DomEvent.preventDefault(e.originalEvent);
           }
+          L.DomEvent.stop(e);
           
           if (onUploadRequest) {
-            console.log(`Context menu upload for drawing: ${drawing.id}`);
+            console.log(`Context menu upload request for drawing: ${drawing.id}`);
             onUploadRequest(drawing.id);
+          }
+        };
+        
+        // Remove any existing handlers
+        featureLayer.off('click');
+        featureLayer.off('contextmenu');
+        
+        // Add new handlers with high priority
+        featureLayer.on('click', handleFeatureClick);
+        featureLayer.on('contextmenu', handleFeatureContextMenu);
+        
+        // Ensure DOM element is properly configured for interaction
+        featureLayer.on('add', () => {
+          const element = (featureLayer as any)._path;
+          if (element) {
+            element.style.pointerEvents = 'all';
+            element.style.cursor = 'pointer';
+            element.classList.add('leaflet-interactive');
           }
         });
       }
@@ -115,7 +132,7 @@ export const createLayerFromDrawing = ({
       interactive: true
     };
     
-    // Set up additional click handlers
+    // Set up additional click handlers using the existing system
     setupLayerClickHandlers(layer, drawing, isMounted, onRegionClick, onUploadRequest);
     
     // Add the layer to the feature group
@@ -175,7 +192,7 @@ export const createLayerFromDrawing = ({
       }
     }
     
-    console.log(`Successfully created layer for drawing: ${drawing.id}`);
+    console.log(`Successfully created interactive layer for drawing: ${drawing.id}`);
   } catch (error) {
     console.error(`Error creating layer for drawing ${drawing.id}:`, error);
   }

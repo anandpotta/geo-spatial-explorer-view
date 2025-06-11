@@ -29,10 +29,8 @@ export const setupLayerClickHandlers = (
     console.log(`Drawing layer clicked: ${drawing.id}`, e);
     
     // Stop event propagation to prevent map click
-    if (e.originalEvent) {
-      L.DomEvent.stopPropagation(e.originalEvent);
-      e.originalEvent.preventDefault();
-    }
+    e.originalEvent?.stopPropagation();
+    e.originalEvent?.preventDefault();
     
     // Stop the leaflet event too
     L.DomEvent.stop(e);
@@ -50,7 +48,11 @@ export const setupLayerClickHandlers = (
       return;
     }
     
-    if (isMounted && onRegionClick) {
+    // For normal clicks, trigger upload request immediately
+    if (isMounted && onUploadRequest) {
+      console.log(`Normal click upload request for drawing: ${drawing.id}`);
+      onUploadRequest(drawing.id);
+    } else if (isMounted && onRegionClick) {
       console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
       onRegionClick(drawing);
     }
@@ -60,10 +62,8 @@ export const setupLayerClickHandlers = (
   const handleContextMenu = (e: L.LeafletMouseEvent) => {
     console.log(`Context menu triggered for drawing: ${drawing.id}`, e);
     
-    if (e.originalEvent) {
-      L.DomEvent.stopPropagation(e.originalEvent);
-      e.originalEvent.preventDefault();
-    }
+    e.originalEvent?.stopPropagation();
+    e.originalEvent?.preventDefault();
     L.DomEvent.stop(e);
     
     if (onUploadRequest) {
@@ -72,25 +72,47 @@ export const setupLayerClickHandlers = (
     }
   };
   
-  // Set up the click handlers
-  layer.on('click', handleLayerClick);
-  layer.on('contextmenu', handleContextMenu);
+  // Remove any existing handlers first to prevent duplicates
+  layer.off('click');
+  layer.off('contextmenu');
+  
+  // Set up the click handlers with higher priority
+  layer.on('click', handleLayerClick, { priority: 1000 });
+  layer.on('contextmenu', handleContextMenu, { priority: 1000 });
   
   // Also set up handlers for sub-layers if this is a feature group
   if (typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((subLayer: L.Layer) => {
-      subLayer.on('click', handleLayerClick);
-      subLayer.on('contextmenu', handleContextMenu);
+      // Remove existing handlers
+      subLayer.off('click');
+      subLayer.off('contextmenu');
       
-      // Make sure the sublayer is interactive
+      // Add new handlers
+      subLayer.on('click', handleLayerClick, { priority: 1000 });
+      subLayer.on('contextmenu', handleContextMenu, { priority: 1000 });
+      
+      // Make sure the sublayer is interactive and has proper styling
       if ((subLayer as any).setStyle) {
         (subLayer as any).setStyle({
           interactive: true,
-          bubblingMouseEvents: false
+          bubblingMouseEvents: false,
+          pane: 'overlayPane'
         });
+      }
+      
+      // Ensure the element has pointer events enabled
+      if ((subLayer as any)._path) {
+        (subLayer as any)._path.style.pointerEvents = 'all';
+        (subLayer as any)._path.style.cursor = 'pointer';
       }
     });
   }
   
-  console.log(`Click handlers set up for drawing: ${drawing.id}`);
+  // Ensure the main layer element has pointer events enabled
+  if ((layer as any)._path) {
+    (layer as any)._path.style.pointerEvents = 'all';
+    (layer as any)._path.style.cursor = 'pointer';
+  }
+  
+  console.log(`Enhanced click handlers set up for drawing: ${drawing.id}`);
 };
