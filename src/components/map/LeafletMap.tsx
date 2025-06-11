@@ -49,7 +49,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const drawingControlsRef = useRef<DrawingControlsRef>(null);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   
-  const { savedLocations } = useSavedLocations();
+  const { markers } = useSavedLocations();
   const { savedDrawings } = useDrawings();
   
   // Create a mock mapState object for useMarkerHandlers
@@ -64,7 +64,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   
   const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   
-  useMapInitialization(mapRef, savedLocations, savedDrawings);
+  useMapInitialization();
   useMapEvents(mapInstance, selectedLocation);
   
   const { handleUploadToDrawing } = useDrawingFileUpload();
@@ -93,6 +93,10 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   }, []);
 
+  const handleMapReady = useCallback((map: L.Map) => {
+    setMapInstance(map);
+  }, []);
+
   return (
     <div className="w-full h-full relative">
       <MapContainer
@@ -102,7 +106,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         ref={mapRef}
         zoomControl={true}
         attributionControl={true}
-        whenReady={setMapInstance}
+        whenReady={handleMapReady}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -120,7 +124,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               id: 'user-location',
               name: 'Your Location',
               position: [userLocation.y, userLocation.x],
-              type: 'pin'
+              type: 'pin',
+              createdAt: new Date().toISOString(),
+              userId: 'current-user'
             }}
             onDelete={() => {}}
           />
@@ -156,7 +162,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         />
         
         <MarkersList 
-          markers={savedLocations}
+          markers={markers}
           tempMarker={tempMarker ? [tempMarker.y, tempMarker.x] : null}
           markerName="New Location"
           markerType="pin"
