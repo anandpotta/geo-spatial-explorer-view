@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,12 +27,6 @@ const NewMarkerForm = ({
   onRename
 }: NewMarkerFormProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [localInputValue, setLocalInputValue] = useState(markerName);
-  
-  // Initialize local input value with marker name
-  useEffect(() => {
-    setLocalInputValue(markerName);
-  }, [markerName]);
   
   useEffect(() => {
     // Focus on input when component mounts
@@ -49,11 +43,8 @@ const NewMarkerForm = ({
     e.preventDefault();
     e.stopPropagation();
     
-    // Update the marker name with the local input value
-    setMarkerName(localInputValue);
-    
     if (isEditing && existingMarkerId && onRename) {
-      onRename(existingMarkerId, localInputValue);
+      onRename(existingMarkerId, markerName);
     } else {
       onSave();
     }
@@ -66,8 +57,8 @@ const NewMarkerForm = ({
           ref={inputRef}
           type="text"
           placeholder="Location name"
-          value={localInputValue}
-          onChange={(e) => setLocalInputValue(e.target.value)}
+          value={markerName}
+          onChange={(e) => setMarkerName(e.target.value)}
           className="mb-2"
           autoFocus
         />
@@ -104,7 +95,7 @@ const NewMarkerForm = ({
         )}
         <Button 
           onClick={handleSaveButtonClick}
-          disabled={!localInputValue.trim()}
+          disabled={!markerName.trim()}
           className="w-full"
         >
           {isEditing ? (
