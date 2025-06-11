@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
@@ -94,7 +93,9 @@ export const createLayerFromDrawing = ({
         // Add context menu handler for right-click upload
         layer.on('contextmenu', (e: L.LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(e);
-          L.DomEvent.preventDefault(e);
+          if (e.originalEvent) {
+            L.DomEvent.preventDefault(e.originalEvent);
+          }
           
           if (onUploadRequest) {
             console.log(`Context menu upload for drawing: ${drawing.id}`);
