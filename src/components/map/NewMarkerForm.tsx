@@ -53,20 +53,17 @@ const NewMarkerForm = ({
     const newValue = e.target.value;
     setLocalValue(newValue);
     
-    // IMMEDIATELY update parent state so it's available for saving
-    setMarkerName(newValue);
-    
-    // Update tooltip in real-time if callback is provided
+    // Only update tooltip in real-time if callback is provided
     if (onInputUpdate) {
       onInputUpdate(newValue);
     }
-    console.log('Input changed to:', newValue, 'and parent state updated');
-  }, [onInputUpdate, setMarkerName]);
+    console.log('Input changed to:', newValue, '(parent state NOT updated yet)');
+  }, [onInputUpdate]);
 
   const performSave = useCallback((nameToSave: string) => {
     console.log('Performing save with name:', nameToSave);
     
-    // Ensure parent state is updated with the final name
+    // Update parent state with the final name at save time
     setMarkerName(nameToSave);
     
     // Update tooltip immediately
