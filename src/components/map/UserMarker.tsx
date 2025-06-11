@@ -18,6 +18,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
+  const [imageUid] = useState(() => crypto.randomUUID());
   
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
@@ -142,12 +143,20 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
               icon.parentNode.removeChild(icon);
             }
           });
+          
+          // Clean up marker image elements
+          const duplicateImages = document.querySelectorAll(`[data-image-uid="${imageUid}"]`);
+          duplicateImages.forEach(img => {
+            if (img.parentNode) {
+              img.parentNode.removeChild(img);
+            }
+          });
         } catch (error) {
           console.error('Error cleaning up marker:', error);
         }
       }
     };
-  }, [markerId]);
+  }, [markerId, imageUid]);
 
   // Set up marker references
   const setMarkerInstance = (marker: L.Marker) => {
@@ -158,6 +167,17 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       const element = marker.getElement();
       if (element) {
         element.setAttribute('data-marker-id', markerId);
+        
+        // Add UID to the marker image element
+        const imgElement = element.querySelector('img');
+        if (imgElement) {
+          imgElement.setAttribute('data-image-uid', imageUid);
+          imgElement.setAttribute('data-marker-image-id', markerId);
+          imgElement.setAttribute('data-image-type', 'marker-icon');
+          imgElement.setAttribute('data-marker-type', 'user');
+          imgElement.id = `marker-image-${imageUid}`;
+          console.log(`User marker image configured with UID: ${imageUid} for marker: ${marker.id}`);
+        }
       }
       
       setIsReady(true);
