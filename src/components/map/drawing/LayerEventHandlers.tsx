@@ -26,7 +26,7 @@ export const setupLayerClickHandlers = (
   
   // Enhanced click handler with better event management
   const handleLayerClick = (e: L.LeafletMouseEvent) => {
-    console.log(`Drawing layer clicked: ${drawing.id}`);
+    console.log(`Drawing layer clicked: ${drawing.id}`, e);
     
     // Stop event propagation to prevent map click
     if (e.originalEvent) {
@@ -56,11 +56,10 @@ export const setupLayerClickHandlers = (
     }
   };
   
-  // Set up the click handler
-  layer.on('click', handleLayerClick);
-  
-  // Also set up right-click handler for upload
-  layer.on('contextmenu', (e: L.LeafletMouseEvent) => {
+  // Enhanced context menu handler
+  const handleContextMenu = (e: L.LeafletMouseEvent) => {
+    console.log(`Context menu triggered for drawing: ${drawing.id}`, e);
+    
     if (e.originalEvent) {
       L.DomEvent.stopPropagation(e.originalEvent);
       e.originalEvent.preventDefault();
@@ -71,24 +70,25 @@ export const setupLayerClickHandlers = (
       console.log(`Context menu upload request for drawing: ${drawing.id}`);
       onUploadRequest(drawing.id);
     }
-  });
+  };
+  
+  // Set up the click handlers
+  layer.on('click', handleLayerClick);
+  layer.on('contextmenu', handleContextMenu);
   
   // Also set up handlers for sub-layers if this is a feature group
   if (typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((subLayer: L.Layer) => {
       subLayer.on('click', handleLayerClick);
-      subLayer.on('contextmenu', (e: L.LeafletMouseEvent) => {
-        if (e.originalEvent) {
-          L.DomEvent.stopPropagation(e.originalEvent);
-          e.originalEvent.preventDefault();
-        }
-        L.DomEvent.stop(e);
-        
-        if (onUploadRequest) {
-          console.log(`Context menu upload request for drawing: ${drawing.id}`);
-          onUploadRequest(drawing.id);
-        }
-      });
+      subLayer.on('contextmenu', handleContextMenu);
+      
+      // Make sure the sublayer is interactive
+      if ((subLayer as any).setStyle) {
+        (subLayer as any).setStyle({
+          interactive: true,
+          bubblingMouseEvents: false
+        });
+      }
     });
   }
   

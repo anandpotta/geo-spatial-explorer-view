@@ -49,7 +49,7 @@ export const createLayerFromDrawing = ({
     // Parse the drawing data
     const geoJsonData = typeof drawing.geoJSON === 'string' ? JSON.parse(drawing.geoJSON) : drawing.geoJSON;
     
-    // Create the layer from GeoJSON
+    // Create the layer from GeoJSON with enhanced interactivity
     const layer = L.geoJSON(geoJsonData, {
       style: {
         color: '#3388ff',
@@ -59,6 +59,48 @@ export const createLayerFromDrawing = ({
         fillOpacity: 0.2,
         // Add interactive styling
         className: `drawing-layer drawing-${drawing.id}`
+      },
+      // Make sure each feature is interactive
+      onEachFeature: (feature, layer) => {
+        // Ensure the layer is interactive
+        if (layer.setStyle) {
+          layer.setStyle({
+            interactive: true,
+            bubblingMouseEvents: false
+          });
+        }
+        
+        // Add click handler directly to each feature
+        layer.on('click', (e) => {
+          console.log(`Feature clicked for drawing: ${drawing.id}`);
+          L.DomEvent.stopPropagation(e);
+          
+          // Check for upload request (right-click, ctrl+click, or cmd+click)
+          const isUploadRequest = e.originalEvent && (
+            (e.originalEvent as MouseEvent).ctrlKey || 
+            (e.originalEvent as MouseEvent).button === 2 || 
+            (e.originalEvent as MouseEvent).metaKey
+          );
+          
+          if (isUploadRequest && onUploadRequest) {
+            console.log(`Upload request triggered for drawing: ${drawing.id}`);
+            onUploadRequest(drawing.id);
+          } else if (onRegionClick) {
+            console.log(`Region click triggered for drawing: ${drawing.id}`);
+            onRegionClick(drawing);
+          }
+        });
+        
+        // Add context menu handler for right-click upload
+        layer.on('contextmenu', (e) => {
+          L.DomEvent.stopPropagation(e);
+          L.DomEvent.preventDefault(e);
+          
+          if (onUploadRequest) {
+            console.log(`Context menu upload for drawing: ${drawing.id}`);
+            onUploadRequest(drawing.id);
+          }
+        });
       }
     });
     
@@ -72,7 +114,7 @@ export const createLayerFromDrawing = ({
       interactive: true
     };
     
-    // Set up click handlers with upload functionality
+    // Set up additional click handlers
     setupLayerClickHandlers(layer, drawing, isMounted, onRegionClick, onUploadRequest);
     
     // Add the layer to the feature group

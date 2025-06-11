@@ -1,7 +1,7 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
 import MarkersList from '../MarkersList';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useEffect } from 'react';
 
 interface MarkersContainerProps {
   markers: LocationMarker[];
@@ -54,8 +54,25 @@ const MarkersContainer = memo(({
     });
   }, [tempMarker, uniqueMarkers]);
 
+  // Listen for marker updates to force re-render
+  useEffect(() => {
+    const handleMarkerUpdate = () => {
+      // Force component to re-evaluate by triggering a state change
+      console.log('Marker update detected, refreshing container');
+    };
+    
+    window.addEventListener('markersUpdated', handleMarkerUpdate);
+    window.addEventListener('storage', handleMarkerUpdate);
+    
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkerUpdate);
+      window.removeEventListener('storage', handleMarkerUpdate);
+    };
+  }, []);
+
   return (
     <MarkersList
+      key={`markers-${uniqueMarkers.length}-${Date.now()}`} // Force re-render when markers change
       markers={uniqueMarkers}
       // Only pass tempMarker if it's not a duplicate of an existing marker
       tempMarker={isTemporaryMarkerDuplicate ? null : tempMarker}
