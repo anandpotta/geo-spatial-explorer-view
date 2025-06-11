@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FlipHorizontal, Upload } from "lucide-react";
@@ -52,12 +53,33 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       loadFloorPlan();
     }
   }, [drawing]);
+
+  // Helper function to find path with retries
+  const findPathWithRetries = async (drawingId: string, maxRetries = 3): Promise<SVGPathElement | null> => {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      console.log(`[FloorPlanView] Path finding attempt ${attempt + 1}/${maxRetries}`);
+      
+      const pathElement = findSvgPathByDrawingId(drawingId);
+      if (pathElement) {
+        console.log(`[FloorPlanView] Found path on attempt ${attempt + 1}`);
+        return pathElement;
+      }
+      
+      // Wait a bit before retrying to allow DOM to update
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    console.log(`[FloorPlanView] Failed to find path after ${maxRetries} attempts`);
+    return null;
+  };
   
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    console.log('Starting file upload for:', file.name, 'Drawing ID:', drawing?.id);
+    console.log('[FloorPlanView] Starting file upload for:', file.name, 'Drawing ID:', drawing?.id);
     
     if (!file.type.startsWith('image/') && !file.type.includes('pdf')) {
       toast.error('Please upload an image or PDF file');
@@ -78,14 +100,15 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
         const result = e.target?.result;
         if (result && drawing?.id) {
           const dataUrl = result as string;
-          console.log('File read successfully, data URL length:', dataUrl.length);
+          console.log('[FloorPlanView] File read successfully, data URL length:', dataUrl.length);
           
-          // Check if SVG path exists BEFORE upload
-          console.log('Checking for SVG path BEFORE upload...');
-          const pathElementBefore = findSvgPathByDrawingId(drawing.id);
-          console.log('SVG path before upload:', pathElementBefore ? 'EXISTS' : 'NOT FOUND');
+          // Check if SVG path exists BEFORE upload with enhanced search
+          console.log('[FloorPlanView] Checking for SVG path BEFORE upload...');
+          let pathElementBefore = await findPathWithRetries(drawing.id);
+          console.log('[FloorPlanView] SVG path before upload:', pathElementBefore ? 'EXISTS' : 'NOT FOUND');
+          
           if (pathElementBefore) {
-            console.log('Path element details before upload:', {
+            console.log('[FloorPlanView] Path element details before upload:', {
               tagName: pathElementBefore.tagName,
               id: pathElementBefore.id,
               classList: Array.from(pathElementBefore.classList),
@@ -97,7 +120,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           // Try to compress the image if it's too large
           let finalDataUrl = dataUrl;
           if (dataUrl.length > 500000) { // If data URL is larger than 500KB
-            console.log('Data URL is large, attempting to compress...');
+            console.log('[FloorPlanView] Data URL is large, attempting to compress...');
             try {
               // Create canvas to compress image
               const img = new Image();
@@ -127,14 +150,14 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
                 if (ctx) {
                   ctx.drawImage(img, 0, 0, width, height);
                   finalDataUrl = canvas.toDataURL('image/jpeg', 0.7); // Compress to 70% quality
-                  console.log('Compressed data URL length:', finalDataUrl.length);
+                  console.log('[FloorPlanView] Compressed data URL length:', finalDataUrl.length);
                   
                   await saveAndApplyFloorPlan(finalDataUrl);
                 }
               };
               img.src = dataUrl;
             } catch (compressionError) {
-              console.error('Error compressing image:', compressionError);
+              console.error('[FloorPlanView] Error compressing image:', compressionError);
               await saveAndApplyFloorPlan(dataUrl);
             }
           } else {
@@ -148,7 +171,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
             setFileName(file.name);
             
             // Save to storage with better error handling
-            console.log('Saving floor plan to storage...');
+            console.log('[FloorPlanView] Saving floor plan to storage...');
             try {
               const success = saveFloorPlan(
                 drawing.id,
@@ -160,62 +183,46 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
               );
               
               if (success) {
-                console.log('Floor plan saved successfully');
+                console.log('[FloorPlanView] Floor plan saved successfully');
                 toast.success(`${file.name} uploaded successfully`);
                 
                 // Apply clip mask to the SVG path if it's an image (not PDF)
                 if (!file.type.includes('pdf')) {
-                  console.log('Applying clip mask for drawing:', drawing.id);
+                  console.log('[FloorPlanView] Applying clip mask for drawing:', drawing.id);
                   
-                  // Check again AFTER storage save
-                  console.log('Checking for SVG path AFTER storage save...');
-                  const pathElementAfterSave = findSvgPathByDrawingId(drawing.id);
-                  console.log('SVG path after storage save:', pathElementAfterSave ? 'EXISTS' : 'NOT FOUND');
+                  // Use the enhanced path finder with retries
+                  const pathElement = await findPathWithRetries(drawing.id, 5);
                   
-                  // Wait a bit for the DOM to update
-                  setTimeout(() => {
-                    console.log('Attempting to find and apply clip mask...');
-                    const pathElement = findSvgPathByDrawingId(drawing.id);
-                    if (pathElement) {
-                      console.log('Found path element, applying clip mask');
-                      console.log('Path element details:', {
-                        tagName: pathElement.tagName,
-                        id: pathElement.id,
-                        classList: Array.from(pathElement.classList),
-                        parentElement: pathElement.parentElement?.tagName,
-                        isInDocument: document.contains(pathElement)
-                      });
-                      
-                      const success = applyImageClipMask(pathElement, imageData, drawing.id);
-                      if (success) {
-                        console.log('Clip mask applied successfully');
-                      } else {
-                        console.error('Failed to apply clip mask');
-                      }
+                  if (pathElement) {
+                    console.log('[FloorPlanView] Found path element, applying clip mask');
+                    console.log('[FloorPlanView] Path element details:', {
+                      tagName: pathElement.tagName,
+                      id: pathElement.id,
+                      classList: Array.from(pathElement.classList),
+                      parentElement: pathElement.parentElement?.tagName,
+                      isInDocument: document.contains(pathElement)
+                    });
+                    
+                    const success = applyImageClipMask(pathElement, imageData, drawing.id);
+                    if (success) {
+                      console.log('[FloorPlanView] Clip mask applied successfully');
                     } else {
-                      console.warn('No path element found for drawing:', drawing.id);
-                      
-                      // Try to find all SVG paths in the document
-                      const allPaths = document.querySelectorAll('svg path');
-                      console.log('All SVG paths found in document:', allPaths.length);
-                      allPaths.forEach((path, index) => {
-                        console.log(`Path ${index}:`, {
-                          hasDrawingId: path.getAttribute('data-drawing-id'),
-                          id: path.id,
-                          classList: Array.from(path.classList)
-                        });
-                      });
+                      console.error('[FloorPlanView] Failed to apply clip mask');
+                      toast.error('Image uploaded but failed to apply to shape. Please try again.');
                     }
-                  }, 500);
+                  } else {
+                    console.warn('[FloorPlanView] No path element found for drawing:', drawing.id);
+                    toast.warning('Image uploaded but shape not found on map. Try refreshing the page.');
+                  }
                 }
                 
                 // Trigger a custom event to ensure clip masks are applied
-                console.log('Dispatching floorPlanUpdated event');
+                console.log('[FloorPlanView] Dispatching floorPlanUpdated event');
                 window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
                   detail: { drawingId: drawing.id }
                 }));
               } else {
-                console.error('Failed to save floor plan to storage');
+                console.error('[FloorPlanView] Failed to save floor plan to storage');
                 // Revert UI state if save failed
                 setSelectedImage(null);
                 setIsPdf(false);
@@ -223,7 +230,7 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
                 toast.error('Failed to save floor plan. Please try a smaller file.');
               }
             } catch (saveError) {
-              console.error('Error during floor plan save:', saveError);
+              console.error('[FloorPlanView] Error during floor plan save:', saveError);
               // Revert UI state if save failed
               setSelectedImage(null);
               setIsPdf(false);
@@ -236,14 +243,14 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
       };
       
       reader.onerror = () => {
-        console.error('FileReader error occurred');
+        console.error('[FloorPlanView] FileReader error occurred');
         toast.error('Failed to read uploaded file');
         setIsUploading(false);
       };
       
       reader.readAsDataURL(file);
     } catch (err) {
-      console.error('Error processing file:', err);
+      console.error('[FloorPlanView] Error processing file:', err);
       toast.error('Failed to process upload');
       setIsUploading(false);
     }
