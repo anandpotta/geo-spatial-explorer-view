@@ -3,14 +3,15 @@ import { useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { LocationMarker } from '@/utils/markers/types';
 import { Button } from '@/components/ui/button';
-import { MapPin, MapPinOff, Trash2 } from 'lucide-react';
+import { MapPin, MapPinOff, Trash2, Edit2 } from 'lucide-react';
 
 interface MarkerPopupProps {
   marker: LocationMarker;
   onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
-const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
+const MarkerPopup = ({ marker, onDelete, onEdit }: MarkerPopupProps) => {
   const [isPinned, setIsPinned] = useState(marker.isPinned || false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -44,11 +45,20 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
     }, 10);
   };
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (onEdit) {
+      onEdit(marker.id);
+    }
+  };
+
   return (
     <Popup>
       <div className="p-2">
         <h3 className="font-medium mb-2">{marker.name}</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -66,6 +76,15 @@ const MarkerPopup = ({ marker, onDelete }: MarkerPopupProps) => {
                 Pin
               </>
             )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleEditClick}
+            className="flex items-center gap-1"
+          >
+            <Edit2 size={16} />
+            Edit
           </Button>
           <Button
             variant="outline"

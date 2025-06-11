@@ -3,18 +3,21 @@ import { Marker, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationMarker } from '@/utils/geo-utils';
 import MarkerPopup from './MarkerPopup';
+import NewMarkerForm from './NewMarkerForm';
 import { isPointWithinAnyDrawnPath, getClosestPointWithinPaths } from '@/utils/path-boundary-utils';
 import { toast } from 'sonner';
 
 interface UserMarkerProps {
   marker: LocationMarker;
   onDelete: (id: string) => void;
+  onRename?: (id: string, newName: string) => void;
 }
 
-const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
+const UserMarker = ({ marker, onDelete, onRename }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
   const [tooltipText, setTooltipText] = useState(marker.name);
@@ -149,6 +152,32 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     }, 100);
   }, [onDelete, isDeleting]);
 
+  // Handler for editing a marker
+  const handleEdit = useCallback((id: string) => {
+    setIsEditing(true);
+    // Close the popup to show the edit form
+    if (markerRef.current) {
+      markerRef.current.closePopup();
+      // Open the popup again after a short delay to show the edit form
+      setTimeout(() => {
+        if (markerRef.current) {
+          markerRef.current.openPopup();
+        }
+      }, 100);
+    }
+  }, []);
+
+  // Handler for renaming a marker
+  const handleRename = useCallback((id: string, newName: string) => {
+    if (onRename) {
+      onRename(id, newName);
+    }
+    setIsEditing(false);
+    // Update tooltip text immediately
+    setTooltipText(newName);
+    setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
+  }, [onRename, marker.id]);
+
   // Set up marker references and handle cleanup when unmounting
   useEffect(() => {
     // Cleanup function for when the marker is unmounted
@@ -201,10 +230,24 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       }}
       attribution={`marker-${marker.id}`}
     >
-      <MarkerPopup 
-        marker={marker} 
-        onDelete={() => handleDelete(marker.id)} 
-      />
+      {isEditing ? (
+        <NewMarkerForm
+          markerName={marker.name}
+          setMarkerName={() => {}} // Not used in edit mode
+          markerType={marker.type}
+          setMarkerType={() => {}} // Not used in edit mode
+          onSave={() => {}} // Not used in edit mode
+          isEditing={true}
+          existingMarkerId={marker.id}
+          onRename={handleRename}
+        />
+      ) : (
+        <MarkerPopup 
+          marker={marker} 
+          onDelete={() => handleDelete(marker.id)}
+          onEdit={handleEdit}
+        />
+      )}
 
       <Tooltip 
         key={tooltipKey}
