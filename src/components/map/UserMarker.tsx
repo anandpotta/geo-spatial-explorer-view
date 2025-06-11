@@ -159,12 +159,12 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   }, [markerId, imageUid]);
 
   // Set up marker references
-  const setMarkerInstance = (marker: L.Marker) => {
-    if (marker && !markerRef.current) {
-      markerRef.current = marker;
+  const setMarkerInstance = (leafletMarker: L.Marker) => {
+    if (leafletMarker && !markerRef.current) {
+      markerRef.current = leafletMarker;
       
       // Add a custom data attribute to help identify this marker's DOM elements
-      const element = marker.getElement();
+      const element = leafletMarker.getElement();
       if (element) {
         element.setAttribute('data-marker-id', markerId);
         
