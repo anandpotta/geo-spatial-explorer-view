@@ -26,7 +26,7 @@ export const setupLayerClickHandlers = (
   console.log(`Setting up click handlers for drawing ${drawing.id}`);
   
   // Set up Leaflet layer click handler with higher priority
-  layer.on('click', (e) => {
+  layer.on('click', (e: L.LeafletMouseEvent) => {
     console.log(`Layer click detected for drawing ${drawing.id} - preventing map click`);
     
     // Stop event propagation immediately
@@ -56,8 +56,8 @@ export const setupLayerClickHandlers = (
     
     paths.forEach((path) => {
       if (path instanceof SVGPathElement) {
-        // Create a named function to avoid closure issues
-        const handlePathClick = (event: Event) => {
+        // Create a DOM event handler specifically for SVG paths
+        const handleDOMPathClick = (event: Event) => {
           console.log(`SVG path click detected for drawing ${drawing.id} - preventing map click`);
           
           // Stop all propagation immediately
@@ -71,21 +71,24 @@ export const setupLayerClickHandlers = (
         };
         
         // Remove any existing handlers first
-        path.removeEventListener('click', handlePathClick, true);
-        path.removeEventListener('click', handlePathClick, false);
+        const existingHandler = (path as any).__clickHandler;
+        if (existingHandler) {
+          path.removeEventListener('click', existingHandler, true);
+          path.removeEventListener('click', existingHandler, false);
+        }
         
         // Add new click handler with capture=true for higher priority
-        path.addEventListener('click', handlePathClick, true);
+        path.addEventListener('click', handleDOMPathClick, true);
         
         // Also add a non-capturing handler as fallback
-        path.addEventListener('click', handlePathClick, false);
+        path.addEventListener('click', handleDOMPathClick, false);
         
         // Ensure the path is properly set up for clicking
         path.style.pointerEvents = 'auto';
         path.style.cursor = 'pointer';
         
         // Store the handler function for potential cleanup
-        (path as any).__clickHandler = handlePathClick;
+        (path as any).__clickHandler = handleDOMPathClick;
       }
     });
   };
