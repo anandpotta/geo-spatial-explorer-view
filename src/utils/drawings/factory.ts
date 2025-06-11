@@ -9,9 +9,6 @@ import { saveDrawing } from './storage';
  */
 export function createDrawing(drawingData: Partial<DrawingData>): DrawingData {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    throw new Error('Cannot create drawing: No user is logged in');
-  }
   
   const drawing: DrawingData = {
     id: drawingData.id || uuidv4(),
@@ -27,7 +24,7 @@ export function createDrawing(drawingData: Partial<DrawingData>): DrawingData {
       createdAt: drawingData.properties?.createdAt || new Date(),
       associatedMarkerId: drawingData.properties?.associatedMarkerId
     },
-    userId: currentUser.id
+    userId: currentUser ? currentUser.id : 'anonymous' // Use 'anonymous' if no user is logged in
   };
   
   saveDrawing(drawing);

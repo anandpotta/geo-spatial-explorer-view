@@ -1,3 +1,4 @@
+
 import { LocationMarker } from './types';
 import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
@@ -29,9 +30,12 @@ export function getSavedMarkers(): LocationMarker[] {
       createdAt: new Date(marker.createdAt)
     }));
     
-    // Filter markers by user if a user is logged in
+    // Filter markers by user if a user is logged in, otherwise show all markers for anonymous users
     if (currentUser) {
       markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
+    } else {
+      // For anonymous users, show markers with 'anonymous' userId
+      markers = markers.filter((marker: LocationMarker) => marker.userId === 'anonymous');
     }
     
     // Deduplicate markers by ID - this helps prevent duplicates
@@ -49,16 +53,11 @@ export function getSavedMarkers(): LocationMarker[] {
 
 export function saveMarker(marker: LocationMarker): void {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot save marker: No user is logged in');
-    toast.error('Please log in to save your markers');
-    return;
-  }
   
-  // Ensure the marker has a user ID
+  // Ensure the marker has a user ID (use 'anonymous' if no user is logged in)
   const markerWithUser = {
     ...marker,
-    userId: currentUser.id
+    userId: currentUser ? currentUser.id : 'anonymous'
   };
   
   // Get existing markers and deduplicate before saving
@@ -99,11 +98,6 @@ export function saveMarker(marker: LocationMarker): void {
 
 export function renameMarker(id: string, newName: string): void {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot rename marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
-    return;
-  }
   
   const savedMarkers = getSavedMarkers();
   const markerIndex = savedMarkers.findIndex(marker => marker.id === id);
@@ -142,11 +136,6 @@ export function renameMarker(id: string, newName: string): void {
 
 export function deleteMarker(id: string): void {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot delete marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
-    return;
-  }
   
   const savedMarkers = getSavedMarkers();
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
