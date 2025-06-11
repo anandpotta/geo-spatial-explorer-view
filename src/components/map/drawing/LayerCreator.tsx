@@ -1,4 +1,3 @@
-
 import React from 'react';
 import L from 'leaflet';
 import { createRoot } from 'react-dom/client';
@@ -70,7 +69,8 @@ export function createLayerFromDrawing({
     (layer as any).options = {
       ...(layer as any).options,
       id: drawing.id,
-      isDrawn: true
+      isDrawn: true,
+      drawingId: drawing.id // Add this for easier identification
     };
 
     // Add custom click handling for the layer - prioritize upload request
@@ -97,95 +97,114 @@ export function createLayerFromDrawing({
     featureGroup.addLayer(layer);
     layersRef.set(drawing.id, layer);
 
-    // Set up the SVG path attributes after the layer is added
-    setTimeout(() => {
-      if (!isMounted) return;
-      
-      console.log(`Setting up SVG path for drawing: ${drawing.id}`);
-      
-      // Try multiple approaches to find the SVG path element
-      let pathElement = document.querySelector(`path[data-drawing-id="${drawing.id}"]`) as SVGPathElement;
-      
-      if (!pathElement) {
-        // Try to find by other attributes or SVG data matching
-        const allPaths = document.querySelectorAll('path');
-        console.log(`Found ${allPaths.length} path elements, searching for drawing ${drawing.id}`);
+    // Set up the SVG path attributes after the layer is added - use multiple attempts
+    const setupSvgPath = () => {
+      setTimeout(() => {
+        if (!isMounted) return;
         
-        allPaths.forEach((path, index) => {
-          const pathData = path.getAttribute('d');
-          console.log(`Path ${index}: data=${pathData?.substring(0, 50)}...`);
+        console.log(`Setting up SVG path for drawing: ${drawing.id}`);
+        
+        // Multiple strategies to find the SVG path element
+        let pathElement: SVGPathElement | null = null;
+        
+        // Strategy 1: Find by existing data-drawing-id
+        pathElement = document.querySelector(`path[data-drawing-id="${drawing.id}"]`) as SVGPathElement;
+        
+        // Strategy 2: Find by data-shape-type and match coordinates or other attributes
+        if (!pathElement) {
+          const shapePaths = document.querySelectorAll(`path[data-shape-type="${drawing.type}"]`);
+          console.log(`Found ${shapePaths.length} paths with shape type ${drawing.type}`);
           
-          if (pathData && drawing.svgPath && pathData.includes(drawing.svgPath.split(' ')[0])) {
-            pathElement = path as SVGPathElement;
-            console.log(`Found matching path for drawing ${drawing.id} by SVG data`);
+          // For now, take the last added path of this type (most recently created)
+          if (shapePaths.length > 0) {
+            pathElement = shapePaths[shapePaths.length - 1] as SVGPathElement;
+            console.log(`Selected path element based on shape type: ${drawing.type}`);
           }
-        });
-      }
-      
-      if (pathElement) {
-        console.log(`Setting up click handler for SVG path of drawing ${drawing.id}`);
-        
-        // Set drawing ID attribute for identification
-        pathElement.setAttribute('data-drawing-id', drawing.id);
-        pathElement.style.cursor = 'pointer';
-        pathElement.style.pointerEvents = 'all';
-        
-        // Remove any existing click listeners to avoid duplicates
-        const existingHandler = (pathElement as any).__clickHandler;
-        if (existingHandler) {
-          pathElement.removeEventListener('click', existingHandler);
         }
         
-        // Create new click handler that triggers upload request immediately
-        const clickHandler = (e: MouseEvent) => {
-          console.log(`SVG Path clicked for drawing: ${drawing.id} - calling upload request`);
-          e.stopPropagation();
-          e.preventDefault();
-          
-          // Call upload request IMMEDIATELY - this should show the upload popup
-          if (onUploadRequest) {
-            console.log(`Triggering upload request from SVG path click for drawing: ${drawing.id}`);
-            onUploadRequest(drawing.id);
-          } else {
-            console.error(`No onUploadRequest handler available for drawing: ${drawing.id}`);
+        // Strategy 3: Find the most recent path without data-drawing-id
+        if (!pathElement) {
+          const allPaths = document.querySelectorAll('path.leaflet-interactive:not([data-drawing-id])');
+          if (allPaths.length > 0) {
+            pathElement = allPaths[allPaths.length - 1] as SVGPathElement;
+            console.log(`Selected most recent path without drawing ID`);
           }
-          
-          // Secondary action: region click
-          if (onRegionClick) {
-            console.log(`Calling onRegionClick from SVG path for drawing: ${drawing.id}`);
-            onRegionClick(drawing);
-          }
-        };
-        
-        // Store reference to handler for cleanup
-        (pathElement as any).__clickHandler = clickHandler;
-        
-        // Add the click event listener with high priority
-        pathElement.addEventListener('click', clickHandler, { 
-          passive: false, 
-          capture: true // Use capture to handle event before it bubbles
-        });
-        
-        console.log(`SVG path click handler successfully set up for drawing ${drawing.id}`);
-        
-        // Test the click handler setup
-        console.log(`Path element cursor: ${pathElement.style.cursor}`);
-        console.log(`Path element pointer events: ${pathElement.style.pointerEvents}`);
-        console.log(`Path element data-drawing-id: ${pathElement.getAttribute('data-drawing-id')}`);
-      } else {
-        console.error(`Could not find SVG path element for drawing: ${drawing.id}`);
-      }
-
-      // Apply floor plan if exists
-      const loadFloorPlan = async () => {
-        const floorPlan = await getFloorPlanById(drawing.id);
-        if (floorPlan && pathElement) {
-          console.log(`Applying existing floor plan for drawing: ${drawing.id}`);
-          applyImageClipMask(pathElement, floorPlan.data, drawing.id);
         }
-      };
-      loadFloorPlan();
-    }, 200);
+        
+        if (pathElement) {
+          console.log(`Found path element for drawing ${drawing.id}, setting up attributes and click handler`);
+          
+          // Set the crucial data-drawing-id attribute
+          pathElement.setAttribute('data-drawing-id', drawing.id);
+          pathElement.setAttribute('data-user-id', drawing.userId || 'unknown');
+          pathElement.style.cursor = 'pointer';
+          pathElement.style.pointerEvents = 'all';
+          
+          // Remove any existing click listeners to avoid duplicates
+          const existingHandler = (pathElement as any).__drawingClickHandler;
+          if (existingHandler) {
+            pathElement.removeEventListener('click', existingHandler);
+          }
+          
+          // Create new click handler that triggers upload request immediately
+          const clickHandler = (e: MouseEvent) => {
+            console.log(`SVG Path clicked for drawing: ${drawing.id} - calling upload request`);
+            e.stopPropagation();
+            e.preventDefault();
+            
+            // Call upload request IMMEDIATELY - this should show the upload popup
+            if (onUploadRequest) {
+              console.log(`Triggering upload request from SVG path click for drawing: ${drawing.id}`);
+              onUploadRequest(drawing.id);
+            } else {
+              console.error(`No onUploadRequest handler available for drawing: ${drawing.id}`);
+            }
+            
+            // Secondary action: region click
+            if (onRegionClick) {
+              console.log(`Calling onRegionClick from SVG path for drawing: ${drawing.id}`);
+              onRegionClick(drawing);
+            }
+          };
+          
+          // Store reference to handler for cleanup
+          (pathElement as any).__drawingClickHandler = clickHandler;
+          
+          // Add the click event listener with high priority
+          pathElement.addEventListener('click', clickHandler, { 
+            passive: false, 
+            capture: true // Use capture to handle event before it bubbles
+          });
+          
+          console.log(`SVG path click handler successfully set up for drawing ${drawing.id}`);
+          console.log(`Path element attributes:`, {
+            'data-drawing-id': pathElement.getAttribute('data-drawing-id'),
+            'data-shape-type': pathElement.getAttribute('data-shape-type'),
+            cursor: pathElement.style.cursor,
+            pointerEvents: pathElement.style.pointerEvents
+          });
+          
+          // Apply floor plan if exists
+          const loadFloorPlan = async () => {
+            const floorPlan = await getFloorPlanById(drawing.id);
+            if (floorPlan && pathElement) {
+              console.log(`Applying existing floor plan for drawing: ${drawing.id}`);
+              applyImageClipMask(pathElement, floorPlan.data, drawing.id);
+            }
+          };
+          loadFloorPlan();
+        } else {
+          console.error(`Could not find SVG path element for drawing: ${drawing.id}`);
+          // Retry after a longer delay
+          if (isMounted) {
+            setTimeout(setupSvgPath, 500);
+          }
+        }
+      }, 200);
+    };
+    
+    // Start the SVG path setup
+    setupSvgPath();
 
     // Add buttons for edit mode
     if (activeTool === 'edit') {
