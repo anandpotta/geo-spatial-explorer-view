@@ -11,6 +11,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
   useMapEvents({
     click: (e) => {
       console.log('Map click detected at:', e.latlng);
+      console.log('Click target:', e.originalEvent.target);
       
       // Don't trigger click if we're in the process of deleting a marker
       if (typeof window !== 'undefined' && window.preventMapClick) {
@@ -39,6 +40,10 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           // Check if this is a drawing path with a drawing ID
           const isDrawingPath = target.closest('[data-drawing-id]') !== null ||
                                target.getAttribute('data-drawing-id') !== null;
+          
+          console.log(`SVG element clicked. Tag: ${target.tagName}, isDrawingPath: ${isDrawingPath}`);
+          console.log(`Drawing ID from element: ${target.getAttribute('data-drawing-id')}`);
+          console.log(`Drawing ID from closest: ${target.closest('[data-drawing-id]')?.getAttribute('data-drawing-id')}`);
           
           if (isDrawingPath) {
             console.log('Click on drawing path detected, letting drawing handle it');

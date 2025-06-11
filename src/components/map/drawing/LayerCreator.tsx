@@ -49,14 +49,12 @@ export function createLayerFromDrawing({
     } else if (drawing.type === 'rectangle') {
       layer = L.rectangle(drawing.coordinates as L.LatLngBoundsExpression);
     } else if (drawing.type === 'circle') {
-      // Handle circle coordinates properly - circle has center and radius
       const coords = drawing.coordinates as any;
       if (Array.isArray(coords) && coords.length >= 2) {
         const [center, radius] = coords;
         layer = L.circle(center as L.LatLngExpression, { radius: radius as number });
       }
     } else if (drawing.type === 'marker') {
-      // Handle marker type - this was causing the TypeScript error
       const coords = drawing.coordinates as any;
       if (Array.isArray(coords) && coords.length >= 2) {
         layer = L.marker([coords[0], coords[1]] as L.LatLngExpression);
@@ -75,19 +73,20 @@ export function createLayerFromDrawing({
       isDrawn: true
     };
 
-    // Add custom click handling for the layer
+    // Add custom click handling for the layer - prioritize upload request
     layer.on('click', (e: L.LeafletMouseEvent) => {
-      console.log(`Layer clicked for drawing: ${drawing.id}`);
+      console.log(`Layer clicked for drawing: ${drawing.id} - triggering upload request`);
       
       // Stop event propagation to prevent map click
       L.DomEvent.stopPropagation(e);
       
-      // Trigger upload request first
+      // Trigger upload request FIRST - this is the primary action
       if (onUploadRequest) {
         console.log(`Calling onUploadRequest for drawing: ${drawing.id}`);
         onUploadRequest(drawing.id);
       }
       
+      // Then call region click as secondary action
       if (onRegionClick) {
         console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
         onRegionClick(drawing);
@@ -126,7 +125,7 @@ export function createLayerFromDrawing({
       if (pathElement) {
         console.log(`Setting up click handler for SVG path of drawing ${drawing.id}`);
         
-        // Set drawing ID attribute
+        // Set drawing ID attribute for identification
         pathElement.setAttribute('data-drawing-id', drawing.id);
         pathElement.style.cursor = 'pointer';
         pathElement.style.pointerEvents = 'all';
@@ -137,18 +136,21 @@ export function createLayerFromDrawing({
           pathElement.removeEventListener('click', existingHandler);
         }
         
-        // Create new click handler that prioritizes upload request
+        // Create new click handler that triggers upload request immediately
         const clickHandler = (e: MouseEvent) => {
-          console.log(`SVG Path clicked for drawing: ${drawing.id}`);
+          console.log(`SVG Path clicked for drawing: ${drawing.id} - calling upload request`);
           e.stopPropagation();
           e.preventDefault();
           
-          // Trigger upload request first - this is the main action
+          // Call upload request IMMEDIATELY - this should show the upload popup
           if (onUploadRequest) {
-            console.log(`Calling onUploadRequest from SVG path for drawing: ${drawing.id}`);
+            console.log(`Triggering upload request from SVG path click for drawing: ${drawing.id}`);
             onUploadRequest(drawing.id);
+          } else {
+            console.error(`No onUploadRequest handler available for drawing: ${drawing.id}`);
           }
           
+          // Secondary action: region click
           if (onRegionClick) {
             console.log(`Calling onRegionClick from SVG path for drawing: ${drawing.id}`);
             onRegionClick(drawing);
@@ -158,12 +160,20 @@ export function createLayerFromDrawing({
         // Store reference to handler for cleanup
         (pathElement as any).__clickHandler = clickHandler;
         
-        // Add the click event listener
-        pathElement.addEventListener('click', clickHandler, { passive: false });
+        // Add the click event listener with high priority
+        pathElement.addEventListener('click', clickHandler, { 
+          passive: false, 
+          capture: true // Use capture to handle event before it bubbles
+        });
         
         console.log(`SVG path click handler successfully set up for drawing ${drawing.id}`);
+        
+        // Test the click handler setup
+        console.log(`Path element cursor: ${pathElement.style.cursor}`);
+        console.log(`Path element pointer events: ${pathElement.style.pointerEvents}`);
+        console.log(`Path element data-drawing-id: ${pathElement.getAttribute('data-drawing-id')}`);
       } else {
-        console.warn(`Could not find SVG path element for drawing: ${drawing.id}`);
+        console.error(`Could not find SVG path element for drawing: ${drawing.id}`);
       }
 
       // Apply floor plan if exists
@@ -175,7 +185,7 @@ export function createLayerFromDrawing({
         }
       };
       loadFloorPlan();
-    }, 200); // Increased timeout to ensure DOM is ready
+    }, 200);
 
     // Add buttons for edit mode
     if (activeTool === 'edit') {
