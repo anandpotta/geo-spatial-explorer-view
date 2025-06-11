@@ -41,27 +41,7 @@ const LayerManager = ({
     removeButtonRoots: removeButtonRoots.current,
     uploadButtonRoots: uploadButtonRoots.current,
     imageControlRoots: imageControlRoots.current,
-    onRegionClick: (drawing: DrawingData) => {
-      console.log('Region clicked in LayerManager:', drawing.id);
-      
-      // Immediately trigger the upload request to show the upload screen
-      if (onUploadRequest) {
-        console.log('Triggering upload request for drawing:', drawing.id);
-        onUploadRequest(drawing.id);
-        
-        // Add a small delay to ensure the upload screen is triggered
-        setTimeout(() => {
-          if (onRegionClick) {
-            console.log('Calling onRegionClick for drawing:', drawing.id);
-            onRegionClick(drawing);
-          }
-        }, 50);
-      } else if (onRegionClick) {
-        // Fallback if no upload request handler
-        console.log('Calling onRegionClick for drawing:', drawing.id);
-        onRegionClick(drawing);
-      }
-    },
+    onRegionClick,
     onRemoveShape,
     onUploadRequest
   });

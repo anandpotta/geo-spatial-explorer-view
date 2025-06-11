@@ -43,7 +43,6 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
       return drawingControlsRef.current?.getDrawTools();
     },
     openFileUploadDialog: (drawingId: string) => {
-      console.log('Opening file upload dialog for drawing:', drawingId);
       drawingControlsRef.current?.openFileUploadDialog(drawingId);
     },
     getSvgPaths: () => {
@@ -54,13 +53,6 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
   const handlePathsUpdated = (paths: string[]) => {
     setSvgPaths(paths);
     console.log('SVG Paths updated:', paths);
-  };
-  
-  const handleUploadRequest = (drawingId: string) => {
-    console.log('Upload request received in container for drawing:', drawingId);
-    if (drawingControlsRef.current) {
-      drawingControlsRef.current.openFileUploadDialog(drawingId);
-    }
   };
   
   return (
@@ -74,7 +66,6 @@ const DrawingControlsContainer = forwardRef<DrawingControlsRef, DrawingControlsC
         onRemoveShape={onRemoveShape}
         onUploadToDrawing={handleUploadToDrawing}
         onPathsUpdated={handlePathsUpdated}
-        onUploadRequest={handleUploadRequest}
       />
       
       <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>

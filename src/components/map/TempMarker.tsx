@@ -23,7 +23,13 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [markerReady, setMarkerReady] = useState(false);
+  const [tooltipText, setTooltipText] = useState(markerName || 'New Location');
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
+
+  // Update tooltip text when marker name changes
+  useEffect(() => {
+    setTooltipText(markerName || 'New Location');
+  }, [markerName]);
 
   // Handle cleanup when component unmounts
   useEffect(() => {
@@ -113,7 +119,10 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     >
       <NewMarkerForm
         markerName={markerName}
-        setMarkerName={setMarkerName}
+        setMarkerName={(name) => {
+          setMarkerName(name);
+          setTooltipText(name || 'New Location');
+        }}
         markerType={markerType}
         setMarkerType={setMarkerType}
         onSave={handleSave}
@@ -124,7 +133,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         opacity={0.9}
         permanent={true}
       >
-        <span className="font-medium">{markerName || 'New Location'}</span>
+        <span className="font-medium">{tooltipText}</span>
       </Tooltip>
     </Marker>
   );

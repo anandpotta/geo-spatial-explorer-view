@@ -1,5 +1,6 @@
 
 import { DrawingData } from './types';
+import { getCurrentUser } from '../../services/auth-service';
 import { v4 as uuidv4 } from 'uuid';
 import { saveDrawing } from './storage';
 
@@ -7,6 +8,11 @@ import { saveDrawing } from './storage';
  * Create a new drawing with default values
  */
 export function createDrawing(drawingData: Partial<DrawingData>): DrawingData {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Cannot create drawing: No user is logged in');
+  }
+  
   const drawing: DrawingData = {
     id: drawingData.id || uuidv4(),
     type: drawingData.type || 'polygon',
@@ -21,7 +27,7 @@ export function createDrawing(drawingData: Partial<DrawingData>): DrawingData {
       createdAt: drawingData.properties?.createdAt || new Date(),
       associatedMarkerId: drawingData.properties?.associatedMarkerId
     },
-    userId: 'anonymous' // No auth required
+    userId: currentUser.id
   };
   
   saveDrawing(drawing);
