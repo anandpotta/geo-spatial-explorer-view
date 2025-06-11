@@ -1,4 +1,3 @@
-
 import { useCallback, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { handleClearAll } from '@/components/map/drawing/ClearAllHandler';
@@ -7,6 +6,8 @@ import L from 'leaflet';
 
 // Global state to track if a confirmation dialog is already showing
 let isConfirmationDialogOpen = false;
+let lastClearAllRequest = 0;
+const CLEAR_ALL_DEBOUNCE_TIME = 1000; // 1 second debounce
 
 export function useClearAllOperation(onClearAll?: () => void) {
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -116,14 +117,31 @@ export function useClearAllOperation(onClearAll?: () => void) {
     }
   };
   
+  // Enhanced debouncing for clear all requests
+  const handleClearAllRequest = useCallback(() => {
+    const now = Date.now();
+    
+    // Debounce rapid clear all requests
+    if (now - lastClearAllRequest < CLEAR_ALL_DEBOUNCE_TIME) {
+      console.log('Clear all request debounced - too soon after last request');
+      return;
+    }
+    
+    lastClearAllRequest = now;
+    
+    console.log('Processing clear all request');
+    if (!isConfirmationDialogOpen) {
+      const preservedData = preserveRedMarkers();
+      (window as any).preservedRedMarkers = preservedData;
+      setShowConfirmation(true);
+    }
+  }, []);
+  
   // Listen for the custom leafletClearAllRequest event
   useEffect(() => {
     const handleLeafletClearRequest = () => {
       console.log('Received leaflet clear all request event');
-      // No auth check needed - proceed directly
-      if (!isConfirmationDialogOpen) {
-        setShowConfirmation(true);
-      }
+      handleClearAllRequest();
     };
     
     // Enhanced handler for Leaflet Draw specific clear all action
@@ -145,13 +163,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
           e.preventDefault();
           e.stopPropagation();
           
-          // No auth check - proceed directly
-          if (!isConfirmationDialogOpen) {
-            const preservedData = preserveRedMarkers();
-            (window as any).preservedRedMarkers = preservedData;
-            setShowConfirmation(true);
-          }
-          
+          handleClearAllRequest();
           return false;
         }
       }
@@ -165,16 +177,11 @@ export function useClearAllOperation(onClearAll?: () => void) {
       window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
       document.removeEventListener('click', handleLeafletClearAction, true);
     };
-  }, []); // Remove isAuthenticated dependency
+  }, [handleClearAllRequest]);
   
   const handleClearAllWrapper = useCallback(() => {
-    // No auth check needed - proceed directly
-    if (!isConfirmationDialogOpen) {
-      const preservedData = preserveRedMarkers();
-      (window as any).preservedRedMarkers = preservedData;
-      setShowConfirmation(true);
-    }
-  }, []); // Remove isAuthenticated dependency
+    handleClearAllRequest();
+  }, [handleClearAllRequest]);
   
   const confirmClearAll = useCallback(() => {
     console.log('Confirming clear all operation');

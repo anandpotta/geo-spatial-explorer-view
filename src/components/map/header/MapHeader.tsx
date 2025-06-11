@@ -10,15 +10,65 @@ interface MapHeaderProps {
 
 const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = false }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [actualMapReady, setActualMapReady] = useState(isMapReady);
   
-  console.log('MapHeader render:', { isMapReady, isVisible });
+  // Enhanced map ready detection
+  useEffect(() => {
+    const checkMapReady = () => {
+      // Check for Leaflet map instances
+      const leafletContainers = document.querySelectorAll('.leaflet-container');
+      const hasLeafletMap = leafletContainers.length > 0;
+      
+      // Check if any map container has been initialized
+      let hasInitializedMap = false;
+      leafletContainers.forEach(container => {
+        if ((container as any)._leaflet_id) {
+          hasInitializedMap = true;
+        }
+      });
+      
+      const mapIsReady = isMapReady || (hasLeafletMap && hasInitializedMap);
+      
+      if (mapIsReady !== actualMapReady) {
+        console.log('Map ready state changed:', { 
+          isMapReady, 
+          hasLeafletMap, 
+          hasInitializedMap, 
+          finalState: mapIsReady 
+        });
+        setActualMapReady(mapIsReady);
+      }
+    };
+    
+    // Initial check
+    checkMapReady();
+    
+    // Set up interval to check map ready state
+    const interval = setInterval(checkMapReady, 1000);
+    
+    // Listen for map initialization events
+    const handleMapInit = () => {
+      setTimeout(checkMapReady, 100);
+    };
+    
+    window.addEventListener('mapInitialized', handleMapInit);
+    window.addEventListener('leafletMapReady', handleMapInit);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('mapInitialized', handleMapInit);
+      window.removeEventListener('leafletMapReady', handleMapInit);
+    };
+  }, [isMapReady, actualMapReady]);
   
   // Check if the header is actually visible in the DOM
   useEffect(() => {
     const checkVisibility = () => {
-      // Simple check if the component is mounted in the DOM
       const element = document.querySelector('[data-map-header="true"]');
-      setIsVisible(!!element && document.body.contains(element));
+      const newVisibility = !!element && document.body.contains(element);
+      if (newVisibility !== isVisible) {
+        setIsVisible(newVisibility);
+      }
     };
     
     checkVisibility();
@@ -30,7 +80,7 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [isVisible]);
 
   const handleLocationSelect = (position: [number, number]) => {
     if (!isVisible) {
@@ -41,16 +91,26 @@ const MapHeader: React.FC<MapHeaderProps> = ({ onLocationSelect, isMapReady = fa
     onLocationSelect(position);
   };
 
+  // Only log significant state changes to reduce console noise
+  const shouldLog = actualMapReady !== isMapReady || !isVisible;
+  if (shouldLog) {
+    console.log('MapHeader render:', { 
+      isMapReady: actualMapReady, 
+      isVisible, 
+      propMapReady: isMapReady 
+    });
+  }
+
   return (
     <div 
       className="absolute top-4 right-4 z-[1001] flex gap-2" 
       data-map-header="true"
       style={{ pointerEvents: 'auto', marginRight: '27px' }}
     >
-      <DownloadButton disabled={false} />
+      <DownloadButton disabled={!actualMapReady} />
       <SavedLocationsDropdown 
         onLocationSelect={handleLocationSelect} 
-        isMapReady={isMapReady && isVisible}
+        isMapReady={actualMapReady && isVisible}
       />
     </div>
   );
