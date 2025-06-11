@@ -38,16 +38,15 @@ export function useHandleShapeCreation(
       } else {
         console.log('Creating polygon shape - no marker creation');
         
-        // Save the drawing and get the result
+        // Save the drawing (returns void, so no return value to check)
         try {
-          const drawingData = saveDrawing(shape);
+          saveDrawing(shape);
+          console.log(`Drawing saved with ID: ${drawingId}`);
           
-          if (drawingData && typeof drawingData === 'object' && 'id' in drawingData) {
-            // Apply attributes again with the actual drawing ID
-            setTimeout(() => {
-              applyDrawingIdToMarkedPaths(drawingData.id);
-            }, 200);
-          }
+          // Apply attributes again with the drawing ID we already have
+          setTimeout(() => {
+            applyDrawingIdToMarkedPaths(drawingId);
+          }, 200);
         } catch (saveError) {
           console.error('Error saving drawing:', saveError);
         }
