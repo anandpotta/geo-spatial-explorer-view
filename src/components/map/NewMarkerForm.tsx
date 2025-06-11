@@ -66,8 +66,12 @@ const NewMarkerForm = ({
       
       if (localValue.trim()) {
         console.log('Enter pressed, saving with name:', localValue.trim());
-        // Update parent state only when saving
+        // Update parent state before saving
         setMarkerName(localValue.trim());
+        // Also update tooltip immediately
+        if (onInputUpdate) {
+          onInputUpdate(localValue.trim());
+        }
         
         if (isEditing && existingMarkerId && onRename) {
           onRename(existingMarkerId, localValue.trim());
@@ -76,7 +80,7 @@ const NewMarkerForm = ({
         }
       }
     }
-  }, [localValue, isEditing, existingMarkerId, onRename, onSave, setMarkerName]);
+  }, [localValue, isEditing, existingMarkerId, onRename, onSave, setMarkerName, onInputUpdate]);
 
   const handleSaveButtonClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -84,8 +88,12 @@ const NewMarkerForm = ({
     
     if (localValue.trim()) {
       console.log('Save button clicked, saving with name:', localValue.trim());
-      // Update parent state only when saving
+      // Update parent state before saving
       setMarkerName(localValue.trim());
+      // Also update tooltip immediately
+      if (onInputUpdate) {
+        onInputUpdate(localValue.trim());
+      }
       
       if (isEditing && existingMarkerId && onRename) {
         onRename(existingMarkerId, localValue.trim());
@@ -93,7 +101,7 @@ const NewMarkerForm = ({
         onSave();
       }
     }
-  }, [isEditing, existingMarkerId, onRename, localValue, onSave, setMarkerName]);
+  }, [isEditing, existingMarkerId, onRename, localValue, onSave, setMarkerName, onInputUpdate]);
 
   const handleTypeChange = useCallback((type: 'pin' | 'area' | 'building') => {
     setMarkerType(type);
