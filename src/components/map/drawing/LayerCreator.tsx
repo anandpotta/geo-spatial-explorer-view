@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -6,7 +5,7 @@ import { getSavedMarkers } from '@/utils/marker-utils';
 import { createLayerControls } from './LayerControls';
 import { toast } from 'sonner';
 import { prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
-import { setupLayerClickHandlers } from './LayerEventHandlers';
+import { setupDrawingLayerHandlers } from './LayerEventHandlers';
 import { applyClipMaskToDrawing } from './clip-mask';
 import { hasFloorPlan } from '@/utils/floor-plan-utils';
 
@@ -116,7 +115,7 @@ export const createLayerFromDrawing = async ({
         }
         
         // Setup click handlers
-        setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
+        setupDrawingLayerHandlers(l, drawing, isMounted, onRegionClick);
       }
     });
     
