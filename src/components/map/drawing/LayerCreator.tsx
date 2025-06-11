@@ -1,16 +1,14 @@
 
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
-import { getSavedMarkers } from '@/utils/marker-utils';
-import { createLayerControls } from './LayerControls';
-import { toast } from 'sonner';
-import { prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
-import { applyClipMaskToDrawing } from './clip-mask';
-import { hasFloorPlan } from '@/utils/floor-plan-utils';
+import { createUploadButtonControl } from './controls/UploadButtonControl';
+import { createRemoveButtonControl } from './controls/RemoveButtonControl';
+import { createImageControls } from './controls/ImageControls';
+import { getCurrentUser } from '@/services/auth-service';
+import { getFloorPlan } from '@/utils/floor-plan-utils';
 
-interface CreateLayerOptions {
+interface LayerCreatorProps {
   drawing: DrawingData;
   featureGroup: L.FeatureGroup;
   activeTool: string | null;
@@ -24,12 +22,7 @@ interface CreateLayerOptions {
   onUploadRequest?: (drawingId: string) => void;
 }
 
-// Keep track of layer creation to prevent repeated attempts
-const layersCreated = new Map<string, number>();
-// Track floor plan applications to prevent repeated attempts
-const floorPlanApplied = new Map<string, number>();
-
-export const createLayerFromDrawing = async ({
+export const createLayerFromDrawing = ({
   drawing,
   featureGroup,
   activeTool,
@@ -41,134 +34,101 @@ export const createLayerFromDrawing = async ({
   onRegionClick,
   onRemoveShape,
   onUploadRequest
-}: CreateLayerOptions) => {
-  if (!drawing.geoJSON || !isMounted) return;
+}: LayerCreatorProps): void => {
+  if (!drawing || !drawing.data || !isMounted) return;
   
-  // Check if we've already created this layer recently
-  const now = Date.now();
-  const lastCreated = layersCreated.get(drawing.id) || 0;
-  if (now - lastCreated < 1000) { // Debounce layer creation
+  const currentUser = getCurrentUser();
+  if (!currentUser || drawing.userId !== currentUser.id) {
+    console.log(`Skipping layer creation for drawing ${drawing.id} - not owned by current user`);
     return;
   }
   
-  // Update the creation timestamp
-  layersCreated.set(drawing.id, now);
-
   try {
-    // Check if the feature group is attached to a valid map
-    const map = getMapFromLayer(featureGroup);
-    if (!isMapValid(map)) {
-      return;
-    }
-
-    // Check if this layer already exists
-    let existingLayer = false;
-    featureGroup.eachLayer(layer => {
-      if ((layer as any).drawingId === drawing.id) {
-        existingLayer = true;
+    console.log(`Creating layer for drawing: ${drawing.id}`);
+    
+    // Parse the drawing data
+    const geoJsonData = typeof drawing.data === 'string' ? JSON.parse(drawing.data) : drawing.data;
+    
+    // Create the layer from GeoJSON
+    const layer = L.geoJSON(geoJsonData, {
+      style: {
+        color: drawing.style?.color || '#3388ff',
+        weight: drawing.style?.weight || 3,
+        opacity: drawing.style?.opacity || 0.8,
+        fillColor: drawing.style?.fillColor || '#3388ff',
+        fillOpacity: drawing.style?.fillOpacity || 0.2,
+        // Add interactive styling
+        className: `drawing-layer drawing-${drawing.id}`
       }
     });
     
-    if (existingLayer) {
-      console.log(`Layer for drawing ${drawing.id} already exists, skipping creation`);
-      return;
-    }
-
-    // Prepare layer options - this is now async
-    const options = await prepareLayerOptions(drawing);
-    
-    // Create the layer
-    const layer = createGeoJSONLayer(drawing, options);
-    
-    if (!layer) {
-      return;
-    }
-    
-    // Store the drawing ID at the layer level as well for easier reference
+    // Store the drawing ID and user ID on the layer for reference
     (layer as any).drawingId = drawing.id;
+    (layer as any).userId = drawing.userId;
+    (layer as any).options = {
+      ...(layer as any).options,
+      id: drawing.id,
+      isDrawn: true,
+      interactive: true
+    };
     
-    // Process the layer and add it to the feature group
-    layer.eachLayer((l: L.Layer) => {
-      if (l && isMounted) {
-        // Add the ID at the sublayer level too
-        (l as any).drawingId = drawing.id;
+    // Set up click handlers with upload functionality
+    setupLayerClickHandlers(layer, drawing, isMounted, onRegionClick, onUploadRequest);
+    
+    // Add the layer to the feature group
+    featureGroup.addLayer(layer);
+    layersRef.set(drawing.id, layer);
+    
+    // Create control buttons if in edit mode
+    if (activeTool === 'edit') {
+      // Get the bounds of the layer to position buttons
+      const bounds = layer.getBounds();
+      if (bounds && bounds.isValid()) {
+        const center = bounds.getCenter();
         
-        // Add drawing ID attribute to the SVG path for identification
-        addDrawingAttributesToLayer(l, drawing.id);
-        
-        // Store the layer reference
-        layersRef.set(drawing.id, l);
-        
-        // Add controls when in edit mode
-        if (onRemoveShape && onUploadRequest) {
-          createLayerControls({
-            layer: l,
+        // Create remove button
+        if (onRemoveShape) {
+          createRemoveButtonControl({
             drawingId: drawing.id,
-            activeTool,
+            removeButtonPosition: center,
             featureGroup,
             removeButtonRoots,
-            uploadButtonRoots,
-            imageControlRoots,
             isMounted,
-            onRemoveShape,
+            onRemoveShape
+          });
+        }
+        
+        // Create upload button
+        if (onUploadRequest) {
+          // Position upload button slightly offset from remove button
+          const uploadPosition = L.latLng(center.lat + 0.0001, center.lng + 0.0001);
+          createUploadButtonControl({
+            drawingId: drawing.id,
+            uploadButtonPosition: uploadPosition,
+            featureGroup,
+            uploadButtonRoots,
+            isMounted,
             onUploadRequest
           });
         }
         
-        // Setup click handlers
-        setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
-      }
-    });
-    
-    // Add the layer to the feature group
-    if (isMounted && layer) {
-      featureGroup.addLayer(layer);
-      
-      // Check if we've recently applied a floor plan to this drawing
-      const lastApplied = floorPlanApplied.get(drawing.id) || 0;
-      const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
-      
-      // Check if this drawing has a floor plan
-      const hasFloorPlanResult = await hasFloorPlan(drawing.id);
-      console.log(`Drawing ${drawing.id} has floor plan: ${hasFloorPlanResult}`);
-      
-      // Add a small delay before applying clip mask to ensure the path is rendered
-      if (hasFloorPlanResult && isMounted && shouldApply) {
-        floorPlanApplied.set(drawing.id, now);
-        
-        // Apply with increasing timeouts to ensure SVG is ready
-        const attemptApplication = (attempt = 1) => {
-          if (attempt > 3 || !isMounted) return;
-          
-          console.log(`Attempting to apply clip mask for ${drawing.id}, attempt ${attempt}`);
-          
-          setTimeout(() => {
-            // Apply clip mask if a floor plan exists
-            if (isMounted) {
-              applyClipMaskToDrawing({
-                drawingId: drawing.id,
-                isMounted,
-                layer
-              }).then(success => {
-                if (!success && isMounted) {
-                  console.log(`Attempt ${attempt} failed, trying again with longer timeout`);
-                  attemptApplication(attempt + 1);
-                } else if (success) {
-                  console.log(`Successfully applied clip mask on attempt ${attempt}`);
-                  // Force an update
-                  window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-                    detail: { drawingId: drawing.id }
-                  }));
-                }
-              });
-            }
-          }, 300 * attempt); // Increasing delay with each attempt
-        };
-        
-        attemptApplication();
+        // Create image controls if there's a floor plan
+        const floorPlan = getFloorPlan(drawing.id);
+        if (floorPlan) {
+          const imageControlPosition = L.latLng(center.lat - 0.0001, center.lng - 0.0001);
+          createImageControls({
+            drawingId: drawing.id,
+            imageControlPosition,
+            featureGroup,
+            imageControlRoots,
+            isMounted
+          });
+        }
       }
     }
-  } catch (err) {
-    console.error('Error creating layer for drawing:', err);
+    
+    console.log(`Successfully created layer for drawing: ${drawing.id}`);
+  } catch (error) {
+    console.error(`Error creating layer for drawing ${drawing.id}:`, error);
   }
 };

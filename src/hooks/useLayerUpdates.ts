@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
-import debounce from 'lodash/debounce';  // Fixed import statement
+import debounce from 'lodash/debounce';
 import { getCurrentUser } from '@/services/auth-service';
 
 interface LayerUpdatesProps {
@@ -40,8 +40,11 @@ export function useLayerUpdates({
     const currentUser = getCurrentUser();
     if (!currentUser) return;
     
+    console.log(`Updating layers for user: ${currentUser.id}, drawings:`, savedDrawings.length);
+    
     // Filter drawings to only include ones that belong to the current user
     const userDrawings = savedDrawings.filter(drawing => drawing.userId === currentUser.id);
+    console.log(`User drawings found: ${userDrawings.length}`);
     
     // Clear out any layers that are no longer in the saved drawings
     const drawingIds = new Set(userDrawings.map(d => d.id));
@@ -49,6 +52,7 @@ export function useLayerUpdates({
     // Create array of entries to avoid modification during iteration
     Array.from(layersRef.current.entries()).forEach(([id, layer]) => {
       if (!drawingIds.has(id)) {
+        console.log(`Removing layer for deleted drawing: ${id}`);
         // This drawing no longer exists, remove the layer
         featureGroup.removeLayer(layer);
         layersRef.current.delete(id);
@@ -89,6 +93,7 @@ export function useLayerUpdates({
     // Create or update layers for each drawing
     userDrawings.forEach(drawing => {
       if (!layersRef.current.has(drawing.id)) {
+        console.log(`Creating new layer for drawing: ${drawing.id}`);
         // This is a new drawing, create a layer for it
         createLayerFromDrawing({
           drawing,
@@ -103,8 +108,12 @@ export function useLayerUpdates({
           onRemoveShape,
           onUploadRequest
         });
+      } else {
+        console.log(`Layer already exists for drawing: ${drawing.id}`);
       }
     });
+    
+    console.log(`Layer update complete. Total layers: ${layersRef.current.size}`);
   }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
   
   // Create a debounced version of updateLayers for performance

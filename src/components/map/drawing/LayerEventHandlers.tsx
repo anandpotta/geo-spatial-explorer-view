@@ -10,9 +10,10 @@ export const setupLayerClickHandlers = (
   layer: L.Layer, 
   drawing: DrawingData,
   isMounted: boolean,
-  onRegionClick?: (drawing: DrawingData) => void
+  onRegionClick?: (drawing: DrawingData) => void,
+  onUploadRequest?: (drawingId: string) => void
 ): void => {
-  if (!layer || !isMounted || !onRegionClick) return;
+  if (!layer || !isMounted) return;
   
   const currentUser = getCurrentUser();
   if (!currentUser) return; // Don't set up handlers if no user is logged in
@@ -36,6 +37,19 @@ export const setupLayerClickHandlers = (
     // Stop the leaflet event too
     L.DomEvent.stop(e);
     
+    // Check if this is a request to upload an image (right-click or ctrl+click)
+    const isUploadRequest = e.originalEvent && (
+      (e.originalEvent as MouseEvent).ctrlKey || 
+      (e.originalEvent as MouseEvent).button === 2 || // right click
+      (e.originalEvent as MouseEvent).metaKey // cmd on mac
+    );
+    
+    if (isUploadRequest && onUploadRequest) {
+      console.log(`Upload request for drawing: ${drawing.id}`);
+      onUploadRequest(drawing.id);
+      return;
+    }
+    
     if (isMounted && onRegionClick) {
       console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
       onRegionClick(drawing);
@@ -45,12 +59,38 @@ export const setupLayerClickHandlers = (
   // Set up the click handler
   layer.on('click', handleLayerClick);
   
+  // Also set up right-click handler for upload
+  layer.on('contextmenu', (e: L.LeafletMouseEvent) => {
+    if (e.originalEvent) {
+      L.DomEvent.stopPropagation(e.originalEvent);
+      e.originalEvent.preventDefault();
+    }
+    L.DomEvent.stop(e);
+    
+    if (onUploadRequest) {
+      console.log(`Context menu upload request for drawing: ${drawing.id}`);
+      onUploadRequest(drawing.id);
+    }
+  });
+  
   // Also set up handlers for sub-layers if this is a feature group
   if (typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((subLayer: L.Layer) => {
       subLayer.on('click', handleLayerClick);
+      subLayer.on('contextmenu', (e: L.LeafletMouseEvent) => {
+        if (e.originalEvent) {
+          L.DomEvent.stopPropagation(e.originalEvent);
+          e.originalEvent.preventDefault();
+        }
+        L.DomEvent.stop(e);
+        
+        if (onUploadRequest) {
+          console.log(`Context menu upload request for drawing: ${drawing.id}`);
+          onUploadRequest(drawing.id);
+        }
+      });
     });
   }
   
-  console.log(`Click handler set up for drawing: ${drawing.id}`);
+  console.log(`Click handlers set up for drawing: ${drawing.id}`);
 };
