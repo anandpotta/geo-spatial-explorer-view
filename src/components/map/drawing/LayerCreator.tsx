@@ -6,7 +6,7 @@ import { DrawingData } from '@/utils/drawing-utils';
 import RemoveButton from './RemoveButton';
 import UploadButton from './UploadButton';
 import ImageControls from './ImageControls';
-import { getFloorPlan } from '@/utils/floor-plan-utils';
+import { getFloorPlanById } from '@/utils/floor-plan-utils';
 import { applyImageClipMask } from '@/utils/svg-clip-mask';
 
 interface CreateLayerFromDrawingProps {
@@ -49,8 +49,12 @@ export function createLayerFromDrawing({
     } else if (drawing.type === 'rectangle') {
       layer = L.rectangle(drawing.coordinates as L.LatLngBoundsExpression);
     } else if (drawing.type === 'circle') {
-      const [center, radius] = drawing.coordinates as [L.LatLngExpression, number];
-      layer = L.circle(center, { radius });
+      // Fix: Handle circle coordinates properly
+      const coords = drawing.coordinates as [L.LatLngExpression, number];
+      if (coords && coords.length >= 2) {
+        const [center, radius] = coords;
+        layer = L.circle(center, { radius });
+      }
     } else if (drawing.type === 'polyline') {
       layer = L.polyline(drawing.coordinates as L.LatLngExpression[]);
     }
@@ -151,11 +155,14 @@ export function createLayerFromDrawing({
       }
 
       // Apply floor plan if exists
-      const floorPlan = getFloorPlan(drawing.id);
-      if (floorPlan && pathElement) {
-        console.log(`Applying existing floor plan for drawing: ${drawing.id}`);
-        applyImageClipMask(pathElement, floorPlan.data, drawing.id);
-      }
+      const loadFloorPlan = async () => {
+        const floorPlan = await getFloorPlanById(drawing.id);
+        if (floorPlan && pathElement) {
+          console.log(`Applying existing floor plan for drawing: ${drawing.id}`);
+          applyImageClipMask(pathElement, floorPlan.data, drawing.id);
+        }
+      };
+      loadFloorPlan();
     }, 100);
 
     // Add buttons for edit mode
@@ -173,7 +180,8 @@ export function createLayerFromDrawing({
         const bounds = (layer as any).getBounds();
         if (!bounds) return;
 
-        const map = featureGroup._map;
+        // Fix: Use getMap() method instead of accessing protected _map
+        const map = featureGroup.getMap();
         if (!map) return;
 
         const center = bounds.getCenter();
@@ -193,7 +201,7 @@ export function createLayerFromDrawing({
         const removeRoot = createRoot(removeButtonContainer);
         removeRoot.render(
           <RemoveButton 
-            onRemove={() => onRemoveShape && onRemoveShape(drawing.id)} 
+            onClick={() => onRemoveShape && onRemoveShape(drawing.id)} 
           />
         );
         removeButtonRoots.set(`${drawing.id}-remove`, removeRoot);
@@ -211,7 +219,7 @@ export function createLayerFromDrawing({
         const uploadRoot = createRoot(uploadButtonContainer);
         uploadRoot.render(
           <UploadButton 
-            onUpload={() => {
+            onClick={() => {
               console.log(`Upload button clicked for drawing: ${drawing.id}`);
               onUploadRequest && onUploadRequest(drawing.id);
             }} 
@@ -220,23 +228,26 @@ export function createLayerFromDrawing({
         uploadButtonRoots.set(`${drawing.id}-upload`, uploadRoot);
 
         // Image controls if floor plan exists
-        const floorPlan = getFloorPlan(drawing.id);
-        if (floorPlan) {
-          const imageControlsContainer = document.createElement('div');
-          imageControlsContainer.style.position = 'absolute';
-          imageControlsContainer.style.left = `${point.x}px`;
-          imageControlsContainer.style.top = `${point.y + 20}px`;
-          imageControlsContainer.style.zIndex = '1000';
-          imageControlsContainer.style.pointerEvents = 'auto';
+        const checkFloorPlan = async () => {
+          const floorPlan = await getFloorPlanById(drawing.id);
+          if (floorPlan) {
+            const imageControlsContainer = document.createElement('div');
+            imageControlsContainer.style.position = 'absolute';
+            imageControlsContainer.style.left = `${point.x}px`;
+            imageControlsContainer.style.top = `${point.y + 20}px`;
+            imageControlsContainer.style.zIndex = '1000';
+            imageControlsContainer.style.pointerEvents = 'auto';
 
-          mapContainer.appendChild(imageControlsContainer);
+            mapContainer.appendChild(imageControlsContainer);
 
-          const imageControlsRoot = createRoot(imageControlsContainer);
-          imageControlsRoot.render(
-            <ImageControls drawingId={drawing.id} />
-          );
-          imageControlRoots.set(`${drawing.id}-controls`, imageControlsRoot);
-        }
+            const imageControlsRoot = createRoot(imageControlsContainer);
+            imageControlsRoot.render(
+              <ImageControls drawingId={drawing.id} />
+            );
+            imageControlRoots.set(`${drawing.id}-controls`, imageControlsRoot);
+          }
+        };
+        checkFloorPlan();
       } catch (error) {
         console.error('Error adding edit mode buttons:', error);
       }
