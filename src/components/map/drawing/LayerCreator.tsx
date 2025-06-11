@@ -4,7 +4,7 @@ import { DrawingData } from '@/utils/drawing-utils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
 import { createUploadButtonControl } from './controls/UploadButtonControl';
 import { createRemoveButtonControl } from './controls/RemoveButtonControl';
-import { createImageControls } from './controls/ImageControls';
+import { createImageControlsLayer } from './controls/ImageControlsLayer';
 import { getCurrentUser } from '@/services/auth-service';
 import { getFloorPlan } from '@/utils/floor-plan-utils';
 
@@ -35,7 +35,7 @@ export const createLayerFromDrawing = ({
   onRemoveShape,
   onUploadRequest
 }: LayerCreatorProps): void => {
-  if (!drawing || !drawing.data || !isMounted) return;
+  if (!drawing || !drawing.geoJson || !isMounted) return;
   
   const currentUser = getCurrentUser();
   if (!currentUser || drawing.userId !== currentUser.id) {
@@ -47,16 +47,16 @@ export const createLayerFromDrawing = ({
     console.log(`Creating layer for drawing: ${drawing.id}`);
     
     // Parse the drawing data
-    const geoJsonData = typeof drawing.data === 'string' ? JSON.parse(drawing.data) : drawing.data;
+    const geoJsonData = typeof drawing.geoJson === 'string' ? JSON.parse(drawing.geoJson) : drawing.geoJson;
     
     // Create the layer from GeoJSON
     const layer = L.geoJSON(geoJsonData, {
       style: {
-        color: drawing.style?.color || '#3388ff',
-        weight: drawing.style?.weight || 3,
-        opacity: drawing.style?.opacity || 0.8,
-        fillColor: drawing.style?.fillColor || '#3388ff',
-        fillOpacity: drawing.style?.fillOpacity || 0.2,
+        color: '#3388ff',
+        weight: 3,
+        opacity: 0.8,
+        fillColor: '#3388ff',
+        fillOpacity: 0.2,
         // Add interactive styling
         className: `drawing-layer drawing-${drawing.id}`
       }
@@ -89,8 +89,9 @@ export const createLayerFromDrawing = ({
         // Create remove button
         if (onRemoveShape) {
           createRemoveButtonControl({
+            layer,
             drawingId: drawing.id,
-            removeButtonPosition: center,
+            buttonPosition: center,
             featureGroup,
             removeButtonRoots,
             isMounted,
@@ -116,12 +117,13 @@ export const createLayerFromDrawing = ({
         const floorPlan = getFloorPlan(drawing.id);
         if (floorPlan) {
           const imageControlPosition = L.latLng(center.lat - 0.0001, center.lng - 0.0001);
-          createImageControls({
+          createImageControlsLayer({
             drawingId: drawing.id,
-            imageControlPosition,
+            imageControlsPosition: imageControlPosition,
             featureGroup,
             imageControlRoots,
-            isMounted
+            isMounted,
+            onRemoveShape: onRemoveShape || (() => {})
           });
         }
       }
