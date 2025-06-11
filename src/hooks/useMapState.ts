@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -90,7 +91,7 @@ export function useMapState(selectedLocation?: Location) {
       type: markerType,
       createdAt: new Date(),
       associatedDrawing: currentDrawing ? currentDrawing.id : undefined,
-      userId: 'anonymous'
+      userId: 'anonymous' // Use default user ID since authentication is disabled
     };
     
     console.log('useMapState: Saving marker with final name:', newMarker.name);
@@ -113,7 +114,7 @@ export function useMapState(selectedLocation?: Location) {
           name: nameToUse,
           associatedMarkerId: newMarker.id
         },
-        userId: 'anonymous'
+        userId: 'anonymous' // Use default user ID since authentication is disabled
       };
       
       // Save or update the drawing but don't clear it from the map
