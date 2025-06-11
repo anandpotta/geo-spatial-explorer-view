@@ -23,15 +23,17 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [markerReady, setMarkerReady] = useState(false);
-  const [tooltipName, setTooltipName] = useState(markerName || 'New Location');
+  const [tooltipName, setTooltipName] = useState('New Location');
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
+  const initializedRef = useRef(false);
 
-  // Initialize tooltip name when marker name is first set
+  // Initialize tooltip name only once when component mounts
   useEffect(() => {
-    if (markerName && !tooltipName) {
-      setTooltipName(markerName);
+    if (!initializedRef.current) {
+      setTooltipName(markerName || 'New Location');
+      initializedRef.current = true;
     }
-  }, [markerName]);
+  }, []);
 
   // Handle cleanup when component unmounts
   useEffect(() => {
