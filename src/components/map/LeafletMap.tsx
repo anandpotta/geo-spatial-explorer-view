@@ -93,8 +93,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   }, []);
 
-  const handleMapReady = useCallback((map: L.Map) => {
-    setMapInstance(map);
+  const handleMapReady = useCallback(() => {
+    // Access the map instance through the ref
+    if (mapRef.current) {
+      setMapInstance(mapRef.current);
+    }
   }, []);
 
   return (
@@ -125,7 +128,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               name: 'Your Location',
               position: [userLocation.y, userLocation.x],
               type: 'pin',
-              createdAt: new Date().toISOString(),
+              createdAt: new Date(),
               userId: 'current-user'
             }}
             onDelete={() => {}}
