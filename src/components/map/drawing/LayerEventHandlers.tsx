@@ -15,10 +15,13 @@ export const setupLayerClickHandlers = (
   if (!layer || !isMounted || !onRegionClick) return;
   
   const currentUser = getCurrentUser();
-  if (!currentUser) return; // Don't set up handlers if no user is logged in
   
-  // Only set up click handlers for drawings owned by the current user
-  if (drawing.userId && drawing.userId !== currentUser.id) {
+  // Allow anonymous users to interact with drawings, but only allow interaction with their own drawings
+  // For anonymous users, we'll use 'anonymous' as the userId
+  const effectiveUserId = currentUser?.id || 'anonymous';
+  
+  // Only set up click handlers for drawings owned by the current user (including anonymous)
+  if (drawing.userId && drawing.userId !== effectiveUserId) {
     console.log(`Drawing ${drawing.id} belongs to another user, skipping handler setup`);
     return;
   }
