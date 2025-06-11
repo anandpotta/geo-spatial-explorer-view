@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ interface NewMarkerFormProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
+  onSave: (finalName?: string) => void;
   isEditing?: boolean;
   existingMarkerId?: string;
   onRename?: (id: string, newName: string) => void;
@@ -57,18 +58,15 @@ const NewMarkerForm = ({
     
     console.log('NewMarkerForm: Save button clicked with value:', localInputValue);
     
-    // Update the marker name with the final input value BEFORE saving
-    setMarkerName(localInputValue);
-    
     if (isEditing && existingMarkerId && onRename) {
       console.log('NewMarkerForm: Renaming marker to:', localInputValue);
       onRename(existingMarkerId, localInputValue);
     } else {
       console.log('NewMarkerForm: Saving new marker with name:', localInputValue);
-      // Use setTimeout to ensure state update happens before save
-      setTimeout(() => {
-        onSave();
-      }, 10);
+      // Update the marker name state first
+      setMarkerName(localInputValue);
+      // Pass the final name directly to onSave to avoid state timing issues
+      onSave(localInputValue);
     }
   };
 

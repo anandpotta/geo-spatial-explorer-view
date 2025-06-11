@@ -74,14 +74,18 @@ export function useMapState(selectedLocation?: Location) {
     };
   }, []);
 
-  const handleSaveMarker = () => {
-    if (!tempMarker || !markerName.trim()) return;
+  const handleSaveMarker = (finalName?: string) => {
+    if (!tempMarker) return;
     
-    console.log('useMapState: handleSaveMarker called with name:', markerName.trim());
+    // Use the passed finalName or fallback to markerName state
+    const nameToUse = finalName || markerName.trim();
+    if (!nameToUse) return;
+    
+    console.log('useMapState: handleSaveMarker called with name:', nameToUse);
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
-      name: markerName.trim(),
+      name: nameToUse,
       position: tempMarker,
       type: markerType,
       createdAt: new Date(),
@@ -106,7 +110,7 @@ export function useMapState(selectedLocation?: Location) {
         })) : undefined,
         properties: {
           ...currentDrawing.properties,
-          name: markerName.trim(),
+          name: nameToUse,
           associatedMarkerId: newMarker.id
         },
         userId: 'anonymous'

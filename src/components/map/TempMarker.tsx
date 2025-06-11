@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -10,7 +9,7 @@ interface TempMarkerProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
+  onSave: (finalName?: string) => void;
 }
 
 const TempMarker: React.FC<TempMarkerProps> = ({
@@ -74,10 +73,10 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   };
   
   // Custom save handler to update tooltip and then save
-  const handleSave = () => {
-    // Update tooltip with current marker name on save
-    const newTooltipText = markerName || 'New Location';
-    setTooltipText(newTooltipText);
+  const handleSave = (finalName?: string) => {
+    // Update tooltip with the final name
+    const nameToUse = finalName || markerName || 'New Location';
+    setTooltipText(nameToUse);
     setTooltipKey(prev => prev + 1);
     
     // Clean up the marker DOM elements before saving
@@ -88,8 +87,8 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
     });
     
-    // Call the original save handler
-    onSave();
+    // Call the original save handler with the final name
+    onSave(finalName);
   };
 
   // Set up marker references
