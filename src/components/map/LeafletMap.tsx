@@ -145,6 +145,7 @@ const LeafletMap = ({
       onLocationSelect={handleLocationSelect}
       onMapClick={handleMapClick}
       onDeleteMarker={mapState.handleDeleteMarker}
+      onRenameMarker={mapState.handleRenameMarker}
       onSaveMarker={mapState.handleSaveMarker}
       setMarkerName={mapState.setMarkerName}
       setMarkerType={mapState.setMarkerType}
