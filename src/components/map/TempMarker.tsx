@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -137,8 +138,9 @@ const TempMarker: React.FC<TempMarkerProps> = ({
           imgElement.setAttribute('data-image-uid', imageUid);
           imgElement.setAttribute('data-marker-image-id', markerId);
           imgElement.setAttribute('data-image-type', 'marker-icon');
+          imgElement.setAttribute('data-marker-img-uid', imageUid);
           imgElement.id = `marker-image-${imageUid}`;
-          console.log(`Marker image configured with UID: ${imageUid}`);
+          console.log(`Temp marker image configured with UID: ${imageUid}`);
         }
       }
       

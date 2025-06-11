@@ -18,11 +18,20 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
+  const [currentMarkerName, setCurrentMarkerName] = useState(marker.name);
   const [imageUid] = useState(() => crypto.randomUUID());
   const [iconUid] = useState(() => crypto.randomUUID());
   
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
+
+  // Update current marker name when marker prop changes
+  useEffect(() => {
+    if (marker.name !== currentMarkerName) {
+      setCurrentMarkerName(marker.name);
+      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
+    }
+  }, [marker.name, currentMarkerName, marker.id]);
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
@@ -176,6 +185,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       const element = leafletMarker.getElement();
       if (element) {
         element.setAttribute('data-marker-id', markerId);
+        element.setAttribute('data-marker-uid', iconUid);
         
         // Add UID to the leaflet-marker-icon element
         if (element.classList.contains('leaflet-marker-icon')) {
@@ -193,6 +203,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
           imgElement.setAttribute('data-marker-image-id', markerId);
           imgElement.setAttribute('data-image-type', 'marker-icon');
           imgElement.setAttribute('data-marker-type', 'user');
+          imgElement.setAttribute('data-marker-img-uid', imageUid);
           imgElement.id = `marker-image-${imageUid}`;
           console.log(`User marker image configured with UID: ${imageUid} for marker: ${marker.id}`);
         }
@@ -227,7 +238,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         opacity={0.9}
         permanent={true}
       >
-        <span className="font-medium">{marker.name}</span>
+        <span className="font-medium">{currentMarkerName}</span>
       </Tooltip>
     </Marker>
   );
