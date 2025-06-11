@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { canUserInteractWithDrawing } from './handlers/UserAuthUtils';
@@ -6,9 +7,9 @@ import { setupLayerClickHandlers } from './handlers/LayerEventSetup';
 import { setupSvgPathAttributes, retrySetupWithDelays } from './handlers/SvgPathSetup';
 
 /**
- * Sets up click handlers for drawing layers
+ * Main orchestrator function that sets up all drawing layer interactions
  */
-export const setupLayerClickHandlers = (
+export const setupDrawingLayerHandlers = (
   layer: L.Layer, 
   drawing: DrawingData,
   isMounted: boolean,
