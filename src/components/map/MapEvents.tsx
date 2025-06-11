@@ -52,16 +52,18 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         // Special handling for SVG paths - check if they have drawing IDs
         if (target.tagName === 'path') {
           const drawingId = target.getAttribute('data-drawing-id');
-          if (drawingId) {
-            console.log(`Click on SVG path with drawing ID: ${drawingId} - layer handler should manage this`);
-            // Don't call onMapClick for drawing paths - let the layer handler manage it
+          const isInteractive = target.getAttribute('data-interactive');
+          
+          if (drawingId || isInteractive) {
+            console.log(`Click on interactive SVG path with drawing ID: ${drawingId} - blocking map click to let layer handler manage it`);
+            // Completely block map click for drawing paths
             return;
           }
           
           // If it's an interactive path without drawing ID, still let layer handle it
           if (target.hasAttribute('data-svg-uid') ||
               target.classList.contains('leaflet-interactive')) {
-            console.log('Click on interactive drawing - letting layer handler manage it');
+            console.log('Click on interactive drawing path - blocking map click to let layer handler manage it');
             return;
           }
         }

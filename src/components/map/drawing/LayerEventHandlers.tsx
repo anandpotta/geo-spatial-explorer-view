@@ -34,6 +34,7 @@ export const setupLayerClickHandlers = (
   // Enhanced click handler with better event management
   const handleLayerClick = (e: L.LeafletMouseEvent) => {
     console.log(`Drawing layer clicked: ${drawing.id}`);
+    console.log('Event details:', { type: e.type, target: e.target });
     
     // Stop event propagation to prevent map click
     if (e.originalEvent) {
@@ -47,12 +48,21 @@ export const setupLayerClickHandlers = (
     
     if (isMounted && onRegionClick) {
       console.log(`Calling onRegionClick for drawing: ${drawing.id}`);
-      onRegionClick(drawing);
+      console.log('Drawing data being passed:', drawing);
+      try {
+        onRegionClick(drawing);
+        console.log(`onRegionClick called successfully for drawing: ${drawing.id}`);
+      } catch (error) {
+        console.error(`Error calling onRegionClick for drawing ${drawing.id}:`, error);
+      }
+    } else {
+      console.warn(`Cannot call onRegionClick - isMounted: ${isMounted}, onRegionClick: ${!!onRegionClick}`);
     }
   };
   
   // Set up the click handler on the layer
   layer.on('click', handleLayerClick);
+  console.log(`Main layer click handler attached for drawing: ${drawing.id}`);
   
   // Also set up handlers for sub-layers if this is a feature group
   if (typeof (layer as any).eachLayer === 'function') {
@@ -65,24 +75,45 @@ export const setupLayerClickHandlers = (
         const pathElement = (subLayer as any)._path;
         if (pathElement) {
           console.log(`Attaching DOM click handler to SVG path for drawing: ${drawing.id}`);
-          pathElement.addEventListener('click', (domEvent: Event) => {
+          
+          // Set data attributes for identification
+          pathElement.setAttribute('data-drawing-id', drawing.id);
+          pathElement.setAttribute('data-interactive', 'true');
+          
+          // Remove any existing click handlers first
+          if ((pathElement as any)._drawingClickHandler) {
+            pathElement.removeEventListener('click', (pathElement as any)._drawingClickHandler, true);
+          }
+          
+          const domClickHandler = (domEvent: Event) => {
             console.log(`DOM click detected on SVG path for drawing: ${drawing.id}`);
+            console.log('DOM event details:', domEvent);
+            
             domEvent.stopPropagation();
             domEvent.preventDefault();
+            domEvent.stopImmediatePropagation();
             
             // Create a mock leaflet event
             const mockEvent = {
               originalEvent: domEvent,
               target: subLayer,
-              type: 'click'
+              type: 'click',
+              latlng: null
             } as L.LeafletMouseEvent;
             
+            console.log(`Triggering handleLayerClick from DOM event for drawing: ${drawing.id}`);
             handleLayerClick(mockEvent);
-          }, { capture: true });
+          };
+          
+          pathElement.addEventListener('click', domClickHandler, { capture: true });
           
           // Store reference for cleanup
-          (pathElement as any)._drawingClickHandler = handleLayerClick;
+          (pathElement as any)._drawingClickHandler = domClickHandler;
           (pathElement as any)._drawingId = drawing.id;
+          
+          console.log(`DOM click handler fully attached to SVG path for drawing: ${drawing.id}`);
+        } else {
+          console.warn(`No path element found for drawing: ${drawing.id}`);
         }
       }
     });
