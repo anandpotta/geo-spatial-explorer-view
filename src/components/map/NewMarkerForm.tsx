@@ -52,17 +52,21 @@ const NewMarkerForm = ({
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
+    
+    // IMMEDIATELY update parent state so it's available for saving
+    setMarkerName(newValue);
+    
     // Update tooltip in real-time if callback is provided
     if (onInputUpdate) {
       onInputUpdate(newValue);
     }
-    console.log('Input changed to:', newValue);
-  }, [onInputUpdate]);
+    console.log('Input changed to:', newValue, 'and parent state updated');
+  }, [onInputUpdate, setMarkerName]);
 
   const performSave = useCallback((nameToSave: string) => {
     console.log('Performing save with name:', nameToSave);
     
-    // Update parent state first
+    // Ensure parent state is updated with the final name
     setMarkerName(nameToSave);
     
     // Update tooltip immediately
