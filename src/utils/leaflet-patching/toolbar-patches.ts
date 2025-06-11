@@ -57,17 +57,16 @@ export const patchEditToolbar = () => {
       };
     }
 
-    // Patch edit toolbar to properly handle layer detection
+    // Patch edit toolbar to properly handle layer detection including markers
     if (editProto && editProto._checkDisabled) {
       const originalCheckDisabled = editProto._checkDisabled;
       editProto._checkDisabled = function() {
-        // Always allow editing if there are any layers or SVG paths
         const featureGroup = this.options.featureGroup;
         if (featureGroup) {
           // Check for layers in feature group
           const layers = featureGroup.getLayers();
           if (layers && layers.length > 0) {
-            return false; // Enable editing
+            return false; // Enable editing - we have layers
           }
           
           // Check for SVG paths in the map
@@ -77,8 +76,32 @@ export const patchEditToolbar = () => {
             if (container) {
               const paths = container.querySelectorAll('.leaflet-overlay-pane path');
               if (paths.length > 0) {
-                return false; // Enable editing
+                return false; // Enable editing - we have SVG paths
               }
+              
+              // Check for markers in the map
+              const markers = container.querySelectorAll('.leaflet-marker-icon');
+              if (markers.length > 0) {
+                return false; // Enable editing - we have markers
+              }
+              
+              // Check for any drawn elements or user markers
+              const drawnElements = container.querySelectorAll('.leaflet-interactive');
+              if (drawnElements.length > 0) {
+                return false; // Enable editing - we have interactive elements
+              }
+            }
+          }
+          
+          // Check if there are any markers in the map's _layers
+          if (map && map._layers) {
+            const mapLayers = Object.values(map._layers);
+            const hasMarkers = mapLayers.some((layer: any) => 
+              layer instanceof L.Marker || 
+              (layer.options && (layer.options.isMarker || layer.options.isUserMarker))
+            );
+            if (hasMarkers) {
+              return false; // Enable editing - we have markers
             }
           }
         }
@@ -103,13 +126,12 @@ export const patchDeleteToolbar = () => {
     if (deleteProto && deleteProto._checkDisabled) {
       const originalCheckDisabled = deleteProto._checkDisabled;
       deleteProto._checkDisabled = function() {
-        // Always allow deleting if there are any layers or SVG paths
         const featureGroup = this.options.featureGroup;
         if (featureGroup) {
           // Check for layers in feature group
           const layers = featureGroup.getLayers();
           if (layers && layers.length > 0) {
-            return false; // Enable deleting
+            return false; // Enable deleting - we have layers
           }
           
           // Check for SVG paths in the map
@@ -119,8 +141,32 @@ export const patchDeleteToolbar = () => {
             if (container) {
               const paths = container.querySelectorAll('.leaflet-overlay-pane path');
               if (paths.length > 0) {
-                return false; // Enable deleting
+                return false; // Enable deleting - we have SVG paths
               }
+              
+              // Check for markers in the map
+              const markers = container.querySelectorAll('.leaflet-marker-icon');
+              if (markers.length > 0) {
+                return false; // Enable deleting - we have markers
+              }
+              
+              // Check for any drawn elements or user markers
+              const drawnElements = container.querySelectorAll('.leaflet-interactive');
+              if (drawnElements.length > 0) {
+                return false; // Enable deleting - we have interactive elements
+              }
+            }
+          }
+          
+          // Check if there are any markers in the map's _layers
+          if (map && map._layers) {
+            const mapLayers = Object.values(map._layers);
+            const hasMarkers = mapLayers.some((layer: any) => 
+              layer instanceof L.Marker || 
+              (layer.options && (layer.options.isMarker || layer.options.isUserMarker))
+            );
+            if (hasMarkers) {
+              return false; // Enable deleting - we have markers
             }
           }
         }
