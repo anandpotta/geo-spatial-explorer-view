@@ -55,8 +55,12 @@ export function createLayerFromDrawing({
         const [center, radius] = coords;
         layer = L.circle(center as L.LatLngExpression, { radius: radius as number });
       }
-    } else if (drawing.type === 'polyline') {
-      layer = L.polyline(drawing.coordinates as L.LatLngExpression[]);
+    } else if (drawing.type === 'marker') {
+      // Handle marker type - this was causing the TypeScript error
+      const coords = drawing.coordinates as any;
+      if (Array.isArray(coords) && coords.length >= 2) {
+        layer = L.marker([coords[0], coords[1]] as L.LatLngExpression);
+      }
     }
 
     if (!layer) {
