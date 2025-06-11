@@ -27,7 +27,7 @@ const NewMarkerForm = ({
   onRename
 }: NewMarkerFormProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [localValue, setLocalValue] = useState(markerName);
+  const [localValue, setLocalValue] = useState(markerName || '');
   
   useEffect(() => {
     // Focus on input when component mounts
@@ -40,17 +40,20 @@ const NewMarkerForm = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Only update local value when markerName prop changes from outside (not from our own updates)
+  // Sync local value with markerName prop when it changes externally
   useEffect(() => {
-    // Only sync if the marker name changed from outside and it's different from our local value
-    if (markerName !== localValue && markerName !== '') {
-      setLocalValue(markerName);
+    if (markerName !== localValue) {
+      setLocalValue(markerName || '');
     }
-  }, [markerName]); // Removed localValue dependency to prevent sync loops
+  }, [markerName]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(e.target.value);
-  }, []);
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    // Immediately update parent state
+    setMarkerName(newValue);
+    console.log('Input changed to:', newValue);
+  }, [setMarkerName]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -58,17 +61,15 @@ const NewMarkerForm = ({
       e.stopPropagation();
       
       if (localValue.trim()) {
-        // Update parent state immediately before calling save/rename
-        setMarkerName(localValue);
+        console.log('Enter pressed, saving with name:', localValue.trim());
+        // Ensure parent state is updated with trimmed value
+        setMarkerName(localValue.trim());
         
-        // Use setTimeout to ensure state update happens first
-        setTimeout(() => {
-          if (isEditing && existingMarkerId && onRename) {
-            onRename(existingMarkerId, localValue);
-          } else {
-            onSave();
-          }
-        }, 0);
+        if (isEditing && existingMarkerId && onRename) {
+          onRename(existingMarkerId, localValue.trim());
+        } else {
+          onSave();
+        }
       }
     }
   }, [localValue, isEditing, existingMarkerId, onRename, onSave, setMarkerName]);
@@ -78,17 +79,15 @@ const NewMarkerForm = ({
     e.stopPropagation();
     
     if (localValue.trim()) {
-      // Update parent state immediately before calling save/rename
-      setMarkerName(localValue);
+      console.log('Save button clicked, saving with name:', localValue.trim());
+      // Ensure parent state is updated with trimmed value
+      setMarkerName(localValue.trim());
       
-      // Use setTimeout to ensure state update happens first
-      setTimeout(() => {
-        if (isEditing && existingMarkerId && onRename) {
-          onRename(existingMarkerId, localValue);
-        } else {
-          onSave();
-        }
-      }, 0);
+      if (isEditing && existingMarkerId && onRename) {
+        onRename(existingMarkerId, localValue.trim());
+      } else {
+        onSave();
+      }
     }
   }, [isEditing, existingMarkerId, onRename, localValue, onSave, setMarkerName]);
 

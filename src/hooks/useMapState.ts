@@ -77,11 +77,17 @@ export function useMapState(selectedLocation?: Location) {
   }, []);
 
   const handleSaveMarker = () => {
-    if (!tempMarker || !markerName.trim()) return;
+    if (!tempMarker) {
+      console.log('No temp marker to save');
+      return;
+    }
+    
+    const finalName = markerName.trim() || 'Unnamed Location';
+    console.log('Saving marker with name:', finalName);
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
-      name: markerName,
+      name: finalName,
       position: tempMarker,
       type: markerType,
       createdAt: new Date(),
@@ -94,6 +100,7 @@ export function useMapState(selectedLocation?: Location) {
     
     // Save the marker
     saveMarker(newMarker);
+    console.log('Marker saved:', newMarker);
     
     if (currentDrawing) {
       // Create a safe copy of currentDrawing without circular references
@@ -107,7 +114,7 @@ export function useMapState(selectedLocation?: Location) {
         })) : undefined,
         properties: {
           ...currentDrawing.properties,
-          name: markerName,
+          name: finalName,
           associatedMarkerId: newMarker.id
         },
         userId: 'anonymous'
@@ -157,6 +164,7 @@ export function useMapState(selectedLocation?: Location) {
   };
 
   const handleRenameMarker = (id: string, newName: string) => {
+    console.log('Renaming marker:', id, 'to:', newName);
     renameMarker(id, newName);
     // Update the markers state immediately
     const updatedMarkers = getSavedMarkers();
