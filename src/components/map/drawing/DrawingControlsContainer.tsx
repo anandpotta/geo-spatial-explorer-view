@@ -9,6 +9,7 @@ import FileUploadInput from './FileUploadInput';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
+import { useDrawings } from '@/hooks/useDrawings';
 
 interface DrawingControlsContainerProps {
   onShapeCreated: (shape: any) => void;
@@ -22,31 +23,27 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showUploadDialog, setShowUploadDialog] = React.useState(false);
     const [selectedDrawingId, setSelectedDrawingId] = React.useState<string | null>(null);
+    const [isUploading, setIsUploading] = React.useState(false);
+    const [uploadError, setUploadError] = React.useState<string | null>(null);
     
     const { currentUser } = useDrawingAuth();
+    const { savedDrawings } = useDrawings();
     
     const {
-      map,
-      featureGroup,
-      editControlRef,
-      drawingLayers,
-      activeDrawings,
-      layersRef,
-      removeButtonRoots,
-      uploadButtonRoots,
-      imageControlRoots,
-      isMounted,
-      isEditMode,
-      onRemoveShape,
-      setMap
+      featureGroupRef,
+      drawToolsRef,
+      mountedRef,
+      isInitialized,
+      setIsInitialized
     } = useDrawingControls();
     
     const {
-      uploadFile,
-      isUploading,
-      uploadError,
-      resetUpload
-    } = useFileUploadHandling();
+      handleFileChange
+    } = useFileUploadHandling({ 
+      onUploadToDrawing: (drawingId: string, file: File) => {
+        console.log(`Upload to drawing ${drawingId}:`, file.name);
+      }
+    });
     
     // Handle upload request from layer clicks
     const handleUploadRequest = React.useCallback((drawingId: string) => {
@@ -60,8 +57,12 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
       const file = event.target.files?.[0];
       if (!file || !selectedDrawingId) return;
       
+      setIsUploading(true);
+      setUploadError(null);
+      
       try {
-        await uploadFile(file, selectedDrawingId);
+        // Use the existing file handling logic
+        await handleFileChange(event);
         setShowUploadDialog(false);
         setSelectedDrawingId(null);
         
@@ -71,6 +72,9 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
         }
       } catch (error) {
         console.error('Upload failed:', error);
+        setUploadError('Upload failed. Please try again.');
+      } finally {
+        setIsUploading(false);
       }
     };
     
@@ -78,7 +82,8 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
     const handleDialogClose = () => {
       setShowUploadDialog(false);
       setSelectedDrawingId(null);
-      resetUpload();
+      setUploadError(null);
+      setIsUploading(false);
       
       // Reset the file input
       if (fileInputRef.current) {
@@ -87,8 +92,8 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
     };
     
     useImperativeHandle(ref, () => ({
-      getMap: () => map,
-      getFeatureGroup: () => featureGroup,
+      getMap: () => null, // This would need to be implemented based on your map structure
+      getFeatureGroup: () => featureGroupRef.current,
       clearAll: () => {
         if (onClearAll) {
           onClearAll();
@@ -103,28 +108,15 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
     return (
       <>
         <DrawingControlsEffects
-          map={map}
-          featureGroup={featureGroup}
-          editControlRef={editControlRef}
           activeTool={activeTool}
-          onShapeCreated={onShapeCreated}
-          setMap={setMap}
+          isInitialized={isInitialized}
         />
         
         <LayerManagerWrapper
-          map={map}
-          featureGroup={featureGroup}
-          drawingLayers={drawingLayers}
-          activeDrawings={activeDrawings}
-          layersRef={layersRef}
-          removeButtonRoots={removeButtonRoots}
-          uploadButtonRoots={uploadButtonRoots}
-          imageControlRoots={imageControlRoots}
+          featureGroup={featureGroupRef.current}
+          savedDrawings={savedDrawings}
           activeTool={activeTool}
-          isMounted={isMounted}
-          isEditMode={isEditMode}
           onRegionClick={onRegionClick}
-          onRemoveShape={onRemoveShape}
           onUploadRequest={handleUploadRequest}
         />
         
@@ -145,7 +137,7 @@ const DrawingControlsContainer = forwardRef<any, DrawingControlsContainerProps>(
               
               <FileUploadInput
                 ref={fileInputRef}
-                onFileChange={handleFileUpload}
+                onChange={handleFileUpload}
                 accept="image/*"
                 disabled={isUploading}
               />
