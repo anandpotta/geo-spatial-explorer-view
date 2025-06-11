@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -25,6 +24,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   const [markerReady, setMarkerReady] = useState(false);
   const [markerUid] = useState(() => crypto.randomUUID());
   const [imageUid] = useState(() => crypto.randomUUID());
+  const [iconUid] = useState(() => crypto.randomUUID());
   const markerId = `temp-marker-${markerUid}`;
 
   // Handle cleanup when component unmounts
@@ -51,12 +51,20 @@ const TempMarker: React.FC<TempMarkerProps> = ({
               img.parentNode.removeChild(img);
             }
           });
+
+          // Clean up leaflet-marker-icon elements
+          const tempMarkerIcons = document.querySelectorAll(`[data-icon-uid="${iconUid}"]`);
+          tempMarkerIcons.forEach(icon => {
+            if (icon.parentNode) {
+              icon.parentNode.removeChild(icon);
+            }
+          });
         } catch (error) {
           console.error("Error cleaning up temp marker:", error);
         }
       }
     };
-  }, [markerUid, imageUid]);
+  }, [markerUid, imageUid, iconUid]);
 
   // Update marker position in parent when dragged
   const handleDragEnd = (e: L.LeafletEvent) => {
@@ -89,6 +97,14 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
     });
     
+    // Clean up leaflet-marker-icon elements
+    const tempMarkerIcons = document.querySelectorAll(`[data-icon-uid="${iconUid}"]`);
+    tempMarkerIcons.forEach(icon => {
+      if (icon.parentNode) {
+        icon.parentNode.removeChild(icon);
+      }
+    });
+    
     // Call the original save handler
     onSave();
   };
@@ -105,6 +121,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         element.setAttribute('data-marker-uid', markerUid);
         element.setAttribute('data-marker-type', 'temp');
         element.id = `marker-${markerUid}`;
+        
+        // Add UID to the leaflet-marker-icon element
+        if (element.classList.contains('leaflet-marker-icon')) {
+          element.setAttribute('data-icon-uid', iconUid);
+          element.setAttribute('data-marker-icon-id', markerId);
+          element.setAttribute('data-marker-type', 'temp');
+          element.id = `marker-icon-${iconUid}`;
+          console.log(`Temp marker icon configured with UID: ${iconUid}`);
+        }
         
         // Add UID to the marker image element
         const imgElement = element.querySelector('img');
@@ -127,7 +152,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
       
       setMarkerReady(true);
-      console.log(`Temp marker created with UIDs: marker=${markerUid}, image=${imageUid}`);
+      console.log(`Temp marker created with UIDs: marker=${markerUid}, image=${imageUid}, icon=${iconUid}`);
     }
   };
 

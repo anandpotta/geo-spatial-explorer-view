@@ -19,6 +19,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
   const [imageUid] = useState(() => crypto.randomUUID());
+  const [iconUid] = useState(() => crypto.randomUUID());
   
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
@@ -151,12 +152,20 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
               img.parentNode.removeChild(img);
             }
           });
+
+          // Clean up leaflet-marker-icon elements
+          const duplicateMarkerIcons = document.querySelectorAll(`[data-icon-uid="${iconUid}"]`);
+          duplicateMarkerIcons.forEach(icon => {
+            if (icon.parentNode) {
+              icon.parentNode.removeChild(icon);
+            }
+          });
         } catch (error) {
           console.error('Error cleaning up marker:', error);
         }
       }
     };
-  }, [markerId, imageUid]);
+  }, [markerId, imageUid, iconUid]);
 
   // Set up marker references
   const setMarkerInstance = (leafletMarker: L.Marker) => {
@@ -167,6 +176,15 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       const element = leafletMarker.getElement();
       if (element) {
         element.setAttribute('data-marker-id', markerId);
+        
+        // Add UID to the leaflet-marker-icon element
+        if (element.classList.contains('leaflet-marker-icon')) {
+          element.setAttribute('data-icon-uid', iconUid);
+          element.setAttribute('data-marker-icon-id', markerId);
+          element.setAttribute('data-marker-type', 'user');
+          element.id = `marker-icon-${iconUid}`;
+          console.log(`User marker icon configured with UID: ${iconUid} for marker: ${marker.id}`);
+        }
         
         // Add UID to the marker image element
         const imgElement = element.querySelector('img');
