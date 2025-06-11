@@ -29,7 +29,7 @@ export const setupLayerClickHandlers = (
     return;
   }
   
-  console.log(`Setting up click handler for drawing: ${drawing.id}, user: ${effectiveUserId}`);
+  console.log(`=== SETTING UP CLICK HANDLER for drawing: ${drawing.id}, user: ${effectiveUserId} ===`);
   
   // Enhanced click handler with better event management
   const handleLayerClick = (e: L.LeafletMouseEvent) => {
@@ -62,24 +62,24 @@ export const setupLayerClickHandlers = (
   };
   
   // Create a global function to trigger drawing clicks from DOM events
-  const createGlobalDrawingClickHandler = (drawingData: DrawingData) => {
-    const handlerName = `triggerDrawingClick_${drawingData.id}`;
-    
-    // Store the handler globally so DOM events can access it
-    (window as any)[handlerName] = () => {
-      console.log(`=== GLOBAL DRAWING CLICK TRIGGERED for drawing: ${drawingData.id} ===`);
-      if (isMounted && onRegionClick) {
-        try {
-          onRegionClick(drawingData);
-          console.log(`=== onRegionClick called successfully from global handler for drawing: ${drawingData.id} ===`);
-        } catch (error) {
-          console.error(`Error calling onRegionClick from global handler for drawing ${drawingData.id}:`, error);
-        }
+  const globalHandlerName = `triggerDrawingClick_${drawing.id}`;
+  
+  // Store the handler globally so DOM events can access it
+  (window as any)[globalHandlerName] = () => {
+    console.log(`=== GLOBAL DRAWING CLICK TRIGGERED for drawing: ${drawing.id} ===`);
+    if (isMounted && onRegionClick) {
+      try {
+        onRegionClick(drawing);
+        console.log(`=== onRegionClick called successfully from global handler for drawing: ${drawing.id} ===`);
+      } catch (error) {
+        console.error(`Error calling onRegionClick from global handler for drawing ${drawing.id}:`, error);
       }
-    };
-    
-    return handlerName;
+    } else {
+      console.warn(`Cannot call onRegionClick from global handler - isMounted: ${isMounted}, onRegionClick: ${!!onRegionClick}`);
+    }
   };
+  
+  console.log(`=== GLOBAL HANDLER CREATED: ${globalHandlerName} ===`);
   
   // Enhanced DOM click handler that calls the global function
   const createDomClickHandler = (drawingData: DrawingData, globalHandlerName: string) => {
@@ -102,12 +102,12 @@ export const setupLayerClickHandlers = (
         (window as any)[globalHandlerName]();
       } else {
         console.error(`Global handler ${globalHandlerName} not found`);
+        // List available global handlers for debugging
+        const availableHandlers = Object.keys(window).filter(key => key.startsWith('triggerDrawingClick_'));
+        console.log('Available global handlers:', availableHandlers);
       }
     };
   };
-  
-  // Create the global handler
-  const globalHandlerName = createGlobalDrawingClickHandler(drawing);
   
   // Set up the click handler on the layer with high priority
   layer.off('click'); // Remove any existing handlers first
@@ -127,7 +127,7 @@ export const setupLayerClickHandlers = (
       if (subLayer instanceof L.Path) {
         const pathElement = (subLayer as any)._path;
         if (pathElement) {
-          console.log(`Attaching DOM click handler to SVG path for drawing: ${drawing.id}`);
+          console.log(`=== ATTACHING DOM HANDLER to SVG path for drawing: ${drawing.id} ===`);
           
           // Set data attributes for identification
           pathElement.setAttribute('data-drawing-id', drawing.id);
@@ -158,7 +158,7 @@ export const setupLayerClickHandlers = (
             passive: false 
           });
           
-          console.log(`DOM click handler fully attached to SVG path for drawing: ${drawing.id} with global handler: ${globalHandlerName}`);
+          console.log(`=== DOM HANDLER ATTACHED to SVG path for drawing: ${drawing.id} with global handler: ${globalHandlerName} ===`);
         } else {
           console.warn(`No path element found for drawing: ${drawing.id}`);
         }
@@ -166,5 +166,5 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  console.log(`Click handler fully set up for drawing: ${drawing.id} with global handler: ${globalHandlerName}`);
+  console.log(`=== CLICK HANDLER SETUP COMPLETE for drawing: ${drawing.id} with global handler: ${globalHandlerName} ===`);
 };

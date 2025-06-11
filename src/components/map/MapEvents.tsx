@@ -110,6 +110,9 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
               }
             } else {
               console.warn(`Global handler from parent ${globalHandler} not found on window object`);
+              // List available global handlers for debugging
+              const availableHandlers = Object.keys(window).filter(key => key.startsWith('triggerDrawingClick_'));
+              console.log('Available global handlers:', availableHandlers);
             }
             
             return;
