@@ -1,6 +1,6 @@
 
 import { LocationMarker } from '@/utils/marker-utils';
-import MarkersList from '../MarkersList';
+import MarkersList from './MarkersList';
 import { memo, useMemo } from 'react';
 
 interface MarkersContainerProps {
