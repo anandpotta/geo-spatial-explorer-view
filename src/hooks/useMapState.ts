@@ -88,10 +88,7 @@ export function useMapState(selectedLocation?: Location) {
       userId: 'anonymous' // Default user since we removed auth
     };
     
-    // Clear the temporary marker BEFORE saving to prevent duplicate rendering
-    setTempMarker(null);
-    
-    // Save the marker
+    // Save the marker first
     saveMarker(newMarker);
     
     if (currentDrawing) {
@@ -116,18 +113,24 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
+    // Update the markers state with the new marker first
+    const updatedMarkers = getSavedMarkers();
+    setMarkers(updatedMarkers);
+    
+    // Clear the temporary marker AFTER updating the markers state
+    setTimeout(() => {
+      setTempMarker(null);
+    }, 100);
+    
     // Clear and reset UI state
     setMarkerName('');
-    
-    // Update the markers state with the new marker - use getSavedMarkers to ensure deduplication
-    setMarkers(getSavedMarkers());
     
     toast.success("Location saved successfully");
     
     // Ensure drawings remain visible by dispatching a custom event
     window.dispatchEvent(new Event('drawingsUpdated'));
     
-    // Clean up any leftover temporary marker DOM elements after a slight delay
+    // Clean up any leftover temporary marker DOM elements after a delay
     setTimeout(() => {
       if (tempMarker) {
         const markerId = `temp-marker-${tempMarker[0]}-${tempMarker[1]}`;
@@ -138,7 +141,7 @@ export function useMapState(selectedLocation?: Location) {
           }
         });
       }
-    }, 100);
+    }, 200);
   };
 
   const handleDeleteMarker = (id: string) => {

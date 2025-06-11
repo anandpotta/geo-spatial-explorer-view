@@ -29,6 +29,22 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
   }, [marker.name, marker.id]);
 
+  // Force tooltip to be visible when marker is first created
+  useEffect(() => {
+    if (markerRef.current && isReady) {
+      setTimeout(() => {
+        try {
+          if (markerRef.current) {
+            // Ensure tooltip is open and visible
+            markerRef.current.openTooltip();
+          }
+        } catch (error) {
+          console.error('Error opening tooltip:', error);
+        }
+      }, 100);
+    }
+  }, [isReady, marker.id]);
+
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
       const currentPosition = markerRef.current.getLatLng();
