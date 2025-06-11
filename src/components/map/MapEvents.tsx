@@ -35,12 +35,22 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // Check for SVG elements more specifically - only ignore if they have interactive attributes
+        // Check for SVG elements - allow clicks on paths with drawing IDs (these should trigger region clicks)
         if (target.tagName === 'path' || target.tagName === 'svg') {
+          const hasDrawingId = target.getAttribute('data-drawing-id') !== null;
+          const isInteractiveDrawing = target.closest('[data-drawing-id]') !== null;
+          
+          // If it's a drawing with an ID, let the layer click handler deal with it
+          // Don't call onMapClick for these as they should trigger region clicks instead
+          if (hasDrawingId || isInteractiveDrawing) {
+            console.log('Click on drawing path - letting layer handler manage it');
+            return;
+          }
+          
+          // For other SVG elements without drawing IDs, check if they have interactive attributes
           const hasClickHandler = target.onclick !== null || 
                                  target.getAttribute('onclick') !== null ||
-                                 target.style.cursor === 'pointer' ||
-                                 target.closest('[data-interactive="true"]') !== null;
+                                 target.style.cursor === 'pointer';
           
           if (hasClickHandler) {
             console.log('Click on interactive SVG element ignored');
