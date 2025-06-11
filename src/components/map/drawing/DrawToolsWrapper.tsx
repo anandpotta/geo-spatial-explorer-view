@@ -1,10 +1,10 @@
-
 import React, { ForwardedRef, useEffect } from 'react';
 import DrawTools from '../DrawTools';
 import L from 'leaflet';
 import { ensureFeatureGroupMethods } from '@/utils/leaflet-layer-patch';
 import { patchLeafletDraw } from '@/hooks/useDrawToolsConfiguration';
-import { configureSvgRenderer } from '@/utils/draw-tools-utils'; 
+import { configureSvgRenderer } from '@/utils/draw-tools-utils';
+import { setupDrawingPathObserver } from './LayerAttributeManager';
 
 interface DrawToolsWrapperProps {
   onCreated: (shape: any) => void;
@@ -27,6 +27,9 @@ const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
     
     // Configure SVG renderer to improve path rendering
     const cleanup = configureSvgRenderer();
+    
+    // Set up the drawing path observer
+    const cleanupObserver = setupDrawingPathObserver();
     
     // Patch the GeometryUtil.readableArea method to prevent "type is not defined" error
     if (L.GeometryUtil && L.GeometryUtil.readableArea) {
@@ -59,6 +62,7 @@ const DrawToolsWrapper = React.forwardRef<any, DrawToolsWrapperProps>(({
     
     return () => {
       if (cleanup) cleanup();
+      if (cleanupObserver) cleanupObserver();
     };
   }, []);
   
