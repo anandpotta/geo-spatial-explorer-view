@@ -27,6 +27,7 @@ interface MapViewProps {
   onLocationSelect: (position: [number, number]) => void;
   onMapClick: (latlng: L.LatLng) => void;
   onDeleteMarker: (id: string) => void;
+  onRenameMarker: (id: string, newName: string) => void;
   onSaveMarker: () => void;
   setMarkerName: (name: string) => void;
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
@@ -50,6 +51,7 @@ const MapView = ({
   onLocationSelect,
   onMapClick,
   onDeleteMarker,
+  onRenameMarker,
   onSaveMarker,
   setMarkerName,
   setMarkerType,
@@ -126,6 +128,7 @@ const MapView = ({
           markerName={markerName}
           markerType={markerType}
           onDeleteMarker={onDeleteMarker}
+          onRenameMarker={onRenameMarker}
           onSaveMarker={onSaveMarker}
           setMarkerName={setMarkerName}
           setMarkerType={setMarkerType}
