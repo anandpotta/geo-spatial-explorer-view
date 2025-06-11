@@ -1,12 +1,41 @@
 
 /**
- * Image processing utilities for clip masks
+ * Utilities for processing images in clip masks
  */
-
-import { getCurrentUser } from '@/services/auth-service';
+import { toast } from 'sonner';
+import { loadingImages, toastShown } from './image-loading';
 
 /**
- * Process an image for use in a clip mask pattern
+ * Calculates dimensions and positions for an image to fit within an SVG shape
+ */
+export const calculateImageFitDimensions = (
+  bbox: SVGRect,
+  imgWidth: number,
+  imgHeight: number
+): { 
+  scaledWidth: number; 
+  scaledHeight: number; 
+  offsetX: number;
+  offsetY: number;
+} => {
+  // Calculate scale to fit the image properly within the shape
+  // Use a different scaling approach to ensure image covers the entire shape
+  const scaleX = bbox.width / imgWidth;
+  const scaleY = bbox.height / imgHeight;
+  const scale = Math.max(scaleX, scaleY) * 1.05; // 5% extra coverage to avoid gaps
+  
+  const scaledWidth = imgWidth * scale;
+  const scaledHeight = imgHeight * scale;
+  
+  // Calculate position to exactly center the image in the path
+  const offsetX = bbox.x + (bbox.width - scaledWidth) / 2;
+  const offsetY = bbox.y + (bbox.height - scaledHeight) / 2;
+  
+  return { scaledWidth, scaledHeight, offsetX, offsetY };
+};
+
+/**
+ * Loads and processes an image for a clip mask
  */
 export const processImageForClipMask = (
   imageUrl: string,
@@ -16,123 +45,164 @@ export const processImageForClipMask = (
   onSuccess: () => void,
   onError: () => void
 ): void => {
-  try {
-    console.log(`Processing image for clip mask: ${imageUrl}`);
+  // Clear any existing images in the pattern first
+  while (pattern.firstChild) {
+    pattern.removeChild(pattern.firstChild);
+  }
+  
+  // Create an image element for the pattern
+  const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+  image.setAttribute('href', imageUrl);
+  image.setAttribute('preserveAspectRatio', 'none'); // Don't preserve aspect ratio for better fitting
+  image.setAttribute('opacity', '1'); // Ensure full opacity
+  
+  // Add loading handler to ensure image is rendered properly
+  image.onload = () => {
+    console.log(`Pattern image loaded for drawing ${drawingId}`);
     
-    // Get the bounding box of the path to size the pattern correctly
-    const bbox = pathElement.getBBox();
-    console.log(`Path bounding box:`, bbox);
+    // Remove loading class
+    pathElement.classList.remove('loading-clip-mask');
     
-    // Set pattern dimensions to match the path
-    pattern.setAttribute('x', bbox.x.toString());
-    pattern.setAttribute('y', bbox.y.toString());
-    pattern.setAttribute('width', bbox.width.toString());
-    pattern.setAttribute('height', bbox.height.toString());
+    // Force a repaint after image loads
+    window.dispatchEvent(new Event('resize'));
     
-    // Create the image element
-    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-    image.setAttribute('href', imageUrl);
-    image.setAttribute('x', '0');
-    image.setAttribute('y', '0');
-    image.setAttribute('width', bbox.width.toString());
-    image.setAttribute('height', bbox.height.toString());
-    image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    // Set a success attribute
+    pathElement.setAttribute('data-image-loaded', 'true');
     
-    // Add attributes for identification and user association
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      image.setAttribute('data-user-id', currentUser.id);
-    }
-    image.setAttribute('data-drawing-id', drawingId);
+    onSuccess();
     
-    // Handle image load events
-    image.addEventListener('load', () => {
-      console.log(`Image loaded successfully for drawing ${drawingId}`);
-      
-      // Ensure the image is properly positioned and sized
-      requestAnimationFrame(() => {
-        // Re-apply dimensions in case they were reset
-        image.setAttribute('width', bbox.width.toString());
-        image.setAttribute('height', bbox.height.toString());
-        
-        // Mark as loaded
-        image.setAttribute('data-loaded', 'true');
-        
-        // Call success callback
-        onSuccess();
+    // Trigger a floor plan update event
+    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+      detail: { drawingId: drawingId, refreshed: true }
+    }));
+  };
+  
+  // Add error handler
+  image.onerror = (e) => {
+    console.error(`Failed to load image for pattern-${drawingId}`, { imageUrl, error: e });
+    pathElement.classList.remove('loading-clip-mask');
+    pathElement.setAttribute('data-image-error', 'true');
+    
+    // Add a placeholder with error message
+    image.setAttribute('href', 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="red" font-size="14">Image failed</text></svg>');
+    
+    onError();
+  };
+  
+  pattern.appendChild(image);
+  
+  // Get the bounding box to properly size the pattern
+  const bbox = pathElement.getBBox();
+  
+  // Create a pre-loaded image to get dimensions
+  const tempImg = new Image();
+  
+  // Set crossorigin attribute to handle CORS correctly
+  tempImg.crossOrigin = "anonymous";
+  
+  // Add timeout to prevent hanging on image load
+  const imageTimeout = setTimeout(() => {
+    console.warn(`Image load timed out for ${drawingId}`);
+    // Apply default dimensions if image load times out
+    applyImageWithDimensions(300, 300);
+    loadingImages.set(drawingId, false);
+  }, 10000); // Longer timeout
+  
+  tempImg.onload = () => {
+    clearTimeout(imageTimeout);
+    console.log(`Image loaded successfully for ${drawingId}, dimensions: ${tempImg.width}x${tempImg.height}`);
+    applyImageWithDimensions(tempImg.width, tempImg.height);
+    loadingImages.set(drawingId, false);
+  };
+  
+  tempImg.onerror = (e) => {
+    clearTimeout(imageTimeout);
+    console.error('Failed to load image for clip mask', e);
+    console.error(`Image URL that failed: ${imageUrl}`);
+    // Try to access the image URL to check if it's valid
+    fetch(imageUrl)
+      .then(res => {
+        if (!res.ok) {
+          console.error(`Image URL returned ${res.status} (${res.statusText})`);
+        } else {
+          console.log('Image URL seems valid, but loading failed for another reason');
+        }
+      })
+      .catch(err => {
+        console.error('Error accessing image URL:', err);
       });
-    });
     
-    image.addEventListener('error', (e) => {
-      console.error(`Failed to load image for drawing ${drawingId}:`, e);
+    // Apply default dimensions as fallback
+    applyImageWithDimensions(300, 300);
+    loadingImages.set(drawingId, false);
+  };
+  
+  function applyImageWithDimensions(imgWidth: number, imgHeight: number) {
+    try {
+      if (!pathElement || !document.contains(pathElement)) {
+        console.error(`Path element for ${drawingId} is no longer in document`);
+        return; // Safety check
+      }
       
-      // Create a fallback pattern with a colored background
-      createFallbackPattern(pattern, bbox, drawingId);
+      // Log bounding box for debugging
+      console.log(`BBox for ${drawingId}: x=${bbox.x}, y=${bbox.y}, w=${bbox.width}, h=${bbox.height}`);
       
-      // Still call success to continue with the fallback
-      onSuccess();
-    });
-    
-    // Clear any existing content in the pattern
-    pattern.innerHTML = '';
-    
-    // Add the image to the pattern
-    pattern.appendChild(image);
-    
-    console.log(`Added image to pattern for drawing ${drawingId}`);
-    
-  } catch (err) {
-    console.error('Error processing image for clip mask:', err);
-    
-    // Create fallback pattern
-    if (pattern) {
-      createFallbackPattern(pattern, pathElement.getBBox(), drawingId);
-      onSuccess(); // Continue with fallback
-    } else {
-      onError();
+      const { scaledWidth, scaledHeight, offsetX, offsetY } = calculateImageFitDimensions(
+        bbox, imgWidth, imgHeight
+      );
+      
+      // Set pattern attributes
+      pattern.setAttribute('x', String(offsetX));
+      pattern.setAttribute('y', String(offsetY));
+      pattern.setAttribute('width', String(scaledWidth));
+      pattern.setAttribute('height', String(scaledHeight));
+      pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+      
+      // Update image dimensions
+      image.setAttribute('width', String(scaledWidth));
+      image.setAttribute('height', String(scaledHeight));
+      image.setAttribute('x', '0');
+      image.setAttribute('y', '0');
+      
+      // Only show toast for first time applications to reduce notification spam
+      if (!toastShown.has(drawingId)) {
+        toastShown.add(drawingId);
+        toast.success('Floor plan applied successfully', { id: `floor-plan-${drawingId}` });
+      }
+      
+      // Force a repaint to ensure the image renders
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+          detail: { drawingId: drawingId, refreshed: true } 
+        }));
+        
+        // Double-check the visibility after a slight delay
+        setTimeout(() => {
+          if (pathElement && document.contains(pathElement)) {
+            // Ensure fill is still applied
+            if (!pathElement.style.fill || !pathElement.style.fill.includes(`url(#pattern-${drawingId})`)) {
+              console.log(`Fill lost for ${drawingId}, reapplying`);
+              pathElement.style.fill = `url(#pattern-${drawingId})`;
+              pathElement.setAttribute('fill', `url(#pattern-${drawingId})`);
+              
+              // Trigger another repaint
+              window.dispatchEvent(new Event('resize'));
+            }
+          }
+        }, 500);
+      }, 100);
+    } catch (err) {
+      console.error('Error during image processing:', err);
+      // Clear loading state
+      if (pathElement) {
+        pathElement.classList.remove('loading-clip-mask');
+      }
+      loadingImages.set(drawingId, false);
     }
   }
-};
-
-/**
- * Create a fallback pattern when image loading fails
- */
-const createFallbackPattern = (
-  pattern: SVGPatternElement,
-  bbox: DOMRect,
-  drawingId: string
-): void => {
-  try {
-    console.log(`Creating fallback pattern for drawing ${drawingId}`);
-    
-    // Clear existing content
-    pattern.innerHTML = '';
-    
-    // Create a simple colored rectangle as fallback
-    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    rect.setAttribute('x', '0');
-    rect.setAttribute('y', '0');
-    rect.setAttribute('width', bbox.width.toString());
-    rect.setAttribute('height', bbox.height.toString());
-    rect.setAttribute('fill', 'rgba(59, 130, 246, 0.3)'); // Light blue background
-    rect.setAttribute('stroke', 'rgba(59, 130, 246, 0.8)');
-    rect.setAttribute('stroke-width', '2');
-    
-    // Add a text element to indicate this is a placeholder
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', (bbox.width / 2).toString());
-    text.setAttribute('y', (bbox.height / 2).toString());
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('fill', 'rgba(59, 130, 246, 1)');
-    text.setAttribute('font-size', Math.min(bbox.width / 10, bbox.height / 10, 16).toString());
-    text.textContent = 'Image';
-    
-    pattern.appendChild(rect);
-    pattern.appendChild(text);
-    
-    console.log(`Created fallback pattern for drawing ${drawingId}`);
-  } catch (err) {
-    console.error('Error creating fallback pattern:', err);
-  }
+  
+  // Start loading the image
+  console.log(`Starting image load for ${drawingId} with URL: ${imageUrl}`);
+  tempImg.src = imageUrl;
 };

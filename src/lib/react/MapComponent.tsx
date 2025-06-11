@@ -29,7 +29,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
     
-    const map = new MapCore(containerRef.current, options);
+    const map = new MapCore(options);
     mapRef.current = map;
     
     try {
@@ -67,7 +67,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   // Handle location changes
   useEffect(() => {
     if (mapRef.current && isReady && selectedLocation) {
-      mapRef.current.centerMap(selectedLocation.latitude, selectedLocation.longitude);
+      mapRef.current.centerMap(selectedLocation.y, selectedLocation.x);
       mapRef.current.addMarker(selectedLocation);
     }
   }, [selectedLocation, isReady]);
@@ -80,8 +80,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       const mockLocation: GeoLocation = {
         id: `loc-${Date.now()}`,
         label: 'Selected Location',
-        longitude: Math.random() * 180 - 90, // mock longitude
-        latitude: Math.random() * 90 - 45,  // mock latitude
+        x: Math.random() * 180 - 90, // mock longitude
+        y: Math.random() * 90 - 45,  // mock latitude
       };
       onLocationSelect(mockLocation);
     }

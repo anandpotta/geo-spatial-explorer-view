@@ -62,7 +62,7 @@ export const createClipMaskSvgElements = (
 };
 
 /**
- * Applies a pattern and clip path to an SVG path element while preserving the original path
+ * Applies a pattern and clip path to an SVG path element
  */
 export const applyPatternAndClipPath = (
   pathElement: SVGPathElement,
@@ -70,119 +70,44 @@ export const applyPatternAndClipPath = (
   clipPathId: string
 ): boolean => {
   try {
-    // Store the original styling to preserve it
-    const originalFill = pathElement.getAttribute('fill') || pathElement.style.fill;
-    const originalStroke = pathElement.getAttribute('stroke') || pathElement.style.stroke;
-    const originalStrokeWidth = pathElement.getAttribute('stroke-width') || pathElement.style.strokeWidth;
-    
-    console.log(`Applying pattern ${patternId} and clip-path ${clipPathId} to path element`);
-    console.log(`Original styling - fill: ${originalFill}, stroke: ${originalStroke}, stroke-width: ${originalStrokeWidth}`);
-    
     requestAnimationFrame(() => {
       if (!pathElement || !document.contains(pathElement)) return;
       
-      // Apply the pattern as fill while preserving stroke
+      // Apply all changes in a single batch to reduce visual flickering
       const fill = `url(#${patternId})`;
+      const clipPathUrl = `url(#${clipPathId})`;
       
-      // Set the pattern fill
+      console.log(`Setting fill to: ${fill}`);
+      console.log(`Setting clip-path to: ${clipPathUrl}`);
+      
+      // Set attributes directly to ensure they take effect
       pathElement.style.fill = fill;
       pathElement.setAttribute('fill', fill);
+      pathElement.style.clipPath = clipPathUrl;
+      pathElement.setAttribute('clip-path', clipPathUrl);
       
-      // Preserve or set a visible stroke to ensure the path outline remains visible
-      if (!originalStroke || originalStroke === 'none') {
-        pathElement.style.stroke = 'rgba(0, 0, 0, 0.3)';
-        pathElement.style.strokeWidth = '1px';
-      } else {
-        pathElement.style.stroke = originalStroke;
-        pathElement.style.strokeWidth = originalStrokeWidth || '1px';
-      }
-      
-      // Ensure the path is visible
-      pathElement.style.opacity = '1';
-      pathElement.style.visibility = 'visible';
-      pathElement.style.display = 'block';
-      
-      // Add class to identify paths with image fills
+      // Add extra visibility classes
       pathElement.classList.add('has-image-fill');
       
-      // Store original styling as data attributes for potential restoration
-      pathElement.setAttribute('data-original-fill', originalFill || 'none');
-      pathElement.setAttribute('data-original-stroke', originalStroke || 'none');
-      pathElement.setAttribute('data-original-stroke-width', originalStrokeWidth || '1');
-      
-      console.log(`Successfully applied pattern ${patternId} to path element`);
-      
       // Force a repaint
-      pathElement.getBoundingClientRect();
       window.dispatchEvent(new Event('resize'));
       
-      // Double-check the fill is still applied after a short delay
+      // Check again after a short delay to ensure attributes haven't been overridden
       setTimeout(() => {
         if (!pathElement || !document.contains(pathElement)) return;
         
-        const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
-        if (!currentFill || !currentFill.includes(patternId)) {
-          console.log(`Fill lost for ${patternId}, reapplying with fallback`);
+        // Re-apply if the fill was lost
+        if (!pathElement.style.fill || !pathElement.style.fill.includes(patternId)) {
+          console.log(`Fill lost for ${patternId}, reapplying`);
           pathElement.style.fill = fill;
           pathElement.setAttribute('fill', fill);
-          
-          // Add a fallback visible stroke if pattern is not showing
-          pathElement.style.stroke = 'rgba(59, 130, 246, 0.8)'; // Blue stroke as fallback
-          pathElement.style.strokeWidth = '2px';
         }
-      }, 500);
+      }, 300);
     });
     
     return true;
   } catch (err) {
     console.error('Error applying pattern and clip path:', err);
-    return false;
-  }
-};
-
-/**
- * Removes clip mask from a path element and restores original styling
- */
-export const removePatternAndClipPath = (pathElement: SVGPathElement): boolean => {
-  try {
-    if (!pathElement) return false;
-    
-    // Restore original styling
-    const originalFill = pathElement.getAttribute('data-original-fill');
-    const originalStroke = pathElement.getAttribute('data-original-stroke');
-    const originalStrokeWidth = pathElement.getAttribute('data-original-stroke-width');
-    
-    if (originalFill) {
-      pathElement.style.fill = originalFill === 'none' ? 'transparent' : originalFill;
-      pathElement.setAttribute('fill', originalFill);
-    }
-    
-    if (originalStroke) {
-      pathElement.style.stroke = originalStroke === 'none' ? 'none' : originalStroke;
-      pathElement.setAttribute('stroke', originalStroke);
-    }
-    
-    if (originalStrokeWidth) {
-      pathElement.style.strokeWidth = originalStrokeWidth;
-      pathElement.setAttribute('stroke-width', originalStrokeWidth);
-    }
-    
-    // Remove clip mask related attributes
-    pathElement.style.clipPath = '';
-    pathElement.removeAttribute('clip-path');
-    pathElement.classList.remove('has-image-fill');
-    
-    // Clean up data attributes
-    pathElement.removeAttribute('data-original-fill');
-    pathElement.removeAttribute('data-original-stroke');
-    pathElement.removeAttribute('data-original-stroke-width');
-    pathElement.removeAttribute('data-has-clip-mask');
-    pathElement.removeAttribute('data-image-url');
-    
-    console.log('Removed clip mask and restored original styling');
-    return true;
-  } catch (err) {
-    console.error('Error removing pattern and clip path:', err);
     return false;
   }
 };

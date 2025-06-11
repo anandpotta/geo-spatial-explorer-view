@@ -24,37 +24,55 @@ export function useClearAllOperation(onClearAll?: () => void) {
   // Helper function to preserve red markers more reliably
   const preserveRedMarkers = () => {
     const redMarkerData: Array<{
-      element: HTMLElement;
-      parent: Element;
+      src: string;
+      style: string;
+      className: string;
+      parentHTML: string;
+      position: { left: string; top: string; transform: string };
     }> = [];
     
     const redTooltipData: Array<{
-      element: HTMLElement;
-      parent: Element;
+      innerHTML: string;
+      className: string;
+      style: string;
+      position: { left: string; top: string; transform: string };
     }> = [];
     
-    // Collect red marker data - more specific selector
+    // Collect red marker data
     const redMarkers = document.querySelectorAll('img[src*="marker-icon-2x-red.png"]');
     redMarkers.forEach(marker => {
       const markerElement = marker as HTMLElement;
-      if (markerElement.parentElement) {
-        redMarkerData.push({
-          element: markerElement.cloneNode(true) as HTMLElement,
-          parent: markerElement.parentElement
-        });
-      }
+      const computedStyle = window.getComputedStyle(markerElement);
+      
+      redMarkerData.push({
+        src: (marker as HTMLImageElement).src,
+        style: markerElement.getAttribute('style') || '',
+        className: markerElement.className,
+        parentHTML: markerElement.parentElement?.outerHTML || '',
+        position: {
+          left: computedStyle.left,
+          top: computedStyle.top,
+          transform: computedStyle.transform
+        }
+      });
     });
     
-    // Collect selected location tooltips - more specific to selected location
-    const selectedTooltips = document.querySelectorAll('.selected-location-tooltip, .leaflet-tooltip:has(.selected-location-content)');
+    // Collect red marker tooltip data
+    const selectedTooltips = document.querySelectorAll('.selected-location-tooltip');
     selectedTooltips.forEach(tooltip => {
       const tooltipElement = tooltip as HTMLElement;
-      if (tooltipElement.parentElement) {
-        redTooltipData.push({
-          element: tooltipElement.cloneNode(true) as HTMLElement,
-          parent: tooltipElement.parentElement
-        });
-      }
+      const computedStyle = window.getComputedStyle(tooltipElement);
+      
+      redTooltipData.push({
+        innerHTML: tooltipElement.innerHTML,
+        className: tooltipElement.className,
+        style: tooltipElement.getAttribute('style') || '',
+        position: {
+          left: computedStyle.left,
+          top: computedStyle.top,
+          transform: computedStyle.transform
+        }
+      });
     });
     
     return { redMarkerData, redTooltipData };
@@ -62,43 +80,47 @@ export function useClearAllOperation(onClearAll?: () => void) {
   
   // Helper function to restore red markers
   const restoreRedMarkers = (redMarkerData: any[], redTooltipData: any[]) => {
-    setTimeout(() => {
-      try {
-        // Restore red markers
-        redMarkerData.forEach(({element, parent}) => {
-          try {
-            // Only restore if the parent still exists and doesn't already have this marker
-            if (parent && parent.parentNode && !parent.querySelector('img[src*="marker-icon-2x-red.png"]')) {
-              parent.appendChild(element);
-            }
-          } catch (e) {
-            console.error('Error restoring red marker:', e);
-          }
-        });
+    const markerPanes = document.querySelectorAll('.leaflet-marker-pane');
+    const tooltipPanes = document.querySelectorAll('.leaflet-tooltip-pane');
+    
+    // Restore red markers
+    if (markerPanes.length > 0 && redMarkerData.length > 0) {
+      const markerPane = markerPanes[0] as HTMLElement;
+      
+      redMarkerData.forEach(data => {
+        const img = document.createElement('img');
+        img.src = data.src;
+        img.className = data.className;
+        img.setAttribute('style', data.style);
         
-        // Restore red marker tooltips
-        redTooltipData.forEach(({element, parent}) => {
-          try {
-            // Only restore if the parent still exists and doesn't already have this tooltip
-            if (parent && parent.parentNode && !parent.querySelector('.selected-location-tooltip')) {
-              parent.appendChild(element);
-            }
-          } catch (e) {
-            console.error('Error restoring red marker tooltip:', e);
-          }
-        });
+        const wrapper = document.createElement('div');
+        wrapper.className = 'leaflet-marker-icon leaflet-zoom-animated leaflet-interactive';
+        wrapper.appendChild(img);
         
-        console.log('Red markers and tooltips restored after clear all operation');
-      } catch (e) {
-        console.error('Error in red marker restoration:', e);
-      }
-    }, 100);
+        markerPane.appendChild(wrapper);
+      });
+    }
+    
+    // Restore red marker tooltips
+    if (tooltipPanes.length > 0 && redTooltipData.length > 0) {
+      const tooltipPane = tooltipPanes[0] as HTMLElement;
+      
+      redTooltipData.forEach(data => {
+        const tooltip = document.createElement('div');
+        tooltip.className = data.className;
+        tooltip.innerHTML = data.innerHTML;
+        tooltip.setAttribute('style', data.style);
+        
+        tooltipPane.appendChild(tooltip);
+      });
+    }
   };
   
   // Listen for the custom leafletClearAllRequest event
   useEffect(() => {
     const handleLeafletClearRequest = () => {
       console.log('Received leaflet clear all request event');
+      // No auth check needed - proceed directly
       if (!isConfirmationDialogOpen) {
         setShowConfirmation(true);
       }
@@ -123,6 +145,7 @@ export function useClearAllOperation(onClearAll?: () => void) {
           e.preventDefault();
           e.stopPropagation();
           
+          // No auth check - proceed directly
           if (!isConfirmationDialogOpen) {
             const preservedData = preserveRedMarkers();
             (window as any).preservedRedMarkers = preservedData;
@@ -142,15 +165,16 @@ export function useClearAllOperation(onClearAll?: () => void) {
       window.removeEventListener('leafletClearAllRequest', handleLeafletClearRequest);
       document.removeEventListener('click', handleLeafletClearAction, true);
     };
-  }, []);
+  }, []); // Remove isAuthenticated dependency
   
   const handleClearAllWrapper = useCallback(() => {
+    // No auth check needed - proceed directly
     if (!isConfirmationDialogOpen) {
       const preservedData = preserveRedMarkers();
       (window as any).preservedRedMarkers = preservedData;
       setShowConfirmation(true);
     }
-  }, []);
+  }, []); // Remove isAuthenticated dependency
   
   const confirmClearAll = useCallback(() => {
     console.log('Confirming clear all operation');
@@ -161,36 +185,6 @@ export function useClearAllOperation(onClearAll?: () => void) {
     
     // Preserve selected location data before clearing
     const selectedLocation = localStorage.getItem('selectedLocation');
-    
-    // Clear all markers including temporary ones from DOM
-    const allMarkers = document.querySelectorAll('.leaflet-marker-icon:not([src*="marker-icon-2x-red.png"])');
-    allMarkers.forEach(marker => {
-      try {
-        marker.remove();
-      } catch (e) {
-        console.error('Error removing marker:', e);
-      }
-    });
-    
-    // Clear all tooltips except selected location tooltips
-    const allTooltips = document.querySelectorAll('.leaflet-tooltip:not(.selected-location-tooltip)');
-    allTooltips.forEach(tooltip => {
-      try {
-        tooltip.remove();
-      } catch (e) {
-        console.error('Error removing tooltip:', e);
-      }
-    });
-    
-    // Clear all popups
-    const allPopups = document.querySelectorAll('.leaflet-popup');
-    allPopups.forEach(popup => {
-      try {
-        popup.remove();
-      } catch (e) {
-        console.error('Error removing popup:', e);
-      }
-    });
     
     // First ensure we clear all SVG paths from the DOM directly
     const mapContainers = document.querySelectorAll('.leaflet-container');
@@ -218,23 +212,11 @@ export function useClearAllOperation(onClearAll?: () => void) {
     } else {
       console.warn('Feature group not available for clear operation, using localStorage fallback');
       
-      // Clear ALL storages that contain saved data
-      console.log('Clearing all saved data from localStorage...');
+      // Clear specific storages but preserve selected location
       localStorage.removeItem('savedDrawings');
       localStorage.removeItem('savedMarkers');
       localStorage.removeItem('floorPlans');
       localStorage.removeItem('svgPaths');
-      
-      // Also clear user-specific marker storage
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      if (currentUser?.id) {
-        localStorage.removeItem(`geospatial_markers_${currentUser.id}`);
-        localStorage.removeItem(`geospatial_svg_paths_${currentUser.id}`);
-      }
-      
-      // Clear generic marker storage as well
-      localStorage.removeItem('geospatial_markers');
-      localStorage.removeItem('geospatial_svg_paths');
       
       // Restore selected location
       if (selectedLocation) {
@@ -258,20 +240,21 @@ export function useClearAllOperation(onClearAll?: () => void) {
     setShowConfirmation(false);
     
     // Restore red markers after clearing operations
-    restoreRedMarkers(preservedData.redMarkerData, preservedData.redTooltipData);
-    
-    // Ensure selected location is preserved
-    if (selectedLocation) {
-      setTimeout(() => {
-        localStorage.setItem('selectedLocation', selectedLocation);
-        window.dispatchEvent(new Event('storage'));
-      }, 200);
-    }
-    
-    // Clean up preserved data
     setTimeout(() => {
-      delete (window as any).preservedRedMarkers;
-    }, 500);
+      try {
+        restoreRedMarkers(preservedData.redMarkerData, preservedData.redTooltipData);
+        
+        if (selectedLocation) {
+          localStorage.setItem('selectedLocation', selectedLocation);
+          window.dispatchEvent(new Event('storage'));
+        }
+        
+        delete (window as any).preservedRedMarkers;
+        console.log('Red markers restored after clear all operation');
+      } catch (e) {
+        console.error('Error restoring red markers:', e);
+      }
+    }, 300);
     
   }, [onClearAll]);
   
