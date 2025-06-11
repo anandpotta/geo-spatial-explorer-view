@@ -48,20 +48,59 @@ export const getDefaultDrawingOptions = (color?: string): L.PathOptions => ({
 });
 
 /**
+ * Enhanced SVG renderer that applies drawing ID attributes immediately
+ */
+const createEnhancedSVGRenderer = () => {
+  const originalSvg = L.svg;
+  
+  return originalSvg({
+    _addPath: function(layer: any) {
+      // Call the original _addPath method
+      const result = L.SVG.prototype._addPath.call(this, layer);
+      
+      // Immediately apply drawing ID attributes if available
+      if (layer._path && layer.options && layer.options.drawingId) {
+        const drawingId = layer.options.drawingId;
+        console.log(`Applying attributes to SVG path for drawing ${drawingId}`);
+        
+        // Apply attributes directly to the path element
+        layer._path.setAttribute('data-drawing-id', drawingId);
+        layer._path.setAttribute('id', `drawing-path-${drawingId}`);
+        layer._path.setAttribute('data-path-uid', `uid-${drawingId}-${Date.now()}`);
+        layer._path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+        layer._path.classList.add('visible-path-stroke');
+        layer._path.setAttribute('data-drawing-type', 'user-drawn');
+        layer._path.setAttribute('data-clickable', 'true');
+        
+        console.log(`Successfully applied attributes to path:`, {
+          'data-drawing-id': layer._path.getAttribute('data-drawing-id'),
+          'id': layer._path.getAttribute('id'),
+          'classes': layer._path.className
+        });
+      }
+      
+      return result;
+    }
+  });
+};
+
+/**
  * Creates a drawing layer from GeoJSON and applies options
  */
 export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions): L.GeoJSON | null => {
   try {
     console.log(`Creating GeoJSON layer for drawing ${drawing.id}`);
     
-    // Create a copy of options without renderer for GeoJSON
-    const geoJSONOptions = { ...options };
-    // Remove renderer from GeoJSON options as it's not a valid property
-    if ('renderer' in geoJSONOptions) {
-      delete geoJSONOptions.renderer;
-    }
+    // Create enhanced renderer with drawing ID support
+    const enhancedRenderer = createEnhancedSVGRenderer();
     
-    // Create layer with corrected options
+    // Create a copy of options and set the enhanced renderer
+    const geoJSONOptions = { 
+      ...options,
+      renderer: enhancedRenderer
+    };
+    
+    // Create layer with enhanced options
     const layer = L.geoJSON(drawing.geoJSON, geoJSONOptions);
     
     if (!layer) {
@@ -71,50 +110,6 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
     // Store the drawing ID at the layer level as well for easier reference
     (layer as any).drawingId = drawing.id;
     
-    // After creation, apply SVG renderer to each layer and set up path monitoring
-    layer.eachLayer((l: any) => {
-      if (l && l.options) {
-        // Apply SVG renderer to the layer options
-        l.options.renderer = L.svg();
-        
-        // Ensure stroke is set to true for this layer
-        l.options.stroke = true;
-        l.options.weight = options.weight || 4;
-        l.options.opacity = 1;
-        
-        // Store the drawing ID on the layer
-        l.drawingId = drawing.id;
-        
-        // Override the _updatePath method to apply attributes when path is created/updated
-        const originalUpdatePath = l._updatePath;
-        if (originalUpdatePath) {
-          l._updatePath = function() {
-            // Call the original method first
-            originalUpdatePath.call(this);
-            
-            // Apply attributes immediately after path update
-            if (this._path) {
-              applyAttributesToPath(this._path, drawing.id);
-            }
-          };
-        }
-        
-        // Also override _initPath to catch initial path creation
-        const originalInitPath = l._initPath;
-        if (originalInitPath) {
-          l._initPath = function() {
-            // Call the original method first
-            originalInitPath.call(this);
-            
-            // Apply attributes immediately after path initialization
-            if (this._path) {
-              applyAttributesToPath(this._path, drawing.id);
-            }
-          };
-        }
-      }
-    });
-    
     return layer;
   } catch (error) {
     console.error('Error creating drawing layer:', error);
@@ -123,40 +118,7 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
 };
 
 /**
- * Apply attributes directly to a path element
- */
-const applyAttributesToPath = (path: SVGPathElement, drawingId: string): void => {
-  if (!path) return;
-  
-  console.log(`Applying attributes to path for drawing ${drawingId}:`, path);
-  
-  // Add multiple ways to identify this path
-  path.setAttribute('data-drawing-id', drawingId);
-  path.setAttribute('id', `drawing-path-${drawingId}`);
-  
-  // Add classes for identification and styling
-  path.classList.add('drawing-path-' + drawingId.substring(0, 8));
-  path.classList.add('leaflet-interactive-drawing');
-  path.classList.add('visible-path-stroke');
-  
-  // Add a unique identifier for the path
-  const uid = `uid-${drawingId}-${Date.now()}`;
-  path.setAttribute('data-path-uid', uid);
-  
-  // Store drawing metadata
-  path.setAttribute('data-drawing-type', 'user-drawn');
-  path.setAttribute('data-clickable', 'true');
-  
-  console.log(`Successfully applied attributes to path:`, {
-    'data-drawing-id': path.getAttribute('data-drawing-id'),
-    'data-path-uid': path.getAttribute('data-path-uid'),
-    'id': path.getAttribute('id'),
-    'classes': path.className
-  });
-};
-
-/**
- * Adds drawing ID attributes to SVG paths - Enhanced with direct DOM targeting
+ * Adds drawing ID attributes to SVG paths - Direct DOM approach
  */
 export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
   if (!layer) return;
@@ -167,45 +129,74 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
     
     console.log(`Adding drawing attributes for ${drawingId}`);
     
-    // Process the main layer
-    const processLayer = (targetLayer: any) => {
+    // Direct path element targeting
+    const applyAttributesDirectly = (targetLayer: any) => {
       if (targetLayer._path && targetLayer._path.tagName === 'path') {
-        applyAttributesToPath(targetLayer._path, drawingId);
+        console.log(`Applying attributes directly to path for ${drawingId}`);
+        
+        targetLayer._path.setAttribute('data-drawing-id', drawingId);
+        targetLayer._path.setAttribute('id', `drawing-path-${drawingId}`);
+        targetLayer._path.setAttribute('data-path-uid', `uid-${drawingId}-${Date.now()}`);
+        targetLayer._path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+        targetLayer._path.classList.add('visible-path-stroke');
+        targetLayer._path.setAttribute('data-drawing-type', 'user-drawn');
+        targetLayer._path.setAttribute('data-clickable', 'true');
+        
+        console.log(`Applied attributes:`, {
+          'data-drawing-id': targetLayer._path.getAttribute('data-drawing-id'),
+          'id': targetLayer._path.getAttribute('id')
+        });
+        
         return true;
       }
       return false;
     };
 
     // Process the main layer
-    let processed = processLayer(layer);
+    let processed = applyAttributesDirectly(layer);
     
     // If it's a feature group, process each sublayer
     if (!processed && typeof (layer as any).eachLayer === 'function') {
       (layer as any).eachLayer((subLayer: L.Layer) => {
         (subLayer as any).drawingId = drawingId;
-        const success = processLayer(subLayer);
+        const success = applyAttributesDirectly(subLayer);
         if (success) processed = true;
       });
     }
     
-    // If we still haven't processed any paths, use a targeted DOM search as fallback
+    // Force immediate DOM application if renderer approach didn't work
     if (!processed) {
       setTimeout(() => {
-        // Find SVG paths that don't have drawing IDs yet
-        const allPaths = document.querySelectorAll('svg path:not([data-drawing-id])');
-        console.log(`Fallback: Found ${allPaths.length} paths without drawing IDs`);
-        
-        allPaths.forEach((path) => {
-          // Check if this path is likely our drawing
-          const isInteractive = path.classList.contains('leaflet-interactive');
-          const isInOverlayPane = path.closest('.leaflet-overlay-pane');
+        // Find all SVG paths without drawing IDs in the overlay pane
+        const overlayPanes = document.querySelectorAll('.leaflet-overlay-pane');
+        overlayPanes.forEach(pane => {
+          const paths = pane.querySelectorAll('path:not([data-drawing-id])');
+          console.log(`Found ${paths.length} paths without drawing IDs in overlay pane`);
           
-          if (isInteractive && isInOverlayPane) {
-            console.log(`Applying fallback attributes to path for ${drawingId}`);
-            applyAttributesToPath(path as SVGPathElement, drawingId);
-          }
+          paths.forEach((path) => {
+            // Check if this path is likely our drawing based on attributes
+            const isInteractive = path.classList.contains('leaflet-interactive');
+            const hasDrawingClass = path.classList.contains('leaflet-drawing');
+            
+            if (isInteractive || hasDrawingClass) {
+              console.log(`Applying fallback attributes to path for ${drawingId}`);
+              
+              path.setAttribute('data-drawing-id', drawingId);
+              path.setAttribute('id', `drawing-path-${drawingId}`);
+              path.setAttribute('data-path-uid', `uid-${drawingId}-${Date.now()}`);
+              path.classList.add('drawing-path-' + drawingId.substring(0, 8));
+              path.classList.add('visible-path-stroke');
+              path.setAttribute('data-drawing-type', 'user-drawn');
+              path.setAttribute('data-clickable', 'true');
+              
+              console.log(`Fallback attributes applied:`, {
+                'data-drawing-id': path.getAttribute('data-drawing-id'),
+                'id': path.getAttribute('id')
+              });
+            }
+          });
         });
-      }, 100);
+      }, 50);
     }
     
   } catch (err) {
