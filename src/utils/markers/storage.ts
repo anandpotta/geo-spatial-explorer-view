@@ -1,22 +1,11 @@
+
 import { LocationMarker } from './types';
-import { getCurrentUser } from '../../services/auth-service';
 import { toast } from 'sonner';
-import { syncMarkersWithBackend, fetchMarkersFromBackend, deleteMarkerFromBackend } from './sync';
-import { getConnectionStatus } from '../api-service';
 
 export function getSavedMarkers(): LocationMarker[] {
-  const currentUser = getCurrentUser();
   const markersJson = localStorage.getItem('savedMarkers');
   
   if (!markersJson) {
-    // Try to fetch from backend first if localStorage is empty
-    const { isOnline, isBackendAvailable } = getConnectionStatus();
-    if (isOnline && isBackendAvailable) {
-      fetchMarkersFromBackend().catch(err => {
-        // Silent fail for initial load
-        console.log('Could not fetch markers from backend, using local storage');
-      });
-    }
     return [];
   }
   
@@ -28,11 +17,6 @@ export function getSavedMarkers(): LocationMarker[] {
       ...marker,
       createdAt: new Date(marker.createdAt)
     }));
-    
-    // Filter markers by user if a user is logged in
-    if (currentUser) {
-      markers = markers.filter((marker: LocationMarker) => marker.userId === currentUser.id);
-    }
     
     // Deduplicate markers by ID - this helps prevent duplicates
     const uniqueMarkers = new Map<string, LocationMarker>();
@@ -48,17 +32,10 @@ export function getSavedMarkers(): LocationMarker[] {
 }
 
 export function saveMarker(marker: LocationMarker): void {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot save marker: No user is logged in');
-    toast.error('Please log in to save your markers');
-    return;
-  }
-  
-  // Ensure the marker has a user ID
+  // Ensure the marker has a user ID (use anonymous for no auth)
   const markerWithUser = {
     ...marker,
-    userId: currentUser.id
+    userId: marker.userId || 'anonymous'
   };
   
   // Get existing markers and deduplicate before saving
@@ -85,26 +62,10 @@ export function saveMarker(marker: LocationMarker): void {
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('markersUpdated'));
   
-  // Only attempt to sync if we're online
-  const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable) {
-    syncMarkersWithBackend(Array.from(uniqueMarkers.values()))
-      .catch(err => {
-        if (navigator.onLine) {
-          console.warn('Failed to sync markers, will retry later:', err);
-        }
-      });
-  }
+  console.log('Marker saved successfully:', markerWithUser.id);
 }
 
 export function renameMarker(id: string, newName: string): void {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot rename marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
-    return;
-  }
-  
   const savedMarkers = getSavedMarkers();
   const markerIndex = savedMarkers.findIndex(marker => marker.id === id);
   
@@ -126,28 +87,10 @@ export function renameMarker(id: string, newName: string): void {
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('markersUpdated'));
   
-  // Only attempt to sync if we're online
-  const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable) {
-    syncMarkersWithBackend(savedMarkers)
-      .catch(err => {
-        if (navigator.onLine) {
-          console.warn('Failed to sync renamed marker, will retry later:', err);
-        }
-      });
-  }
-  
   toast.success('Location renamed successfully');
 }
 
 export function deleteMarker(id: string): void {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot delete marker: No user is logged in');
-    toast.error('Please log in to manage your markers');
-    return;
-  }
-  
   const savedMarkers = getSavedMarkers();
   const filteredMarkers = savedMarkers.filter(marker => marker.id !== id);
   localStorage.setItem('savedMarkers', JSON.stringify(filteredMarkers));
@@ -156,14 +99,5 @@ export function deleteMarker(id: string): void {
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('markersUpdated'));
   
-  // Only attempt to sync delete if we're online
-  const { isOnline, isBackendAvailable } = getConnectionStatus();
-  if (isOnline && isBackendAvailable) {
-    deleteMarkerFromBackend(id)
-      .catch(err => {
-        if (navigator.onLine) {
-          console.warn('Failed to delete marker from backend, will retry later:', err);
-        }
-      });
-  }
+  toast.success('Location deleted successfully');
 }

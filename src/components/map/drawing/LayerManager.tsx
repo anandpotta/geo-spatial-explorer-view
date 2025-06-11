@@ -43,12 +43,14 @@ const LayerManager = ({
     imageControlRoots: imageControlRoots.current,
     onRegionClick: (drawing: DrawingData) => {
       console.log('Region clicked in LayerManager:', drawing.id);
-      // Always trigger upload request for region clicks
+      
+      // First, call the upload request handler to show the upload screen
       if (onUploadRequest) {
-        console.log('Calling onUploadRequest for drawing:', drawing.id);
+        console.log('Triggering upload request for drawing:', drawing.id);
         onUploadRequest(drawing.id);
       }
-      // Also call the original region click handler
+      
+      // Then call the original region click handler for any additional logic
       if (onRegionClick) {
         console.log('Calling onRegionClick for drawing:', drawing.id);
         onRegionClick(drawing);
