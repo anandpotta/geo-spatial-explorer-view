@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -102,34 +101,33 @@ export const createLayerFromDrawing = async ({
     if (isMounted && layer) {
       featureGroup.addLayer(layer);
       
-      // Immediately try to add drawing attributes
-      console.log(`Adding layer for drawing ${drawing.id} to feature group, attempting to add attributes`);
+      console.log(`Adding layer for drawing ${drawing.id} to feature group`);
       
-      // Add drawing ID attributes immediately after adding to map
-      layer.eachLayer((l: L.Layer) => {
-        if (l && isMounted) {
-          // Add drawing ID attribute to the SVG path for identification
-          addDrawingAttributesToLayer(l, drawing.id);
-        }
-      });
-      
-      // THEN add controls and event handlers after a short delay to ensure DOM is ready
+      // Wait for the layer to be fully added to the DOM before adding attributes
       setTimeout(() => {
+        if (!isMounted) return;
+        
         layer.eachLayer((l: L.Layer) => {
           if (l && isMounted) {
+            console.log(`Attempting to add drawing attributes for ${drawing.id}`);
+            addDrawingAttributesToLayer(l, drawing.id);
+            
             // Verify the attributes were added
             const pathElement = (l as any)._path;
             if (pathElement) {
               const drawingId = pathElement.getAttribute('data-drawing-id');
-              console.log(`Verifying drawing ID attribute: ${drawingId} for drawing ${drawing.id}`);
-              
-              // If attributes weren't added, try again
-              if (!drawingId) {
-                console.log(`Attributes missing, retrying for drawing ${drawing.id}`);
-                addDrawingAttributesToLayer(l, drawing.id);
-              }
+              console.log(`Drawing ID attribute verification: ${drawingId} for drawing ${drawing.id}`);
             }
-            
+          }
+        });
+      }, 500); // Increased delay to ensure DOM is ready
+      
+      // Add controls and event handlers after attributes are set
+      setTimeout(() => {
+        if (!isMounted) return;
+        
+        layer.eachLayer((l: L.Layer) => {
+          if (l && isMounted) {
             // Add controls when in edit mode
             if (onRemoveShape && onUploadRequest) {
               createLayerControls({
@@ -150,7 +148,7 @@ export const createLayerFromDrawing = async ({
             setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
           }
         });
-      }, 300); // Increased delay to ensure DOM is ready
+      }, 800); // Even longer delay for controls
       
       // Check if we've recently applied a floor plan to this drawing
       const lastApplied = floorPlanApplied.get(drawing.id) || 0;
@@ -190,7 +188,7 @@ export const createLayerFromDrawing = async ({
                 }
               });
             }
-          }, 400 * attempt); // Increased base delay
+          }, 600 * attempt); // Increased base delay
         };
         
         attemptApplication();

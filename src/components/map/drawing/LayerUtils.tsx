@@ -109,7 +109,7 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
 };
 
 /**
- * Adds drawing ID attributes to SVG paths in a layer - Enhanced version with multiple retry attempts
+ * Adds drawing ID attributes to SVG paths in a layer - Enhanced version with DOM polling
  */
 export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
   if (!layer) return;
@@ -119,7 +119,7 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
     (layer as any).drawingId = drawingId;
     
     // Function to add attributes to a path element
-    const addAttributesToPath = (path: SVGPathElement) => {
+    const addAttributesToPath = (path: SVGPathElement): boolean => {
       if (!path) return false;
       
       console.log(`Adding drawing ID ${drawingId} to SVG path element`);
@@ -134,7 +134,8 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       path.classList.add('visible-path-stroke');
       
       // Add a unique identifier for the path
-      path.setAttribute('data-path-uid', `uid-${drawingId}-${Date.now()}`);
+      const uid = `uid-${drawingId}-${Date.now()}`;
+      path.setAttribute('data-path-uid', uid);
       
       // Store drawing metadata
       path.setAttribute('data-drawing-type', 'user-drawn');
@@ -149,58 +150,72 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       console.log(`Successfully added drawing attributes to path for ${drawingId}:`, {
         'data-drawing-id': path.getAttribute('data-drawing-id'),
         'data-path-uid': path.getAttribute('data-path-uid'),
-        id: path.getAttribute('id')
+        'id': path.getAttribute('id')
       });
       
       return true;
     };
 
-    // Function to attempt adding attributes with retry logic
-    const attemptAddAttributes = (attempt = 1, maxAttempts = 5) => {
-      console.log(`Attempt ${attempt} to add attributes for drawing ${drawingId}`);
+    // Function to poll for the DOM element until it's available
+    const pollForPathElement = (maxAttempts = 20, interval = 100) => {
+      let attempts = 0;
       
-      let success = false;
-      
-      // Check for SVG path element in the layer
-      if ((layer as any)._path) {
-        success = addAttributesToPath((layer as any)._path);
-      }
-
-      // If it's a feature group, process each layer
-      if (typeof (layer as any).eachLayer === 'function') {
-        (layer as any).eachLayer((subLayer: L.Layer) => {
-          // Store drawing ID on sublayer too
-          (subLayer as any).drawingId = drawingId;
-          
-          if ((subLayer as any)._path) {
-            const subSuccess = addAttributesToPath((subLayer as any)._path);
-            success = success || subSuccess;
+      const poll = () => {
+        attempts++;
+        console.log(`Polling for path element, attempt ${attempts} for drawing ${drawingId}`);
+        
+        let found = false;
+        
+        // Check for SVG path element in the layer
+        if ((layer as any)._path) {
+          const pathElement = (layer as any)._path;
+          if (pathElement && pathElement.tagName === 'path') {
+            found = addAttributesToPath(pathElement);
+            if (found) {
+              console.log(`Successfully found and processed path on attempt ${attempts}`);
+              return;
+            }
           }
-        });
-      }
+        }
+
+        // If it's a feature group, process each layer
+        if (typeof (layer as any).eachLayer === 'function') {
+          (layer as any).eachLayer((subLayer: L.Layer) => {
+            // Store drawing ID on sublayer too
+            (subLayer as any).drawingId = drawingId;
+            
+            if ((subLayer as any)._path) {
+              const pathElement = (subLayer as any)._path;
+              if (pathElement && pathElement.tagName === 'path') {
+                const success = addAttributesToPath(pathElement);
+                if (success) found = true;
+              }
+            }
+          });
+        }
+        
+        // If we didn't find the element and haven't reached max attempts, try again
+        if (!found && attempts < maxAttempts) {
+          setTimeout(poll, interval);
+        } else if (!found) {
+          console.warn(`Failed to find path element after ${maxAttempts} attempts for drawing ${drawingId}`);
+        }
+      };
       
-      // If we didn't succeed and haven't reached max attempts, try again
-      if (!success && attempt < maxAttempts) {
-        setTimeout(() => {
-          attemptAddAttributes(attempt + 1, maxAttempts);
-        }, 100 * attempt); // Increasing delay
-      } else if (success) {
-        console.log(`Successfully added attributes on attempt ${attempt}`);
-      } else {
-        console.warn(`Failed to add attributes after ${maxAttempts} attempts for drawing ${drawingId}`);
-      }
+      // Start polling immediately
+      poll();
     };
     
-    // Start the attempt process
-    attemptAddAttributes();
+    // Start the polling process
+    pollForPathElement();
     
     // Also set up an event listener to catch when the path is actually rendered
     if ((layer as any).on) {
       (layer as any).on('add', () => {
-        console.log(`Layer 'add' event fired for drawing ${drawingId}, attempting to add attributes`);
+        console.log(`Layer 'add' event fired for drawing ${drawingId}, starting attribute polling`);
         setTimeout(() => {
-          attemptAddAttributes(1, 3); // Fewer attempts on the add event
-        }, 50);
+          pollForPathElement(10, 50); // Fewer attempts with shorter intervals on the add event
+        }, 100);
       });
     }
     
