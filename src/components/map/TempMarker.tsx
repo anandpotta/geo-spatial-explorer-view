@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -22,15 +23,15 @@ const TempMarker: React.FC<TempMarkerProps> = ({
 }) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [markerReady, setMarkerReady] = useState(false);
-  // Keep tooltip completely separate from markerName prop
-  const [tooltipName, setTooltipName] = useState('New Location');
+  // Track the current input value for real-time tooltip updates
+  const [currentInputValue, setCurrentInputValue] = useState(markerName || 'New Location');
   const markerId = `temp-marker-${position[0]}-${position[1]}`;
   const initializedRef = useRef(false);
 
-  // Initialize tooltip name only once when component mounts
+  // Initialize current input value only once when component mounts
   useEffect(() => {
     if (!initializedRef.current) {
-      setTooltipName(markerName || 'New Location');
+      setCurrentInputValue(markerName || 'New Location');
       initializedRef.current = true;
     }
   }, []);
@@ -73,10 +74,6 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   
   // Custom save handler to update tooltip only when saving
   const handleSave = () => {
-    // Update the tooltip with the final name only when saving
-    const finalName = markerName.trim() || 'Unnamed Location';
-    setTooltipName(finalName);
-    
     // Clean up the marker DOM elements before saving
     const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
     tempIcons.forEach(icon => {
@@ -87,6 +84,11 @@ const TempMarker: React.FC<TempMarkerProps> = ({
     
     // Call the original save handler
     onSave();
+  };
+
+  // Handle real-time input updates for tooltip
+  const handleInputUpdate = (value: string) => {
+    setCurrentInputValue(value || 'New Location');
   };
 
   // Set up marker references
@@ -131,14 +133,16 @@ const TempMarker: React.FC<TempMarkerProps> = ({
         markerType={markerType}
         setMarkerType={setMarkerType}
         onSave={handleSave}
+        onInputUpdate={handleInputUpdate}
       />
       <Tooltip
         direction="top"
         offset={[0, -10]}
         opacity={0.9}
         permanent={true}
+        key={`tooltip-${currentInputValue}`}
       >
-        <span className="font-medium">{tooltipName}</span>
+        <span className="font-medium">{currentInputValue}</span>
       </Tooltip>
     </Marker>
   );

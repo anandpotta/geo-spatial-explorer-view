@@ -14,6 +14,7 @@ interface NewMarkerFormProps {
   isEditing?: boolean;
   existingMarkerId?: string;
   onRename?: (id: string, newName: string) => void;
+  onInputUpdate?: (value: string) => void;
 }
 
 const NewMarkerForm = ({
@@ -24,7 +25,8 @@ const NewMarkerForm = ({
   onSave,
   isEditing = false,
   existingMarkerId,
-  onRename
+  onRename,
+  onInputUpdate
 }: NewMarkerFormProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState(markerName || '');
@@ -50,9 +52,12 @@ const NewMarkerForm = ({
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
-    // DO NOT update parent state on every keystroke - only update local state
+    // Update tooltip in real-time if callback is provided
+    if (onInputUpdate) {
+      onInputUpdate(newValue);
+    }
     console.log('Input changed to:', newValue);
-  }, []);
+  }, [onInputUpdate]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
