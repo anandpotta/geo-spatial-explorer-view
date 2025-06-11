@@ -1,36 +1,66 @@
 
 import { useCallback } from 'react';
+import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
+import { setCurrentDrawingContext, applyDrawingIdToMarkedPaths } from '@/components/map/drawing/LayerAttributeManager';
 
-export function useHandleShapeCreation(onCreated: (shape: any) => void, onPathsUpdated: (paths: string[]) => void, svgPaths: string[]) {
-  
+export function useHandleShapeCreation(
+  onCreated: (shape: any) => void,
+  onPathsUpdated?: (paths: string[]) => void,
+  svgPaths?: string[]
+) {
   const handleCreatedWrapper = useCallback((shape: any) => {
-    // No auth check needed - allow all shape creation
-    const wrappedHandler = createShapeCreationHandler({
-      onCreated,
-      onPathsUpdated,
-      svgPaths
-    });
+    console.log('handleShapeCreated called with shape type:', shape.layerType);
     
-    wrappedHandler(shape);
+    try {
+      // Set drawing context immediately when shape is created
+      const drawingId = shape.layer?.drawingId || `drawing-${Date.now()}`;
+      console.log(`Setting drawing context for new shape: ${drawingId}`);
+      
+      // Set the context before any processing
+      setCurrentDrawingContext(drawingId);
+      
+      // Store the drawing ID on the layer
+      if (shape.layer) {
+        (shape.layer as any).drawingId = drawingId;
+      }
+      
+      // Apply attributes to any marked paths immediately
+      setTimeout(() => {
+        applyDrawingIdToMarkedPaths(drawingId);
+      }, 100);
+      
+      // Handle different shape types
+      if (shape.layerType === 'marker') {
+        console.log('Creating marker shape');
+        // Handle marker creation if needed
+        onCreated(shape);
+      } else {
+        console.log('Creating polygon shape - no marker creation');
+        
+        // Save the drawing
+        const drawingData = saveDrawing(shape);
+        
+        if (drawingData) {
+          // Apply attributes again with the actual drawing ID
+          setTimeout(() => {
+            applyDrawingIdToMarkedPaths(drawingData.id);
+          }, 200);
+        }
+        
+        onCreated(shape);
+      }
+      
+      // Update SVG paths if callback provided
+      if (onPathsUpdated && svgPaths) {
+        onPathsUpdated(svgPaths);
+      }
+      
+    } catch (error) {
+      console.error('Error in handleCreatedWrapper:', error);
+      toast.error('Failed to create shape');
+    }
   }, [onCreated, onPathsUpdated, svgPaths]);
 
-  return {
-    handleCreatedWrapper
-  };
-}
-
-function createShapeCreationHandler({ onCreated, onPathsUpdated, svgPaths }: any) {
-  return (shape: any) => {
-    // Implementation from original ShapeCreationHandler.tsx
-    if (onCreated) {
-      onCreated(shape);
-    }
-    
-    // Update paths if needed
-    if (onPathsUpdated && shape.svgPath) {
-      const updatedPaths = [...svgPaths, shape.svgPath];
-      onPathsUpdated(updatedPaths);
-    }
-  };
+  return { handleCreatedWrapper };
 }

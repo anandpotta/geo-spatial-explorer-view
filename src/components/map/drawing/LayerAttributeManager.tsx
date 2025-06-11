@@ -114,15 +114,22 @@ export const setupDrawingPathObserver = (): (() => void) => {
         if (node instanceof SVGPathElement) {
           // Check if this is a drawing path that needs attributes
           if (node.classList.contains('leaflet-interactive') && 
-              node.classList.contains('leaflet-drawing') &&
               !node.getAttribute('data-drawing-id')) {
             
             console.log('Found new drawing path without attributes:', node);
             
-            // We'll need to get the drawing ID from somewhere
-            // For now, we'll add a temporary marker so we can find it later
+            // Mark it and store creation time for later identification
             node.setAttribute('data-needs-drawing-id', 'true');
             node.setAttribute('data-created-at', Date.now().toString());
+            
+            // Try to apply attributes immediately if we have a recent drawing context
+            const recentDrawingId = (window as any).lastCreatedDrawingId;
+            if (recentDrawingId) {
+              console.log(`Applying immediate attributes with drawing ID: ${recentDrawingId}`);
+              node.removeAttribute('data-needs-drawing-id');
+              node.removeAttribute('data-created-at');
+              applyAttributesToPath(node, recentDrawingId);
+            }
           }
         }
       });
@@ -146,15 +153,47 @@ export const setupDrawingPathObserver = (): (() => void) => {
  * Applies drawing ID to paths that were marked as needing it
  */
 export const applyDrawingIdToMarkedPaths = (drawingId: string): void => {
+  console.log(`Looking for marked paths to apply drawing ID: ${drawingId}`);
+  
   const paths = document.querySelectorAll('path[data-needs-drawing-id="true"]');
+  console.log(`Found ${paths.length} paths marked as needing drawing ID`);
   
   paths.forEach((path) => {
     if (path instanceof SVGPathElement) {
+      console.log(`Applying drawing ID ${drawingId} to marked path`);
       path.removeAttribute('data-needs-drawing-id');
       path.removeAttribute('data-created-at');
       applyAttributesToPath(path, drawingId);
     }
   });
+  
+  // Also check for any recent paths without our attributes
+  const allPaths = document.querySelectorAll('.leaflet-overlay-pane path:not([data-drawing-id])');
+  console.log(`Found ${allPaths.length} additional paths without drawing ID`);
+  
+  allPaths.forEach((path) => {
+    if (path instanceof SVGPathElement && 
+        path.classList.contains('leaflet-interactive')) {
+      console.log(`Applying drawing ID ${drawingId} to unmarked interactive path`);
+      applyAttributesToPath(path, drawingId);
+    }
+  });
+};
+
+/**
+ * Sets the current drawing context for immediate application
+ */
+export const setCurrentDrawingContext = (drawingId: string): void => {
+  (window as any).lastCreatedDrawingId = drawingId;
+  console.log(`Set current drawing context to: ${drawingId}`);
+  
+  // Clear the context after a short delay
+  setTimeout(() => {
+    if ((window as any).lastCreatedDrawingId === drawingId) {
+      (window as any).lastCreatedDrawingId = null;
+      console.log(`Cleared drawing context for: ${drawingId}`);
+    }
+  }, 2000);
 };
 
 /**
@@ -165,6 +204,9 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
 
   try {
     console.log(`Adding drawing attributes for ${drawingId}`);
+    
+    // Set the current drawing context for immediate application
+    setCurrentDrawingContext(drawingId);
     
     // Store drawing ID on the layer object itself
     (layer as any).drawingId = drawingId;
