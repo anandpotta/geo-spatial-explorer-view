@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { EnhancedLocation } from '@/utils/enhanced-geo-utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -109,13 +110,6 @@ function StandaloneMapComponent({
     toast.success(`Navigating to ${location.label}`);
   }, [onLocationChange]);
 
-  // Handle map ready
-  const handleMapReady = useCallback((map: any) => {
-    console.log('Standalone map ready');
-    mapRef.current = map;
-    setIsMapReady(true);
-  }, []);
-
   // Handle clear selected location
   const handleClearSelectedLocation = useCallback(() => {
     setSelectedLocation(undefined);
@@ -191,11 +185,9 @@ function StandaloneMapComponent({
 
   // Convert EnhancedLocation back to the format expected by LeafletMap
   const leafletLocation = selectedLocation ? {
-    id: selectedLocation.id,
-    label: selectedLocation.label,
     x: selectedLocation.x,
     y: selectedLocation.y,
-    raw: selectedLocation.raw
+    label: selectedLocation.label
   } : undefined;
 
   return (
@@ -216,9 +208,8 @@ function StandaloneMapComponent({
       {/* Main map component */}
       <LeafletMap
         selectedLocation={leafletLocation}
-        onMapReady={handleMapReady}
         onLocationSelect={handleInternalLocationSelect}
-        onClearSelectedLocation={handleClearSelectedLocation}
+        activeTool={null}
       />
     </div>
   );

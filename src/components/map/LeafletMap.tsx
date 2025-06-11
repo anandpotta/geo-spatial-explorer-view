@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -20,7 +21,7 @@ import { DrawingControlsRef } from '@/hooks/useDrawingControls';
 import MarkersList from './MarkersList';
 
 interface LeafletMapProps {
-  selectedLocation?: { x: number; y: number };
+  selectedLocation?: { x: number; y: number; label?: string };
   tempMarker?: { x: number; y: number };
   userLocation?: { x: number; y: number };
   activeTool: string | null;
@@ -51,23 +52,34 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const { savedLocations } = useSavedLocations();
   const { savedDrawings } = useDrawings();
   
-  const { handleMarkerCreation, handleMarkerDeletion, handleMarkerRename } = useMarkerHandlers(onMarkerCreate);
+  // Create a mock mapState object for useMarkerHandlers
+  const mapState = {
+    activeTool,
+    tempMarker,
+    selectedLocation,
+    setTempMarker: () => {},
+    setMarkerName: () => {},
+    setCurrentDrawing: () => {}
+  };
+  
+  const { handleMapClick, handleShapeCreated } = useMarkerHandlers(mapState);
   
   useMapInitialization(mapRef, savedLocations, savedDrawings);
   useMapEvents(mapInstance, selectedLocation);
   
   const { handleUploadToDrawing } = useDrawingFileUpload();
 
-  const handleMapClick = useCallback((latlng: L.LatLng) => {
+  const handleMapClickWrapper = useCallback((latlng: L.LatLng) => {
     if (activeTool === 'marker') {
-      handleMarkerCreation(latlng);
+      handleMapClick(latlng);
     } else if (onLocationSelect) {
       onLocationSelect({ x: latlng.lng, y: latlng.lat });
     }
-  }, [activeTool, handleMarkerCreation, onLocationSelect]);
+  }, [activeTool, handleMapClick, onLocationSelect]);
 
-  const handleShapeCreated = (shape: any) => {
+  const handleShapeCreatedWrapper = (shape: any) => {
     console.log('Shape Created:', shape);
+    handleShapeCreated(shape);
   };
 
   const handleRegionClick = (drawing: DrawingData) => {
@@ -90,7 +102,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         ref={mapRef}
         zoomControl={true}
         attributionControl={true}
-        whenCreated={setMapInstance}
+        whenReady={setMapInstance}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -98,25 +110,43 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         />
         
         <MapEvents 
-          onMapClick={handleMapClick} 
+          onMapClick={handleMapClickWrapper} 
           onPathClick={handlePathClick}
         />
 
         {userLocation && (
-          <UserMarker position={[userLocation.y, userLocation.x]} />
+          <UserMarker 
+            marker={{
+              id: 'user-location',
+              name: 'Your Location',
+              position: [userLocation.y, userLocation.x],
+              type: 'pin'
+            }}
+            onDelete={() => {}}
+          />
         )}
 
         {tempMarker && (
-          <TempMarker position={[tempMarker.y, tempMarker.x]} />
+          <TempMarker 
+            position={[tempMarker.y, tempMarker.x]}
+            markerName="New Location"
+            setMarkerName={() => {}}
+            markerType="pin"
+            setMarkerType={() => {}}
+            onSave={() => {}}
+          />
         )}
 
         {selectedLocation && (
-          <SelectedLocationMarker position={[selectedLocation.y, selectedLocation.x]} />
+          <SelectedLocationMarker 
+            position={[selectedLocation.y, selectedLocation.x]}
+            label={selectedLocation.label || 'Selected Location'}
+          />
         )}
         
         <DrawingControls
           ref={drawingControlsRef}
-          onCreated={handleShapeCreated}
+          onCreated={handleShapeCreatedWrapper}
           activeTool={activeTool}
           onRegionClick={handleRegionClick}
           onClearAll={onClearAll}
@@ -125,7 +155,16 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
           onPathsUpdated={onPathsUpdated}
         />
         
-        <MarkersList />
+        <MarkersList 
+          markers={savedLocations}
+          tempMarker={tempMarker ? [tempMarker.y, tempMarker.x] : null}
+          markerName="New Location"
+          markerType="pin"
+          onDeleteMarker={() => {}}
+          onSaveMarker={() => {}}
+          setMarkerName={() => {}}
+          setMarkerType={() => {}}
+        />
       </MapContainer>
     </div>
   );
