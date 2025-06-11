@@ -109,7 +109,7 @@ export const createGeoJSONLayer = (drawing: DrawingData, options: L.PathOptions)
 };
 
 /**
- * Adds drawing ID attributes to SVG paths in a layer - Enhanced version with DOM polling
+ * Adds drawing ID attributes to SVG paths in a layer - Enhanced version with immediate DOM manipulation
  */
 export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
   if (!layer) return;
@@ -118,11 +118,13 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
     // Store drawing ID on the layer object itself
     (layer as any).drawingId = drawingId;
     
+    console.log(`Starting attribute addition for drawing ${drawingId}`);
+    
     // Function to add attributes to a path element
     const addAttributesToPath = (path: SVGPathElement): boolean => {
       if (!path) return false;
       
-      console.log(`Adding drawing ID ${drawingId} to SVG path element`);
+      console.log(`Adding drawing ID ${drawingId} to SVG path element:`, path);
       
       // Add multiple ways to identify this path
       path.setAttribute('data-drawing-id', drawingId);
@@ -150,71 +152,95 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
       console.log(`Successfully added drawing attributes to path for ${drawingId}:`, {
         'data-drawing-id': path.getAttribute('data-drawing-id'),
         'data-path-uid': path.getAttribute('data-path-uid'),
-        'id': path.getAttribute('id')
+        'id': path.getAttribute('id'),
+        'classes': path.className
       });
       
       return true;
     };
 
-    // Function to poll for the DOM element until it's available
-    const pollForPathElement = (maxAttempts = 20, interval = 100) => {
-      let attempts = 0;
+    // Try immediate access first
+    const processLayer = (targetLayer: any) => {
+      if (targetLayer._path && targetLayer._path.tagName === 'path') {
+        return addAttributesToPath(targetLayer._path);
+      }
+      return false;
+    };
+
+    // Process the main layer
+    let processed = processLayer(layer);
+    
+    // If it's a feature group, process each sublayer
+    if (!processed && typeof (layer as any).eachLayer === 'function') {
+      (layer as any).eachLayer((subLayer: L.Layer) => {
+        (subLayer as any).drawingId = drawingId;
+        const success = processLayer(subLayer);
+        if (success) processed = true;
+      });
+    }
+
+    // If immediate processing didn't work, use MutationObserver to watch for DOM changes
+    if (!processed) {
+      console.log(`Immediate processing failed for ${drawingId}, setting up MutationObserver`);
       
-      const poll = () => {
-        attempts++;
-        console.log(`Polling for path element, attempt ${attempts} for drawing ${drawingId}`);
-        
+      const observer = new MutationObserver((mutations) => {
         let found = false;
         
-        // Check for SVG path element in the layer
-        if ((layer as any)._path) {
-          const pathElement = (layer as any)._path;
-          if (pathElement && pathElement.tagName === 'path') {
-            found = addAttributesToPath(pathElement);
-            if (found) {
-              console.log(`Successfully found and processed path on attempt ${attempts}`);
-              return;
-            }
-          }
-        }
-
-        // If it's a feature group, process each layer
-        if (typeof (layer as any).eachLayer === 'function') {
-          (layer as any).eachLayer((subLayer: L.Layer) => {
-            // Store drawing ID on sublayer too
-            (subLayer as any).drawingId = drawingId;
-            
-            if ((subLayer as any)._path) {
-              const pathElement = (subLayer as any)._path;
-              if (pathElement && pathElement.tagName === 'path') {
-                const success = addAttributesToPath(pathElement);
-                if (success) found = true;
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node as Element;
+                
+                // Check if it's a path element
+                if (element.tagName === 'path') {
+                  console.log(`MutationObserver found path element for ${drawingId}`);
+                  const success = addAttributesToPath(element as SVGPathElement);
+                  if (success) found = true;
+                }
+                
+                // Check child path elements
+                const pathElements = element.querySelectorAll('path');
+                pathElements.forEach(pathEl => {
+                  console.log(`MutationObserver found child path element for ${drawingId}`);
+                  const success = addAttributesToPath(pathEl as SVGPathElement);
+                  if (success) found = true;
+                });
               }
-            }
-          });
-        }
+            });
+          }
+        });
         
-        // If we didn't find the element and haven't reached max attempts, try again
-        if (!found && attempts < maxAttempts) {
-          setTimeout(poll, interval);
-        } else if (!found) {
-          console.warn(`Failed to find path element after ${maxAttempts} attempts for drawing ${drawingId}`);
+        if (found) {
+          console.log(`MutationObserver successfully processed ${drawingId}, disconnecting`);
+          observer.disconnect();
         }
-      };
+      });
       
-      // Start polling immediately
-      poll();
-    };
-    
-    // Start the polling process
-    pollForPathElement();
+      // Start observing the document for new elements
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+      
+      // Disconnect after 5 seconds to prevent memory leaks
+      setTimeout(() => {
+        observer.disconnect();
+        console.log(`MutationObserver timeout for ${drawingId}`);
+      }, 5000);
+    }
     
     // Also set up an event listener to catch when the path is actually rendered
     if ((layer as any).on) {
       (layer as any).on('add', () => {
-        console.log(`Layer 'add' event fired for drawing ${drawingId}, starting attribute polling`);
+        console.log(`Layer 'add' event fired for drawing ${drawingId}, processing immediately`);
         setTimeout(() => {
-          pollForPathElement(10, 50); // Fewer attempts with shorter intervals on the add event
+          processLayer(layer);
+          if (typeof (layer as any).eachLayer === 'function') {
+            (layer as any).eachLayer((subLayer: L.Layer) => {
+              processLayer(subLayer);
+            });
+          }
         }, 100);
       });
     }

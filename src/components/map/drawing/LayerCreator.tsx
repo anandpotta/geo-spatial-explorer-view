@@ -103,24 +103,42 @@ export const createLayerFromDrawing = async ({
       
       console.log(`Adding layer for drawing ${drawing.id} to feature group`);
       
-      // Wait for the layer to be fully added to the DOM before adding attributes
+      // Apply drawing attributes immediately after adding to feature group
+      layer.eachLayer((l: L.Layer) => {
+        if (l && isMounted) {
+          console.log(`Immediately applying drawing attributes for ${drawing.id}`);
+          addDrawingAttributesToLayer(l, drawing.id);
+        }
+      });
+      
+      // Also apply with a short delay to catch any delayed rendering
       setTimeout(() => {
         if (!isMounted) return;
         
         layer.eachLayer((l: L.Layer) => {
           if (l && isMounted) {
-            console.log(`Attempting to add drawing attributes for ${drawing.id}`);
+            console.log(`Applying drawing attributes with delay for ${drawing.id}`);
             addDrawingAttributesToLayer(l, drawing.id);
             
-            // Verify the attributes were added
+            // Force verification
             const pathElement = (l as any)._path;
             if (pathElement) {
               const drawingId = pathElement.getAttribute('data-drawing-id');
-              console.log(`Drawing ID attribute verification: ${drawingId} for drawing ${drawing.id}`);
+              console.log(`Drawing ID attribute verification after delay: ${drawingId} for drawing ${drawing.id}`);
+              
+              // If still not applied, force it
+              if (!drawingId) {
+                console.log(`Force applying attributes directly to path element for ${drawing.id}`);
+                pathElement.setAttribute('data-drawing-id', drawing.id);
+                pathElement.setAttribute('id', `drawing-path-${drawing.id}`);
+                pathElement.setAttribute('data-path-uid', `uid-${drawing.id}-${Date.now()}`);
+                pathElement.classList.add('drawing-path-' + drawing.id.substring(0, 8));
+                pathElement.classList.add('visible-path-stroke');
+              }
             }
           }
         });
-      }, 500); // Increased delay to ensure DOM is ready
+      }, 200);
       
       // Add controls and event handlers after attributes are set
       setTimeout(() => {
@@ -148,7 +166,7 @@ export const createLayerFromDrawing = async ({
             setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
           }
         });
-      }, 800); // Even longer delay for controls
+      }, 400);
       
       // Check if we've recently applied a floor plan to this drawing
       const lastApplied = floorPlanApplied.get(drawing.id) || 0;
