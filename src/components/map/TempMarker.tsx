@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -10,7 +9,7 @@ interface TempMarkerProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
+  onSave: (nameOverride?: string) => void;
 }
 
 const TempMarker: React.FC<TempMarkerProps> = ({
@@ -73,7 +72,7 @@ const TempMarker: React.FC<TempMarkerProps> = ({
   };
   
   // Custom save handler to update tooltip only when saving
-  const handleSave = () => {
+  const handleSave = (nameOverride?: string) => {
     // Clean up the marker DOM elements before saving
     const tempIcons = document.querySelectorAll(`.leaflet-marker-icon[data-marker-id="${markerId}"], .leaflet-marker-shadow[data-marker-id="${markerId}"]`);
     tempIcons.forEach(icon => {
@@ -82,8 +81,8 @@ const TempMarker: React.FC<TempMarkerProps> = ({
       }
     });
     
-    // Call the original save handler
-    onSave();
+    // Call the original save handler with the name override
+    onSave(nameOverride);
   };
 
   // Handle real-time input updates for tooltip

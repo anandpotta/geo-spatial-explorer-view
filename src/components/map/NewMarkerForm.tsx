@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ interface NewMarkerFormProps {
   setMarkerName: (name: string) => void;
   markerType: 'pin' | 'area' | 'building';
   setMarkerType: (type: 'pin' | 'area' | 'building') => void;
-  onSave: () => void;
+  onSave: (nameOverride?: string) => void;
   isEditing?: boolean;
   existingMarkerId?: string;
   onRename?: (id: string, newName: string) => void;
@@ -63,24 +62,19 @@ const NewMarkerForm = ({
   const performSave = useCallback((nameToSave: string) => {
     console.log('Performing save with name:', nameToSave);
     
-    // Update parent state with the final name at save time
-    setMarkerName(nameToSave);
-    
     // Update tooltip immediately
     if (onInputUpdate) {
       onInputUpdate(nameToSave);
     }
     
-    // Then perform the actual save operation with a slight delay to ensure parent state is updated
+    // Then perform the actual save operation, passing the name directly
     if (isEditing && existingMarkerId && onRename) {
       onRename(existingMarkerId, nameToSave);
     } else {
-      // Use a longer delay to ensure parent state is fully updated
-      setTimeout(() => {
-        onSave();
-      }, 50);
+      // Pass the name directly to onSave instead of relying on parent state
+      onSave(nameToSave);
     }
-  }, [isEditing, existingMarkerId, onRename, onSave, setMarkerName, onInputUpdate]);
+  }, [isEditing, existingMarkerId, onRename, onSave, onInputUpdate]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {

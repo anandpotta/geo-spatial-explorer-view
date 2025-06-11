@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -76,15 +75,15 @@ export function useMapState(selectedLocation?: Location) {
     };
   }, []);
 
-  const handleSaveMarker = () => {
+  const handleSaveMarker = (nameOverride?: string) => {
     if (!tempMarker) {
       console.log('No temp marker to save');
       return;
     }
     
-    // Use markerName directly - it should already be updated by the form
-    const finalName = markerName.trim() || 'Unnamed Location';
-    console.log('Saving marker with final name:', finalName, 'from markerName state:', markerName);
+    // Use the provided name override or fall back to markerName state
+    const finalName = (nameOverride || markerName).trim() || 'Unnamed Location';
+    console.log('Saving marker with final name:', finalName, 'from nameOverride:', nameOverride, 'markerName state:', markerName);
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
