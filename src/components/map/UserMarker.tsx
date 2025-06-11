@@ -16,21 +16,36 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
   const markerRef = useRef<L.Marker | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [tooltipKey, setTooltipKey] = useState(`tooltip-${marker.id}-${Date.now()}`);
   const [originalPosition, setOriginalPosition] = useState<[number, number]>(marker.position);
-  const [currentMarkerName, setCurrentMarkerName] = useState(marker.name);
+  const [displayName, setDisplayName] = useState(marker.name);
   
   // Create a custom marker ID for DOM element tracking
   const markerId = `marker-${marker.id}`;
 
-  // Update the marker name when the prop changes
+  // Update the display name when the marker name changes
   useEffect(() => {
-    if (marker.name !== currentMarkerName) {
-      setCurrentMarkerName(marker.name);
-      // Force tooltip to re-render with new name
-      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
+    console.log(`Marker ${marker.id} name changed from "${displayName}" to "${marker.name}"`);
+    if (marker.name !== displayName) {
+      setDisplayName(marker.name);
     }
-  }, [marker.name, currentMarkerName, marker.id]);
+  }, [marker.name, displayName, marker.id]);
+
+  // Listen for marker updates from storage
+  useEffect(() => {
+    const handleMarkersUpdated = () => {
+      console.log(`Markers updated event received for marker ${marker.id}`);
+      // Force a re-render by updating the display name
+      setDisplayName(marker.name);
+    };
+
+    window.addEventListener('markersUpdated', handleMarkersUpdated);
+    window.addEventListener('storage', handleMarkersUpdated);
+
+    return () => {
+      window.removeEventListener('markersUpdated', handleMarkersUpdated);
+      window.removeEventListener('storage', handleMarkersUpdated);
+    };
+  }, [marker.id, marker.name]);
 
   const handleDragStart = useCallback((e: L.LeafletEvent) => {
     if (markerRef.current) {
@@ -102,9 +117,6 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
       
       // Dispatch event to update other components
       window.dispatchEvent(new CustomEvent('markersUpdated'));
-      
-      // Update tooltip key to force re-render
-      setTooltipKey(`tooltip-${marker.id}-${Date.now()}`);
     } catch (error) {
       console.error('Error updating marker position:', error);
     }
@@ -174,10 +186,14 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
     }
   };
   
+  // Use displayName and create a unique key that changes when the name changes
+  const markerKey = `marker-${marker.id}-${displayName}`;
+  const tooltipKey = `tooltip-${marker.id}-${displayName}-${Date.now()}`;
+  
   return (
     <Marker 
       position={marker.position} 
-      key={`marker-${marker.id}-${currentMarkerName}`}
+      key={markerKey}
       draggable={true}
       ref={setMarkerInstance}
       eventHandlers={{ 
@@ -199,7 +215,7 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
         opacity={0.9}
         permanent={true}
       >
-        <span className="font-medium">{currentMarkerName}</span>
+        <span className="font-medium">{displayName}</span>
       </Tooltip>
     </Marker>
   );
