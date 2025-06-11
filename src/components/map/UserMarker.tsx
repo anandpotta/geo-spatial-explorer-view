@@ -220,5 +220,3 @@ const UserMarker = ({ marker, onDelete }: UserMarkerProps) => {
 };
 
 export default React.memo(UserMarker);
-
-</edits_to_apply>
