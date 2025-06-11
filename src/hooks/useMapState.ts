@@ -82,8 +82,9 @@ export function useMapState(selectedLocation?: Location) {
       return;
     }
     
+    // Use markerName directly - it should already be updated by the form
     const finalName = markerName.trim() || 'Unnamed Location';
-    console.log('Saving marker with name:', finalName);
+    console.log('Saving marker with final name:', finalName, 'from markerName state:', markerName);
     
     const newMarker: LocationMarker = {
       id: uuidv4(),
