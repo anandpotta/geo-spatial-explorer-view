@@ -23,6 +23,7 @@ interface DrawingControlsProps {
   onRemoveShape?: (drawingId: string) => void;
   onUploadToDrawing?: (drawingId: string, file: File) => void;
   onPathsUpdated?: (paths: string[]) => void;
+  onUploadRequest?: (drawingId: string) => void;
 }
 
 const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({ 
@@ -32,7 +33,8 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   onClearAll, 
   onRemoveShape,
   onUploadToDrawing,
-  onPathsUpdated
+  onPathsUpdated,
+  onUploadRequest
 }: DrawingControlsProps, ref) => {
   const { savedDrawings } = useDrawings();
   const { isAuthenticated, currentUser, checkAuthBeforeAction } = useDrawingAuth();
@@ -69,9 +71,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     getFeatureGroup: () => featureGroupRef.current,
     getDrawTools: () => drawToolsRef.current,
     openFileUploadDialog: (drawingId: string) => {
-      if (!checkAuthBeforeAction('upload files')) {
-        return;
-      }
+      console.log('Opening file upload dialog for drawing:', drawingId);
       openFileUploadDialog(drawingId);
     },
     getSvgPaths: () => {
@@ -114,8 +114,19 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   };
 
   const handleDrawingClick = (drawing: DrawingData) => {
+    console.log('Drawing clicked in DrawingControls:', drawing.id);
     if (onRegionClick) {
       onRegionClick(drawing);
+    }
+  };
+
+  const handleUploadRequestWrapper = (drawingId: string) => {
+    console.log('Upload request received for drawing:', drawingId);
+    if (onUploadRequest) {
+      onUploadRequest(drawingId);
+    } else {
+      // Fallback to opening file dialog directly
+      openFileUploadDialog(drawingId);
     }
   };
 
@@ -134,7 +145,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
             activeTool={activeTool}
             onRegionClick={handleDrawingClick}
             onRemoveShape={handleRemoveShape}
-            onUploadRequest={handleUploadRequest}
+            onUploadRequest={handleUploadRequestWrapper}
           />
         )}
         <DrawToolsWrapper 

@@ -44,14 +44,20 @@ const LayerManager = ({
     onRegionClick: (drawing: DrawingData) => {
       console.log('Region clicked in LayerManager:', drawing.id);
       
-      // First, call the upload request handler to show the upload screen
+      // Immediately trigger the upload request to show the upload screen
       if (onUploadRequest) {
         console.log('Triggering upload request for drawing:', drawing.id);
         onUploadRequest(drawing.id);
-      }
-      
-      // Then call the original region click handler for any additional logic
-      if (onRegionClick) {
+        
+        // Add a small delay to ensure the upload screen is triggered
+        setTimeout(() => {
+          if (onRegionClick) {
+            console.log('Calling onRegionClick for drawing:', drawing.id);
+            onRegionClick(drawing);
+          }
+        }, 50);
+      } else if (onRegionClick) {
+        // Fallback if no upload request handler
         console.log('Calling onRegionClick for drawing:', drawing.id);
         onRegionClick(drawing);
       }
