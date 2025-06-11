@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Location, LocationMarker } from '@/utils/geo-utils';
 import { DrawingData, saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
@@ -78,6 +77,8 @@ export function useMapState(selectedLocation?: Location) {
   const handleSaveMarker = () => {
     if (!tempMarker || !markerName.trim()) return;
     
+    console.log('useMapState: handleSaveMarker called with name:', markerName.trim());
+    
     const newMarker: LocationMarker = {
       id: uuidv4(),
       name: markerName.trim(),
@@ -88,7 +89,7 @@ export function useMapState(selectedLocation?: Location) {
       userId: 'anonymous'
     };
     
-    console.log('Saving marker with name:', newMarker.name);
+    console.log('useMapState: Saving marker with final name:', newMarker.name);
     
     // Save the marker first
     saveMarker(newMarker);
@@ -115,25 +116,26 @@ export function useMapState(selectedLocation?: Location) {
       saveDrawing(safeDrawing);
     }
     
-    // Update the markers state with the new marker BEFORE clearing temp marker
+    // Update the markers state with the new marker IMMEDIATELY
     const updatedMarkers = getSavedMarkers();
+    console.log('useMapState: Updated markers after save:', updatedMarkers.map(m => ({ id: m.id, name: m.name })));
     setMarkers(updatedMarkers);
     
-    // Clear temp marker and reset form after a small delay to ensure the new marker is rendered
+    // Clear temp marker and reset form after markers are updated
     setTimeout(() => {
       setTempMarker(null);
       setMarkerName('');
-    }, 100);
+    }, 50);
     
     toast.success("Location saved successfully");
     
-    // Ensure drawings remain visible by dispatching a custom event
+    // Force multiple update events to ensure all components refresh
     window.dispatchEvent(new Event('drawingsUpdated'));
+    window.dispatchEvent(new Event('markersUpdated'));
     
-    // Force a markers update event to ensure all components refresh
     setTimeout(() => {
       window.dispatchEvent(new Event('markersUpdated'));
-    }, 150);
+    }, 100);
   };
 
   const handleDeleteMarker = (id: string) => {

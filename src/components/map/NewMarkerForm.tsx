@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Popup } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
@@ -49,23 +48,27 @@ const NewMarkerForm = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalInputValue(newValue);
-    // Don't update parent state on every keystroke
+    console.log('NewMarkerForm: Input changed to:', newValue);
   };
 
   const handleSaveButtonClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Update the marker name with the final input value only when saving
+    console.log('NewMarkerForm: Save button clicked with value:', localInputValue);
+    
+    // Update the marker name with the final input value BEFORE saving
     setMarkerName(localInputValue);
     
     if (isEditing && existingMarkerId && onRename) {
+      console.log('NewMarkerForm: Renaming marker to:', localInputValue);
       onRename(existingMarkerId, localInputValue);
     } else {
-      // Small delay to ensure state is updated before saving
+      console.log('NewMarkerForm: Saving new marker with name:', localInputValue);
+      // Use setTimeout to ensure state update happens before save
       setTimeout(() => {
         onSave();
-      }, 50);
+      }, 10);
     }
   };
 
