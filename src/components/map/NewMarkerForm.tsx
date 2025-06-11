@@ -50,10 +50,9 @@ const NewMarkerForm = ({
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
-    // Immediately update parent state
-    setMarkerName(newValue);
+    // DO NOT update parent state on every keystroke - only update local state
     console.log('Input changed to:', newValue);
-  }, [setMarkerName]);
+  }, []);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -62,7 +61,7 @@ const NewMarkerForm = ({
       
       if (localValue.trim()) {
         console.log('Enter pressed, saving with name:', localValue.trim());
-        // Ensure parent state is updated with trimmed value
+        // Update parent state only when saving
         setMarkerName(localValue.trim());
         
         if (isEditing && existingMarkerId && onRename) {
@@ -80,7 +79,7 @@ const NewMarkerForm = ({
     
     if (localValue.trim()) {
       console.log('Save button clicked, saving with name:', localValue.trim());
-      // Ensure parent state is updated with trimmed value
+      // Update parent state only when saving
       setMarkerName(localValue.trim());
       
       if (isEditing && existingMarkerId && onRename) {
