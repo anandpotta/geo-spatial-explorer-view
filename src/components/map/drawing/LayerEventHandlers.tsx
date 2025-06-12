@@ -124,9 +124,19 @@ export const setupLayerClickHandlers = (
     // First, try to set the data attribute on the layer's DOM element
     if ((layer as any)._path) {
       const pathElement = (layer as any)._path;
-      pathElement.setAttribute('data-drawing-id', drawing.id);
-      console.log(`✅ Set data-drawing-id on layer path for ${drawing.id}`);
+      if (pathElement && typeof pathElement.setAttribute === 'function') {
+        pathElement.setAttribute('data-drawing-id', drawing.id);
+        console.log(`✅ Set data-drawing-id on layer path for ${drawing.id}`);
+      }
     }
+    
+    // Type guard function to check if an element is a valid DOM Element
+    const isElement = (node: unknown): node is Element => {
+      return node !== null && 
+             typeof node === 'object' && 
+             'nodeType' in node && 
+             (node as any).nodeType === Node.ELEMENT_NODE;
+    };
     
     // Enhanced selectors - try multiple approaches to find the path
     const selectors = [
@@ -173,8 +183,8 @@ export const setupLayerClickHandlers = (
         passive: false 
       });
       
-      (pathElement as any).setAttribute('data-click-handler-attached', 'true');
-      (pathElement as any).style.cursor = 'pointer';
+      pathElement.setAttribute('data-click-handler-attached', 'true');
+      (pathElement as HTMLElement).style.cursor = 'pointer';
       
       handledPaths.add(pathElement);
       return true;
@@ -186,7 +196,7 @@ export const setupLayerClickHandlers = (
       console.log(`Found ${drawingPaths.length} paths with selector "${selector}" for drawing ${drawing.id}`);
       
       drawingPaths.forEach((pathElement) => {
-        if (attachToPath(pathElement, `selector: ${selector}`)) {
+        if (isElement(pathElement) && attachToPath(pathElement, `selector: ${selector}`)) {
           pathsFound++;
         }
       });
@@ -195,7 +205,7 @@ export const setupLayerClickHandlers = (
     // If no specific paths found, try to match by layer reference
     if (pathsFound === 0 && (layer as any)._path) {
       const layerPath = (layer as any)._path;
-      if (attachToPath(layerPath, 'layer._path')) {
+      if (isElement(layerPath) && attachToPath(layerPath, 'layer._path')) {
         pathsFound++;
       }
     }
@@ -207,12 +217,12 @@ export const setupLayerClickHandlers = (
       
       // For now, attach to the most recently added interactive path that doesn't have a handler
       const unhandledPaths = Array.from(allInteractivePaths).filter(path => 
-        !path.hasAttribute('data-click-handler-attached')
+        isElement(path) && !path.hasAttribute('data-click-handler-attached')
       );
       
       if (unhandledPaths.length > 0) {
         const targetPath = unhandledPaths[unhandledPaths.length - 1]; // Most recent
-        if (attachToPath(targetPath, 'fallback-recent')) {
+        if (isElement(targetPath) && attachToPath(targetPath, 'fallback-recent')) {
           pathsFound++;
         }
       }
@@ -227,9 +237,9 @@ export const setupLayerClickHandlers = (
       const allPaths = container.querySelectorAll('path');
       console.log(`Debug: ${allPaths.length} total paths in container:`, 
         Array.from(allPaths).map(p => ({
-          className: p.className,
-          'data-drawing-id': p.getAttribute('data-drawing-id'),
-          hasHandler: p.hasAttribute('data-click-handler-attached')
+          className: isElement(p) ? p.className : 'unknown',
+          'data-drawing-id': isElement(p) ? p.getAttribute('data-drawing-id') : 'unknown',
+          hasHandler: isElement(p) ? p.hasAttribute('data-click-handler-attached') : false
         }))
       );
     }
