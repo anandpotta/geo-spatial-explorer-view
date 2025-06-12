@@ -39,22 +39,20 @@ export const setupLayerClickHandlers = (
   // Remove any existing handlers first
   layer.off('click');
   
-  // Set up the primary Leaflet layer click handler with higher priority
+  // Set up the primary Leaflet layer click handler with maximum priority
   layer.on('click', (e: L.LeafletMouseEvent) => {
     console.log(`🎯 LAYER CLICK HANDLER TRIGGERED for drawing ${drawing.id}`, e);
     
-    // Stop event propagation immediately and more aggressively
+    // Stop ALL propagation immediately
+    e.stopPropagation();
+    L.DomEvent.stop(e);
+    
     if (e.originalEvent) {
       e.originalEvent.stopPropagation();
       e.originalEvent.stopImmediatePropagation();
       e.originalEvent.preventDefault();
-      
-      // Mark the event as handled by layer
       (e.originalEvent as any).__handledByLayer = true;
     }
-    
-    // Also stop Leaflet-level propagation
-    L.DomEvent.stop(e);
     
     if (isMounted && onRegionClick) {
       console.log(`🚀 Calling onRegionClick for drawing ${drawing.id}`);
@@ -66,125 +64,129 @@ export const setupLayerClickHandlers = (
       }
     }
     
-    return false; // Prevent further event propagation
-  });
+    return false;
+  }, true); // Use capture phase
   
-  // Set up DOM-level click handlers as backup with improved path finding
+  // Set up aggressive DOM-level handlers immediately
   const setupDOMClickHandlers = () => {
-    console.log(`Setting up DOM backup handlers for drawing ${drawing.id}`);
+    console.log(`Setting up DOM handlers for drawing ${drawing.id}`);
     
-    // More comprehensive selectors to find the path element
+    // Find all possible path elements for this drawing
     const selectors = [
       `path[data-drawing-id="${drawing.id}"]`,
       `#drawing-path-${drawing.id}`,
       `path[data-path-uid*="${drawing.id}"]`,
       `svg path[data-drawing-id="${drawing.id}"]`,
-      `.leaflet-interactive[data-drawing-id="${drawing.id}"]`
+      `.leaflet-interactive[data-drawing-id="${drawing.id}"]`,
+      `path.leaflet-interactive`
     ];
     
-    let pathElement: HTMLElement | null = null;
+    let pathElements: HTMLElement[] = [];
     
+    // Collect all matching elements
     for (const selector of selectors) {
-      pathElement = document.querySelector(selector) as HTMLElement;
-      if (pathElement) {
-        console.log(`✅ Found path element for drawing ${drawing.id} using selector: ${selector}`, pathElement);
-        break;
-      }
+      const elements = document.querySelectorAll(selector) as NodeListOf<HTMLElement>;
+      pathElements.push(...Array.from(elements));
     }
     
-    // If we still haven't found it, try a broader search
-    if (!pathElement) {
-      const allPaths = document.querySelectorAll('path.leaflet-interactive');
+    // If no specific elements found, search through all interactive paths
+    if (pathElements.length === 0) {
+      const allPaths = document.querySelectorAll('path.leaflet-interactive') as NodeListOf<HTMLElement>;
       console.log(`Searching through ${allPaths.length} interactive paths for drawing ${drawing.id}`);
       
       for (const path of allPaths) {
         const drawingId = path.getAttribute('data-drawing-id');
         const pathUid = path.getAttribute('data-path-uid');
         if (drawingId === drawing.id || (pathUid && pathUid.includes(drawing.id))) {
-          pathElement = path as HTMLElement;
-          console.log(`✅ Found path element through broad search for drawing ${drawing.id}`, pathElement);
-          break;
+          pathElements.push(path);
         }
       }
     }
     
-    if (pathElement) {
-      // Remove any existing handlers
-      const existingHandler = (pathElement as any).__drawingClickHandler;
-      if (existingHandler) {
-        pathElement.removeEventListener('click', existingHandler, true);
-        pathElement.removeEventListener('click', existingHandler, false);
-      }
+    if (pathElements.length > 0) {
+      console.log(`✅ Found ${pathElements.length} path elements for drawing ${drawing.id}`);
       
-      const handleDOMPathClick = (event: Event) => {
-        console.log(`🎯 DOM BACKUP CLICK HANDLER TRIGGERED for drawing ${drawing.id}`, event);
-        
-        // Stop all propagation for DOM events more aggressively
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        event.preventDefault();
-        
-        // Mark the event as handled by layer
-        (event as any).__handledByLayer = true;
-        
-        if (isMounted && onRegionClick) {
-          console.log(`🚀 Calling onRegionClick from DOM backup handler for drawing ${drawing.id}`);
-          try {
-            onRegionClick(drawing);
-            console.log(`✅ Successfully called onRegionClick from DOM backup handler for drawing ${drawing.id}`);
-          } catch (error) {
-            console.error(`❌ Error calling onRegionClick from DOM backup handler for drawing ${drawing.id}:`, error);
-          }
+      pathElements.forEach((pathElement, index) => {
+        // Remove any existing handlers
+        const existingHandler = (pathElement as any).__drawingClickHandler;
+        if (existingHandler) {
+          pathElement.removeEventListener('click', existingHandler, true);
+          pathElement.removeEventListener('click', existingHandler, false);
         }
         
-        return false;
-      };
+        const handleDOMPathClick = (event: Event) => {
+          console.log(`🎯 DOM CLICK HANDLER TRIGGERED for drawing ${drawing.id} (element ${index})`, event);
+          
+          // Aggressive event stopping
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          (event as any).__handledByLayer = true;
+          
+          if (isMounted && onRegionClick) {
+            console.log(`🚀 Calling onRegionClick from DOM handler for drawing ${drawing.id}`);
+            try {
+              onRegionClick(drawing);
+              console.log(`✅ Successfully called onRegionClick from DOM handler for drawing ${drawing.id}`);
+            } catch (error) {
+              console.error(`❌ Error calling onRegionClick from DOM handler for drawing ${drawing.id}:`, error);
+            }
+          }
+          
+          return false;
+        };
+        
+        // Add handlers with maximum priority (capture phase first)
+        pathElement.addEventListener('click', handleDOMPathClick, { 
+          capture: true, 
+          passive: false,
+          once: false 
+        });
+        
+        // Ensure the element is interactive
+        pathElement.style.pointerEvents = 'auto';
+        pathElement.style.cursor = 'pointer';
+        pathElement.style.zIndex = '1000';
+        
+        // Store the handler for cleanup
+        (pathElement as any).__drawingClickHandler = handleDOMPathClick;
+      });
       
-      // Add click handlers with both capture and bubble phases, prioritizing capture
-      pathElement.addEventListener('click', handleDOMPathClick, { capture: true, passive: false });
-      pathElement.addEventListener('click', handleDOMPathClick, { capture: false, passive: false });
-      
-      // Ensure the path is clickable and has high z-index
-      pathElement.style.pointerEvents = 'auto';
-      pathElement.style.cursor = 'pointer';
-      pathElement.style.zIndex = '1000';
-      
-      // Store the handler for cleanup
-      (pathElement as any).__drawingClickHandler = handleDOMPathClick;
-      
-      console.log(`✅ Successfully attached DOM backup handlers for drawing ${drawing.id}`);
       return true;
     } else {
-      console.log(`❌ Path element not found for drawing ${drawing.id} with any method`);
+      console.log(`❌ No path elements found for drawing ${drawing.id}`);
       return false;
     }
   };
   
-  // Try to set up DOM handlers immediately
-  if (!setupDOMClickHandlers()) {
-    // If not found immediately, try again with more frequent retries
-    const retryDelays = [10, 50, 100, 200, 400, 800, 1600];
+  // Try to set up DOM handlers immediately and with retries
+  let setupSuccess = setupDOMClickHandlers();
+  
+  if (!setupSuccess) {
+    // More frequent retries with shorter delays
+    const retryDelays = [5, 10, 25, 50, 100, 200, 500];
     
     retryDelays.forEach((delay, index) => {
       setTimeout(() => {
-        if (isMounted) {
-          const success = setupDOMClickHandlers();
-          if (success) {
+        if (isMounted && !setupSuccess) {
+          setupSuccess = setupDOMClickHandlers();
+          if (setupSuccess) {
             console.log(`✅ DOM handlers attached on retry ${index + 1} (${delay}ms) for drawing ${drawing.id}`);
-          } else if (index === retryDelays.length - 1) {
-            console.log(`❌ Failed to attach DOM handlers after all retries for drawing ${drawing.id}`);
           }
         }
       }, delay);
     });
   }
   
-  // Additional layer-level event binding for FeatureGroup layers
+  // Handle FeatureGroup layers recursively
   if (layer && typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((childLayer: L.Layer) => {
       childLayer.off('click');
       childLayer.on('click', (e: L.LeafletMouseEvent) => {
         console.log(`🎯 CHILD LAYER CLICK for drawing ${drawing.id}`, e);
+        
+        e.stopPropagation();
+        L.DomEvent.stop(e);
         
         if (e.originalEvent) {
           e.originalEvent.stopPropagation();
@@ -193,15 +195,13 @@ export const setupLayerClickHandlers = (
           (e.originalEvent as any).__handledByLayer = true;
         }
         
-        L.DomEvent.stop(e);
-        
         if (isMounted && onRegionClick) {
           console.log(`🚀 Calling onRegionClick from child layer for drawing ${drawing.id}`);
           onRegionClick(drawing);
         }
         
         return false;
-      });
+      }, true); // Use capture phase
     });
   }
   
