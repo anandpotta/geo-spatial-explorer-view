@@ -195,13 +195,13 @@ export const setCurrentDrawingContext = (drawingId: string): void => {
   (window as any).lastCreatedDrawingId = drawingId;
   console.log(`Set current drawing context to: ${drawingId}`);
   
-  // Clear the context after a short delay
+  // Extend the context duration to allow for polygon completion
   setTimeout(() => {
     if ((window as any).lastCreatedDrawingId === drawingId) {
       (window as any).lastCreatedDrawingId = null;
       console.log(`Cleared drawing context for: ${drawingId}`);
     }
-  }, 2000);
+  }, 10000); // Increased from 2000 to 10000 milliseconds to allow polygon completion
 };
 
 /**
@@ -225,11 +225,18 @@ export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): 
     // Also apply to any recently marked paths
     applyDrawingIdToMarkedPaths(drawingId);
     
-    // Set up a fallback check
-    setTimeout(() => {
-      applyAttributesToLayer(layer, drawingId);
-      applyDrawingIdToMarkedPaths(drawingId);
-    }, 200);
+    // Set up multiple fallback checks with increasing delays
+    const applyWithDelay = (delay: number) => {
+      setTimeout(() => {
+        applyAttributesToLayer(layer, drawingId);
+        applyDrawingIdToMarkedPaths(drawingId);
+      }, delay);
+    };
+    
+    applyWithDelay(200);
+    applyWithDelay(500);
+    applyWithDelay(1000);
+    applyWithDelay(2000);
     
   } catch (err) {
     console.error('Error adding drawing attributes to layer:', err);
