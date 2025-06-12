@@ -27,7 +27,7 @@ export const setupLayerClickHandlers = (
   
   // Set up Leaflet layer click handler with higher priority
   layer.on('click', (e: L.LeafletMouseEvent) => {
-    console.log(`Layer click detected for drawing ${drawing.id} - preventing map click`);
+    console.log(`Layer click detected for drawing ${drawing.id} - opening upload popup`);
     
     // Stop event propagation immediately
     if (e.originalEvent) {
@@ -37,11 +37,8 @@ export const setupLayerClickHandlers = (
       L.DomEvent.preventDefault(e.originalEvent);
     }
     
-    // Stop the leaflet event as well
-    L.DomEvent.stopPropagation(e as any);
-    L.DomEvent.preventDefault(e as any);
-    
     if (isMounted) {
+      console.log(`Calling onRegionClick for drawing ${drawing.id}`);
       onRegionClick(drawing);
     }
   });
@@ -58,7 +55,7 @@ export const setupLayerClickHandlers = (
       if (path instanceof SVGPathElement) {
         // Create a DOM event handler specifically for SVG paths
         const handleDOMPathClick = (event: Event) => {
-          console.log(`SVG path click detected for drawing ${drawing.id} - preventing map click`);
+          console.log(`SVG path click detected for drawing ${drawing.id} - opening upload popup`);
           
           // Stop all propagation immediately
           event.stopPropagation();
@@ -66,6 +63,7 @@ export const setupLayerClickHandlers = (
           event.preventDefault();
           
           if (isMounted && onRegionClick) {
+            console.log(`Calling onRegionClick from DOM handler for drawing ${drawing.id}`);
             onRegionClick(drawing);
           }
         };
@@ -89,6 +87,8 @@ export const setupLayerClickHandlers = (
         
         // Store the handler function for potential cleanup
         (path as any).__clickHandler = handleDOMPathClick;
+        
+        console.log(`Set up DOM click handlers for path with drawing ID ${drawing.id}`);
       }
     });
   };
@@ -97,4 +97,5 @@ export const setupLayerClickHandlers = (
   setupPathClickHandlers();
   setTimeout(setupPathClickHandlers, 100);
   setTimeout(setupPathClickHandlers, 500);
+  setTimeout(setupPathClickHandlers, 1000);
 };
