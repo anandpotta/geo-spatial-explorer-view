@@ -18,14 +18,18 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         return;
       }
       
+      // Check if this click was already handled by a layer click handler
+      if (e.originalEvent && (e.originalEvent as any).__handledByLayer) {
+        console.log('Click already handled by layer, skipping map click');
+        return;
+      }
+      
       // More precise click filtering - only ignore actual UI elements
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
         // Check for actual marker icons ONLY - be extremely specific
-        // Only consider elements that are definitely location markers, not drawing elements
         const isOnActualMarker = (
-          // Must be an IMG element with marker icon class AND not have any drawing attributes
           target.tagName === 'IMG' && 
           target.classList.contains('leaflet-marker-icon') &&
           !target.hasAttribute('data-drawing-id') &&
@@ -33,11 +37,9 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           !target.hasAttribute('data-drawing-type') &&
           !target.classList.contains('leaflet-interactive') &&
           !target.classList.contains('leaflet-drawing') &&
-          // Extra safety: check if parent has drawing attributes
           !target.closest('[data-drawing-id]') &&
           !target.closest('[data-shape-type]') &&
           !target.closest('.leaflet-interactive') &&
-          // Make sure it's actually a location marker by checking src or other marker-specific attributes
           (target.getAttribute('src')?.includes('marker') || 
            target.getAttribute('alt')?.includes('marker') ||
            target.closest('.marker-container') !== null)
@@ -48,13 +50,36 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         const isOnButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
         const isOnInput = target.tagName === 'INPUT' || target.closest('input') !== null;
         
+        // Check if clicking on a drawing path - these should be handled by layer handlers
+        const isOnDrawingPath = (
+          target.hasAttribute('data-drawing-id') ||
+          target.classList.contains('clickable-drawing-path') ||
+          target.closest('[data-drawing-id]') !== null ||
+          target.classList.contains('leaflet-interactive') ||
+          (target.tagName === 'path' && target.classList.contains('leaflet-interactive'))
+        );
+        
+        // If clicking on a drawing path, don't process as map click - let layer handler take precedence
+        if (isOnDrawingPath) {
+          console.log('Click on drawing path - deferring to layer click handler');
+          // Give layer handlers a chance to process first
+          setTimeout(() => {
+            // Only process as map click if the event wasn't handled by layer
+            if (!(e.originalEvent as any).__handledByLayer) {
+              console.log('Drawing path click not handled by layer, processing as map click');
+              onMapClick(e.latlng);
+            }
+          }, 10);
+          return;
+        }
+        
         // Only ignore if it's actually on a real location marker or other UI elements
         if (isOnActualMarker || isOnPopup || isOnControl || isOnButton || isOnInput) {
           console.log('Click on UI element ignored:', { isOnActualMarker, isOnPopup, isOnControl, isOnButton, isOnInput });
           return;
         }
         
-        // For SVG elements (drawn shapes), handle them separately
+        // For SVG elements (drawn shapes), handle them carefully
         if (target.tagName === 'path' || target.tagName === 'svg') {
           const hasDrawingId = target.getAttribute('data-drawing-id') !== null;
           const isInteractiveDrawing = target.closest('[data-drawing-id]') !== null;
@@ -66,11 +91,13 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
             console.log('Click on active drawing path - allowing polygon drawing to continue');
             // Don't return here - let the drawing continue
           } else if (hasDrawingId || isInteractiveDrawing) {
-            console.log('Click on completed drawing path - letting layer handler process it');
-            // Don't return here - let the event continue to be processed
-            // The layer's click handler should have already been triggered with higher priority
-            // If we reach this point, it means the layer handler didn't catch it
-            // So we should NOT create a new marker on a drawing
+            console.log('Click on completed drawing path - deferring to layer handler');
+            // Defer to layer handler with timeout
+            setTimeout(() => {
+              if (!(e.originalEvent as any).__handledByLayer) {
+                console.log('Drawing path click not handled by layer after timeout');
+              }
+            }, 100);
             return;
           }
           
