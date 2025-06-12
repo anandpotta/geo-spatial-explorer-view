@@ -39,19 +39,22 @@ export const setupLayerClickHandlers = (
   // Remove any existing handlers first
   layer.off('click');
   
-  // Set up the primary Leaflet layer click handler with more specific logging
+  // Set up the primary Leaflet layer click handler with higher priority
   layer.on('click', (e: L.LeafletMouseEvent) => {
     console.log(`🎯 LAYER CLICK HANDLER TRIGGERED for drawing ${drawing.id}`, e);
     
-    // Stop event propagation for Leaflet events
+    // Stop event propagation immediately and more aggressively
     if (e.originalEvent) {
-      L.DomEvent.stopPropagation(e.originalEvent);
-      L.DomEvent.preventDefault(e.originalEvent);
+      e.originalEvent.stopPropagation();
       e.originalEvent.stopImmediatePropagation();
+      e.originalEvent.preventDefault();
       
       // Mark the event as handled by layer
       (e.originalEvent as any).__handledByLayer = true;
     }
+    
+    // Also stop Leaflet-level propagation
+    L.DomEvent.stop(e);
     
     if (isMounted && onRegionClick) {
       console.log(`🚀 Calling onRegionClick for drawing ${drawing.id}`);
@@ -62,6 +65,8 @@ export const setupLayerClickHandlers = (
         console.error(`❌ Error calling onRegionClick for drawing ${drawing.id}:`, error);
       }
     }
+    
+    return false; // Prevent further event propagation
   });
   
   // Set up DOM-level click handlers as backup with improved path finding
@@ -114,7 +119,7 @@ export const setupLayerClickHandlers = (
       const handleDOMPathClick = (event: Event) => {
         console.log(`🎯 DOM BACKUP CLICK HANDLER TRIGGERED for drawing ${drawing.id}`, event);
         
-        // Stop all propagation for DOM events
+        // Stop all propagation for DOM events more aggressively
         event.stopPropagation();
         event.stopImmediatePropagation();
         event.preventDefault();
@@ -131,15 +136,18 @@ export const setupLayerClickHandlers = (
             console.error(`❌ Error calling onRegionClick from DOM backup handler for drawing ${drawing.id}:`, error);
           }
         }
+        
+        return false;
       };
       
-      // Add click handlers with both capture and bubble phases
-      pathElement.addEventListener('click', handleDOMPathClick, { capture: true });
-      pathElement.addEventListener('click', handleDOMPathClick, { capture: false });
+      // Add click handlers with both capture and bubble phases, prioritizing capture
+      pathElement.addEventListener('click', handleDOMPathClick, { capture: true, passive: false });
+      pathElement.addEventListener('click', handleDOMPathClick, { capture: false, passive: false });
       
-      // Ensure the path is clickable
+      // Ensure the path is clickable and has high z-index
       pathElement.style.pointerEvents = 'auto';
       pathElement.style.cursor = 'pointer';
+      pathElement.style.zIndex = '1000';
       
       // Store the handler for cleanup
       (pathElement as any).__drawingClickHandler = handleDOMPathClick;
@@ -154,20 +162,46 @@ export const setupLayerClickHandlers = (
   
   // Try to set up DOM handlers immediately
   if (!setupDOMClickHandlers()) {
-    // If not found immediately, try again with more aggressive delays
-    const retryDelays = [50, 150, 300, 500, 1000, 2000];
+    // If not found immediately, try again with more frequent retries
+    const retryDelays = [10, 50, 100, 200, 400, 800, 1600];
     
     retryDelays.forEach((delay, index) => {
       setTimeout(() => {
         if (isMounted) {
           const success = setupDOMClickHandlers();
           if (success) {
-            console.log(`✅ DOM handlers attached on retry ${index + 1} for drawing ${drawing.id}`);
+            console.log(`✅ DOM handlers attached on retry ${index + 1} (${delay}ms) for drawing ${drawing.id}`);
           } else if (index === retryDelays.length - 1) {
             console.log(`❌ Failed to attach DOM handlers after all retries for drawing ${drawing.id}`);
           }
         }
       }, delay);
+    });
+  }
+  
+  // Additional layer-level event binding for FeatureGroup layers
+  if (layer && typeof (layer as any).eachLayer === 'function') {
+    (layer as any).eachLayer((childLayer: L.Layer) => {
+      childLayer.off('click');
+      childLayer.on('click', (e: L.LeafletMouseEvent) => {
+        console.log(`🎯 CHILD LAYER CLICK for drawing ${drawing.id}`, e);
+        
+        if (e.originalEvent) {
+          e.originalEvent.stopPropagation();
+          e.originalEvent.stopImmediatePropagation();
+          e.originalEvent.preventDefault();
+          (e.originalEvent as any).__handledByLayer = true;
+        }
+        
+        L.DomEvent.stop(e);
+        
+        if (isMounted && onRegionClick) {
+          console.log(`🚀 Calling onRegionClick from child layer for drawing ${drawing.id}`);
+          onRegionClick(drawing);
+        }
+        
+        return false;
+      });
     });
   }
   
