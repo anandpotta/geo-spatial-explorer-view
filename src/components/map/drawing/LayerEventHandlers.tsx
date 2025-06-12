@@ -38,8 +38,8 @@ export const setupLayerClickHandlers = (
     }
     
     // Stop the leaflet event as well
-    L.DomEvent.stopPropagation(e);
-    L.DomEvent.preventDefault(e);
+    L.DomEvent.stopPropagation(e as any);
+    L.DomEvent.preventDefault(e as any);
     
     if (isMounted) {
       onRegionClick(drawing);
