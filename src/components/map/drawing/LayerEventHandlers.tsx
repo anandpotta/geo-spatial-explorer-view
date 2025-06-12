@@ -48,8 +48,12 @@ export const setupLayerClickHandlers = (
       e.originalEvent.stopPropagation();
       e.originalEvent.preventDefault();
       e.originalEvent.stopImmediatePropagation();
-      L.DomEvent.stopPropagation(e.originalEvent);
-      L.DomEvent.preventDefault(e.originalEvent);
+      // Mark the event as handled by layer
+      (e.originalEvent as any).__handledByLayer = true;
+      
+      // Use proper Leaflet event stopping
+      L.DomEvent.stopPropagation(e.originalEvent as Event);
+      L.DomEvent.preventDefault(e.originalEvent as Event);
     }
     
     // Stop Leaflet event propagation
@@ -99,6 +103,9 @@ export const setupLayerClickHandlers = (
             event.stopPropagation();
             event.stopImmediatePropagation();
             event.preventDefault();
+            
+            // Mark the event as handled by layer
+            (event as any).__handledByLayer = true;
             
             if (isMounted && onRegionClick) {
               console.log(`Calling onRegionClick from DOM handler for drawing ${drawing.id}`);
@@ -170,6 +177,9 @@ export const setupLayerClickHandlers = (
           event.stopPropagation();
           event.stopImmediatePropagation();
           event.preventDefault();
+          
+          // Mark the event as handled by layer
+          (event as any).__handledByLayer = true;
           
           if (isMounted && onRegionClick) {
             console.log(`Calling onRegionClick from delegated handler for drawing ${drawing.id}`);
