@@ -69,7 +69,7 @@ export const setupLayerClickHandlers = (
     }
   });
   
-  // Enhanced DOM event handler setup with simplified and more reliable path finding
+  // Enhanced DOM event handler setup
   const setupPathClickHandlers = () => {
     if (!isMounted) return 0;
     
@@ -88,71 +88,18 @@ export const setupLayerClickHandlers = (
       return 0;
     }
     
-    // Find all interactive SVG paths in the map
-    const allPaths = mapContainer.querySelectorAll('svg path.leaflet-interactive');
-    console.log(`Found ${allPaths.length} interactive SVG paths in map`);
-    
     let handlerCount = 0;
-    const layerStamp = (layer as any)._leaflet_id;
     
-    allPaths.forEach((path, index) => {
-      // Skip paths that already have our drawing ID
-      if (path.getAttribute('data-drawing-id') === drawing.id) {
-        console.log(`Path ${index} already has drawing ID ${drawing.id}`);
-        return;
-      }
+    // Strategy 1: Find paths that already have our drawing ID but need handlers
+    const existingPaths = mapContainer.querySelectorAll(`path[data-drawing-id="${drawing.id}"]`);
+    console.log(`Found ${existingPaths.length} existing paths with drawing ID ${drawing.id}`);
+    
+    existingPaths.forEach((path, index) => {
+      const pathElement = path as HTMLElement;
       
-      // Check if this path belongs to our drawing layer using multiple methods
-      let isOurPath = false;
-      
-      // Method 1: Check if path is the layer's direct path element
-      if ((layer as any)._path === path) {
-        isOurPath = true;
-        console.log(`Path ${index} matched as layer's direct path`);
-      }
-      
-      // Method 2: Check layer stamp on the path's associated layer
-      const pathLayer = (path as any)._leaflet_layer;
-      if (!isOurPath && layerStamp && pathLayer && pathLayer._leaflet_id === layerStamp) {
-        isOurPath = true;
-        console.log(`Path ${index} matched by layer stamp`);
-      }
-      
-      // Method 3: For newly created paths without existing IDs, check if they're recent and don't belong to other drawings
-      if (!isOurPath && !path.getAttribute('data-drawing-id')) {
-        // Check if this is a recent path (created in the last few seconds)
-        const pathCreatedAt = path.getAttribute('data-created-at');
-        const currentTime = Date.now();
-        
-        if (!pathCreatedAt) {
-          // No creation time, assume it's recent and belongs to our drawing
-          isOurPath = true;
-          console.log(`Path ${index} matched as recent path without drawing ID`);
-        } else if ((currentTime - parseInt(pathCreatedAt)) < 5000) {
-          isOurPath = true;
-          console.log(`Path ${index} matched as recent path (${currentTime - parseInt(pathCreatedAt)}ms old)`);
-        }
-      }
-      
-      // Method 4: Check if this path has the same style/color as our layer
-      if (!isOurPath && (layer as any).options) {
-        const layerColor = (layer as any).options.color;
-        const pathColor = path.getAttribute('stroke') || path.style.stroke;
-        
-        if (layerColor && pathColor && layerColor === pathColor) {
-          isOurPath = true;
-          console.log(`Path ${index} matched by color: ${layerColor}`);
-        }
-      }
-      
-      if (isOurPath) {
-        console.log(`Setting up DOM handler for path ${index} belonging to drawing ${drawing.id}`);
-        
-        // Set drawing ID and other attributes
-        path.setAttribute('data-drawing-id', drawing.id);
-        path.setAttribute('data-created-at', Date.now().toString());
-        path.classList.add('clickable-drawing-path');
-        path.classList.add(`drawing-${drawing.id}`);
+      // Check if handler is already attached
+      if (!(pathElement as any).__clickHandler) {
+        console.log(`Setting up handler for existing path ${index} with drawing ID ${drawing.id}`);
         
         const handleDOMPathClick = (event: Event) => {
           console.log(`SVG path DOM click detected for drawing ${drawing.id} - opening upload popup`);
@@ -176,36 +123,116 @@ export const setupLayerClickHandlers = (
           }
         };
         
-        // Remove any existing handlers first
-        const existingHandler = (path as any).__clickHandler;
-        if (existingHandler) {
-          path.removeEventListener('click', existingHandler, true);
-          path.removeEventListener('click', existingHandler, false);
-        }
-        
         // Add click handlers with maximum priority (capture=true)
-        path.addEventListener('click', handleDOMPathClick, true);
-        path.addEventListener('click', handleDOMPathClick, false);
+        pathElement.addEventListener('click', handleDOMPathClick, true);
+        pathElement.addEventListener('click', handleDOMPathClick, false);
         
         // Ensure the path is properly set up for clicking
-        const pathElement = path as HTMLElement;
         pathElement.style.pointerEvents = 'auto';
         pathElement.style.cursor = 'pointer';
         pathElement.style.zIndex = '1000';
         
         // Store the handler function for cleanup
-        (path as any).__clickHandler = handleDOMPathClick;
+        (pathElement as any).__clickHandler = handleDOMPathClick;
+        (pathElement as any).__drawingId = drawing.id;
         
         handlerCount++;
+      } else {
+        console.log(`Path ${index} already has click handler for drawing ${drawing.id}`);
       }
     });
+    
+    // Strategy 2: Find interactive paths without drawing ID (for newly created paths)
+    if (handlerCount === 0) {
+      const allPaths = mapContainer.querySelectorAll('svg path.leaflet-interactive:not([data-drawing-id])');
+      console.log(`Found ${allPaths.length} interactive SVG paths without drawing ID`);
+      
+      const layerStamp = (layer as any)._leaflet_id;
+      
+      allPaths.forEach((path, index) => {
+        // Check if this path belongs to our drawing layer
+        let isOurPath = false;
+        
+        // Method 1: Check if path is the layer's direct path element
+        if ((layer as any)._path === path) {
+          isOurPath = true;
+          console.log(`Path ${index} matched as layer's direct path`);
+        }
+        
+        // Method 2: Check layer stamp on the path's associated layer
+        const pathLayer = (path as any)._leaflet_layer;
+        if (!isOurPath && layerStamp && pathLayer && pathLayer._leaflet_id === layerStamp) {
+          isOurPath = true;
+          console.log(`Path ${index} matched by layer stamp`);
+        }
+        
+        // Method 3: Check if this is a recent path by color matching
+        if (!isOurPath && (layer as any).options) {
+          const layerColor = (layer as any).options.color;
+          const pathColor = path.getAttribute('stroke') || (path as HTMLElement).style.stroke;
+          
+          if (layerColor && pathColor && layerColor === pathColor) {
+            isOurPath = true;
+            console.log(`Path ${index} matched by color: ${layerColor}`);
+          }
+        }
+        
+        if (isOurPath) {
+          console.log(`Setting up DOM handler for new path ${index} belonging to drawing ${drawing.id}`);
+          
+          // Set drawing ID and other attributes
+          path.setAttribute('data-drawing-id', drawing.id);
+          path.setAttribute('id', `drawing-path-${drawing.id}`);
+          path.classList.add('clickable-drawing-path');
+          path.classList.add(`drawing-${drawing.id.substring(0, 8)}`);
+          
+          const handleDOMPathClick = (event: Event) => {
+            console.log(`SVG path DOM click detected for drawing ${drawing.id} - opening upload popup`);
+            
+            // Stop all propagation with maximum priority
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            
+            // Mark the event as handled by layer
+            (event as any).__handledByLayer = true;
+            
+            if (isMounted && onRegionClick) {
+              console.log(`Calling onRegionClick from DOM handler for drawing ${drawing.id}`);
+              try {
+                onRegionClick(drawing);
+                console.log(`Successfully called onRegionClick from DOM handler for drawing ${drawing.id}`);
+              } catch (error) {
+                console.error(`Error calling onRegionClick from DOM handler for drawing ${drawing.id}:`, error);
+              }
+            }
+          };
+          
+          // Add click handlers with maximum priority (capture=true)
+          const pathElement = path as HTMLElement;
+          pathElement.addEventListener('click', handleDOMPathClick, true);
+          pathElement.addEventListener('click', handleDOMPathClick, false);
+          
+          // Ensure the path is properly set up for clicking
+          pathElement.style.pointerEvents = 'auto';
+          pathElement.style.cursor = 'pointer';
+          pathElement.style.zIndex = '1000';
+          
+          // Store the handler function for cleanup
+          (pathElement as any).__clickHandler = handleDOMPathClick;
+          (pathElement as any).__drawingId = drawing.id;
+          
+          handlerCount++;
+        }
+      });
+    }
     
     console.log(`Set up ${handlerCount} DOM click handlers for drawing ${drawing.id}`);
     return handlerCount;
   };
   
   // Set up path handlers with multiple attempts and increasing delays
-  const maxAttempts = 8;
+  const maxAttempts = 5;
   let attempt = 0;
   
   const trySetupHandlers = () => {
@@ -222,7 +249,7 @@ export const setupLayerClickHandlers = (
     
     // Continue trying if we haven't reached max attempts
     if (attempt < maxAttempts) {
-      const delay = Math.min(attempt * 150, 1000); // Cap delay at 1 second
+      const delay = Math.min(attempt * 200, 1000); // Cap delay at 1 second
       console.log(`Retrying handler setup for drawing ${drawing.id} in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
       setTimeout(trySetupHandlers, delay);
     } else {
@@ -230,6 +257,7 @@ export const setupLayerClickHandlers = (
     }
   };
   
-  // Start the setup process with a small initial delay
-  setTimeout(trySetupHandlers, 50);
+  // Start the setup process immediately and with a small delay
+  setupPathClickHandlers();
+  setTimeout(trySetupHandlers, 100);
 };
