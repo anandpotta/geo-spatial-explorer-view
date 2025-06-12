@@ -43,8 +43,7 @@ export const setupLayerClickHandlers = (
   layer.on('click', (e: L.LeafletMouseEvent) => {
     console.log(`🎯 LAYER CLICK HANDLER TRIGGERED for drawing ${drawing.id}`, e);
     
-    // Stop ALL propagation immediately
-    e.stopPropagation();
+    // Stop ALL propagation immediately using Leaflet's method
     L.DomEvent.stop(e);
     
     if (e.originalEvent) {
@@ -185,7 +184,7 @@ export const setupLayerClickHandlers = (
       childLayer.on('click', (e: L.LeafletMouseEvent) => {
         console.log(`🎯 CHILD LAYER CLICK for drawing ${drawing.id}`, e);
         
-        e.stopPropagation();
+        // Use Leaflet's proper event stopping method
         L.DomEvent.stop(e);
         
         if (e.originalEvent) {
