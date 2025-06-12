@@ -128,10 +128,13 @@ export const setupLayerClickHandlers = (
           path.addEventListener('click', handleDOMPathClick, false);
           path.addEventListener('mousedown', handleDOMPathClick, false);
           
-          // Ensure the path is properly set up for clicking
-          (path as HTMLElement).style.pointerEvents = 'auto';
-          (path as HTMLElement).style.cursor = 'pointer';
-          (path as HTMLElement).style.zIndex = '1000';
+          // Ensure the path is properly set up for clicking - cast to Element for style access
+          const pathElement = path as unknown as Element;
+          if (pathElement && 'style' in pathElement) {
+            (pathElement as any).style.pointerEvents = 'auto';
+            (pathElement as any).style.cursor = 'pointer';
+            (pathElement as any).style.zIndex = '1000';
+          }
           
           // Add specific classes for targeting
           path.classList.add('clickable-drawing-path');
