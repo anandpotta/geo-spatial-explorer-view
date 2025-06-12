@@ -64,7 +64,7 @@ export const setupLayerClickHandlers = (
     }
   });
   
-  // Also set up DOM-level click handlers as a backup with improved logic
+  // Also set up DOM-level click handlers as a backup
   const setupDOMClickHandlers = () => {
     console.log(`Setting up DOM backup handlers for drawing ${drawing.id}`);
     
@@ -96,7 +96,7 @@ export const setupLayerClickHandlers = (
       const handleDOMPathClick = (event: Event) => {
         console.log(`🎯 DOM backup click handler triggered for drawing ${drawing.id}`);
         
-        // Stop all propagation
+        // Stop all propagation for DOM events
         event.stopPropagation();
         event.stopImmediatePropagation();
         event.preventDefault();
