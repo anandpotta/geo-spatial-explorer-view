@@ -43,13 +43,11 @@ export const setupLayerClickHandlers = (
   layer.on('click', (e: L.LeafletMouseEvent) => {
     console.log(`✅ Leaflet layer click handler triggered for drawing ${drawing.id}`);
     
-    // Stop event propagation immediately
-    L.DomEvent.stopPropagation(e);
-    L.DomEvent.preventDefault(e);
-    
+    // Stop event propagation for Leaflet events
     if (e.originalEvent) {
-      e.originalEvent.stopPropagation();
-      e.originalEvent.preventDefault();
+      // Use the original DOM event for stopping propagation
+      L.DomEvent.stopPropagation(e.originalEvent);
+      L.DomEvent.preventDefault(e.originalEvent);
       e.originalEvent.stopImmediatePropagation();
     }
     
