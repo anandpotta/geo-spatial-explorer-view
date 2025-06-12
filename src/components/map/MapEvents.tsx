@@ -23,8 +23,12 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         const target = e.originalEvent.target as HTMLElement;
         
         // Check if click is on specific interactive elements - be more specific
-        const isOnActualMarker = target.closest('.leaflet-marker-icon') !== null || 
-                                 target.classList.contains('leaflet-marker-icon');
+        // Only consider actual marker icons, not drawing paths
+        const isOnActualMarker = (target.closest('.leaflet-marker-icon') !== null || 
+                                 target.classList.contains('leaflet-marker-icon')) &&
+                                 !target.classList.contains('leaflet-interactive') &&
+                                 !target.hasAttribute('data-shape-type');
+        
         const isOnPopup = target.closest('.leaflet-popup') !== null;
         const isOnControl = target.closest('.leaflet-control') !== null;
         const isOnButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
@@ -40,9 +44,15 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         if (target.tagName === 'path' || target.tagName === 'svg') {
           const hasDrawingId = target.getAttribute('data-drawing-id') !== null;
           const isInteractiveDrawing = target.closest('[data-drawing-id]') !== null;
+          const isActiveDrawing = target.hasAttribute('data-shape-type') || 
+                                 target.classList.contains('leaflet-drawing');
           
-          if (hasDrawingId || isInteractiveDrawing) {
-            console.log('Click on drawing path - letting layer handler process it');
+          // If it's an active drawing (polygon being drawn), allow the click to continue
+          if (isActiveDrawing) {
+            console.log('Click on active drawing path - allowing polygon drawing to continue');
+            // Don't return here - let the drawing continue
+          } else if (hasDrawingId || isInteractiveDrawing) {
+            console.log('Click on completed drawing path - letting layer handler process it');
             // Don't return here - let the event continue to be processed
             // The layer's click handler should have already been triggered with higher priority
             // If we reach this point, it means the layer handler didn't catch it
@@ -55,7 +65,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
                                  target.getAttribute('onclick') !== null ||
                                  target.style.cursor === 'pointer';
           
-          if (hasClickHandler) {
+          if (hasClickHandler && !isActiveDrawing) {
             console.log('Click on interactive SVG element ignored');
             return;
           }
