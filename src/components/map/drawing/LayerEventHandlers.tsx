@@ -51,11 +51,9 @@ export const setupLayerClickHandlers = (
       // Mark the event as handled by layer
       (e.originalEvent as any).__handledByLayer = true;
       
-      // Use proper Leaflet event stopping - only with originalEvent which is a DOM Event
-      if (e.originalEvent) {
-        L.DomEvent.stopPropagation(e.originalEvent);
-        L.DomEvent.preventDefault(e.originalEvent);
-      }
+      // Use proper Leaflet event stopping
+      L.DomEvent.stopPropagation(e.originalEvent);
+      L.DomEvent.preventDefault(e.originalEvent);
     }
     
     if (isMounted && onRegionClick) {
@@ -75,6 +73,8 @@ export const setupLayerClickHandlers = (
   const setupPathClickHandlers = () => {
     if (!isMounted) return;
     
+    console.log(`Setting up DOM path handlers for drawing ${drawing.id}`);
+    
     // Get the map to find paths more reliably
     const map = (layer as any)._map;
     if (!map) {
@@ -88,44 +88,46 @@ export const setupLayerClickHandlers = (
       return;
     }
     
-    // Find all SVG paths in the overlay pane - use more general approach
-    const overlayPane = mapContainer.querySelector('.leaflet-overlay-pane');
-    if (!overlayPane) {
-      console.log('No overlay pane found');
-      return;
-    }
+    // Find all SVG paths in the map - use broader search
+    const allPaths = mapContainer.querySelectorAll('svg path');
+    console.log(`Found ${allPaths.length} total SVG paths in map`);
     
-    // Find all interactive paths and set up handlers on the ones that belong to this drawing
-    const allPaths = overlayPane.querySelectorAll('path.leaflet-interactive');
     let handlerCount = 0;
     
     allPaths.forEach((path, index) => {
+      // Skip paths that already have our drawing ID
+      if (path.getAttribute('data-drawing-id')) {
+        return;
+      }
+      
       // Check if this path belongs to our drawing layer
       const layerStamp = (layer as any)._leaflet_id;
       const pathLayer = (path as any)._leaflet_layer;
-      
-      // Alternative way: check if the path is part of our layer by comparing positions or other attributes
-      const pathBounds = path.getBBox ? path.getBBox() : null;
-      
-      // Type guard to check if layer has getBounds method
-      const layerHasBounds = 'getBounds' in layer && typeof (layer as any).getBounds === 'function';
-      const layerBounds = layerHasBounds ? (layer as any).getBounds() : null;
       
       let isOurPath = false;
       
       // Method 1: Check layer stamp
       if (layerStamp && pathLayer && pathLayer._leaflet_id === layerStamp) {
         isOurPath = true;
+        console.log(`Path ${index} matched by layer stamp`);
       }
       
-      // Method 2: If path already has our drawing ID
-      if (path.getAttribute('data-drawing-id') === drawing.id) {
-        isOurPath = true;
-      }
-      
-      // Method 3: Check if path is a child of our layer's DOM element
+      // Method 2: Check if path is the layer's direct path element
       if (!isOurPath && (layer as any)._path === path) {
         isOurPath = true;
+        console.log(`Path ${index} matched as layer's direct path`);
+      }
+      
+      // Method 3: Check if path is interactive and recent (likely our new drawing)
+      if (!isOurPath && path.classList.contains('leaflet-interactive')) {
+        // For newly created paths without IDs, assume they belong to the most recent drawing
+        const pathCreatedAt = path.getAttribute('data-created-at');
+        const currentTime = Date.now();
+        
+        if (!pathCreatedAt || (currentTime - parseInt(pathCreatedAt)) < 5000) {
+          isOurPath = true;
+          console.log(`Path ${index} matched as recent interactive path`);
+        }
       }
       
       if (isOurPath) {
@@ -183,44 +185,33 @@ export const setupLayerClickHandlers = (
     });
     
     console.log(`Set up ${handlerCount} DOM click handlers for drawing ${drawing.id}`);
-    
-    // If no paths found, try alternative approach - look for the layer's path directly
-    if (handlerCount === 0 && (layer as any)._path) {
-      const layerPath = (layer as any)._path;
-      console.log(`Setting up handler directly on layer path for drawing ${drawing.id}`);
-      
-      layerPath.setAttribute('data-drawing-id', drawing.id);
-      layerPath.classList.add('clickable-drawing-path');
-      layerPath.classList.add(`drawing-${drawing.id}`);
-      
-      const handleLayerPathClick = (event: Event) => {
-        console.log(`Layer path DOM click detected for drawing ${drawing.id}`);
-        
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        event.preventDefault();
-        (event as any).__handledByLayer = true;
-        
-        if (isMounted && onRegionClick) {
-          console.log(`Calling onRegionClick from layer path handler for drawing ${drawing.id}`);
-          onRegionClick(drawing);
-        }
-      };
-      
-      layerPath.addEventListener('click', handleLayerPathClick, true);
-      layerPath.addEventListener('click', handleLayerPathClick, false);
-      (layerPath as any).__clickHandler = handleLayerPathClick;
-      
-      console.log(`Set up direct layer path handler for drawing ${drawing.id}`);
-    }
+    return handlerCount;
   };
   
   // Set up path handlers with multiple attempts and increasing delays
-  setupPathClickHandlers();
-  setTimeout(setupPathClickHandlers, 50);
-  setTimeout(setupPathClickHandlers, 100);
-  setTimeout(setupPathClickHandlers, 300);
-  setTimeout(setupPathClickHandlers, 500);
-  setTimeout(setupPathClickHandlers, 1000);
-  setTimeout(setupPathClickHandlers, 2000);
+  const maxAttempts = 6;
+  let attempt = 0;
+  
+  const trySetupHandlers = () => {
+    attempt++;
+    const handlersSet = setupPathClickHandlers();
+    
+    console.log(`Attempt ${attempt}: Set up ${handlersSet || 0} handlers for drawing ${drawing.id}`);
+    
+    // If we successfully set up handlers or reached max attempts, stop trying
+    if (handlersSet && handlersSet > 0) {
+      console.log(`Successfully set up handlers for drawing ${drawing.id} on attempt ${attempt}`);
+      return;
+    }
+    
+    if (attempt < maxAttempts) {
+      const delay = attempt * 200; // Increasing delay: 200ms, 400ms, 600ms, etc.
+      setTimeout(trySetupHandlers, delay);
+    } else {
+      console.warn(`Failed to set up DOM handlers for drawing ${drawing.id} after ${maxAttempts} attempts`);
+    }
+  };
+  
+  // Start the setup process
+  trySetupHandlers();
 };
