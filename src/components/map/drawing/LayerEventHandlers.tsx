@@ -69,9 +69,9 @@ export const setupLayerClickHandlers = (
     }
   });
   
-  // Enhanced DOM event handler setup with better path finding
+  // Enhanced DOM event handler setup with simplified and more reliable path finding
   const setupPathClickHandlers = () => {
-    if (!isMounted) return;
+    if (!isMounted) return 0;
     
     console.log(`Setting up DOM path handlers for drawing ${drawing.id}`);
     
@@ -79,54 +79,69 @@ export const setupLayerClickHandlers = (
     const map = (layer as any)._map;
     if (!map) {
       console.log('No map available for path setup');
-      return;
+      return 0;
     }
     
     const mapContainer = map.getContainer();
     if (!mapContainer) {
       console.log('No map container available');
-      return;
+      return 0;
     }
     
-    // Find all SVG paths in the map - use broader search
-    const allPaths = mapContainer.querySelectorAll('svg path');
-    console.log(`Found ${allPaths.length} total SVG paths in map`);
+    // Find all interactive SVG paths in the map
+    const allPaths = mapContainer.querySelectorAll('svg path.leaflet-interactive');
+    console.log(`Found ${allPaths.length} interactive SVG paths in map`);
     
     let handlerCount = 0;
+    const layerStamp = (layer as any)._leaflet_id;
     
     allPaths.forEach((path, index) => {
       // Skip paths that already have our drawing ID
-      if (path.getAttribute('data-drawing-id')) {
+      if (path.getAttribute('data-drawing-id') === drawing.id) {
+        console.log(`Path ${index} already has drawing ID ${drawing.id}`);
         return;
       }
       
-      // Check if this path belongs to our drawing layer
-      const layerStamp = (layer as any)._leaflet_id;
-      const pathLayer = (path as any)._leaflet_layer;
-      
+      // Check if this path belongs to our drawing layer using multiple methods
       let isOurPath = false;
       
-      // Method 1: Check layer stamp
-      if (layerStamp && pathLayer && pathLayer._leaflet_id === layerStamp) {
-        isOurPath = true;
-        console.log(`Path ${index} matched by layer stamp`);
-      }
-      
-      // Method 2: Check if path is the layer's direct path element
-      if (!isOurPath && (layer as any)._path === path) {
+      // Method 1: Check if path is the layer's direct path element
+      if ((layer as any)._path === path) {
         isOurPath = true;
         console.log(`Path ${index} matched as layer's direct path`);
       }
       
-      // Method 3: Check if path is interactive and recent (likely our new drawing)
-      if (!isOurPath && path.classList.contains('leaflet-interactive')) {
-        // For newly created paths without IDs, assume they belong to the most recent drawing
+      // Method 2: Check layer stamp on the path's associated layer
+      const pathLayer = (path as any)._leaflet_layer;
+      if (!isOurPath && layerStamp && pathLayer && pathLayer._leaflet_id === layerStamp) {
+        isOurPath = true;
+        console.log(`Path ${index} matched by layer stamp`);
+      }
+      
+      // Method 3: For newly created paths without existing IDs, check if they're recent and don't belong to other drawings
+      if (!isOurPath && !path.getAttribute('data-drawing-id')) {
+        // Check if this is a recent path (created in the last few seconds)
         const pathCreatedAt = path.getAttribute('data-created-at');
         const currentTime = Date.now();
         
-        if (!pathCreatedAt || (currentTime - parseInt(pathCreatedAt)) < 5000) {
+        if (!pathCreatedAt) {
+          // No creation time, assume it's recent and belongs to our drawing
           isOurPath = true;
-          console.log(`Path ${index} matched as recent interactive path`);
+          console.log(`Path ${index} matched as recent path without drawing ID`);
+        } else if ((currentTime - parseInt(pathCreatedAt)) < 5000) {
+          isOurPath = true;
+          console.log(`Path ${index} matched as recent path (${currentTime - parseInt(pathCreatedAt)}ms old)`);
+        }
+      }
+      
+      // Method 4: Check if this path has the same style/color as our layer
+      if (!isOurPath && (layer as any).options) {
+        const layerColor = (layer as any).options.color;
+        const pathColor = path.getAttribute('stroke') || path.style.stroke;
+        
+        if (layerColor && pathColor && layerColor === pathColor) {
+          isOurPath = true;
+          console.log(`Path ${index} matched by color: ${layerColor}`);
         }
       }
       
@@ -135,6 +150,7 @@ export const setupLayerClickHandlers = (
         
         // Set drawing ID and other attributes
         path.setAttribute('data-drawing-id', drawing.id);
+        path.setAttribute('data-created-at', Date.now().toString());
         path.classList.add('clickable-drawing-path');
         path.classList.add(`drawing-${drawing.id}`);
         
@@ -189,7 +205,7 @@ export const setupLayerClickHandlers = (
   };
   
   // Set up path handlers with multiple attempts and increasing delays
-  const maxAttempts = 6;
+  const maxAttempts = 8;
   let attempt = 0;
   
   const trySetupHandlers = () => {
@@ -198,20 +214,22 @@ export const setupLayerClickHandlers = (
     
     console.log(`Attempt ${attempt}: Set up ${handlersSet || 0} handlers for drawing ${drawing.id}`);
     
-    // If we successfully set up handlers or reached max attempts, stop trying
+    // If we successfully set up handlers, stop trying
     if (handlersSet && handlersSet > 0) {
       console.log(`Successfully set up handlers for drawing ${drawing.id} on attempt ${attempt}`);
       return;
     }
     
+    // Continue trying if we haven't reached max attempts
     if (attempt < maxAttempts) {
-      const delay = attempt * 200; // Increasing delay: 200ms, 400ms, 600ms, etc.
+      const delay = Math.min(attempt * 150, 1000); // Cap delay at 1 second
+      console.log(`Retrying handler setup for drawing ${drawing.id} in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
       setTimeout(trySetupHandlers, delay);
     } else {
       console.warn(`Failed to set up DOM handlers for drawing ${drawing.id} after ${maxAttempts} attempts`);
     }
   };
   
-  // Start the setup process
-  trySetupHandlers();
+  // Start the setup process with a small initial delay
+  setTimeout(trySetupHandlers, 50);
 };
