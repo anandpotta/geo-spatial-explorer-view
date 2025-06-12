@@ -22,12 +22,21 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Check if click is on specific interactive elements - be more specific
-        // Only consider actual marker icons, not drawing paths
-        const isOnActualMarker = (target.closest('.leaflet-marker-icon') !== null || 
-                                 target.classList.contains('leaflet-marker-icon')) &&
-                                 !target.classList.contains('leaflet-interactive') &&
-                                 !target.hasAttribute('data-shape-type');
+        // Check for actual marker icons ONLY - be very specific
+        // A real marker icon will be an IMG element or have specific marker classes
+        // and will NOT have drawing-related attributes
+        const isOnActualMarker = (
+          // Must be an actual marker icon element (usually IMG)
+          (target.tagName === 'IMG' && target.classList.contains('leaflet-marker-icon')) ||
+          // Or have marker icon class but NOT be a drawing element
+          (target.classList.contains('leaflet-marker-icon') && 
+           target.tagName !== 'path' && 
+           target.tagName !== 'svg' &&
+           !target.hasAttribute('data-shape-type') &&
+           !target.hasAttribute('data-drawing-id') &&
+           !target.classList.contains('leaflet-interactive') &&
+           !target.classList.contains('leaflet-drawing'))
+        );
         
         const isOnPopup = target.closest('.leaflet-popup') !== null;
         const isOnControl = target.closest('.leaflet-control') !== null;
@@ -40,7 +49,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
           return;
         }
         
-        // For SVG elements (drawn shapes), check if they have drawing IDs
+        // For SVG elements (drawn shapes), handle them separately
         if (target.tagName === 'path' || target.tagName === 'svg') {
           const hasDrawingId = target.getAttribute('data-drawing-id') !== null;
           const isInteractiveDrawing = target.closest('[data-drawing-id]') !== null;
