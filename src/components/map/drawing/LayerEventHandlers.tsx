@@ -12,82 +12,73 @@ export const setupLayerClickHandlers = (
   isMounted: boolean,
   onRegionClick?: (drawing: DrawingData) => void
 ): void => {
-  if (!layer || !isMounted) {
-    console.log(`Cannot set up handlers: layer=${!!layer}, isMounted=${isMounted}`);
-    return;
-  }
-  
-  if (!onRegionClick) {
-    console.log(`No onRegionClick callback provided for drawing ${drawing.id}`);
+  if (!layer || !isMounted || !onRegionClick) {
     return;
   }
   
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.log('No current user - skipping handler setup');
+  if (!currentUser || (drawing.userId && drawing.userId !== currentUser.id)) {
     return;
   }
   
-  // Only set up click handlers for drawings owned by the current user
-  if (drawing.userId && drawing.userId !== currentUser.id) {
-    console.log(`Drawing ${drawing.id} belongs to another user, skipping handler setup`);
-    return;
-  }
+  console.log(`🔧 Setting up layer click handler for drawing ${drawing.id}`);
   
-  console.log(`🔧 Setting up simplified click handlers for drawing ${drawing.id}`);
-  
-  // Remove any existing handlers first
+  // Remove any existing handlers
   layer.off('click');
   
-  // Create the click handler
+  // Create the click handler that marks the event as handled
   const handleLayerClick = (e: L.LeafletMouseEvent) => {
-    console.log(`🎯 LAYER CLICK TRIGGERED for drawing ${drawing.id}`, e);
+    console.log(`🎯 Layer click handler triggered for drawing ${drawing.id}`);
     
-    // Stop event propagation using Leaflet's method
-    L.DomEvent.stop(e);
-    
-    // Also stop the original event if available
+    // Mark the event as handled by layer
     if (e.originalEvent) {
-      e.originalEvent.stopPropagation();
-      e.originalEvent.preventDefault();
+      (e.originalEvent as any).__handledByLayer = true;
     }
+    
+    // Stop propagation
+    L.DomEvent.stop(e);
     
     // Call the callback
     if (isMounted && onRegionClick) {
-      console.log(`🚀 Calling onRegionClick for drawing ${drawing.id}`);
-      try {
-        onRegionClick(drawing);
-        console.log(`✅ Successfully handled click for drawing ${drawing.id}`);
-      } catch (error) {
-        console.error(`❌ Error calling onRegionClick for drawing ${drawing.id}:`, error);
-      }
+      console.log(`✅ Calling onRegionClick for drawing ${drawing.id}`);
+      onRegionClick(drawing);
     }
     
     return false;
   };
   
-  // Set up the Leaflet layer click handler with high priority
+  // Attach to the main layer
   layer.on('click', handleLayerClick);
   
-  // For feature groups, also set up handlers on child layers
+  // For feature groups, attach to child layers
   if (layer && typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((childLayer: L.Layer) => {
-      console.log(`🔧 Setting up handler on child layer for drawing ${drawing.id}`);
       childLayer.off('click');
       childLayer.on('click', handleLayerClick);
+    });
+  }
+  
+  // CRITICAL: Also set up DOM-level handlers for the SVG paths
+  // This is what was missing - we need to handle clicks directly on the DOM elements
+  setTimeout(() => {
+    const map = (layer as any)._map;
+    if (!map) return;
+    
+    // Find SVG paths with this drawing ID
+    const container = map.getContainer();
+    if (container) {
+      const paths = container.querySelectorAll(`[data-drawing-id="${drawing.id}"], .leaflet-interactive`);
       
-      // Also try to set a higher event priority if the layer has a DOM element
-      setTimeout(() => {
-        const pathElement = (childLayer as any)._path;
-        if (pathElement) {
-          console.log(`🎯 Found path element for drawing ${drawing.id}, ensuring it's clickable`);
-          pathElement.style.pointerEvents = 'auto';
-          pathElement.style.cursor = 'pointer';
-          pathElement.setAttribute('data-drawing-id', drawing.id);
+      paths.forEach((pathElement: any) => {
+        if (!pathElement.hasAttribute('data-click-handler-attached')) {
+          console.log(`🎯 Attaching DOM click handler to path for drawing ${drawing.id}`);
           
-          // Add a direct DOM click handler as backup
-          const domHandler = (event: Event) => {
-            console.log(`🎯 DOM BACKUP HANDLER triggered for drawing ${drawing.id}`);
+          const domClickHandler = (event: Event) => {
+            console.log(`🚀 DOM click handler triggered for drawing ${drawing.id}`);
+            
+            // Mark as handled by layer
+            (event as any).__handledByLayer = true;
+            
             event.stopPropagation();
             event.preventDefault();
             
@@ -96,11 +87,14 @@ export const setupLayerClickHandlers = (
             }
           };
           
-          pathElement.addEventListener('click', domHandler, { capture: true });
+          pathElement.addEventListener('click', domClickHandler, { capture: true });
+          pathElement.setAttribute('data-click-handler-attached', 'true');
+          pathElement.setAttribute('data-drawing-id', drawing.id);
+          pathElement.style.cursor = 'pointer';
         }
-      }, 100);
-    });
-  }
+      });
+    }
+  }, 100);
   
-  console.log(`✅ Completed handler setup for drawing ${drawing.id}`);
+  console.log(`✅ Layer click handler setup complete for drawing ${drawing.id}`);
 };
