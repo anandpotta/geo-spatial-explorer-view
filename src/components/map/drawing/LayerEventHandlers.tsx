@@ -51,14 +51,14 @@ export const setupLayerClickHandlers = (
       // Mark the event as handled by layer
       (e.originalEvent as any).__handledByLayer = true;
       
-      // Use proper Leaflet event stopping
-      L.DomEvent.stopPropagation(e.originalEvent as Event);
-      L.DomEvent.preventDefault(e.originalEvent as Event);
+      // Use proper Leaflet event stopping with the correct event type
+      L.DomEvent.stopPropagation(e.originalEvent);
+      L.DomEvent.preventDefault(e.originalEvent);
     }
     
-    // Stop Leaflet event propagation
-    L.DomEvent.stopPropagation(e);
-    L.DomEvent.preventDefault(e);
+    // Stop Leaflet event propagation - use the Leaflet event directly
+    L.DomEvent.stopPropagation(e as any);
+    L.DomEvent.preventDefault(e as any);
     
     if (isMounted && onRegionClick) {
       console.log(`Calling onRegionClick for drawing ${drawing.id}`);
