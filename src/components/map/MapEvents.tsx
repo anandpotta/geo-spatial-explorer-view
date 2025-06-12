@@ -22,20 +22,25 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Check for actual marker icons ONLY - be very specific
-        // A real marker icon will be an IMG element or have specific marker classes
-        // and will NOT have drawing-related attributes
+        // Check for actual marker icons ONLY - be extremely specific
+        // Only consider elements that are definitely location markers, not drawing elements
         const isOnActualMarker = (
-          // Must be an actual marker icon element (usually IMG)
-          (target.tagName === 'IMG' && target.classList.contains('leaflet-marker-icon')) ||
-          // Or have marker icon class but NOT be a drawing element
-          (target.classList.contains('leaflet-marker-icon') && 
-           target.tagName !== 'path' && 
-           target.tagName !== 'svg' &&
-           !target.hasAttribute('data-shape-type') &&
-           !target.hasAttribute('data-drawing-id') &&
-           !target.classList.contains('leaflet-interactive') &&
-           !target.classList.contains('leaflet-drawing'))
+          // Must be an IMG element with marker icon class AND not have any drawing attributes
+          target.tagName === 'IMG' && 
+          target.classList.contains('leaflet-marker-icon') &&
+          !target.hasAttribute('data-drawing-id') &&
+          !target.hasAttribute('data-shape-type') &&
+          !target.hasAttribute('data-drawing-type') &&
+          !target.classList.contains('leaflet-interactive') &&
+          !target.classList.contains('leaflet-drawing') &&
+          // Extra safety: check if parent has drawing attributes
+          !target.closest('[data-drawing-id]') &&
+          !target.closest('[data-shape-type]') &&
+          !target.closest('.leaflet-interactive') &&
+          // Make sure it's actually a location marker by checking src or other marker-specific attributes
+          (target.getAttribute('src')?.includes('marker') || 
+           target.getAttribute('alt')?.includes('marker') ||
+           target.closest('.marker-container') !== null)
         );
         
         const isOnPopup = target.closest('.leaflet-popup') !== null;
@@ -43,7 +48,7 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
         const isOnButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
         const isOnInput = target.tagName === 'INPUT' || target.closest('input') !== null;
         
-        // Only ignore if it's actually on a real marker icon or other UI elements
+        // Only ignore if it's actually on a real location marker or other UI elements
         if (isOnActualMarker || isOnPopup || isOnControl || isOnButton || isOnInput) {
           console.log('Click on UI element ignored:', { isOnActualMarker, isOnPopup, isOnControl, isOnButton, isOnInput });
           return;
