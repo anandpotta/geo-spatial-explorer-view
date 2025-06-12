@@ -74,15 +74,36 @@ export function usePathElementsCleaner(clearPathElements: () => void) {
         // Dispatch event to restore each saved path
         customEvent.detail.paths.forEach((pathData: string) => {
           try {
-            const pathObj = JSON.parse(pathData);
-            if (pathObj && pathObj.id) {
+            // First try to parse as JSON (new format)
+            let pathObj;
+            try {
+              pathObj = JSON.parse(pathData);
+            } catch (jsonError) {
+              // If JSON parsing fails, it might be a raw SVG path string (old format)
+              if (typeof pathData === 'string' && pathData.startsWith('M')) {
+                console.log('Found raw SVG path data, creating minimal path object');
+                pathObj = {
+                  id: `path-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                  d: pathData,
+                  stroke: '#3388ff',
+                  strokeWidth: '3',
+                  fill: '#3388ff',
+                  fillOpacity: '0.2'
+                };
+              } else {
+                console.error('Failed to parse path data - not JSON and not SVG path:', pathData);
+                return;
+              }
+            }
+            
+            if (pathObj && (pathObj.id || pathObj.d)) {
               // Create a drawing created event to restore this path
               window.dispatchEvent(new CustomEvent('restoreDrawing', {
                 detail: pathObj
               }));
             }
           } catch (err) {
-            console.error('Failed to parse saved path data:', err);
+            console.error('Failed to process saved path data:', err);
           }
         });
       }
