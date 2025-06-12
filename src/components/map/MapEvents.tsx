@@ -22,16 +22,17 @@ const MapEvents = ({ onMapClick }: MapEventsProps) => {
       if (e.originalEvent.target) {
         const target = e.originalEvent.target as HTMLElement;
         
-        // Check if click is on specific interactive elements
-        const isOnMarker = target.closest('.leaflet-marker-icon') !== null;
+        // Check if click is on specific interactive elements - be more specific
+        const isOnActualMarker = target.closest('.leaflet-marker-icon') !== null || 
+                                 target.classList.contains('leaflet-marker-icon');
         const isOnPopup = target.closest('.leaflet-popup') !== null;
         const isOnControl = target.closest('.leaflet-control') !== null;
         const isOnButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
         const isOnInput = target.tagName === 'INPUT' || target.closest('input') !== null;
         
-        // Only ignore if it's actually on an interactive element
-        if (isOnMarker || isOnPopup || isOnControl || isOnButton || isOnInput) {
-          console.log('Click on interactive element ignored:', { isOnMarker, isOnPopup, isOnControl, isOnButton, isOnInput });
+        // Only ignore if it's actually on a real marker icon or other UI elements
+        if (isOnActualMarker || isOnPopup || isOnControl || isOnButton || isOnInput) {
+          console.log('Click on UI element ignored:', { isOnActualMarker, isOnPopup, isOnControl, isOnButton, isOnInput });
           return;
         }
         
