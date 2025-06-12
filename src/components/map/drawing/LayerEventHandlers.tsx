@@ -106,7 +106,10 @@ export const setupLayerClickHandlers = (
       
       // Alternative way: check if the path is part of our layer by comparing positions or other attributes
       const pathBounds = path.getBBox ? path.getBBox() : null;
-      const layerBounds = layer.getBounds ? layer.getBounds() : null;
+      
+      // Type guard to check if layer has getBounds method
+      const layerHasBounds = 'getBounds' in layer && typeof (layer as any).getBounds === 'function';
+      const layerBounds = layerHasBounds ? (layer as any).getBounds() : null;
       
       let isOurPath = false;
       
