@@ -49,7 +49,7 @@ export const setupLayerClickHandlers = (
   
   // Create a unified click handler that properly stops event propagation
   const handleClick = (e: any) => {
-    console.log(`🎯 Drawing ${drawing.id} click handler triggered - SUCCESS!`);
+    console.log(`🎯 Drawing ${drawing.id} click handler TRIGGERED - SUCCESS!`);
     
     // Stop all event propagation immediately
     if (e && e.originalEvent) {
@@ -102,7 +102,7 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  // Enhanced DOM-level click handlers with better timing and element detection
+  // Enhanced DOM-level click handlers with better element detection
   const setupDOMHandlers = () => {
     if (!isMounted) {
       console.log(`Component unmounted before DOM handler setup for ${drawing.id}`);
@@ -121,14 +121,7 @@ export const setupLayerClickHandlers = (
       return;
     }
     
-    // First, try to set the data attribute on the layer's DOM element
-    if ((layer as any)._path) {
-      const pathElement = (layer as any)._path;
-      if (pathElement && typeof pathElement.setAttribute === 'function') {
-        pathElement.setAttribute('data-drawing-id', drawing.id);
-        console.log(`✅ Set data-drawing-id on layer path for ${drawing.id}`);
-      }
-    }
+    console.log(`🔍 Setting up DOM handlers for drawing ${drawing.id}`);
     
     // Type guard function to check if an element is a valid DOM Element
     const isElement = (node: unknown): node is Element => {
@@ -138,21 +131,18 @@ export const setupLayerClickHandlers = (
              (node as any).nodeType === Node.ELEMENT_NODE;
     };
     
-    // Enhanced selectors - try multiple approaches to find the path
-    const selectors = [
-      `[data-drawing-id="${drawing.id}"]`,
-      `path[data-drawing-id="${drawing.id}"]`,
-      `.leaflet-interactive[data-drawing-id="${drawing.id}"]`,
-      '.leaflet-interactive', // Fallback to all interactive elements
-      'path.leaflet-interactive' // All interactive paths
-    ];
-    
-    let pathsFound = 0;
-    let handledPaths = new Set();
+    // First, try to set the data attribute on the layer's DOM element
+    if ((layer as any)._path) {
+      const pathElement = (layer as any)._path;
+      if (pathElement && typeof pathElement.setAttribute === 'function') {
+        pathElement.setAttribute('data-drawing-id', drawing.id);
+        console.log(`✅ Set data-drawing-id on layer path for ${drawing.id}`);
+      }
+    }
     
     // Function to attach handler to a path element
     const attachToPath = (pathElement: Element, source: string) => {
-      if (!pathElement || handledPaths.has(pathElement)) {
+      if (!pathElement) {
         return false;
       }
       
@@ -164,7 +154,7 @@ export const setupLayerClickHandlers = (
       console.log(`🎯 Attaching DOM click handler to path from ${source} for drawing ${drawing.id}`);
       
       const domClickHandler = (event: Event) => {
-        console.log(`🚀 DOM click handler triggered for drawing ${drawing.id} - SUCCESS!`);
+        console.log(`🚀 DOM click handler TRIGGERED for drawing ${drawing.id} - SUCCESS!`);
         
         // Mark as handled
         (event as any).__handledByLayer = true;
@@ -178,53 +168,78 @@ export const setupLayerClickHandlers = (
         }
       };
       
+      // Remove any existing click handlers first
+      const existingHandler = (pathElement as any).__clickHandler;
+      if (existingHandler) {
+        pathElement.removeEventListener('click', existingHandler);
+      }
+      
+      // Attach new handler
       pathElement.addEventListener('click', domClickHandler, { 
         capture: true,
         passive: false 
       });
       
+      // Store reference to handler for cleanup
+      (pathElement as any).__clickHandler = domClickHandler;
+      
       pathElement.setAttribute('data-click-handler-attached', 'true');
       (pathElement as HTMLElement).style.cursor = 'pointer';
       
-      handledPaths.add(pathElement);
       return true;
     };
     
-    // Try specific selectors first
-    selectors.slice(0, 3).forEach(selector => {
-      const drawingPaths = container.querySelectorAll(selector);
-      console.log(`Found ${drawingPaths.length} paths with selector "${selector}" for drawing ${drawing.id}`);
-      
-      drawingPaths.forEach((pathElement) => {
-        if (isElement(pathElement) && attachToPath(pathElement, `selector: ${selector}`)) {
-          pathsFound++;
-        }
-      });
-    });
+    let pathsFound = 0;
     
-    // If no specific paths found, try to match by layer reference
-    if (pathsFound === 0 && (layer as any)._path) {
-      const layerPath = (layer as any)._path;
-      if (isElement(layerPath) && attachToPath(layerPath, 'layer._path')) {
-        pathsFound++;
+    // Try to find paths using multiple strategies
+    const strategies = [
+      // Strategy 1: Use the layer's _path directly
+      () => {
+        if ((layer as any)._path) {
+          const layerPath = (layer as any)._path;
+          if (isElement(layerPath) && attachToPath(layerPath, 'layer._path')) {
+            pathsFound++;
+            return true;
+          }
+        }
+        return false;
+      },
+      
+      // Strategy 2: Look for paths with the specific drawing ID
+      () => {
+        const drawingPaths = container.querySelectorAll(`[data-drawing-id="${drawing.id}"]`);
+        let found = false;
+        drawingPaths.forEach((pathElement) => {
+          if (isElement(pathElement) && attachToPath(pathElement, 'data-drawing-id selector')) {
+            pathsFound++;
+            found = true;
+          }
+        });
+        return found;
+      },
+      
+      // Strategy 3: Look for the most recent interactive path without a handler
+      () => {
+        const allInteractivePaths = container.querySelectorAll('path.leaflet-interactive');
+        const unhandledPaths = Array.from(allInteractivePaths).filter(path => 
+          isElement(path) && !path.hasAttribute('data-click-handler-attached')
+        );
+        
+        if (unhandledPaths.length > 0) {
+          const targetPath = unhandledPaths[unhandledPaths.length - 1]; // Most recent
+          if (isElement(targetPath) && attachToPath(targetPath, 'most-recent-unhandled')) {
+            pathsFound++;
+            return true;
+          }
+        }
+        return false;
       }
-    }
+    ];
     
-    // If still no paths found, try all interactive paths and match by proximity or other heuristics
-    if (pathsFound === 0) {
-      const allInteractivePaths = container.querySelectorAll('path.leaflet-interactive');
-      console.log(`Fallback: Found ${allInteractivePaths.length} interactive paths total`);
-      
-      // For now, attach to the most recently added interactive path that doesn't have a handler
-      const unhandledPaths = Array.from(allInteractivePaths).filter(path => 
-        isElement(path) && !path.hasAttribute('data-click-handler-attached')
-      );
-      
-      if (unhandledPaths.length > 0) {
-        const targetPath = unhandledPaths[unhandledPaths.length - 1]; // Most recent
-        if (isElement(targetPath) && attachToPath(targetPath, 'fallback-recent')) {
-          pathsFound++;
-        }
+    // Try each strategy until one works
+    for (const strategy of strategies) {
+      if (strategy()) {
+        break;
       }
     }
     
@@ -245,11 +260,28 @@ export const setupLayerClickHandlers = (
     }
   };
   
-  // Try immediate setup and also delayed setup
+  // Try immediate setup
   setupDOMHandlers();
   
-  // Also try after a longer delay to catch late-rendered elements
-  setTimeout(setupDOMHandlers, 500);
+  // Also try after delays to catch elements that render later
+  setTimeout(() => {
+    if (isMounted) {
+      setupDOMHandlers();
+    }
+  }, 100);
+  
+  setTimeout(() => {
+    if (isMounted) {
+      setupDOMHandlers();
+    }
+  }, 500);
+  
+  // Also try on next animation frame
+  requestAnimationFrame(() => {
+    if (isMounted) {
+      setupDOMHandlers();
+    }
+  });
   
   console.log(`✅ Layer click handler setup complete for drawing ${drawing.id}`);
 };
