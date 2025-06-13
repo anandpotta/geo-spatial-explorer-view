@@ -42,18 +42,8 @@ export const setupLayerClickHandlers = (
   const currentUser = getCurrentUser();
   console.log(`👤 LayerEventHandlers: Current user:`, currentUser?.id || 'none');
   
-  if (!currentUser) {
-    console.warn('❌ LayerEventHandlers: No current user, skipping handler setup');
-    return;
-  }
-  
-  // Check if user owns this drawing or if it's public
-  if (drawing.userId && drawing.userId !== currentUser.id) {
-    console.warn(`❌ LayerEventHandlers: User ${currentUser.id} cannot interact with drawing ${drawing.id} owned by ${drawing.userId}`);
-    return;
-  }
-  
-  console.log(`✅ LayerEventHandlers: All validation checks passed for drawing ${drawing.id}`);
+  // Always set up handlers for existing drawings - the onRegionClick callback will handle auth
+  console.log(`✅ LayerEventHandlers: Setting up click handlers for drawing ${drawing.id}`);
   
   // Ensure the global handlers map exists
   console.log(`🔧 LayerEventHandlers: Checking global handlers map...`);
@@ -114,7 +104,7 @@ export const setupLayerClickHandlers = (
     console.log(`📞 LayerEventHandlers: About to call onRegionClick for drawing ${drawing.id}`);
     console.log(`🔍 LayerEventHandlers: onRegionClick function:`, onRegionClick);
     
-    // Always call the callback
+    // Always call the callback - let the callback handle authentication
     try {
       onRegionClick(drawing);
       console.log(`✅ LayerEventHandlers: Successfully called onRegionClick for drawing ${drawing.id}`);
