@@ -14,6 +14,7 @@ import FileUploadHandler from './drawing/FileUploadHandler';
 import DrawingControlsEffects from './drawing/DrawingControlsEffects';
 import LayerManagerWrapper from './drawing/LayerManagerWrapper';
 import DrawToolsWrapper from './drawing/DrawToolsWrapper';
+import GlobalPathClickHandler from './drawing/GlobalPathClickHandler';
 
 interface DrawingControlsProps {
   onCreated: (shape: any) => void;
@@ -129,6 +130,7 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
 
   return (
     <>
+      <GlobalPathClickHandler />
       <FileUploadHandler fileInputRef={uploadFileInputRef} onChange={handleFileChange} />
       <DrawingControlsEffects 
         activeTool={activeTool} 

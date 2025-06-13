@@ -81,7 +81,7 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  // Set up DOM-level handlers as backup
+  // Enhanced DOM-level handlers with better targeting
   const setupDOMHandlers = () => {
     const map = (layer as any)._map;
     if (!map?.getContainer) return;
@@ -91,7 +91,7 @@ export const setupLayerClickHandlers = (
     
     console.log(`🔍 Setting up DOM handlers for drawing ${drawing.id}`);
     
-    // Create DOM click handler
+    // Create DOM click handler that captures the drawing context
     const domClickHandler = (event: MouseEvent) => {
       console.log(`🚀 LayerEventHandlers: DOM click handler TRIGGERED for drawing ${drawing.id}`);
       
@@ -111,56 +111,75 @@ export const setupLayerClickHandlers = (
       }
     };
     
-    // Find SVG paths with the drawing ID
-    const drawingPaths = container.querySelectorAll(`[data-drawing-id="${drawing.id}"]`);
-    
-    if (drawingPaths.length > 0) {
-      drawingPaths.forEach((pathElement) => {
-        // Remove existing handler
-        const existingHandler = (pathElement as any).__clickHandler;
-        if (existingHandler) {
-          pathElement.removeEventListener('click', existingHandler, true);
-        }
-        
-        // Add new handler with capture = true
-        pathElement.addEventListener('click', domClickHandler, true);
-        (pathElement as any).__clickHandler = domClickHandler;
-        
-        // Ensure the element is interactive
-        (pathElement as HTMLElement).style.pointerEvents = 'auto';
-        (pathElement as HTMLElement).style.cursor = 'pointer';
-        
-        console.log(`✅ DOM handler attached to path for drawing ${drawing.id}`);
-      });
-    } else {
-      // Fallback: find the layer's path element and mark it
-      if ((layer as any)._path) {
-        const layerPath = (layer as any)._path;
-        layerPath.setAttribute('data-drawing-id', drawing.id);
-        
-        // Remove existing handler
-        const existingHandler = (layerPath as any).__clickHandler;
-        if (existingHandler) {
-          layerPath.removeEventListener('click', existingHandler, true);
-        }
-        
-        // Add new handler
-        layerPath.addEventListener('click', domClickHandler, true);
-        (layerPath as any).__clickHandler = domClickHandler;
-        
-        // Ensure the element is interactive
-        layerPath.style.pointerEvents = 'auto';
-        layerPath.style.cursor = 'pointer';
-        
-        console.log(`✅ DOM handler attached to layer path for drawing ${drawing.id}`);
-      }
+    // Store the drawing ID globally for path identification
+    if (!(window as any).drawingClickHandlers) {
+      (window as any).drawingClickHandlers = new Map();
     }
+    (window as any).drawingClickHandlers.set(drawing.id, { drawing, onRegionClick });
+    
+    // Find and setup handlers for the layer's SVG path
+    const setupPathHandler = (pathElement: Element) => {
+      // Remove existing handler
+      const existingHandler = (pathElement as any).__clickHandler;
+      if (existingHandler) {
+        pathElement.removeEventListener('click', existingHandler, true);
+      }
+      
+      // Set drawing ID attribute for identification
+      pathElement.setAttribute('data-drawing-id', drawing.id);
+      
+      // Add new handler with capture = true for better event handling
+      pathElement.addEventListener('click', domClickHandler, true);
+      (pathElement as any).__clickHandler = domClickHandler;
+      
+      // Ensure the element is interactive
+      (pathElement as HTMLElement).style.pointerEvents = 'auto';
+      (pathElement as HTMLElement).style.cursor = 'pointer';
+      
+      console.log(`✅ DOM handler attached to path for drawing ${drawing.id}`);
+    };
+    
+    // Try multiple strategies to find the SVG paths
+    setTimeout(() => {
+      // Strategy 1: Find paths with the drawing ID
+      const drawingPaths = container.querySelectorAll(`[data-drawing-id="${drawing.id}"]`);
+      if (drawingPaths.length > 0) {
+        drawingPaths.forEach(setupPathHandler);
+        return;
+      }
+      
+      // Strategy 2: Find the layer's path element directly
+      if ((layer as any)._path) {
+        setupPathHandler((layer as any)._path);
+        return;
+      }
+      
+      // Strategy 3: Find paths in feature groups
+      if (typeof (layer as any).eachLayer === 'function') {
+        (layer as any).eachLayer((childLayer: L.Layer) => {
+          if ((childLayer as any)._path) {
+            setupPathHandler((childLayer as any)._path);
+          }
+        });
+      }
+      
+      // Strategy 4: Global path search as fallback
+      const allPaths = container.querySelectorAll('path');
+      allPaths.forEach((path) => {
+        if (!path.hasAttribute('data-drawing-id')) {
+          path.setAttribute('data-drawing-id', drawing.id);
+          setupPathHandler(path);
+        }
+      });
+    }, 100);
+    
+    // Also setup with additional delays for paths that load later
+    setTimeout(() => setupDOMHandlers(), 500);
+    setTimeout(() => setupDOMHandlers(), 1000);
   };
   
   // Setup DOM handlers immediately and with retries
   setupDOMHandlers();
-  setTimeout(() => setupDOMHandlers(), 100);
-  setTimeout(() => setupDOMHandlers(), 500);
   
   console.log(`✅ Layer click handler setup complete for drawing ${drawing.id}`);
 };
