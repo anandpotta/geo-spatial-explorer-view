@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { findSvgPathByDrawingId } from '@/utils/svg-path-finder';
 import { applyImageClipMask } from '@/utils/svg-clip-mask';
@@ -17,6 +18,8 @@ export function useSvgPathManagement() {
     const maxRetries = 15;
     const baseRetryDelay = 300;
     
+    console.log(`🎯 useSvgPathManagement: applyClipMaskStable CALLED for ${drawingId} (attempt ${retryCount + 1})`);
+    
     if (retryCount >= maxRetries) {
       console.error(`❌ useSvgPathManagement: Max retries exceeded for ${drawingId}`);
       return false;
@@ -33,30 +36,65 @@ export function useSvgPathManagement() {
     
     // Find path element with comprehensive search
     let pathElement = findSvgPathByDrawingId(drawingId);
+    console.log(`🔍 useSvgPathManagement: findSvgPathByDrawingId result for ${drawingId}:`, pathElement);
     
     if (!pathElement) {
       pathElement = document.querySelector(`#drawing-path-${drawingId}`) as SVGPathElement;
+      console.log(`🔍 useSvgPathManagement: querySelector by ID result for ${drawingId}:`, pathElement);
     }
     
     if (!pathElement) {
       pathElement = document.querySelector(`[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+      console.log(`🔍 useSvgPathManagement: querySelector by data-drawing-id result for ${drawingId}:`, pathElement);
     }
     
     if (!pathElement) {
       // Look in all SVG containers and leaflet panes
       const allSvgs = document.querySelectorAll('svg');
+      console.log(`🔍 useSvgPathManagement: Found ${allSvgs.length} SVG elements to search`);
+      
       for (const svg of Array.from(allSvgs)) {
         pathElement = svg.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
-        if (pathElement) break;
+        if (pathElement) {
+          console.log(`🔍 useSvgPathManagement: Found path in SVG element:`, svg);
+          break;
+        }
       }
     }
     
     if (!pathElement) {
       // Also search in leaflet overlay panes specifically
       const overlayPanes = document.querySelectorAll('.leaflet-overlay-pane');
+      console.log(`🔍 useSvgPathManagement: Found ${overlayPanes.length} overlay panes to search`);
+      
       for (const pane of Array.from(overlayPanes)) {
         pathElement = pane.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
-        if (pathElement) break;
+        if (pathElement) {
+          console.log(`🔍 useSvgPathManagement: Found path in overlay pane:`, pane);
+          break;
+        }
+      }
+    }
+    
+    // Additional comprehensive search
+    if (!pathElement) {
+      const allPaths = document.querySelectorAll('path');
+      console.log(`🔍 useSvgPathManagement: Searching through ${allPaths.length} total path elements`);
+      
+      for (const path of Array.from(allPaths)) {
+        const pathDrawingId = path.getAttribute('data-drawing-id');
+        const pathId = path.getAttribute('id');
+        console.log(`🔍 useSvgPathManagement: Path attributes:`, {
+          'data-drawing-id': pathDrawingId,
+          'id': pathId,
+          'matches': pathDrawingId === drawingId || pathId === `drawing-path-${drawingId}`
+        });
+        
+        if (pathDrawingId === drawingId || pathId === `drawing-path-${drawingId}`) {
+          pathElement = path as SVGPathElement;
+          console.log(`🔍 useSvgPathManagement: Found matching path element:`, pathElement);
+          break;
+        }
       }
     }
     
@@ -65,6 +103,7 @@ export function useSvgPathManagement() {
       
       const timeoutId = setTimeout(() => {
         if (mountedRef.current) {
+          console.log(`🔄 useSvgPathManagement: Retrying clip mask application for ${drawingId}`);
           applyClipMaskStable(drawingId, floorPlanData, retryCount + 1);
         }
       }, baseRetryDelay * (retryCount + 1));
@@ -74,6 +113,14 @@ export function useSvgPathManagement() {
     }
     
     console.log(`✅ useSvgPathManagement: Found path element for ${drawingId}:`, pathElement);
+    console.log(`🔍 useSvgPathManagement: Path element details:`, {
+      tagName: pathElement.tagName,
+      id: pathElement.id,
+      'data-drawing-id': pathElement.getAttribute('data-drawing-id'),
+      'd': pathElement.getAttribute('d')?.substring(0, 50) + '...',
+      className: pathElement.className,
+      parentElement: pathElement.parentElement?.tagName
+    });
     
     // Check if already processed successfully
     const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
@@ -85,13 +132,22 @@ export function useSvgPathManagement() {
     
     // Apply the clip mask
     console.log(`🎨 useSvgPathManagement: Applying clip mask with image data to ${drawingId}`);
+    console.log(`🎨 useSvgPathManagement: Floor plan data length:`, floorPlanData.data?.length);
+    console.log(`🎨 useSvgPathManagement: Floor plan data type:`, typeof floorPlanData.data);
+    console.log(`🎨 useSvgPathManagement: Floor plan data preview:`, floorPlanData.data?.substring(0, 100));
+    
     const result = applyImageClipMask(pathElement, floorPlanData.data, drawingId);
+    console.log(`🎨 useSvgPathManagement: applyImageClipMask result:`, result);
     
     if (result) {
       console.log(`🎉 useSvgPathManagement: Successfully applied clip mask to ${drawingId}`);
       
       // Mark as processed
       processedDrawingsRef.current.add(drawingId);
+      
+      // Verify the fill was applied
+      const newFill = pathElement.style.fill || pathElement.getAttribute('fill');
+      console.log(`🔍 useSvgPathManagement: New fill after application:`, newFill);
       
       // Ensure the fill persists with multiple checks
       const ensureFillPersistence = (attempt = 0) => {
@@ -101,6 +157,12 @@ export function useSvgPathManagement() {
           if (mountedRef.current && document.contains(pathElement)) {
             const expectedFill = `url(#pattern-${drawingId})`;
             const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
+            
+            console.log(`🔄 useSvgPathManagement: Fill persistence check ${attempt + 1} for ${drawingId}:`, {
+              expectedFill,
+              currentFill,
+              needsReapply: !currentFill || !currentFill.includes(`pattern-${drawingId}`)
+            });
             
             if (!currentFill || !currentFill.includes(`pattern-${drawingId}`)) {
               console.log(`🔄 useSvgPathManagement: Reapplying fill to ${drawingId} (attempt ${attempt + 1})`);
@@ -112,6 +174,8 @@ export function useSvgPathManagement() {
               
               // Continue checking
               ensureFillPersistence(attempt + 1);
+            } else {
+              console.log(`✅ useSvgPathManagement: Fill persistence confirmed for ${drawingId}`);
             }
           }
         }, 100 * (attempt + 1));
@@ -126,6 +190,7 @@ export function useSvgPathManagement() {
       // Retry on failure
       const timeoutId = setTimeout(() => {
         if (mountedRef.current) {
+          console.log(`🔄 useSvgPathManagement: Retrying after failure for ${drawingId}`);
           applyClipMaskStable(drawingId, floorPlanData, retryCount + 1);
         }
       }, baseRetryDelay * (retryCount + 1));
@@ -163,7 +228,7 @@ export function useSvgPathManagement() {
       // Only process for current user
       const currentUser = getCurrentUser();
       if (userId && currentUser && currentUser.id !== userId) {
-        console.log(`❌ useSvgPathManagement: User mismatch, skipping`);
+        console.log(`❌ useSvgPathManagement: User mismatch, skipping. Event userId: ${userId}, current: ${currentUser.id}`);
         return;
       }
       
@@ -176,20 +241,28 @@ export function useSvgPathManagement() {
           // Get the floor plan data
           const floorPlan = await getFloorPlanById(drawingId);
           
+          console.log(`🔍 useSvgPathManagement: Retrieved floor plan:`, {
+            exists: !!floorPlan,
+            hasData: !!(floorPlan?.data),
+            dataLength: floorPlan?.data?.length,
+            fileName: floorPlan?.fileName,
+            userId: floorPlan?.userId,
+            currentUserId: currentUser?.id || 'anonymous'
+          });
+          
           if (floorPlan && floorPlan.data && (!currentUser || floorPlan.userId === currentUser.id || floorPlan.userId === 'anonymous')) {
-            console.log(`✅ useSvgPathManagement: Found floor plan for ${drawingId}`, {
-              hasData: !!floorPlan.data,
-              dataLength: floorPlan.data?.length,
-              fileName: floorPlan.fileName
-            });
+            console.log(`✅ useSvgPathManagement: Found floor plan for ${drawingId}, starting clip mask application`);
             
             // Apply immediately, then retry to ensure it sticks
-            await applyClipMaskStable(drawingId, floorPlan);
+            const result = await applyClipMaskStable(drawingId, floorPlan);
+            console.log(`🎯 useSvgPathManagement: First application result:`, result);
             
             // Additional attempt after a short delay to ensure persistence
             setTimeout(async () => {
               if (mountedRef.current && !processedDrawingsRef.current.has(drawingId)) {
-                await applyClipMaskStable(drawingId, floorPlan);
+                console.log(`🔄 useSvgPathManagement: Second application attempt for ${drawingId}`);
+                const secondResult = await applyClipMaskStable(drawingId, floorPlan);
+                console.log(`🎯 useSvgPathManagement: Second application result:`, secondResult);
               }
             }, 1000);
             
@@ -224,12 +297,17 @@ export function useSvgPathManagement() {
     const checkExistingFloorPlans = async () => {
       if (!mountedRef.current) return;
       
+      console.log(`🔍 useSvgPathManagement: Checking for existing floor plans on mount`);
+      
       // Look for existing paths with floor plans
       const allPaths = document.querySelectorAll('path[data-drawing-id]');
+      console.log(`🔍 useSvgPathManagement: Found ${allPaths.length} paths with drawing IDs`);
       
       for (const pathElement of Array.from(allPaths)) {
         const drawingId = pathElement.getAttribute('data-drawing-id');
         if (!drawingId || processedDrawingsRef.current.has(drawingId)) continue;
+        
+        console.log(`🔍 useSvgPathManagement: Checking existing path for ${drawingId}`);
         
         try {
           const floorPlan = await getFloorPlanById(drawingId);
