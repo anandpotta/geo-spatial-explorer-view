@@ -112,7 +112,7 @@ export function useSvgPathManagement() {
     }
     
     console.log(`✅ useSvgPathManagement: Found path element for ${drawingId}:`, pathElement);
-    console.log(`🔍 useSvgPathManagement: Path element details:`, {
+    console.log(`🔍 usSvgPathManagement: Path element details:`, {
       tagName: pathElement.tagName,
       id: pathElement.id,
       'data-drawing-id': pathElement.getAttribute('data-drawing-id'),
