@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -27,7 +28,7 @@ interface CreateLayerOptions {
 // Keep track of layer creation to prevent repeated attempts
 const layersCreated = new Map<string, number>();
 // Track floor plan applications to prevent repeated attempts
-const floorPlanApplied = new Map<string, number>();
+const floorPlanChecked = new Map<string, number>();
 
 export const createLayerFromDrawing = async ({
   drawing,
@@ -70,7 +71,15 @@ export const createLayerFromDrawing = async ({
     });
     
     if (existingLayer) {
-      console.log(`Layer for drawing ${drawing.id} already exists, skipping creation`);
+      console.log(`Layer for drawing ${drawing.id} already exists, checking for floor plan...`);
+      
+      // Even if layer exists, check for floor plan application
+      setTimeout(async () => {
+        if (isMounted) {
+          await checkAndApplyFloorPlan(drawing.id, isMounted);
+        }
+      }, 1000);
+      
       return;
     }
 
@@ -141,70 +150,69 @@ export const createLayerFromDrawing = async ({
         });
       }, 500);
       
-      // Enhanced floor plan checking and application with better timing
-      console.log(`🔍 LayerCreator: Checking for floor plan for drawing ${drawing.id}`);
-      
-      // Wait a bit longer before checking for floor plans to ensure DOM is stable
+      // Check for floor plan after layer is fully created
       setTimeout(async () => {
-        if (!isMounted) return;
-        
-        try {
-          // Check if this drawing has a floor plan with better debugging
-          const hasFloorPlanResult = await hasFloorPlan(drawing.id);
-          console.log(`📋 LayerCreator: Drawing ${drawing.id} has floor plan: ${hasFloorPlanResult}`);
-          
-          if (hasFloorPlanResult) {
-            // Get the actual floor plan data
-            const floorPlanData = await getFloorPlanById(drawing.id);
-            console.log(`📋 LayerCreator: Floor plan data retrieved:`, {
-              hasData: !!floorPlanData,
-              hasImageData: !!(floorPlanData?.data),
-              dataLength: floorPlanData?.data?.length || 0
-            });
-            
-            if (floorPlanData && floorPlanData.data) {
-              const currentUser = getCurrentUser();
-              
-              // Check if we've recently applied a floor plan to this drawing
-              const lastApplied = floorPlanApplied.get(drawing.id) || 0;
-              const shouldApply = now - lastApplied > 2000; // 2 seconds debounce
-              
-              if (shouldApply && isMounted) {
-                floorPlanApplied.set(drawing.id, now);
-                
-                console.log(`🎨 LayerCreator: Triggering floor plan application for drawing ${drawing.id}`);
-                
-                // Instead of applying directly, trigger the floor plan updated event
-                // This ensures the useSvgPathManagement hook handles it properly
-                setTimeout(() => {
-                  if (isMounted) {
-                    console.log(`🚀 LayerCreator: Dispatching floorPlanUpdated event for ${drawing.id}`);
-                    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-                      detail: { 
-                        drawingId: drawing.id,
-                        success: false, // Set to false to trigger processing
-                        freshlyUploaded: true,
-                        retryNeeded: false,
-                        userId: currentUser?.id || 'anonymous'
-                      }
-                    }));
-                  }
-                }, 1500); // Give more time for DOM to settle
-              } else {
-                console.log(`⏭️ LayerCreator: Skipping floor plan application for ${drawing.id} (debounced or unmounted)`);
-              }
-            } else {
-              console.warn(`⚠️ LayerCreator: Floor plan exists but no data found for ${drawing.id}`);
-            }
-          } else {
-            console.log(`ℹ️ LayerCreator: No floor plan found for drawing ${drawing.id}`);
-          }
-        } catch (error) {
-          console.error(`❌ LayerCreator: Error checking/applying floor plan for ${drawing.id}:`, error);
+        if (isMounted) {
+          await checkAndApplyFloorPlan(drawing.id, isMounted);
         }
-      }, 2000); // Increased delay to ensure everything is ready
+      }, 1500); // Increased delay to ensure DOM is fully ready
     }
   } catch (err) {
     console.error('❌ LayerCreator: Error creating layer for drawing:', err);
   }
 };
+
+// Helper function to check and apply floor plan
+async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean) {
+  if (!isMounted) return;
+  
+  const now = Date.now();
+  const lastChecked = floorPlanChecked.get(drawingId) || 0;
+  
+  // Debounce floor plan checks
+  if (now - lastChecked < 2000) {
+    console.log(`⏭️ LayerCreator: Skipping floor plan check for ${drawingId} (debounced)`);
+    return;
+  }
+  
+  floorPlanChecked.set(drawingId, now);
+  
+  try {
+    console.log(`🔍 LayerCreator: Checking for floor plan for drawing ${drawingId}`);
+    
+    const hasFloorPlanResult = await hasFloorPlan(drawingId);
+    console.log(`📋 LayerCreator: Drawing ${drawingId} has floor plan: ${hasFloorPlanResult}`);
+    
+    if (hasFloorPlanResult) {
+      const floorPlanData = await getFloorPlanById(drawingId);
+      console.log(`📋 LayerCreator: Floor plan data retrieved:`, {
+        hasData: !!floorPlanData,
+        hasImageData: !!(floorPlanData?.data),
+        dataLength: floorPlanData?.data?.length || 0
+      });
+      
+      if (floorPlanData && floorPlanData.data && isMounted) {
+        const currentUser = getCurrentUser();
+        
+        console.log(`🚀 LayerCreator: Dispatching floorPlanUpdated event for ${drawingId}`);
+        window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+          detail: { 
+            drawingId: drawingId,
+            success: false, // Set to false to trigger processing
+            freshlyUploaded: true,
+            retryNeeded: false,
+            userId: currentUser?.id || 'anonymous'
+          }
+        }));
+        
+        console.log(`Floor plan updated for drawing ${drawingId}, triggering refresh`);
+      } else {
+        console.warn(`⚠️ LayerCreator: Floor plan exists but no data found for ${drawingId}`);
+      }
+    } else {
+      console.log(`ℹ️ LayerCreator: No floor plan found for drawing ${drawingId}`);
+    }
+  } catch (error) {
+    console.error(`❌ LayerCreator: Error checking/applying floor plan for ${drawingId}:`, error);
+  }
+}
