@@ -35,12 +35,10 @@ export const applyImageClipMask = (
     return false;
   }
   
-  // Get current user
+  // Get current user - but don't require it (allow anonymous usage)
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot apply clip mask: user not logged in');
-    return false;
-  }
+  const userId = currentUser?.id || 'anonymous';
+  console.log(`🎨 applyImageClipMask: Applying clip mask for ${id} with user ${userId}`);
   
   // Check if path element is still in the DOM
   if (!document.contains(pathElement)) {
@@ -141,10 +139,10 @@ export const applyImageClipMask = (
         // Apply the pattern and clip path
         applyPatternAndClipPath(pathElement, `pattern-${id}`, `clip-${id}`);
         
-        // Mark as having a clip mask with user ID
+        // Mark as having a clip mask with user ID (or anonymous)
         pathElement.setAttribute('data-has-clip-mask', 'true');
         pathElement.setAttribute('data-image-url', typeof imageUrl === 'string' ? imageUrl : imageUrlString);
-        pathElement.setAttribute('data-user-id', currentUser.id);
+        pathElement.setAttribute('data-user-id', userId);
         
         // Remove loading class
         pathElement.classList.remove('loading-clip-mask');
@@ -162,10 +160,10 @@ export const applyImageClipMask = (
             
             // Trigger a custom event that the floor plan was updated
             window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-              detail: { drawingId: id, userId: currentUser.id }
+              detail: { drawingId: id, userId: userId }
             }));
             
-            console.log(`Clip mask application completed for ${id}`);
+            console.log(`🎉 Clip mask application completed successfully for ${id}`);
           }
         });
       },

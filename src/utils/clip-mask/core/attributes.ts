@@ -12,12 +12,11 @@ export const preparePathForClipMask = (
   pathElement: SVGPathElement, 
   drawingId: string
 ): void => {
-  // Get current user
+  // Get current user - but allow anonymous usage
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    console.error('Cannot apply clip mask: user not logged in');
-    return;
-  }
+  const userId = currentUser?.id || 'anonymous';
+  
+  console.log(`🔧 preparePathForClipMask: Preparing ${drawingId} for user ${userId}`);
   
   // Store original path data and style for potential restoration
   storeOriginalAttributes(pathElement);
@@ -26,7 +25,7 @@ export const preparePathForClipMask = (
   pathElement.setAttribute('data-has-clip-mask', 'true');
   pathElement.setAttribute('data-last-updated', Date.now().toString());
   pathElement.setAttribute('data-drawing-id', drawingId);
-  pathElement.setAttribute('data-user-id', currentUser.id);
+  pathElement.setAttribute('data-user-id', userId);
   
   // Add a visible outline to help see the path
   pathElement.classList.add('visible-path-stroke');
