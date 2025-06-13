@@ -177,11 +177,14 @@ export function useSvgPathManagement() {
                 
                 // Log all SVG paths in the document for debugging
                 const allPaths = document.querySelectorAll('svg path');
-                console.log(`🔍 useSvgPathManagement: All SVG paths in document:`, Array.from(allPaths).map(p => ({
-                  id: p.id,
-                  drawingId: p.getAttribute('data-drawing-id'),
-                  className: p.className.baseVal || p.className
-                })));
+                console.log(`🔍 useSvgPathManagement: All SVG paths in document:`, Array.from(allPaths).map(p => {
+                  const className = p.className;
+                  return {
+                    id: p.id,
+                    drawingId: p.getAttribute('data-drawing-id'),
+                    className: typeof className === 'string' ? className : (className as any).baseVal || ''
+                  };
+                }));
                 
                 // Schedule a final retry
                 setTimeout(() => {
