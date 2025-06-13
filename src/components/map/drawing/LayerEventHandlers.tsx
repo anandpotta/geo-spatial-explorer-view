@@ -12,8 +12,14 @@ export const setupLayerClickHandlers = (
   isMounted: boolean,
   onRegionClick?: (drawing: DrawingData) => void
 ): void => {
-  console.log(`🔧 LayerEventHandlers: Setting up handlers for drawing ${drawing.id}`);
-  console.log(`🔍 LayerEventHandlers: onRegionClick type:`, typeof onRegionClick);
+  console.log(`🔧 LayerEventHandlers: Starting setup for drawing ${drawing.id}`);
+  console.log(`🔍 LayerEventHandlers: Parameters:`, {
+    layer: !!layer,
+    drawingId: drawing?.id,
+    isMounted,
+    onRegionClick: typeof onRegionClick,
+    onRegionClickFunction: onRegionClick
+  });
   
   // Critical conditional checks
   if (!layer || !drawing?.id || !onRegionClick) {
@@ -37,21 +43,31 @@ export const setupLayerClickHandlers = (
     return;
   }
   
-  console.log(`🔧 LayerEventHandlers: Setting up layer click handler for drawing ${drawing.id}`);
+  console.log(`✅ LayerEventHandlers: All checks passed for drawing ${drawing.id}`);
   
-  // Initialize the global handlers map if it doesn't exist
+  // Ensure the global handlers map exists
   if (!(window as any).drawingClickHandlers) {
+    console.log(`🔧 LayerEventHandlers: Creating global drawingClickHandlers map`);
     (window as any).drawingClickHandlers = new Map();
-    console.log(`🔧 LayerEventHandlers: Created global drawingClickHandlers map`);
+  } else {
+    console.log(`🔧 LayerEventHandlers: Global drawingClickHandlers map already exists`);
   }
   
-  // Store the handler immediately
+  // Store the handler with comprehensive logging
+  console.log(`🗂️ LayerEventHandlers: About to store handler for drawing ${drawing.id}`);
+  console.log(`🗂️ LayerEventHandlers: Storing drawing:`, drawing);
+  console.log(`🗂️ LayerEventHandlers: Storing onRegionClick:`, onRegionClick);
+  
   (window as any).drawingClickHandlers.set(drawing.id, { drawing, onRegionClick });
-  console.log(`🗂️ LayerEventHandlers: Stored handler for drawing ${drawing.id}`, { 
-    drawing: drawing.id, 
-    onRegionClick: typeof onRegionClick,
-    totalHandlers: (window as any).drawingClickHandlers.size
-  });
+  
+  console.log(`✅ LayerEventHandlers: Handler stored successfully for drawing ${drawing.id}`);
+  console.log(`🗂️ LayerEventHandlers: Map size after storing:`, (window as any).drawingClickHandlers.size);
+  console.log(`🗂️ LayerEventHandlers: All keys in map:`, Array.from((window as any).drawingClickHandlers.keys()));
+  
+  // Verify the handler was stored correctly
+  const storedHandler = (window as any).drawingClickHandlers.get(drawing.id);
+  console.log(`🔍 LayerEventHandlers: Retrieved stored handler:`, storedHandler);
+  console.log(`🔍 LayerEventHandlers: Retrieved onRegionClick type:`, typeof storedHandler?.onRegionClick);
   
   // Create a simple, direct click handler
   const handleClick = (e: any) => {
@@ -179,6 +195,9 @@ export const setupLayerClickHandlers = (
   setTimeout(() => setupDOMHandlers(), 500);
   
   console.log(`✅ LayerEventHandlers: Layer click handler setup complete for drawing ${drawing.id}`);
-  console.log(`🗂️ LayerEventHandlers: Current handlers in global map:`, 
-    Array.from((window as any).drawingClickHandlers.keys()));
+  console.log(`🗂️ LayerEventHandlers: Final handlers map state:`, {
+    size: (window as any).drawingClickHandlers.size,
+    keys: Array.from((window as any).drawingClickHandlers.keys()),
+    hasDrawingId: (window as any).drawingClickHandlers.has(drawing.id)
+  });
 };
