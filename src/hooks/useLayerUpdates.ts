@@ -2,40 +2,40 @@
 import { useCallback } from 'react';
 import { DrawingData } from '@/utils/drawing-utils';
 import { createLayerFromDrawing } from '@/components/map/drawing/LayerCreator';
-import debounce from 'lodash/debounce';  // Fixed import statement
+import debounce from 'lodash/debounce';
 import { getCurrentUser } from '@/services/auth-service';
 
 interface LayerUpdatesProps {
   featureGroup: L.FeatureGroup;
   savedDrawings: DrawingData[];
   activeTool: string | null;
-  isMountedRef: React.RefObject<boolean>;
-  layersRef: React.MutableRefObject<Map<string, L.Layer>>;
+  layersRef: Map<string, L.Layer>;
   removeButtonRoots: Map<string, any>;
   uploadButtonRoots: Map<string, any>;
   imageControlRoots: Map<string, any>;
   onRegionClick?: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
   onUploadRequest?: (drawingId: string) => void;
+  isMounted: boolean;
 }
 
 export function useLayerUpdates({
   featureGroup,
   savedDrawings,
   activeTool,
-  isMountedRef,
   layersRef,
   removeButtonRoots,
   uploadButtonRoots,
   imageControlRoots,
   onRegionClick,
   onRemoveShape,
-  onUploadRequest
+  onUploadRequest,
+  isMounted
 }: LayerUpdatesProps) {
   
   // The main update function that creates or updates layers
   const updateLayers = useCallback(() => {
-    if (!featureGroup || !isMountedRef.current) return;
+    if (!featureGroup || !isMounted) return;
     
     const currentUser = getCurrentUser();
     if (!currentUser) return;
@@ -47,11 +47,11 @@ export function useLayerUpdates({
     const drawingIds = new Set(userDrawings.map(d => d.id));
     
     // Create array of entries to avoid modification during iteration
-    Array.from(layersRef.current.entries()).forEach(([id, layer]) => {
+    Array.from(layersRef.entries()).forEach(([id, layer]) => {
       if (!drawingIds.has(id)) {
         // This drawing no longer exists, remove the layer
         featureGroup.removeLayer(layer);
-        layersRef.current.delete(id);
+        layersRef.delete(id);
         
         // Also clean up any React roots for this layer
         const removeRoot = removeButtonRoots.get(`${id}-remove`);
@@ -88,14 +88,14 @@ export function useLayerUpdates({
     
     // Create or update layers for each drawing
     userDrawings.forEach(drawing => {
-      if (!layersRef.current.has(drawing.id)) {
+      if (!layersRef.has(drawing.id)) {
         // This is a new drawing, create a layer for it
         createLayerFromDrawing({
           drawing,
           featureGroup,
           activeTool,
-          isMounted: isMountedRef.current,
-          layersRef: layersRef.current,
+          isMounted,
+          layersRef,
           removeButtonRoots,
           uploadButtonRoots,
           imageControlRoots,
@@ -105,16 +105,16 @@ export function useLayerUpdates({
         });
       }
     });
-  }, [featureGroup, savedDrawings, activeTool, isMountedRef, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest]);
+  }, [featureGroup, savedDrawings, activeTool, layersRef, removeButtonRoots, uploadButtonRoots, imageControlRoots, onRegionClick, onRemoveShape, onUploadRequest, isMounted]);
   
   // Create a debounced version of updateLayers for performance
   const debouncedUpdateLayers = useCallback(
     debounce(() => {
-      if (isMountedRef.current) {
+      if (isMounted) {
         updateLayers();
       }
     }, 150),
-    [updateLayers, isMountedRef]
+    [updateLayers, isMounted]
   );
   
   return { updateLayers, debouncedUpdateLayers };

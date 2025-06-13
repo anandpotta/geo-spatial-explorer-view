@@ -1,14 +1,15 @@
+
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
-import { LayerControls } from './LayerControls';
-import { LayerCreator } from './LayerCreator';
+import { createLayerControls } from './LayerControls';
+import { createLayerFromDrawing } from './LayerCreator';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
 import { createRemoveButtonControl } from './controls/RemoveButtonControl';
 import { createUploadButtonControl } from './controls/UploadButtonControl';
-import { createImageControl } from './controls/ImageControl';
+import { createImageControlsLayer } from './controls/ImageControlsLayer';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -29,7 +30,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 }) => {
   const mountedRef = useRef(true);
   const { 
-    layerRefs, 
+    layersRef, 
     removeButtonRoots, 
     uploadButtonRoots,
     imageControlRoots 
@@ -56,46 +57,60 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     savedDrawings.forEach((drawing) => {
       console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
       
-      if (!layerRefs.current[drawing.id]) {
+      if (!layersRef.current.has(drawing.id)) {
         console.log(`🆕 LayerManager: Creating new layer for drawing ${drawing.id}`);
         
         try {
-          const layer = LayerCreator.createLayerFromDrawing(drawing, featureGroup);
-          
-          if (layer) {
-            console.log(`✅ LayerManager: Layer created successfully for drawing ${drawing.id}`);
-            layerRefs.current[drawing.id] = layer;
-            
-            console.log(`🔧 LayerManager: About to call setupLayerClickHandlers for drawing ${drawing.id}`);
-            console.log(`🔧 LayerManager: Parameters:`, {
-              layer: !!layer,
-              layerType: layer.constructor.name,
-              drawing: !!drawing,
-              drawingId: drawing.id,
-              mounted: mountedRef.current,
-              onRegionClick: typeof onRegionClick,
-              onRegionClickFunction: onRegionClick
-            });
-            
-            // Set up click handlers for the layer
-            setupLayerClickHandlers(
-              layer,
-              drawing,
-              mountedRef.current,
-              onRegionClick
-            );
-            
-            console.log(`✅ LayerManager: setupLayerClickHandlers called for drawing ${drawing.id}`);
-          } else {
-            console.error(`❌ LayerManager: Failed to create layer for drawing ${drawing.id}`);
-          }
+          createLayerFromDrawing({
+            drawing,
+            featureGroup,
+            activeTool,
+            isMounted: mountedRef.current,
+            layersRef: layersRef.current,
+            removeButtonRoots: removeButtonRoots.current,
+            uploadButtonRoots: uploadButtonRoots.current,
+            imageControlRoots: imageControlRoots.current,
+            onRegionClick,
+            onRemoveShape,
+            onUploadRequest
+          }).then((layer) => {
+            if (layer) {
+              console.log(`✅ LayerManager: Layer created successfully for drawing ${drawing.id}`);
+              layersRef.current.set(drawing.id, layer);
+              
+              console.log(`🔧 LayerManager: About to call setupLayerClickHandlers for drawing ${drawing.id}`);
+              console.log(`🔧 LayerManager: Parameters:`, {
+                layer: !!layer,
+                layerType: layer.constructor.name,
+                drawing: !!drawing,
+                drawingId: drawing.id,
+                mounted: mountedRef.current,
+                onRegionClick: typeof onRegionClick,
+                onRegionClickFunction: onRegionClick
+              });
+              
+              // Set up click handlers for the layer
+              setupLayerClickHandlers(
+                layer,
+                drawing,
+                mountedRef.current,
+                onRegionClick
+              );
+              
+              console.log(`✅ LayerManager: setupLayerClickHandlers called for drawing ${drawing.id}`);
+            } else {
+              console.error(`❌ LayerManager: Failed to create layer for drawing ${drawing.id}`);
+            }
+          }).catch((error) => {
+            console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
+          });
         } catch (error) {
           console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
         }
       } else {
         console.log(`♻️ LayerManager: Layer already exists for drawing ${drawing.id}, checking if handlers need update`);
         
-        const existingLayer = layerRefs.current[drawing.id];
+        const existingLayer = layersRef.current.get(drawing.id);
         if (existingLayer) {
           console.log(`🔧 LayerManager: Re-calling setupLayerClickHandlers for existing drawing ${drawing.id}`);
           setupLayerClickHandlers(
@@ -116,10 +131,10 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 
   useLayerUpdates({
     savedDrawings,
-    layerRefs,
-    removeButtonRoots,
-    uploadButtonRoots,
-    imageControlRoots,
+    layersRef,
+    removeButtonRoots: removeButtonRoots.current,
+    uploadButtonRoots: uploadButtonRoots.current,
+    imageControlRoots: imageControlRoots.current,
     featureGroup,
     onRemoveShape,
     onUploadRequest,
@@ -127,17 +142,11 @@ const LayerManager: React.FC<LayerManagerProps> = ({
   });
 
   return (
-    <LayerControls
-      savedDrawings={savedDrawings}
-      layerRefs={layerRefs}
-      removeButtonRoots={removeButtonRoots}
-      uploadButtonRoots={uploadButtonRoots}
-      imageControlRoots={imageControlRoots}
-      featureGroup={featureGroup}
-      onRemoveShape={onRemoveShape}
-      onUploadRequest={onUploadRequest}
-      isMounted={mountedRef.current}
-    />
+    <>
+      {savedDrawings.map((drawing) => (
+        <div key={drawing.id} />
+      ))}
+    </>
   );
 };
 
