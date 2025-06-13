@@ -4,6 +4,7 @@ import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
+import { useSvgPathManagement } from '@/hooks/useSvgPathManagement';
 import { createLayerFromDrawing } from './LayerCreator';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
 
@@ -26,13 +27,15 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 }) => {
   const mountedRef = useRef(true);
   const setupCompletedRef = useRef(new Set<string>());
-  const processedDrawingsRef = useRef(new Set<string>());
   const { 
     layersRef, 
     removeButtonRoots, 
     uploadButtonRoots,
     imageControlRoots 
   } = useLayerReferences();
+  
+  // Initialize SVG path management
+  useSvgPathManagement();
   
   console.log('🏗️ LayerManager: Rendering with:', {
     savedDrawingsCount: savedDrawings.length,
