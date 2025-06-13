@@ -34,7 +34,7 @@ export const setupLayerClickHandlers = (
   
   // Create a simple, direct click handler
   const handleClick = (e: any) => {
-    console.log(`🎯 Layer click handler TRIGGERED for drawing ${drawing.id} - Calling onRegionClick!`);
+    console.log(`🎯 LayerEventHandlers: Layer click handler TRIGGERED for drawing ${drawing.id}`);
     
     // Stop event propagation
     if (e?.originalEvent) {
@@ -44,8 +44,15 @@ export const setupLayerClickHandlers = (
     if (e?.stopPropagation) e.stopPropagation();
     if (e?.preventDefault) e.preventDefault();
     
-    // Always call the callback - remove the isMounted check that might be blocking execution
-    onRegionClick(drawing);
+    console.log(`📞 LayerEventHandlers: About to call onRegionClick for drawing ${drawing.id}`);
+    
+    // Always call the callback
+    try {
+      onRegionClick(drawing);
+      console.log(`✅ LayerEventHandlers: Successfully called onRegionClick for drawing ${drawing.id}`);
+    } catch (err) {
+      console.error(`❌ LayerEventHandlers: Error calling onRegionClick for drawing ${drawing.id}:`, err);
+    }
     
     return false;
   };
@@ -86,15 +93,22 @@ export const setupLayerClickHandlers = (
     
     // Create DOM click handler
     const domClickHandler = (event: MouseEvent) => {
-      console.log(`🚀 DOM click handler TRIGGERED for drawing ${drawing.id} - Calling onRegionClick!`);
+      console.log(`🚀 LayerEventHandlers: DOM click handler TRIGGERED for drawing ${drawing.id}`);
       
       // Stop all event propagation
       event.stopImmediatePropagation();
       event.stopPropagation();
       event.preventDefault();
       
+      console.log(`📞 LayerEventHandlers: About to call onRegionClick from DOM handler for drawing ${drawing.id}`);
+      
       // Call the callback directly
-      onRegionClick(drawing);
+      try {
+        onRegionClick(drawing);
+        console.log(`✅ LayerEventHandlers: Successfully called onRegionClick from DOM handler for drawing ${drawing.id}`);
+      } catch (err) {
+        console.error(`❌ LayerEventHandlers: Error calling onRegionClick from DOM handler for drawing ${drawing.id}:`, err);
+      }
     };
     
     // Find SVG paths with the drawing ID

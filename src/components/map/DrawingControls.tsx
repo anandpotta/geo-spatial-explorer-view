@@ -61,8 +61,6 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   
   // Handle shape creation with authentication check
   const { handleCreatedWrapper } = useHandleShapeCreation(onCreated, onPathsUpdated, svgPaths);
-  
-  // Handle clear all operation with authentication check
   const { handleClearAllWrapper } = useClearAllOperation(onClearAll);
   
   useImperativeHandle(ref, () => ({
@@ -93,10 +91,8 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     };
   }, []);
 
-  // Handle user changes - reload drawings when user changes
   useEffect(() => {
     if (isInitialized && currentUser && drawToolsRef.current) {
-      // When user logs in or changes, we need to refresh the map
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new Event('markersUpdated'));
       window.dispatchEvent(new Event('drawingsUpdated'));
@@ -114,8 +110,20 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   };
 
   const handleDrawingClick = (drawing: DrawingData) => {
+    console.log(`🎯 DrawingControls: handleDrawingClick called for drawing ${drawing.id}`);
+    
+    if (!checkAuthBeforeAction('interact with drawings')) {
+      console.log(`❌ DrawingControls: Auth check failed for drawing ${drawing.id}`);
+      return;
+    }
+    
+    console.log(`✅ DrawingControls: Auth check passed, calling onRegionClick for drawing ${drawing.id}`);
+    
     if (onRegionClick) {
+      console.log(`📤 DrawingControls: Calling onRegionClick callback for drawing ${drawing.id}`);
       onRegionClick(drawing);
+    } else {
+      console.log(`❌ DrawingControls: onRegionClick callback is undefined for drawing ${drawing.id}`);
     }
   };
 
