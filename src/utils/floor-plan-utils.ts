@@ -14,12 +14,111 @@ export interface FloorPlan {
 export type FloorPlanData = FloorPlan;
 
 /**
+ * Compress image data to reduce storage size
+ */
+function compressImageData(dataUrl: string, maxSize: number = 1024 * 1024): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Calculate new dimensions to keep aspect ratio
+      let { width, height } = img;
+      const maxDimension = 1200; // Max width or height
+      
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = (height * maxDimension) / width;
+          width = maxDimension;
+        } else {
+          width = (width * maxDimension) / height;
+          height = maxDimension;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Start with good quality and reduce if needed
+        let quality = 0.8;
+        let compressedData = canvas.toDataURL('image/jpeg', quality);
+        
+        // Reduce quality until size is acceptable
+        while (compressedData.length > maxSize && quality > 0.1) {
+          quality -= 0.1;
+          compressedData = canvas.toDataURL('image/jpeg', quality);
+        }
+        
+        resolve(compressedData);
+      } else {
+        resolve(dataUrl);
+      }
+    };
+    
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Get current storage usage
+ */
+function getStorageUsage(): number {
+  let totalSize = 0;
+  for (let key in localStorage) {
+    if (localStorage.hasOwnProperty(key)) {
+      totalSize += localStorage[key].length + key.length;
+    }
+  }
+  return totalSize;
+}
+
+/**
+ * Clean up old floor plans to make space
+ */
+function cleanupOldFloorPlans(): void {
+  try {
+    const floorPlansJson = localStorage.getItem('floorPlans');
+    if (!floorPlansJson) return;
+    
+    const floorPlans = JSON.parse(floorPlansJson);
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+    
+    // Get user's floor plans and sort by timestamp
+    const userPlans = Object.entries(floorPlans)
+      .filter(([_, plan]) => (plan as FloorPlan).userId === currentUser.id)
+      .sort(([_, a], [__, b]) => {
+        const timeA = new Date((a as FloorPlan).timestamp || 0).getTime();
+        const timeB = new Date((b as FloorPlan).timestamp || 0).getTime();
+        return timeA - timeB; // Oldest first
+      });
+    
+    // Remove oldest plans if we have more than 10
+    if (userPlans.length > 10) {
+      const toRemove = userPlans.slice(0, userPlans.length - 10);
+      toRemove.forEach(([id]) => {
+        delete floorPlans[id];
+      });
+      
+      localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
+      console.log(`Cleaned up ${toRemove.length} old floor plans`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up old floor plans:', error);
+  }
+}
+
+/**
  * Save a floor plan for a specific drawing
  */
-export function saveFloorPlan(
+export async function saveFloorPlan(
   drawingId: string, 
   floorPlan: FloorPlan
-): boolean {
+): Promise<boolean> {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     toast.error('Please log in to save floor plans');
@@ -27,12 +126,39 @@ export function saveFloorPlan(
   }
   
   try {
+    let processedData = floorPlan.data;
+    
+    // Compress image data if it's an image (not PDF)
+    if (!floorPlan.isPdf && floorPlan.data.startsWith('data:image/')) {
+      console.log('Compressing image data...');
+      processedData = await compressImageData(floorPlan.data);
+      console.log(`Image compressed from ${floorPlan.data.length} to ${processedData.length} characters`);
+    }
+    
     // Add user ID and timestamp to the floor plan data
     const floorPlanWithUser = {
       ...floorPlan,
+      data: processedData,
       userId: currentUser.id,
       timestamp: new Date().toISOString()
     };
+    
+    // Check storage usage before saving
+    const currentUsage = getStorageUsage();
+    const estimatedNewSize = JSON.stringify(floorPlanWithUser).length;
+    const maxStorage = 4 * 1024 * 1024; // 4MB limit to be safe
+    
+    if (currentUsage + estimatedNewSize > maxStorage) {
+      console.log('Storage limit approaching, cleaning up old floor plans...');
+      cleanupOldFloorPlans();
+      
+      // Check again after cleanup
+      const newUsage = getStorageUsage();
+      if (newUsage + estimatedNewSize > maxStorage) {
+        toast.error('Storage limit reached. Please delete some old floor plans or use smaller images.');
+        return false;
+      }
+    }
     
     // Get existing floor plans
     const floorPlansJson = localStorage.getItem('floorPlans');
@@ -60,7 +186,7 @@ export function saveFloorPlan(
     
     // Check if error is related to storage quota
     if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      toast.error('Storage limit exceeded. Try uploading a smaller file.');
+      toast.error('Storage limit exceeded. Try uploading a smaller file or delete old floor plans.');
     } else {
       toast.error('Failed to save floor plan');
     }
