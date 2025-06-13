@@ -36,14 +36,14 @@ export const setupLayerClickHandlers = (
   const handleClick = (e: any) => {
     console.log(`🎯 Layer click handler TRIGGERED for drawing ${drawing.id} - SUCCESS!`);
     
-    // Stop event propagation
-    if (e?.originalEvent) {
-      e.originalEvent.stopPropagation();
-      e.originalEvent.preventDefault();
-      (e.originalEvent as any).__handledByLayer = true;
-    }
-    if (e?.stopPropagation) {
-      e.stopPropagation();
+    // Stop event propagation immediately
+    if (e) {
+      if (e.stopPropagation) e.stopPropagation();
+      if (e.preventDefault) e.preventDefault();
+      if (e.originalEvent) {
+        e.originalEvent.stopPropagation();
+        e.originalEvent.preventDefault();
+      }
     }
     
     // Call the callback if component is still mounted
@@ -79,7 +79,7 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  // Set up DOM-level handlers as fallback
+  // Enhanced DOM-level handlers with better targeting
   const setupDOMHandlers = () => {
     if (!isMounted) return;
     
@@ -91,13 +91,14 @@ export const setupLayerClickHandlers = (
     
     console.log(`🔍 Setting up DOM handlers for drawing ${drawing.id}`);
     
-    // Create DOM click handler
-    const domClickHandler = (event: Event) => {
+    // Create DOM click handler with proper event handling
+    const domClickHandler = (event: MouseEvent) => {
       console.log(`🚀 DOM click handler TRIGGERED for drawing ${drawing.id} - SUCCESS!`);
       
+      // Stop all event propagation
+      event.stopImmediatePropagation();
       event.stopPropagation();
       event.preventDefault();
-      (event as any).__handledByLayer = true;
       
       if (isMounted && onRegionClick) {
         console.log(`✅ Calling onRegionClick from DOM handler for drawing ${drawing.id}`);
@@ -105,81 +106,56 @@ export const setupLayerClickHandlers = (
       }
     };
     
-    // Strategy 1: Find by data-drawing-id
+    // Find SVG paths with the drawing ID
     const drawingPaths = container.querySelectorAll(`[data-drawing-id="${drawing.id}"]`);
-    drawingPaths.forEach((pathElement) => {
-      if (pathElement instanceof Element) {
+    
+    if (drawingPaths.length > 0) {
+      drawingPaths.forEach((pathElement) => {
         // Remove existing handler
         const existingHandler = (pathElement as any).__clickHandler;
         if (existingHandler) {
-          pathElement.removeEventListener('click', existingHandler);
+          pathElement.removeEventListener('click', existingHandler, true);
         }
         
-        // Add new handler
-        pathElement.addEventListener('click', domClickHandler, { 
-          capture: true,
-          passive: false 
-        });
-        
+        // Add new handler with capture = true for better event handling
+        pathElement.addEventListener('click', domClickHandler, true);
         (pathElement as any).__clickHandler = domClickHandler;
-        pathElement.setAttribute('data-click-handler-attached', 'true');
+        
+        // Ensure the element is interactive
+        (pathElement as HTMLElement).style.pointerEvents = 'auto';
         (pathElement as HTMLElement).style.cursor = 'pointer';
         
         console.log(`✅ DOM handler attached to path for drawing ${drawing.id}`);
-      }
-    });
-    
-    // Strategy 2: If no paths found, try to find the layer's path element
-    if (drawingPaths.length === 0 && (layer as any)._path) {
-      const layerPath = (layer as any)._path;
-      if (layerPath instanceof Element) {
+      });
+    } else {
+      // Fallback: find the layer's path element and mark it
+      if ((layer as any)._path) {
+        const layerPath = (layer as any)._path;
         layerPath.setAttribute('data-drawing-id', drawing.id);
         
+        // Remove existing handler
         const existingHandler = (layerPath as any).__clickHandler;
         if (existingHandler) {
-          layerPath.removeEventListener('click', existingHandler);
+          layerPath.removeEventListener('click', existingHandler, true);
         }
         
-        layerPath.addEventListener('click', domClickHandler, { 
-          capture: true,
-          passive: false 
-        });
-        
+        // Add new handler
+        layerPath.addEventListener('click', domClickHandler, true);
         (layerPath as any).__clickHandler = domClickHandler;
-        layerPath.setAttribute('data-click-handler-attached', 'true');
-        (layerPath as HTMLElement).style.cursor = 'pointer';
+        
+        // Ensure the element is interactive
+        layerPath.style.pointerEvents = 'auto';
+        layerPath.style.cursor = 'pointer';
         
         console.log(`✅ DOM handler attached to layer path for drawing ${drawing.id}`);
       }
     }
-    
-    // Strategy 3: Find most recent interactive path without handler
-    if (drawingPaths.length === 0) {
-      const allPaths = container.querySelectorAll('path.leaflet-interactive:not([data-click-handler-attached])');
-      if (allPaths.length > 0) {
-        const targetPath = allPaths[allPaths.length - 1];
-        if (targetPath instanceof Element) {
-          targetPath.setAttribute('data-drawing-id', drawing.id);
-          
-          targetPath.addEventListener('click', domClickHandler, { 
-            capture: true,
-            passive: false 
-          });
-          
-          (targetPath as any).__clickHandler = domClickHandler;
-          targetPath.setAttribute('data-click-handler-attached', 'true');
-          (targetPath as HTMLElement).style.cursor = 'pointer';
-          
-          console.log(`✅ DOM handler attached to unhandled path for drawing ${drawing.id}`);
-        }
-      }
-    }
   };
   
-  // Try immediate setup
+  // Setup DOM handlers with multiple attempts
   setupDOMHandlers();
   
-  // Try again after short delays to catch elements that render later
+  // Retry after short delays to handle async rendering
   setTimeout(() => {
     if (isMounted) setupDOMHandlers();
   }, 100);
