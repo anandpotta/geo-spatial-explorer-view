@@ -41,9 +41,24 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     activeTool
   });
 
-  // Process each drawing only once
+  // Clear processed drawings tracking when savedDrawings array changes significantly
   useEffect(() => {
-    if (!featureGroup || !savedDrawings.length || !mountedRef.current) {
+    const currentDrawingIds = new Set(savedDrawings.map(d => d.id));
+    const processedIds = Array.from(processedDrawingsRef.current);
+    
+    // If we have processed drawings that no longer exist, clear the tracking
+    const hasRemovedDrawings = processedIds.some(id => !currentDrawingIds.has(id));
+    
+    if (hasRemovedDrawings) {
+      console.log('🔄 LayerManager: Clearing processed drawings tracking due to removed drawings');
+      processedDrawingsRef.current.clear();
+      setupCompletedRef.current.clear();
+    }
+  }, [savedDrawings]);
+
+  // Process each drawing when the savedDrawings array changes
+  useEffect(() => {
+    if (!featureGroup || !mountedRef.current) {
       return;
     }
 
@@ -53,9 +68,24 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     });
 
     const processDrawing = async (drawing: DrawingData) => {
-      // Skip if already processed
+      // Always try to process if not already processed
       if (processedDrawingsRef.current.has(drawing.id)) {
-        console.log(`⏭️ LayerManager: Drawing ${drawing.id} already processed, skipping`);
+        console.log(`⏭️ LayerManager: Drawing ${drawing.id} already processed, checking handlers`);
+        
+        // Even if processed, ensure handlers are set up
+        if (!setupCompletedRef.current.has(drawing.id)) {
+          const layer = layersRef.current.get(drawing.id);
+          if (layer) {
+            console.log(`🔧 LayerManager: Setting up missing handlers for processed drawing ${drawing.id}`);
+            setupLayerClickHandlers(
+              layer,
+              drawing,
+              mountedRef.current,
+              onRegionClick
+            );
+            setupCompletedRef.current.add(drawing.id);
+          }
+        }
         return;
       }
 
@@ -121,7 +151,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
       processDrawing(drawing);
     });
 
-  }, [savedDrawings.length]); // Only depend on the count, not the entire array
+  }, [savedDrawings, onRegionClick, onRemoveShape, onUploadRequest]); // Include all callback dependencies
 
   // Setup handlers for existing layers when callbacks change
   useEffect(() => {
