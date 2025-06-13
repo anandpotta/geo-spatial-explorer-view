@@ -45,8 +45,8 @@ export const setupLayerClickHandlers = (
   // Always set up handlers for existing drawings - the onRegionClick callback will handle auth
   console.log(`✅ LayerEventHandlers: Setting up click handlers for drawing ${drawing.id}`);
   
-  // Ensure the global handlers map exists
-  console.log(`🔧 LayerEventHandlers: Checking global handlers map...`);
+  // Ensure the global handlers map exists - create immediately
+  console.log(`🔧 LayerEventHandlers: Ensuring global handlers map exists...`);
   if (!(window as any).drawingClickHandlers) {
     console.log(`🔧 LayerEventHandlers: Creating NEW global drawingClickHandlers map`);
     (window as any).drawingClickHandlers = new Map();
@@ -60,7 +60,7 @@ export const setupLayerClickHandlers = (
     keys: (window as any).drawingClickHandlers ? Array.from((window as any).drawingClickHandlers.keys()) : 'No map'
   });
   
-  // Store the handler with comprehensive logging
+  // Store the handler immediately with comprehensive logging
   console.log(`🗂️ LayerEventHandlers: About to store handler for drawing ${drawing.id}`);
   console.log(`🗂️ LayerEventHandlers: Storing drawing object:`, JSON.stringify(drawing, null, 2));
   console.log(`🗂️ LayerEventHandlers: Storing onRegionClick type:`, typeof onRegionClick);
@@ -73,8 +73,9 @@ export const setupLayerClickHandlers = (
       (window as any).drawingClickHandlers = new Map();
     }
     
+    // Store immediately - no delays
     (window as any).drawingClickHandlers.set(drawing.id, { drawing, onRegionClick });
-    console.log(`✅ LayerEventHandlers: Handler stored successfully for drawing ${drawing.id}`);
+    console.log(`✅ LayerEventHandlers: Handler stored IMMEDIATELY for drawing ${drawing.id}`);
     
     // Immediate verification
     const stored = (window as any).drawingClickHandlers.get(drawing.id);

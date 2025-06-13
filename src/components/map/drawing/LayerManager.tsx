@@ -85,27 +85,22 @@ const LayerManager: React.FC<LayerManagerProps> = ({
         }
       }
 
-      // Setup handlers immediately after layer creation or if missing
+      // Setup handlers immediately after layer creation - no delay
       if (!setupCompletedRef.current.has(drawing.id) && mountedRef.current) {
-        // Small delay to ensure layer is fully added to the map
-        setTimeout(() => {
-          if (!mountedRef.current) return;
-          
-          const layer = layersRef.current.get(drawing.id);
-          if (layer) {
-            console.log(`🔧 LayerManager: Setting up click handlers for drawing ${drawing.id}`);
-            setupLayerClickHandlers(
-              layer,
-              drawing,
-              mountedRef.current,
-              onRegionClick
-            );
-            setupCompletedRef.current.add(drawing.id);
-            console.log(`✅ LayerManager: Setup completed for drawing ${drawing.id}`);
-          } else {
-            console.error(`❌ LayerManager: Layer not found after creation for drawing ${drawing.id}`);
-          }
-        }, 50); // Reduced delay for faster response
+        const layer = layersRef.current.get(drawing.id);
+        if (layer) {
+          console.log(`🔧 LayerManager: Setting up click handlers immediately for drawing ${drawing.id}`);
+          setupLayerClickHandlers(
+            layer,
+            drawing,
+            mountedRef.current,
+            onRegionClick
+          );
+          setupCompletedRef.current.add(drawing.id);
+          console.log(`✅ LayerManager: Setup completed immediately for drawing ${drawing.id}`);
+        } else {
+          console.error(`❌ LayerManager: Layer not found after creation for drawing ${drawing.id}`);
+        }
       }
     };
 
