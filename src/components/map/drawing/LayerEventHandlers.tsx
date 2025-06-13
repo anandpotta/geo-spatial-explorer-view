@@ -13,7 +13,7 @@ export const setupLayerClickHandlers = (
   onRegionClick?: (drawing: DrawingData) => void
 ): void => {
   // Critical conditional checks
-  if (!layer || !drawing?.id || !isMounted || !onRegionClick) {
+  if (!layer || !drawing?.id || !onRegionClick) {
     console.warn('Missing required parameters for click handler setup');
     return;
   }
@@ -32,25 +32,20 @@ export const setupLayerClickHandlers = (
   
   console.log(`🔧 Setting up layer click handler for drawing ${drawing.id}`);
   
-  // Create the click handler
+  // Create a simple, direct click handler
   const handleClick = (e: any) => {
-    console.log(`🎯 Layer click handler TRIGGERED for drawing ${drawing.id} - SUCCESS!`);
+    console.log(`🎯 Layer click handler TRIGGERED for drawing ${drawing.id} - Calling onRegionClick!`);
     
-    // Stop event propagation immediately
-    if (e) {
-      if (e.stopPropagation) e.stopPropagation();
-      if (e.preventDefault) e.preventDefault();
-      if (e.originalEvent) {
-        e.originalEvent.stopPropagation();
-        e.originalEvent.preventDefault();
-      }
+    // Stop event propagation
+    if (e?.originalEvent) {
+      e.originalEvent.stopPropagation();
+      e.originalEvent.preventDefault();
     }
+    if (e?.stopPropagation) e.stopPropagation();
+    if (e?.preventDefault) e.preventDefault();
     
-    // Call the callback if component is still mounted
-    if (isMounted && onRegionClick) {
-      console.log(`✅ Calling onRegionClick for drawing ${drawing.id}`);
-      onRegionClick(drawing);
-    }
+    // Always call the callback - remove the isMounted check that might be blocking execution
+    onRegionClick(drawing);
     
     return false;
   };
@@ -79,10 +74,8 @@ export const setupLayerClickHandlers = (
     });
   }
   
-  // Enhanced DOM-level handlers with better targeting
+  // Set up DOM-level handlers as backup
   const setupDOMHandlers = () => {
-    if (!isMounted) return;
-    
     const map = (layer as any)._map;
     if (!map?.getContainer) return;
     
@@ -91,19 +84,17 @@ export const setupLayerClickHandlers = (
     
     console.log(`🔍 Setting up DOM handlers for drawing ${drawing.id}`);
     
-    // Create DOM click handler with proper event handling
+    // Create DOM click handler
     const domClickHandler = (event: MouseEvent) => {
-      console.log(`🚀 DOM click handler TRIGGERED for drawing ${drawing.id} - SUCCESS!`);
+      console.log(`🚀 DOM click handler TRIGGERED for drawing ${drawing.id} - Calling onRegionClick!`);
       
       // Stop all event propagation
       event.stopImmediatePropagation();
       event.stopPropagation();
       event.preventDefault();
       
-      if (isMounted && onRegionClick) {
-        console.log(`✅ Calling onRegionClick from DOM handler for drawing ${drawing.id}`);
-        onRegionClick(drawing);
-      }
+      // Call the callback directly
+      onRegionClick(drawing);
     };
     
     // Find SVG paths with the drawing ID
@@ -117,7 +108,7 @@ export const setupLayerClickHandlers = (
           pathElement.removeEventListener('click', existingHandler, true);
         }
         
-        // Add new handler with capture = true for better event handling
+        // Add new handler with capture = true
         pathElement.addEventListener('click', domClickHandler, true);
         (pathElement as any).__clickHandler = domClickHandler;
         
@@ -152,17 +143,10 @@ export const setupLayerClickHandlers = (
     }
   };
   
-  // Setup DOM handlers with multiple attempts
+  // Setup DOM handlers immediately and with retries
   setupDOMHandlers();
-  
-  // Retry after short delays to handle async rendering
-  setTimeout(() => {
-    if (isMounted) setupDOMHandlers();
-  }, 100);
-  
-  setTimeout(() => {
-    if (isMounted) setupDOMHandlers();
-  }, 500);
+  setTimeout(() => setupDOMHandlers(), 100);
+  setTimeout(() => setupDOMHandlers(), 500);
   
   console.log(`✅ Layer click handler setup complete for drawing ${drawing.id}`);
 };
