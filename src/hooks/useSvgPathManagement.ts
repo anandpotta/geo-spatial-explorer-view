@@ -10,11 +10,12 @@ export function useSvgPathManagement() {
   const isProcessingRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
   const processedDrawingsRef = useRef(new Set<string>());
+  const retryTimeoutsRef = useRef(new Map<string, number>());
   
   // Stable function to apply clip mask
   const applyClipMaskStable = useCallback(async (drawingId: string, floorPlanData: any, retryCount = 0) => {
-    const maxRetries = 10;
-    const retryDelay = 500;
+    const maxRetries = 15;
+    const baseRetryDelay = 300;
     
     if (retryCount >= maxRetries) {
       console.error(`❌ useSvgPathManagement: Max retries exceeded for ${drawingId}`);
@@ -23,7 +24,14 @@ export function useSvgPathManagement() {
     
     console.log(`🎯 useSvgPathManagement: Applying clip mask for ${drawingId} (attempt ${retryCount + 1})`);
     
-    // Find path element with multiple strategies
+    // Clear any existing retry timeout for this drawing
+    const existingTimeout = retryTimeoutsRef.current.get(drawingId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      retryTimeoutsRef.current.delete(drawingId);
+    }
+    
+    // Find path element with comprehensive search
     let pathElement = findSvgPathByDrawingId(drawingId);
     
     if (!pathElement) {
@@ -35,7 +43,7 @@ export function useSvgPathManagement() {
     }
     
     if (!pathElement) {
-      // Look in all SVG containers
+      // Look in all SVG containers and leaflet panes
       const allSvgs = document.querySelectorAll('svg');
       for (const svg of Array.from(allSvgs)) {
         pathElement = svg.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
@@ -44,12 +52,24 @@ export function useSvgPathManagement() {
     }
     
     if (!pathElement) {
-      console.log(`🔍 useSvgPathManagement: Path not found for ${drawingId}, retrying in ${retryDelay}ms`);
-      setTimeout(() => {
+      // Also search in leaflet overlay panes specifically
+      const overlayPanes = document.querySelectorAll('.leaflet-overlay-pane');
+      for (const pane of Array.from(overlayPanes)) {
+        pathElement = pane.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+        if (pathElement) break;
+      }
+    }
+    
+    if (!pathElement) {
+      console.log(`🔍 useSvgPathManagement: Path not found for ${drawingId}, retrying in ${baseRetryDelay * (retryCount + 1)}ms`);
+      
+      const timeoutId = setTimeout(() => {
         if (mountedRef.current) {
           applyClipMaskStable(drawingId, floorPlanData, retryCount + 1);
         }
-      }, retryDelay);
+      }, baseRetryDelay * (retryCount + 1));
+      
+      retryTimeoutsRef.current.set(drawingId, timeoutId);
       return false;
     }
     
@@ -73,27 +93,44 @@ export function useSvgPathManagement() {
       // Mark as processed
       processedDrawingsRef.current.add(drawingId);
       
-      // Ensure the fill is properly applied
-      setTimeout(() => {
-        if (mountedRef.current && document.contains(pathElement)) {
-          const expectedFill = `url(#pattern-${drawingId})`;
-          const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
-          
-          if (!currentFill || !currentFill.includes(`pattern-${drawingId}`)) {
-            console.log(`🔄 useSvgPathManagement: Reapplying fill to ${drawingId}`);
-            pathElement.style.fill = expectedFill;
-            pathElement.setAttribute('fill', expectedFill);
+      // Ensure the fill persists with multiple checks
+      const ensureFillPersistence = (attempt = 0) => {
+        if (!mountedRef.current || attempt > 5) return;
+        
+        setTimeout(() => {
+          if (mountedRef.current && document.contains(pathElement)) {
+            const expectedFill = `url(#pattern-${drawingId})`;
+            const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
+            
+            if (!currentFill || !currentFill.includes(`pattern-${drawingId}`)) {
+              console.log(`🔄 useSvgPathManagement: Reapplying fill to ${drawingId} (attempt ${attempt + 1})`);
+              pathElement.style.fill = expectedFill;
+              pathElement.setAttribute('fill', expectedFill);
+              
+              // Force repaint
+              pathElement.getBoundingClientRect();
+              
+              // Continue checking
+              ensureFillPersistence(attempt + 1);
+            }
           }
-          
-          // Force repaint
-          pathElement.getBoundingClientRect();
-          window.dispatchEvent(new Event('resize'));
-        }
-      }, 100);
+        }, 100 * (attempt + 1));
+      };
+      
+      ensureFillPersistence();
       
       return true;
     } else {
       console.error(`❌ useSvgPathManagement: Failed to apply clip mask to ${drawingId}`);
+      
+      // Retry on failure
+      const timeoutId = setTimeout(() => {
+        if (mountedRef.current) {
+          applyClipMaskStable(drawingId, floorPlanData, retryCount + 1);
+        }
+      }, baseRetryDelay * (retryCount + 1));
+      
+      retryTimeoutsRef.current.set(drawingId, timeoutId);
       return false;
     }
   }, []);
@@ -111,7 +148,7 @@ export function useSvgPathManagement() {
         success 
       });
       
-      // Skip if already successfully processed
+      // Skip if already successfully processed and no retry needed
       if (processedDrawingsRef.current.has(drawingId) && !retryNeeded) {
         console.log(`✅ useSvgPathManagement: Already processed ${drawingId}, skipping`);
         return;
@@ -146,21 +183,22 @@ export function useSvgPathManagement() {
               fileName: floorPlan.fileName
             });
             
-            // Wait a bit for DOM to stabilize
-            const waitTime = freshlyUploaded ? 1000 : 500;
+            // Apply immediately, then retry to ensure it sticks
+            await applyClipMaskStable(drawingId, floorPlan);
             
+            // Additional attempt after a short delay to ensure persistence
             setTimeout(async () => {
-              if (mountedRef.current) {
+              if (mountedRef.current && !processedDrawingsRef.current.has(drawingId)) {
                 await applyClipMaskStable(drawingId, floorPlan);
               }
-              isProcessingRef.current.delete(drawingId);
-            }, waitTime);
+            }, 1000);
+            
           } else {
             console.log(`❌ useSvgPathManagement: No valid floor plan found for ${drawingId}`);
-            isProcessingRef.current.delete(drawingId);
           }
         } catch (error) {
           console.error(`❌ useSvgPathManagement: Error processing floor plan update for ${drawingId}:`, error);
+        } finally {
           isProcessingRef.current.delete(drawingId);
         }
       }
@@ -172,6 +210,11 @@ export function useSvgPathManagement() {
     return () => {
       console.log(`🔇 useSvgPathManagement: Removing floor plan update listener`);
       mountedRef.current = false;
+      
+      // Clear all retry timeouts
+      retryTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      retryTimeoutsRef.current.clear();
+      
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     };
   }, [applyClipMaskStable]);
@@ -201,7 +244,7 @@ export function useSvgPathManagement() {
     };
     
     // Check after a short delay to ensure DOM is ready
-    setTimeout(checkExistingFloorPlans, 1000);
+    setTimeout(checkExistingFloorPlans, 1500);
   }, [applyClipMaskStable]);
   
   return {

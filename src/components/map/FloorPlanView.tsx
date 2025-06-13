@@ -5,6 +5,7 @@ import { FlipHorizontal, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { DrawingData } from "@/utils/geo-utils";
 import { saveFloorPlan, getFloorPlanById } from "@/utils/floor-plan-utils";
+import { getCurrentUser } from "@/services/auth-service";
 
 interface FloorPlanViewProps {
   onBack: () => void;
@@ -88,12 +89,35 @@ const FloorPlanView = ({ onBack, drawing }: FloorPlanViewProps) => {
           
           if (success) {
             setSelectedImage(dataUrl);
-            // Success toast is handled in saveFloorPlan function
+            console.log(`✅ FloorPlanView: Successfully saved floor plan for ${drawing.id}`);
             
-            // Trigger a custom event to ensure clip masks are applied
-            window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-              detail: { drawingId: drawing.id }
-            }));
+            // Get current user for event
+            const currentUser = getCurrentUser();
+            
+            // Trigger multiple events to ensure clip masks are applied immediately
+            const eventDetail = { 
+              drawingId: drawing.id,
+              success: true,
+              freshlyUploaded: true,
+              retryNeeded: false,
+              userId: currentUser?.id || 'anonymous'
+            };
+            
+            // Immediate event dispatch
+            window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+            
+            // Delayed dispatch to ensure hooks are ready
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+              console.log(`🚀 FloorPlanView: Dispatched floorPlanUpdated event for ${drawing.id}`);
+            }, 100);
+            
+            // Additional dispatch for persistence
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+            }, 500);
+            
+            console.log(`Floor plan updated for drawing ${drawing.id}, triggering refresh`);
           } else {
             // Error toast is handled in saveFloorPlan function
             console.log('Failed to save floor plan due to storage constraints');
