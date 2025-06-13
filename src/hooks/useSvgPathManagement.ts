@@ -15,6 +15,11 @@ export function useSvgPathManagement() {
   const applyClipMaskToPath = useCallback(async (drawingId: string, floorPlanData: any) => {
     console.log(`🎯 useSvgPathManagement: Starting clip mask application for ${drawingId}`);
     
+    if (!mountedRef.current) {
+      console.log(`❌ useSvgPathManagement: Component unmounted, skipping ${drawingId}`);
+      return false;
+    }
+    
     // Find the path element using multiple strategies
     let pathElement = findSvgPathByDrawingId(drawingId);
     
@@ -62,26 +67,6 @@ export function useSvgPathManagement() {
     if (result) {
       console.log(`🎉 useSvgPathManagement: Successfully applied clip mask to ${drawingId}`);
       processedDrawingsRef.current.add(drawingId);
-      
-      // Ensure the fill persists with multiple checks
-      const ensureFillPersists = () => {
-        if (mountedRef.current && document.contains(pathElement)) {
-          const expectedFill = `url(#pattern-${drawingId})`;
-          const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
-          
-          if (!currentFill || !currentFill.includes(`pattern-${drawingId}`)) {
-            console.log(`🔄 useSvgPathManagement: Reapplying fill to ${drawingId}`);
-            pathElement.style.fill = expectedFill;
-            pathElement.setAttribute('fill', expectedFill);
-          }
-        }
-      };
-      
-      // Multiple persistence checks
-      setTimeout(ensureFillPersists, 100);
-      setTimeout(ensureFillPersists, 500);
-      setTimeout(ensureFillPersists, 1000);
-      
       return true;
     } else {
       console.error(`❌ useSvgPathManagement: Failed to apply clip mask to ${drawingId}`);
@@ -89,34 +74,28 @@ export function useSvgPathManagement() {
     }
   }, []);
   
-  // Floor plan update handler
+  // Floor plan update handler - stable callback
   const handleFloorPlanUpdated = useCallback(async (event: CustomEvent) => {
-    const { drawingId, userId, freshlyUploaded, retryNeeded, success } = event.detail;
+    if (!mountedRef.current) return;
+    
+    const { drawingId, userId, freshlyUploaded } = event.detail;
     
     console.log(`🔄 useSvgPathManagement: Processing floor plan update for ${drawingId}`, { 
       drawingId, 
       userId, 
-      freshlyUploaded, 
-      retryNeeded, 
-      success,
+      freshlyUploaded,
       isMounted: mountedRef.current
     });
     
-    if (!drawingId || !mountedRef.current) {
-      console.log(`❌ useSvgPathManagement: Invalid event or unmounted component`);
-      return;
-    }
-    
-    // Check if already processed successfully (unless retry is needed)
-    if (processedDrawingsRef.current.has(drawingId) && !retryNeeded) {
-      console.log(`✅ useSvgPathManagement: Already processed ${drawingId}, skipping`);
+    if (!drawingId) {
+      console.log(`❌ useSvgPathManagement: No drawingId in event`);
       return;
     }
     
     // Verify user access
     const currentUser = getCurrentUser();
     if (userId && currentUser && currentUser.id !== userId) {
-      console.log(`❌ useSvgPathManagement: User mismatch, skipping. Event userId: ${userId}, current: ${currentUser.id}`);
+      console.log(`❌ useSvgPathManagement: User mismatch, skipping. Event userId: ${userId}, current: ${currentUser?.id}`);
       return;
     }
     
@@ -126,41 +105,19 @@ export function useSvgPathManagement() {
       // Get the floor plan data
       const floorPlan = await getFloorPlanById(drawingId);
       
-      if (floorPlan && floorPlan.data) {
+      if (floorPlan && floorPlan.data && mountedRef.current) {
         console.log(`✅ useSvgPathManagement: Found floor plan for ${drawingId}, applying clip mask`);
         
-        // Apply clip mask with multiple attempts and delays
-        let success = false;
+        // Apply clip mask immediately
+        await applyClipMaskToPath(drawingId, floorPlan);
         
-        // Immediate attempt
-        success = await applyClipMaskToPath(drawingId, floorPlan);
-        
-        // Retry attempts with increasing delays
-        if (!success && mountedRef.current) {
-          setTimeout(async () => {
-            if (mountedRef.current) {
-              console.log(`🔄 useSvgPathManagement: Retry attempt 1 for ${drawingId}`);
-              success = await applyClipMaskToPath(drawingId, floorPlan);
-            }
-          }, 200);
-        }
-        
-        if (!success && mountedRef.current) {
-          setTimeout(async () => {
-            if (mountedRef.current) {
-              console.log(`🔄 useSvgPathManagement: Retry attempt 2 for ${drawingId}`);
-              await applyClipMaskToPath(drawingId, floorPlan);
-            }
-          }, 1000);
-        }
-        
-        // Final attempt
+        // Add retry with delays for robustness
         setTimeout(async () => {
           if (mountedRef.current && !processedDrawingsRef.current.has(drawingId)) {
-            console.log(`🔄 useSvgPathManagement: Final attempt for ${drawingId}`);
+            console.log(`🔄 useSvgPathManagement: Retry attempt for ${drawingId}`);
             await applyClipMaskToPath(drawingId, floorPlan);
           }
-        }, 2000);
+        }, 500);
         
       } else {
         console.log(`❌ useSvgPathManagement: No valid floor plan found for ${drawingId}`);
@@ -170,18 +127,21 @@ export function useSvgPathManagement() {
     }
   }, [applyClipMaskToPath]);
   
-  // Check for existing floor plans and set up listener
+  // Single effect for everything
   useEffect(() => {
-    if (!mountedRef.current) return;
+    console.log(`🎧 useSvgPathManagement: Effect running, mounted: ${mountedRef.current}`);
     
-    // Add the event listener if not already added
+    // Ensure we're mounted
+    mountedRef.current = true;
+    
+    // Add the event listener only once
     if (!listenerAddedRef.current) {
       console.log(`🎧 useSvgPathManagement: Adding floor plan update listener`);
       window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
       listenerAddedRef.current = true;
     }
     
-    // Check for existing floor plans after a delay to ensure DOM is ready
+    // Check for existing floor plans after DOM is ready
     const checkExistingFloorPlans = async () => {
       if (!mountedRef.current) return;
       
@@ -215,15 +175,17 @@ export function useSvgPathManagement() {
     
     checkExistingFloorPlans();
     
+    // Cleanup function
     return () => {
       console.log(`🔇 useSvgPathManagement: Cleanup function called`);
       mountedRef.current = false;
       if (listenerAddedRef.current) {
+        console.log(`🔇 useSvgPathManagement: Removing floor plan update listener`);
         window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
         listenerAddedRef.current = false;
       }
     };
-  }, [handleFloorPlanUpdated]);
+  }, []); // Empty dependency array - this effect should run only once
   
   return {
     svgPaths,
