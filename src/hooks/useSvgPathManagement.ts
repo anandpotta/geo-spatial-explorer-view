@@ -41,7 +41,7 @@ export function useSvgPathManagement() {
         console.log(`🎯 useSvgPathManagement: Processing floor plan update for drawing ${drawingId}`);
         
         // Wait for DOM to update, especially for freshly uploaded images
-        const waitTime = freshlyUploaded ? 2000 : 1000;
+        const waitTime = freshlyUploaded ? 3000 : 2000; // Increased wait times
         
         setTimeout(async () => {
           try {
@@ -57,25 +57,63 @@ export function useSvgPathManagement() {
                 userId: floorPlan.userId
               });
               
-              // Find the SVG path element with retries
+              // Find the SVG path element with more aggressive retries
               let pathElement = null;
               let pathAttempts = 0;
-              const maxPathAttempts = 15; // Increased attempts
+              const maxPathAttempts = 25; // More attempts for better reliability
               
               while (!pathElement && pathAttempts < maxPathAttempts) {
+                // Try multiple selectors to find the path
                 pathElement = findSvgPathByDrawingId(drawingId);
+                
+                // If not found by drawing ID, try by element ID
+                if (!pathElement) {
+                  pathElement = document.querySelector(`#drawing-path-${drawingId}`);
+                }
+                
+                // If still not found, try data attribute selector
+                if (!pathElement) {
+                  pathElement = document.querySelector(`[data-drawing-id="${drawingId}"]`);
+                }
+                
                 if (!pathElement) {
                   console.log(`🔍 useSvgPathManagement: Path search attempt ${pathAttempts + 1}/${maxPathAttempts} for ${drawingId}`);
-                  await new Promise(resolve => setTimeout(resolve, 300)); // Shorter interval
+                  await new Promise(resolve => setTimeout(resolve, 400)); // Longer interval
                   pathAttempts++;
                 } else {
                   console.log(`✅ useSvgPathManagement: Found path element for ${drawingId} after ${pathAttempts + 1} attempts`);
+                  console.log(`🔍 useSvgPathManagement: Path element details:`, {
+                    tagName: pathElement.tagName,
+                    id: pathElement.id,
+                    drawingId: pathElement.getAttribute('data-drawing-id'),
+                    hasParent: !!pathElement.parentElement
+                  });
                 }
               }
               
               if (pathElement) {
                 console.log(`🎨 useSvgPathManagement: Applying clip mask to ${drawingId}`);
                 console.log(`🖼️ useSvgPathManagement: Using image data: ${floorPlan.data.substring(0, 50)}...`);
+                
+                // Force remove any existing clip mask first
+                const existingSvg = pathElement.closest('svg');
+                if (existingSvg) {
+                  const existingPattern = existingSvg.querySelector(`#pattern-${drawingId}`);
+                  const existingClipPath = existingSvg.querySelector(`#clip-${drawingId}`);
+                  if (existingPattern) {
+                    console.log(`🗑️ useSvgPathManagement: Removing existing pattern for ${drawingId}`);
+                    existingPattern.remove();
+                  }
+                  if (existingClipPath) {
+                    console.log(`🗑️ useSvgPathManagement: Removing existing clip path for ${drawingId}`);
+                    existingClipPath.remove();
+                  }
+                }
+                
+                // Reset path attributes
+                pathElement.removeAttribute('data-has-clip-mask');
+                pathElement.style.fill = '';
+                pathElement.removeAttribute('fill');
                 
                 // Apply the clip mask with the floor plan image data
                 const result = applyImageClipMask(pathElement, floorPlan.data, drawingId);
@@ -90,7 +128,24 @@ export function useSvgPathManagement() {
                     pathElement.setAttribute('data-user-id', currentUser.id);
                   }
                   
-                  // Trigger UI refresh and success event
+                  // Force multiple repaints to ensure visibility
+                  setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                    
+                    // Force style recalculation
+                    if (pathElement && document.contains(pathElement)) {
+                      pathElement.getBoundingClientRect();
+                      
+                      // Ensure the fill is properly applied
+                      const fill = `url(#pattern-${drawingId})`;
+                      pathElement.style.fill = fill;
+                      pathElement.setAttribute('fill', fill);
+                      
+                      console.log(`🔄 useSvgPathManagement: Forced style update for ${drawingId}`);
+                    }
+                  }, 100);
+                  
+                  // Another repaint after a longer delay
                   setTimeout(() => {
                     window.dispatchEvent(new Event('resize'));
                     window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
@@ -100,8 +155,8 @@ export function useSvgPathManagement() {
                         userId: currentUser?.id || 'anonymous'
                       }
                     }));
-                    console.log(`🔄 useSvgPathManagement: Triggered UI refresh for ${drawingId}`);
-                  }, 200);
+                    console.log(`🔄 useSvgPathManagement: Final UI refresh for ${drawingId}`);
+                  }, 500);
                 } else {
                   console.error(`❌ useSvgPathManagement: Failed to apply clip mask to ${drawingId}`);
                   
@@ -120,6 +175,14 @@ export function useSvgPathManagement() {
               } else {
                 console.error(`❌ useSvgPathManagement: Could not find path element for ${drawingId} after ${maxPathAttempts} attempts`);
                 
+                // Log all SVG paths in the document for debugging
+                const allPaths = document.querySelectorAll('svg path');
+                console.log(`🔍 useSvgPathManagement: All SVG paths in document:`, Array.from(allPaths).map(p => ({
+                  id: p.id,
+                  drawingId: p.getAttribute('data-drawing-id'),
+                  className: p.className.baseVal || p.className
+                })));
+                
                 // Schedule a final retry
                 setTimeout(() => {
                   window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
@@ -130,7 +193,7 @@ export function useSvgPathManagement() {
                       userId: currentUser?.id || 'anonymous'
                     }
                   }));
-                }, 2000);
+                }, 3000);
               }
             } else {
               console.log(`❌ useSvgPathManagement: No floor plan found for ${drawingId} or user mismatch`, {
