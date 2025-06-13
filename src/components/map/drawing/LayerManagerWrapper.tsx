@@ -21,6 +21,12 @@ const LayerManagerWrapper: React.FC<LayerManagerWrapperProps> = ({
   onRemoveShape,
   onUploadRequest
 }) => {
+  console.log('🌐 LayerManagerWrapper: Rendering with:', {
+    savedDrawingsCount: savedDrawings.length,
+    onRegionClick: typeof onRegionClick,
+    onUploadRequest: typeof onUploadRequest
+  });
+  
   return (
     <LayerManager 
       featureGroup={featureGroup}

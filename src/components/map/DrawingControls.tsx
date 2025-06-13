@@ -38,6 +38,12 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
   const { savedDrawings } = useDrawings();
   const { isAuthenticated, currentUser, checkAuthBeforeAction } = useDrawingAuth();
   
+  console.log('🔧 DrawingControls: Rendering with props:', {
+    onRegionClick: typeof onRegionClick,
+    savedDrawingsCount: savedDrawings.length,
+    currentUser: currentUser?.id
+  });
+  
   const {
     featureGroupRef,
     drawToolsRef,
@@ -112,6 +118,8 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
 
   const handleDrawingClick = (drawing: DrawingData) => {
     console.log(`🎯 DrawingControls: handleDrawingClick called for drawing ${drawing.id}`);
+    console.log(`🔍 DrawingControls: onRegionClick callback type:`, typeof onRegionClick);
+    console.log(`🔍 DrawingControls: onRegionClick callback:`, onRegionClick);
     
     if (!checkAuthBeforeAction('interact with drawings')) {
       console.log(`❌ DrawingControls: Auth check failed for drawing ${drawing.id}`);
@@ -121,12 +129,20 @@ const DrawingControls = forwardRef<DrawingControlsRef, DrawingControlsProps>(({
     console.log(`✅ DrawingControls: Auth check passed, calling onRegionClick for drawing ${drawing.id}`);
     
     if (onRegionClick) {
-      console.log(`📤 DrawingControls: Calling onRegionClick callback for drawing ${drawing.id}`);
-      onRegionClick(drawing);
+      console.log(`📤 DrawingControls: About to call onRegionClick callback for drawing ${drawing.id}`);
+      try {
+        onRegionClick(drawing);
+        console.log(`✅ DrawingControls: Successfully called onRegionClick for drawing ${drawing.id}`);
+      } catch (err) {
+        console.error(`❌ DrawingControls: Error calling onRegionClick for drawing ${drawing.id}:`, err);
+      }
     } else {
-      console.log(`❌ DrawingControls: onRegionClick callback is undefined for drawing ${drawing.id}`);
+      console.error(`❌ DrawingControls: onRegionClick callback is undefined for drawing ${drawing.id}`);
+      console.log(`🔍 DrawingControls: Props received:`, { onRegionClick, onClearAll, onRemoveShape, onUploadToDrawing });
     }
   };
+
+  console.log(`🏗️ DrawingControls: Rendering LayerManagerWrapper with handleDrawingClick for ${savedDrawings.length} drawings`);
 
   return (
     <>
