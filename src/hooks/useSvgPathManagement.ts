@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { findSvgPathByDrawingId } from '@/utils/svg-path-finder';
 import { applyImageClipMask } from '@/utils/svg-clip-mask';
