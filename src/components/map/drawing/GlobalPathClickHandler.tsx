@@ -25,8 +25,10 @@ const GlobalPathClickHandler = () => {
           // Get the stored drawing handler
           const handlers = (window as any).drawingClickHandlers;
           console.log('🗂️ GlobalPathClickHandler: Available handlers:', handlers);
+          console.log('🗂️ GlobalPathClickHandler: Handlers type:', typeof handlers);
+          console.log('🗂️ GlobalPathClickHandler: Handlers size:', handlers ? handlers.size : 'N/A');
           
-          if (handlers && handlers.has(drawingId)) {
+          if (handlers && handlers.has && handlers.has(drawingId)) {
             const { drawing, onRegionClick } = handlers.get(drawingId);
             
             console.log('✅ GlobalPathClickHandler: Handler found for drawing:', drawing);
@@ -48,6 +50,13 @@ const GlobalPathClickHandler = () => {
           } else {
             console.warn(`❌ GlobalPathClickHandler: No handler found for drawing ${drawingId}`);
             console.log('🗂️ GlobalPathClickHandler: Available handler keys:', handlers ? Array.from(handlers.keys()) : 'No handlers map');
+            console.log('🗂️ GlobalPathClickHandler: Attempting to initialize handlers map...');
+            
+            // Try to initialize the handlers map if it doesn't exist
+            if (!handlers) {
+              (window as any).drawingClickHandlers = new Map();
+              console.log('🔧 GlobalPathClickHandler: Initialized empty handlers map');
+            }
           }
         } else {
           console.log('❌ GlobalPathClickHandler: No drawing ID found on path element');
