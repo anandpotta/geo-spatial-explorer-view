@@ -54,14 +54,15 @@ const LayerManager: React.FC<LayerManagerProps> = ({
       return;
     }
 
-    savedDrawings.forEach((drawing) => {
+    savedDrawings.forEach(async (drawing) => {
       console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
       
       if (!layersRef.current.has(drawing.id)) {
         console.log(`🆕 LayerManager: Creating new layer for drawing ${drawing.id}`);
         
         try {
-          createLayerFromDrawing({
+          // createLayerFromDrawing returns Promise<void>, so we don't test its return value
+          await createLayerFromDrawing({
             drawing,
             featureGroup,
             activeTool,
@@ -73,37 +74,35 @@ const LayerManager: React.FC<LayerManagerProps> = ({
             onRegionClick,
             onRemoveShape,
             onUploadRequest
-          }).then((layer) => {
-            if (layer) {
-              console.log(`✅ LayerManager: Layer created successfully for drawing ${drawing.id}`);
-              layersRef.current.set(drawing.id, layer);
-              
-              console.log(`🔧 LayerManager: About to call setupLayerClickHandlers for drawing ${drawing.id}`);
-              console.log(`🔧 LayerManager: Parameters:`, {
-                layer: !!layer,
-                layerType: layer.constructor.name,
-                drawing: !!drawing,
-                drawingId: drawing.id,
-                mounted: mountedRef.current,
-                onRegionClick: typeof onRegionClick,
-                onRegionClickFunction: onRegionClick
-              });
-              
-              // Set up click handlers for the layer
-              setupLayerClickHandlers(
-                layer,
-                drawing,
-                mountedRef.current,
-                onRegionClick
-              );
-              
-              console.log(`✅ LayerManager: setupLayerClickHandlers called for drawing ${drawing.id}`);
-            } else {
-              console.error(`❌ LayerManager: Failed to create layer for drawing ${drawing.id}`);
-            }
-          }).catch((error) => {
-            console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
           });
+          
+          // Get the layer after creation
+          const layer = layersRef.current.get(drawing.id);
+          if (layer) {
+            console.log(`✅ LayerManager: Layer created successfully for drawing ${drawing.id}`);
+            console.log(`🔧 LayerManager: About to call setupLayerClickHandlers for drawing ${drawing.id}`);
+            console.log(`🔧 LayerManager: Parameters:`, {
+              layer: !!layer,
+              layerType: (layer as any).constructor?.name || 'Unknown',
+              drawing: !!drawing,
+              drawingId: drawing.id,
+              mounted: mountedRef.current,
+              onRegionClick: typeof onRegionClick,
+              onRegionClickFunction: onRegionClick
+            });
+            
+            // Set up click handlers for the layer
+            setupLayerClickHandlers(
+              layer,
+              drawing,
+              mountedRef.current,
+              onRegionClick
+            );
+            
+            console.log(`✅ LayerManager: setupLayerClickHandlers called for drawing ${drawing.id}`);
+          } else {
+            console.error(`❌ LayerManager: Failed to create layer for drawing ${drawing.id}`);
+          }
         } catch (error) {
           console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
         }
@@ -131,7 +130,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 
   useLayerUpdates({
     savedDrawings,
-    layersRef,
+    layersRef: layersRef.current,
     removeButtonRoots: removeButtonRoots.current,
     uploadButtonRoots: uploadButtonRoots.current,
     imageControlRoots: imageControlRoots.current,
