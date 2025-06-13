@@ -70,6 +70,7 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
         });
         
         console.log('📊 FileUpload: File converted to data URL successfully');
+        console.log(`🎯 FileUpload: Data URL length: ${dataUrl.length} characters`);
         
         // Call the upload callback if provided
         if (onUploadToDrawing) {
@@ -78,8 +79,10 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
         
         // Store the image URL for future use
         storeImageUrl(selectedDrawingId, dataUrl, file.name);
+        console.log(`💾 FileUpload: Image URL stored for ${selectedDrawingId}`);
         
         // Save as a floor plan
+        console.log(`🏗️ FileUpload: Saving floor plan for ${selectedDrawingId}`);
         const saveSuccess = await saveFloorPlan(selectedDrawingId, {
           data: dataUrl,
           isPdf: file.type === 'application/pdf',
@@ -99,26 +102,30 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
         toast.loading('Applying image to drawing...', { id: `uploading-${selectedDrawingId}` });
         
         // Wait a bit for the DOM to update
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Find the SVG path element with multiple attempts
         let svgPathElement = null;
         let attempts = 0;
-        const maxAttempts = 10;
+        const maxAttempts = 15;
+        
+        console.log(`🔍 FileUpload: Starting path element search for ${selectedDrawingId}`);
         
         while (!svgPathElement && attempts < maxAttempts) {
           svgPathElement = findSvgPathByDrawingId(selectedDrawingId);
           if (!svgPathElement) {
-            console.log(`🔍 FileUpload: Attempt ${attempts + 1}: Could not find SVG path element for drawing ${selectedDrawingId}, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, 200));
+            console.log(`🔍 FileUpload: Attempt ${attempts + 1}/${maxAttempts}: Could not find SVG path element for drawing ${selectedDrawingId}, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 300));
             attempts++;
+          } else {
+            console.log(`✅ FileUpload: Found SVG path element for ${selectedDrawingId} after ${attempts + 1} attempts`);
           }
         }
         
         if (!svgPathElement) {
           console.error(`❌ FileUpload: Could not find SVG path element for drawing ${selectedDrawingId} after ${maxAttempts} attempts`);
           
-          // Still trigger the floor plan updated event for the useSvgPathManagement hook to handle
+          // Trigger the floor plan updated event for the useSvgPathManagement hook to handle
           console.log(`🔄 FileUpload: Triggering floorPlanUpdated event for ${selectedDrawingId} (no path element found)`);
           window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
             detail: { drawingId: selectedDrawingId, userId: currentUser.id, freshlyUploaded: true }
@@ -130,34 +137,36 @@ export function useFileUploadHandling({ onUploadToDrawing }: FileUploadHandlingP
           return;
         }
         
-        console.log(`✅ FileUpload: Found SVG path element for drawing ${selectedDrawingId} after ${attempts + 1} attempts`);
-        
         // Apply the image directly
         console.log(`🎨 FileUpload: Applying image to drawing ${selectedDrawingId}`);
+        console.log(`🎨 FileUpload: Path element found:`, svgPathElement);
+        console.log(`🎨 FileUpload: Data URL length:`, dataUrl.length);
+        
         const result = applyImageClipMask(svgPathElement, dataUrl, selectedDrawingId);
         
         if (result) {
           console.log(`🎉 FileUpload: Successfully applied clip mask to drawing ${selectedDrawingId}`);
           toast.success(`${file.name} applied successfully!`, { id: `uploading-${selectedDrawingId}` });
           
-          // Add data attributes
+          // Add data attributes for verification
           svgPathElement.setAttribute('data-has-clip-mask', 'true');
           svgPathElement.setAttribute('data-image-url', dataUrl);
           svgPathElement.setAttribute('data-user-id', currentUser.id);
           
-          // Trigger UI updates
+          // Force UI updates
           setTimeout(() => {
+            console.log(`🔄 FileUpload: Triggering UI refresh events`);
             window.dispatchEvent(new Event('resize'));
             window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-              detail: { drawingId: selectedDrawingId, userId: currentUser.id, freshlyUploaded: true } 
+              detail: { drawingId: selectedDrawingId, userId: currentUser.id, freshlyUploaded: true, success: true } 
             }));
           }, 100);
         } else {
-          console.error(`❌ FileUpload: Failed to apply clip mask directly, triggering event for retry`);
+          console.error(`❌ FileUpload: Failed to apply clip mask directly, will retry via event system`);
           
-          // Trigger the floor plan updated event for the useSvgPathManagement hook to handle
+          // Trigger the floor plan updated event for retry
           window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-            detail: { drawingId: selectedDrawingId, userId: currentUser.id, freshlyUploaded: true }
+            detail: { drawingId: selectedDrawingId, userId: currentUser.id, freshlyUploaded: true, retryNeeded: true }
           }));
           
           toast.success(`${file.name} uploaded successfully! Applying to drawing...`, { id: `uploading-${selectedDrawingId}` });
