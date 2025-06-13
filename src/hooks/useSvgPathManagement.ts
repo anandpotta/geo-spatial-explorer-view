@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { findSvgPathByDrawingId } from '@/utils/svg-path-finder';
 import { applyImageClipMask } from '@/utils/svg-clip-mask';
 import { getCurrentUser } from '@/services/auth-service';
@@ -9,8 +9,96 @@ export function useSvgPathManagement() {
   const [svgPaths, setSvgPaths] = useState<string[]>([]);
   const isProcessingRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
+  const processedDrawingsRef = useRef(new Set<string>());
   
-  // Listen for floorPlanUpdated events to attempt reapplying clipmasks
+  // Stable function to apply clip mask
+  const applyClipMaskStable = useCallback(async (drawingId: string, floorPlanData: any, retryCount = 0) => {
+    const maxRetries = 10;
+    const retryDelay = 500;
+    
+    if (retryCount >= maxRetries) {
+      console.error(`❌ useSvgPathManagement: Max retries exceeded for ${drawingId}`);
+      return false;
+    }
+    
+    console.log(`🎯 useSvgPathManagement: Applying clip mask for ${drawingId} (attempt ${retryCount + 1})`);
+    
+    // Find path element with multiple strategies
+    let pathElement = findSvgPathByDrawingId(drawingId);
+    
+    if (!pathElement) {
+      pathElement = document.querySelector(`#drawing-path-${drawingId}`) as SVGPathElement;
+    }
+    
+    if (!pathElement) {
+      pathElement = document.querySelector(`[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+    }
+    
+    if (!pathElement) {
+      // Look in all SVG containers
+      const allSvgs = document.querySelectorAll('svg');
+      for (const svg of Array.from(allSvgs)) {
+        pathElement = svg.querySelector(`path[data-drawing-id="${drawingId}"]`) as SVGPathElement;
+        if (pathElement) break;
+      }
+    }
+    
+    if (!pathElement) {
+      console.log(`🔍 useSvgPathManagement: Path not found for ${drawingId}, retrying in ${retryDelay}ms`);
+      setTimeout(() => {
+        if (mountedRef.current) {
+          applyClipMaskStable(drawingId, floorPlanData, retryCount + 1);
+        }
+      }, retryDelay);
+      return false;
+    }
+    
+    console.log(`✅ useSvgPathManagement: Found path element for ${drawingId}:`, pathElement);
+    
+    // Check if already processed successfully
+    const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
+    if (currentFill && currentFill.includes(`pattern-${drawingId}`)) {
+      console.log(`✅ useSvgPathManagement: Clip mask already applied to ${drawingId}`);
+      processedDrawingsRef.current.add(drawingId);
+      return true;
+    }
+    
+    // Apply the clip mask
+    console.log(`🎨 useSvgPathManagement: Applying clip mask with image data to ${drawingId}`);
+    const result = applyImageClipMask(pathElement, floorPlanData.data, drawingId);
+    
+    if (result) {
+      console.log(`🎉 useSvgPathManagement: Successfully applied clip mask to ${drawingId}`);
+      
+      // Mark as processed
+      processedDrawingsRef.current.add(drawingId);
+      
+      // Ensure the fill is properly applied
+      setTimeout(() => {
+        if (mountedRef.current && document.contains(pathElement)) {
+          const expectedFill = `url(#pattern-${drawingId})`;
+          const currentFill = pathElement.style.fill || pathElement.getAttribute('fill');
+          
+          if (!currentFill || !currentFill.includes(`pattern-${drawingId}`)) {
+            console.log(`🔄 useSvgPathManagement: Reapplying fill to ${drawingId}`);
+            pathElement.style.fill = expectedFill;
+            pathElement.setAttribute('fill', expectedFill);
+          }
+          
+          // Force repaint
+          pathElement.getBoundingClientRect();
+          window.dispatchEvent(new Event('resize'));
+        }
+      }, 100);
+      
+      return true;
+    } else {
+      console.error(`❌ useSvgPathManagement: Failed to apply clip mask to ${drawingId}`);
+      return false;
+    }
+  }, []);
+  
+  // Listen for floorPlanUpdated events
   useEffect(() => {
     const handleFloorPlanUpdated = async (event: CustomEvent) => {
       const { drawingId, userId, freshlyUploaded, retryNeeded, success } = event.detail;
@@ -23,9 +111,9 @@ export function useSvgPathManagement() {
         success 
       });
       
-      // Skip if already successfully applied and not a retry
-      if (success && !retryNeeded) {
-        console.log(`✅ useSvgPathManagement: Clip mask already successfully applied for ${drawingId}`);
+      // Skip if already successfully processed
+      if (processedDrawingsRef.current.has(drawingId) && !retryNeeded) {
+        console.log(`✅ useSvgPathManagement: Already processed ${drawingId}, skipping`);
         return;
       }
       
@@ -35,182 +123,46 @@ export function useSvgPathManagement() {
         return;
       }
       
-      // Only process floor plan updates for the current user (allow anonymous)
+      // Only process for current user
       const currentUser = getCurrentUser();
       if (userId && currentUser && currentUser.id !== userId) {
-        console.log(`❌ useSvgPathManagement: User mismatch, skipping`, { 
-          currentUserId: currentUser?.id, 
-          eventUserId: userId 
-        });
+        console.log(`❌ useSvgPathManagement: User mismatch, skipping`);
         return;
       }
       
       if (drawingId && mountedRef.current) {
-        // Mark as being processed
         isProcessingRef.current.add(drawingId);
         
         console.log(`🎯 useSvgPathManagement: Processing floor plan update for drawing ${drawingId}`);
         
-        // Wait for DOM to update, especially for freshly uploaded images
-        const waitTime = freshlyUploaded ? 1500 : 1000;
-        
-        setTimeout(async () => {
-          if (!mountedRef.current) {
-            isProcessingRef.current.delete(drawingId);
-            return;
-          }
+        try {
+          // Get the floor plan data
+          const floorPlan = await getFloorPlanById(drawingId);
           
-          try {
-            // Get the floor plan data
-            console.log(`📋 useSvgPathManagement: Getting floor plan data for ${drawingId}`);
-            const floorPlan = await getFloorPlanById(drawingId);
+          if (floorPlan && floorPlan.data && (!currentUser || floorPlan.userId === currentUser.id || floorPlan.userId === 'anonymous')) {
+            console.log(`✅ useSvgPathManagement: Found floor plan for ${drawingId}`, {
+              hasData: !!floorPlan.data,
+              dataLength: floorPlan.data?.length,
+              fileName: floorPlan.fileName
+            });
             
-            if (floorPlan && (!currentUser || floorPlan.userId === currentUser.id || floorPlan.userId === 'anonymous')) {
-              console.log(`✅ useSvgPathManagement: Found floor plan for ${drawingId}`, {
-                hasData: !!floorPlan.data,
-                dataLength: floorPlan.data?.length,
-                fileName: floorPlan.fileName,
-                userId: floorPlan.userId
-              });
-              
-              // Enhanced path finding with multiple attempts
-              let pathElement = null;
-              let pathAttempts = 0;
-              const maxPathAttempts = 15;
-              
-              while (!pathElement && pathAttempts < maxPathAttempts && mountedRef.current) {
-                // Try multiple selectors to find the path
-                pathElement = findSvgPathByDrawingId(drawingId);
-                
-                // If not found by drawing ID, try by element ID
-                if (!pathElement) {
-                  pathElement = document.querySelector(`#drawing-path-${drawingId}`);
-                }
-                
-                // If still not found, try data attribute selector
-                if (!pathElement) {
-                  pathElement = document.querySelector(`[data-drawing-id="${drawingId}"]`);
-                }
-                
-                // Try looking in all SVG containers
-                if (!pathElement) {
-                  const allSvgs = document.querySelectorAll('svg');
-                  for (const svg of Array.from(allSvgs)) {
-                    pathElement = svg.querySelector(`path[data-drawing-id="${drawingId}"]`);
-                    if (pathElement) break;
-                    
-                    pathElement = svg.querySelector(`#drawing-path-${drawingId}`);
-                    if (pathElement) break;
-                  }
-                }
-                
-                if (!pathElement) {
-                  console.log(`🔍 useSvgPathManagement: Path search attempt ${pathAttempts + 1}/${maxPathAttempts} for ${drawingId}`);
-                  await new Promise(resolve => setTimeout(resolve, 300));
-                  pathAttempts++;
-                } else {
-                  console.log(`✅ useSvgPathManagement: Found path element for ${drawingId} after ${pathAttempts + 1} attempts`);
-                  console.log(`🔍 useSvgPathManagement: Path element details:`, {
-                    tagName: pathElement.tagName,
-                    id: pathElement.id,
-                    drawingId: pathElement.getAttribute('data-drawing-id'),
-                    hasParent: !!pathElement.parentElement
-                  });
-                }
+            // Wait a bit for DOM to stabilize
+            const waitTime = freshlyUploaded ? 1000 : 500;
+            
+            setTimeout(async () => {
+              if (mountedRef.current) {
+                await applyClipMaskStable(drawingId, floorPlan);
               }
-              
-              if (pathElement && mountedRef.current) {
-                console.log(`🎨 useSvgPathManagement: Applying clip mask to ${drawingId}`);
-                console.log(`🖼️ useSvgPathManagement: Using image data: ${floorPlan.data.substring(0, 50)}...`);
-                
-                // Force remove any existing clip mask first
-                const existingSvg = pathElement.closest('svg');
-                if (existingSvg) {
-                  const existingPattern = existingSvg.querySelector(`#pattern-${drawingId}`);
-                  const existingClipPath = existingSvg.querySelector(`#clip-${drawingId}`);
-                  if (existingPattern) {
-                    console.log(`🗑️ useSvgPathManagement: Removing existing pattern for ${drawingId}`);
-                    existingPattern.remove();
-                  }
-                  if (existingClipPath) {
-                    console.log(`🗑️ useSvgPathManagement: Removing existing clip path for ${drawingId}`);
-                    existingClipPath.remove();
-                  }
-                }
-                
-                // Reset path attributes
-                pathElement.removeAttribute('data-has-clip-mask');
-                pathElement.style.fill = '';
-                pathElement.removeAttribute('fill');
-                
-                // Apply the clip mask with the floor plan image data
-                const result = applyImageClipMask(pathElement, floorPlan.data, drawingId);
-                
-                if (result) {
-                  console.log(`🎉 useSvgPathManagement: Successfully applied clip mask to ${drawingId}`);
-                  
-                  // Add verification attributes
-                  pathElement.setAttribute('data-has-clip-mask', 'true');
-                  pathElement.setAttribute('data-image-url', floorPlan.data);
-                  if (currentUser) {
-                    pathElement.setAttribute('data-user-id', currentUser.id);
-                  }
-                  
-                  // Force immediate style application
-                  const fill = `url(#pattern-${drawingId})`;
-                  pathElement.style.fill = fill;
-                  pathElement.setAttribute('fill', fill);
-                  
-                  // Force multiple repaints to ensure visibility
-                  setTimeout(() => {
-                    if (mountedRef.current && document.contains(pathElement)) {
-                      pathElement.getBoundingClientRect();
-                      pathElement.style.fill = fill;
-                      pathElement.setAttribute('fill', fill);
-                      window.dispatchEvent(new Event('resize'));
-                      console.log(`🔄 useSvgPathManagement: Forced immediate style update for ${drawingId}`);
-                    }
-                  }, 50);
-                  
-                  // Another repaint after a longer delay
-                  setTimeout(() => {
-                    if (mountedRef.current) {
-                      window.dispatchEvent(new Event('resize'));
-                      console.log(`🔄 useSvgPathManagement: Final UI refresh for ${drawingId}`);
-                    }
-                  }, 200);
-                } else {
-                  console.error(`❌ useSvgPathManagement: Failed to apply clip mask to ${drawingId}`);
-                }
-              } else {
-                console.error(`❌ useSvgPathManagement: Could not find path element for ${drawingId} after ${maxPathAttempts} attempts`);
-                
-                // Log all SVG paths in the document for debugging
-                const allPaths = document.querySelectorAll('svg path');
-                console.log(`🔍 useSvgPathManagement: All SVG paths in document:`, Array.from(allPaths).map(p => {
-                  const className = p.className;
-                  return {
-                    id: p.id,
-                    drawingId: p.getAttribute('data-drawing-id'),
-                    className: typeof className === 'string' ? className : (className as any).baseVal || ''
-                  };
-                }));
-              }
-            } else {
-              console.log(`❌ useSvgPathManagement: No floor plan found for ${drawingId} or user mismatch`, {
-                hasFloorPlan: !!floorPlan,
-                userMatch: !currentUser || floorPlan?.userId === currentUser.id || floorPlan?.userId === 'anonymous'
-              });
-            }
-          } catch (error) {
-            console.error(`❌ useSvgPathManagement: Error processing floor plan update for ${drawingId}:`, error);
-          } finally {
-            // Always remove from processing set
-            if (mountedRef.current) {
               isProcessingRef.current.delete(drawingId);
-            }
+            }, waitTime);
+          } else {
+            console.log(`❌ useSvgPathManagement: No valid floor plan found for ${drawingId}`);
+            isProcessingRef.current.delete(drawingId);
           }
-        }, waitTime);
+        } catch (error) {
+          console.error(`❌ useSvgPathManagement: Error processing floor plan update for ${drawingId}:`, error);
+          isProcessingRef.current.delete(drawingId);
+        }
       }
     };
 
@@ -222,7 +174,35 @@ export function useSvgPathManagement() {
       mountedRef.current = false;
       window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
     };
-  }, []);
+  }, [applyClipMaskStable]);
+  
+  // Check for existing floor plans on mount
+  useEffect(() => {
+    const checkExistingFloorPlans = async () => {
+      if (!mountedRef.current) return;
+      
+      // Look for existing paths with floor plans
+      const allPaths = document.querySelectorAll('path[data-drawing-id]');
+      
+      for (const pathElement of Array.from(allPaths)) {
+        const drawingId = pathElement.getAttribute('data-drawing-id');
+        if (!drawingId || processedDrawingsRef.current.has(drawingId)) continue;
+        
+        try {
+          const floorPlan = await getFloorPlanById(drawingId);
+          if (floorPlan && floorPlan.data) {
+            console.log(`🔍 useSvgPathManagement: Found existing floor plan for ${drawingId}, applying clip mask`);
+            await applyClipMaskStable(drawingId, floorPlan);
+          }
+        } catch (error) {
+          console.error(`Error checking existing floor plan for ${drawingId}:`, error);
+        }
+      }
+    };
+    
+    // Check after a short delay to ensure DOM is ready
+    setTimeout(checkExistingFloorPlans, 1000);
+  }, [applyClipMaskStable]);
   
   return {
     svgPaths,

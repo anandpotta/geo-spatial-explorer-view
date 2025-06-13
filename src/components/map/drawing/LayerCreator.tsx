@@ -76,9 +76,9 @@ export const createLayerFromDrawing = async ({
       // Even if layer exists, check for floor plan application
       setTimeout(async () => {
         if (isMounted) {
-          await checkAndApplyFloorPlan(drawing.id, isMounted);
+          await checkAndApplyFloorPlan(drawing.id, isMounted, true);
         }
-      }, 1000);
+      }, 500);
       
       return;
     }
@@ -148,14 +148,14 @@ export const createLayerFromDrawing = async ({
             setupLayerClickHandlers(l, drawing, isMounted, onRegionClick);
           }
         });
-      }, 500);
+      }, 300);
       
-      // Check for floor plan after layer is fully created
+      // Check for floor plan after layer is fully created and DOM is stable
       setTimeout(async () => {
         if (isMounted) {
-          await checkAndApplyFloorPlan(drawing.id, isMounted);
+          await checkAndApplyFloorPlan(drawing.id, isMounted, false);
         }
-      }, 1500); // Increased delay to ensure DOM is fully ready
+      }, 800);
     }
   } catch (err) {
     console.error('❌ LayerCreator: Error creating layer for drawing:', err);
@@ -163,14 +163,14 @@ export const createLayerFromDrawing = async ({
 };
 
 // Helper function to check and apply floor plan
-async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean) {
+async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean, isExistingLayer: boolean) {
   if (!isMounted) return;
   
   const now = Date.now();
   const lastChecked = floorPlanChecked.get(drawingId) || 0;
   
   // Debounce floor plan checks
-  if (now - lastChecked < 2000) {
+  if (now - lastChecked < 1500) {
     console.log(`⏭️ LayerCreator: Skipping floor plan check for ${drawingId} (debounced)`);
     return;
   }
@@ -195,15 +195,32 @@ async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean) {
         const currentUser = getCurrentUser();
         
         console.log(`🚀 LayerCreator: Dispatching floorPlanUpdated event for ${drawingId}`);
-        window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-          detail: { 
-            drawingId: drawingId,
-            success: false, // Set to false to trigger processing
-            freshlyUploaded: true,
-            retryNeeded: false,
-            userId: currentUser?.id || 'anonymous'
+        
+        // Dispatch multiple times to ensure it's caught
+        const eventDetail = { 
+          drawingId: drawingId,
+          success: false,
+          freshlyUploaded: !isExistingLayer,
+          retryNeeded: false,
+          userId: currentUser?.id || 'anonymous'
+        };
+        
+        // Immediate dispatch
+        window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+        
+        // Delayed dispatch to ensure hooks are ready
+        setTimeout(() => {
+          if (isMounted) {
+            window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
           }
-        }));
+        }, 200);
+        
+        // Final dispatch after more time
+        setTimeout(() => {
+          if (isMounted) {
+            window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+          }
+        }, 1000);
         
         console.log(`Floor plan updated for drawing ${drawingId}, triggering refresh`);
       } else {
