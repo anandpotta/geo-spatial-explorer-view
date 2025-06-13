@@ -80,7 +80,10 @@ const GlobalPathClickHandler = () => {
               console.log('🔍 GlobalPathClickHandler: Checking for similar IDs:', {
                 targetId: drawingId,
                 allStoredIds: allKeys,
-                possibleMatches: allKeys.filter(key => key.includes(drawingId.substring(8)) || drawingId.includes(key.substring(8)))
+                possibleMatches: allKeys.filter(key => 
+                  typeof key === 'string' && 
+                  (key.includes(drawingId.substring(8)) || drawingId.includes(key.substring(8)))
+                )
               });
             }
           }
