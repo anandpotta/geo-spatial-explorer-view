@@ -84,6 +84,11 @@ export const setupLayerClickHandlers = (
       onRegionClickType: typeof stored?.onRegionClick
     });
     
+    // Also dispatch a custom event to notify other components
+    window.dispatchEvent(new CustomEvent('handlerRegistered', {
+      detail: { drawingId: drawing.id }
+    }));
+    
   } catch (error) {
     console.error(`❌ LayerEventHandlers: Error storing handler:`, error);
     return;

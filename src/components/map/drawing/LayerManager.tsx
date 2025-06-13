@@ -41,22 +41,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     activeTool
   });
 
-  // Clear processed drawings tracking when savedDrawings array changes significantly
-  useEffect(() => {
-    const currentDrawingIds = new Set(savedDrawings.map(d => d.id));
-    const processedIds = Array.from(processedDrawingsRef.current);
-    
-    // If we have processed drawings that no longer exist, clear the tracking
-    const hasRemovedDrawings = processedIds.some(id => !currentDrawingIds.has(id));
-    
-    if (hasRemovedDrawings) {
-      console.log('🔄 LayerManager: Clearing processed drawings tracking due to removed drawings');
-      processedDrawingsRef.current.clear();
-      setupCompletedRef.current.clear();
-    }
-  }, [savedDrawings]);
-
-  // Process each drawing when the savedDrawings array changes
+  // Process each drawing immediately when it's created or the array changes
   useEffect(() => {
     if (!featureGroup || !mountedRef.current) {
       return;
@@ -68,29 +53,9 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     });
 
     const processDrawing = async (drawing: DrawingData) => {
-      // Always try to process if not already processed
-      if (processedDrawingsRef.current.has(drawing.id)) {
-        console.log(`⏭️ LayerManager: Drawing ${drawing.id} already processed, checking handlers`);
-        
-        // Even if processed, ensure handlers are set up
-        if (!setupCompletedRef.current.has(drawing.id)) {
-          const layer = layersRef.current.get(drawing.id);
-          if (layer) {
-            console.log(`🔧 LayerManager: Setting up missing handlers for processed drawing ${drawing.id}`);
-            setupLayerClickHandlers(
-              layer,
-              drawing,
-              mountedRef.current,
-              onRegionClick
-            );
-            setupCompletedRef.current.add(drawing.id);
-          }
-        }
-        return;
-      }
-
       console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
       
+      // Create layer if it doesn't exist
       if (!layersRef.current.has(drawing.id)) {
         console.log(`🆕 LayerManager: Creating new layer for drawing ${drawing.id}`);
         
@@ -111,20 +76,15 @@ const LayerManager: React.FC<LayerManagerProps> = ({
           
           console.log(`✅ LayerManager: Layer creation completed for drawing ${drawing.id}`);
           
-          // Mark as processed
-          processedDrawingsRef.current.add(drawing.id);
-          
         } catch (error) {
           console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
+          return;
         }
-      } else {
-        console.log(`♻️ LayerManager: Layer exists for drawing ${drawing.id}`);
-        // Mark as processed even if layer exists
-        processedDrawingsRef.current.add(drawing.id);
       }
 
-      // Setup handlers with a delay to ensure layer is fully created
+      // Setup handlers immediately after layer creation or if missing
       if (!setupCompletedRef.current.has(drawing.id) && mountedRef.current) {
+        // Small delay to ensure layer is fully added to the map
         setTimeout(() => {
           if (!mountedRef.current) return;
           
@@ -142,7 +102,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
           } else {
             console.error(`❌ LayerManager: Layer not found after creation for drawing ${drawing.id}`);
           }
-        }, 100);
+        }, 50); // Reduced delay for faster response
       }
     };
 
@@ -151,28 +111,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
       processDrawing(drawing);
     });
 
-  }, [savedDrawings, onRegionClick, onRemoveShape, onUploadRequest]); // Include all callback dependencies
-
-  // Setup handlers for existing layers when callbacks change
-  useEffect(() => {
-    if (!mountedRef.current) return;
-
-    savedDrawings.forEach(drawing => {
-      if (layersRef.current.has(drawing.id) && !setupCompletedRef.current.has(drawing.id)) {
-        const layer = layersRef.current.get(drawing.id);
-        if (layer) {
-          console.log(`🔄 LayerManager: Re-setting up handlers for drawing ${drawing.id}`);
-          setupLayerClickHandlers(
-            layer,
-            drawing,
-            mountedRef.current,
-            onRegionClick
-          );
-          setupCompletedRef.current.add(drawing.id);
-        }
-      }
-    });
-  }, [onRegionClick, onRemoveShape, onUploadRequest]);
+  }, [savedDrawings, onRegionClick, onRemoveShape, onUploadRequest, featureGroup, activeTool]);
 
   useEffect(() => {
     return () => {
