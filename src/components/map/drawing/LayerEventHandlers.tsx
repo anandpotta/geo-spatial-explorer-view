@@ -67,8 +67,23 @@ export const setupLayerClickHandlers = (
   console.log(`🗂️ LayerEventHandlers: Storing onRegionClick function:`, onRegionClick.toString().substring(0, 200));
   
   try {
+    // Force create a new map instance if it's getting corrupted
+    if (!(window as any).drawingClickHandlers || typeof (window as any).drawingClickHandlers.set !== 'function') {
+      console.log(`🔧 LayerEventHandlers: Recreating handlers map due to corruption`);
+      (window as any).drawingClickHandlers = new Map();
+    }
+    
     (window as any).drawingClickHandlers.set(drawing.id, { drawing, onRegionClick });
     console.log(`✅ LayerEventHandlers: Handler stored successfully for drawing ${drawing.id}`);
+    
+    // Immediate verification
+    const stored = (window as any).drawingClickHandlers.get(drawing.id);
+    console.log(`🔍 LayerEventHandlers: Immediate verification - stored handler:`, {
+      exists: !!stored,
+      drawingId: stored?.drawing?.id,
+      onRegionClickType: typeof stored?.onRegionClick
+    });
+    
   } catch (error) {
     console.error(`❌ LayerEventHandlers: Error storing handler:`, error);
     return;
@@ -78,14 +93,6 @@ export const setupLayerClickHandlers = (
     size: (window as any).drawingClickHandlers.size,
     keys: Array.from((window as any).drawingClickHandlers.keys()),
     hasOurDrawing: (window as any).drawingClickHandlers.has(drawing.id)
-  });
-  
-  // Verify the handler was stored correctly
-  const storedHandler = (window as any).drawingClickHandlers.get(drawing.id);
-  console.log(`🔍 LayerEventHandlers: Retrieved stored handler:`, {
-    exists: !!storedHandler,
-    drawingId: storedHandler?.drawing?.id,
-    onRegionClickType: typeof storedHandler?.onRegionClick
   });
   
   // Create a simple, direct click handler

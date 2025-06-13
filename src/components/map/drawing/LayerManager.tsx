@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
@@ -25,6 +25,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
   onUploadRequest
 }) => {
   const mountedRef = useRef(true);
+  const setupCompletedRef = useRef(new Set<string>());
   const { 
     layersRef, 
     removeButtonRoots, 
@@ -39,8 +40,9 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     activeTool
   });
 
-  useEffect(() => {
-    console.log('🔄 LayerManager: useEffect triggered with:', {
+  // Memoize the layer processing function to prevent unnecessary re-renders
+  const processDrawings = useCallback(async () => {
+    console.log('🔄 LayerManager: processDrawings called with:', {
       savedDrawingsCount: savedDrawings.length,
       drawingIds: savedDrawings.map(d => d.id)
     });
@@ -51,7 +53,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     }
 
     // Process each drawing
-    savedDrawings.forEach(async (drawing) => {
+    for (const drawing of savedDrawings) {
       console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
       
       if (!layersRef.current.has(drawing.id)) {
@@ -75,50 +77,59 @@ const LayerManager: React.FC<LayerManagerProps> = ({
           
           console.log(`✅ LayerManager: Layer creation completed for drawing ${drawing.id}`);
           
-          // Small delay to ensure layer is fully created before setting up handlers
+          // Setup handlers after layer creation
           setTimeout(() => {
+            if (!mountedRef.current) return;
+            
             const layer = layersRef.current.get(drawing.id);
-            if (layer && mountedRef.current) {
+            if (layer) {
               console.log(`🔧 LayerManager: Setting up click handlers for drawing ${drawing.id}`);
-              console.log(`🔧 LayerManager: Layer type:`, (layer as any).constructor?.name || 'Unknown');
-              
               setupLayerClickHandlers(
                 layer,
                 drawing,
                 mountedRef.current,
                 onRegionClick
               );
-              
-              console.log(`✅ LayerManager: Click handlers setup completed for drawing ${drawing.id}`);
+              setupCompletedRef.current.add(drawing.id);
+              console.log(`✅ LayerManager: Setup completed for drawing ${drawing.id}`);
             } else {
               console.error(`❌ LayerManager: Layer not found after creation for drawing ${drawing.id}`);
             }
-          }, 100);
+          }, 50);
           
         } catch (error) {
           console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
         }
-      } else {
-        console.log(`♻️ LayerManager: Layer already exists for drawing ${drawing.id}, updating handlers`);
+      } else if (!setupCompletedRef.current.has(drawing.id)) {
+        console.log(`♻️ LayerManager: Layer exists but handlers not set up for drawing ${drawing.id}`);
         
         const existingLayer = layersRef.current.get(drawing.id);
         if (existingLayer && mountedRef.current) {
-          console.log(`🔧 LayerManager: Re-setting up click handlers for existing drawing ${drawing.id}`);
+          console.log(`🔧 LayerManager: Setting up click handlers for existing drawing ${drawing.id}`);
           setupLayerClickHandlers(
             existingLayer,
             drawing,
             mountedRef.current,
             onRegionClick
           );
+          setupCompletedRef.current.add(drawing.id);
         }
+      } else {
+        console.log(`✅ LayerManager: Drawing ${drawing.id} already fully set up`);
       }
-    });
+    }
+  }, [savedDrawings, featureGroup, onRegionClick, onRemoveShape, onUploadRequest, activeTool]);
+
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    
+    processDrawings();
 
     return () => {
       console.log('🧹 LayerManager: Cleanup function called');
       mountedRef.current = false;
     };
-  }, [savedDrawings, featureGroup, onRegionClick]);
+  }, [processDrawings]);
 
   useLayerUpdates({
     savedDrawings,
