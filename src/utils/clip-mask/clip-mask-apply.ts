@@ -42,6 +42,12 @@ export const applyImageClipMask = (
     return false;
   }
   
+  // Check if path element is still in the DOM
+  if (!document.contains(pathElement)) {
+    console.error('Cannot apply clip mask: path element not in DOM');
+    return false;
+  }
+  
   // If already loading this image, don't start another load
   if (loadingImages.get(id)) {
     console.log(`Already loading image for ${id}, skipping duplicate request`);
@@ -58,6 +64,8 @@ export const applyImageClipMask = (
     // Log debugging info
     console.log(`Applying clip mask for drawing ${id}`);
     console.log(`Path element:`, pathElement);
+    console.log(`Image URL type:`, typeof imageUrl);
+    console.log(`Image URL:`, imageUrl);
     
     // Resolve the image URL
     let imageUrlString = resolveImageUrl(imageUrl, id);
@@ -77,33 +85,25 @@ export const applyImageClipMask = (
       storeImageUrl(id, imageUrlString, 'default-pattern');
     }
     
-    console.log(`Using image URL: ${imageUrlString}`);
+    console.log(`Using image URL: ${imageUrlString.substring(0, 100)}...`);
     
     // Check if already has clip mask (improved check)
     if (hasClipMaskApplied(pathElement)) {
-      console.log(`Path already has clip mask for ${id}, updating attributes`);
-      // Just update timestamp to trigger a refresh
-      pathElement.setAttribute('data-last-updated', Date.now().toString());
-      pathElement.setAttribute('data-has-clip-mask', 'true');
-      pathElement.setAttribute('data-user-id', currentUser.id);
-      loadingImages.set(id, false);
-      pathElement.classList.remove('loading-clip-mask');
+      console.log(`Path already has clip mask for ${id}, removing and reapplying`);
       
-      // Ensure the fill is still properly applied
-      const patternId = `pattern-${id}`;
-      const fill = `url(#${patternId})`;
-      pathElement.style.fill = fill;
-      pathElement.setAttribute('fill', fill);
+      // Remove existing clip mask elements
+      const svg = pathElement.closest('svg');
+      if (svg) {
+        const existingPattern = svg.querySelector(`#pattern-${id}`);
+        const existingClipPath = svg.querySelector(`#clip-${id}`);
+        if (existingPattern) existingPattern.remove();
+        if (existingClipPath) existingClipPath.remove();
+      }
       
-      // Force a repaint
-      requestAnimationFrame(() => {
-        if (pathElement && document.contains(pathElement)) {
-          pathElement.getBoundingClientRect();
-          window.dispatchEvent(new Event('resize'));
-        }
-      });
-      
-      return true;
+      // Reset path attributes
+      pathElement.removeAttribute('data-has-clip-mask');
+      pathElement.style.fill = '';
+      pathElement.removeAttribute('fill');
     }
     
     // Get the SVG element that contains this path
@@ -136,8 +136,9 @@ export const applyImageClipMask = (
       pattern,
       // Success callback
       () => {
+        console.log(`Successfully processed image for ${id}, applying pattern and clip path`);
+        
         // Apply the pattern and clip path
-        console.log(`Applying pattern and clip path for ${id}`);
         applyPatternAndClipPath(pathElement, `pattern-${id}`, `clip-${id}`);
         
         // Mark as having a clip mask with user ID
@@ -150,7 +151,6 @@ export const applyImageClipMask = (
         
         // Store the URL for future reference if it's not already stored
         if (typeof imageUrl === 'string' && imageUrl.startsWith('blob:')) {
-          // Make sure to provide a filename or default to 'uploaded-image'
           storeImageUrl(id, imageUrl, 'uploaded-image');
         }
         
@@ -159,16 +159,18 @@ export const applyImageClipMask = (
           if (pathElement && document.contains(pathElement)) {
             pathElement.getBoundingClientRect();
             window.dispatchEvent(new Event('resize'));
+            
             // Trigger a custom event that the floor plan was updated
             window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
               detail: { drawingId: id, userId: currentUser.id }
             }));
+            
+            console.log(`Clip mask application completed for ${id}`);
           }
         });
       },
       // Error callback
       () => {
-        // Error handled in processImageForClipMask
         console.error('Error in image processing callback');
         pathElement.classList.remove('loading-clip-mask');
         loadingImages.set(id, false);
