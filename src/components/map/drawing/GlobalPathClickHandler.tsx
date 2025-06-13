@@ -73,9 +73,27 @@ const GlobalPathClickHandler = () => {
               hasMethod: handlers && typeof handlers.has === 'function',
               mapSize: handlers ? handlers.size : 'N/A'
             });
+            
+            // Additional debugging: check if any similar IDs exist
+            if (handlers && handlers.keys) {
+              const allKeys = Array.from(handlers.keys());
+              console.log('🔍 GlobalPathClickHandler: Checking for similar IDs:', {
+                targetId: drawingId,
+                allStoredIds: allKeys,
+                possibleMatches: allKeys.filter(key => key.includes(drawingId.substring(8)) || drawingId.includes(key.substring(8)))
+              });
+            }
           }
         } else {
           console.log('❌ GlobalPathClickHandler: No drawing ID found on path element');
+          // Debug: check if path has any data attributes
+          if (pathElement) {
+            const attributes = Array.from(pathElement.attributes).map(attr => ({
+              name: attr.name,
+              value: attr.value
+            }));
+            console.log('🔍 GlobalPathClickHandler: Path element attributes:', attributes);
+          }
         }
       } else {
         console.log('ℹ️ GlobalPathClickHandler: Click not on a path element');

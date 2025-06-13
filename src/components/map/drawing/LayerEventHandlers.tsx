@@ -139,7 +139,7 @@ export const setupLayerClickHandlers = (
     console.log(`✅ LayerEventHandlers: Main layer click handler attached for drawing ${drawing.id}`);
   }
   
-  // Handle feature groups with child layers
+  // Handle feature groups with child layers and ensure path elements have correct drawing ID
   if (typeof (layer as any).eachLayer === 'function') {
     (layer as any).eachLayer((childLayer: L.Layer) => {
       if (childLayer?.on) {
@@ -148,6 +148,33 @@ export const setupLayerClickHandlers = (
         }
         childLayer.on('click', handleClick);
         console.log(`✅ LayerEventHandlers: Child layer click handler attached for drawing ${drawing.id}`);
+        
+        // Ensure the path element has the correct drawing ID attribute
+        if ((childLayer as any)._path) {
+          const pathElement = (childLayer as any)._path;
+          const currentDrawingId = pathElement.getAttribute('data-drawing-id');
+          
+          console.log(`🔍 LayerEventHandlers: Path element drawing ID check:`, {
+            currentId: currentDrawingId,
+            expectedId: drawing.id,
+            needsUpdate: currentDrawingId !== drawing.id
+          });
+          
+          if (currentDrawingId !== drawing.id) {
+            console.log(`🔧 LayerEventHandlers: Updating path element drawing ID from ${currentDrawingId} to ${drawing.id}`);
+            pathElement.setAttribute('data-drawing-id', drawing.id);
+            pathElement.setAttribute('id', `drawing-path-${drawing.id}`);
+            pathElement.setAttribute('data-path-uid', `uid-${drawing.id}-${Date.now()}`);
+            
+            // Verify the update
+            const updatedId = pathElement.getAttribute('data-drawing-id');
+            console.log(`✅ LayerEventHandlers: Path element ID updated successfully:`, {
+              oldId: currentDrawingId,
+              newId: updatedId,
+              success: updatedId === drawing.id
+            });
+          }
+        }
       }
     });
   }
