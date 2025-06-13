@@ -1,3 +1,4 @@
+
 import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { getMapFromLayer, isMapValid } from '@/utils/leaflet-type-utils';
@@ -7,7 +8,7 @@ import { toast } from 'sonner';
 import { prepareLayerOptions, createGeoJSONLayer, addDrawingAttributesToLayer } from './LayerUtils';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
 import { applyClipMaskToDrawing } from './clip-mask';
-import { hasFloorPlan } from '@/utils/floor-plan-utils';
+import { hasFloorPlan, getFloorPlanById } from '@/utils/floor-plan-utils';
 
 interface CreateLayerOptions {
   drawing: DrawingData;
@@ -73,7 +74,7 @@ export const createLayerFromDrawing = async ({
       return;
     }
 
-    console.log(`Creating new layer for drawing ${drawing.id}`);
+    console.log(`🏗️ LayerCreator: Creating new layer for drawing ${drawing.id}`);
 
     // Prepare layer options - this is now async
     const options = await prepareLayerOptions(drawing);
@@ -103,7 +104,7 @@ export const createLayerFromDrawing = async ({
     if (isMounted && layer) {
       featureGroup.addLayer(layer);
       
-      console.log(`Successfully added layer for drawing ${drawing.id} to feature group`);
+      console.log(`✅ LayerCreator: Successfully added layer for drawing ${drawing.id} to feature group`);
       
       // Apply drawing attributes immediately after adding to feature group
       layer.eachLayer((l: L.Layer) => {
@@ -140,38 +141,92 @@ export const createLayerFromDrawing = async ({
         });
       }, 500);
       
-      // Check if we've recently applied a floor plan to this drawing
-      const lastApplied = floorPlanApplied.get(drawing.id) || 0;
-      const shouldApply = now - lastApplied > 3000; // 3 seconds debounce
+      // Enhanced floor plan checking and application
+      console.log(`🔍 LayerCreator: Checking for floor plan for drawing ${drawing.id}`);
       
-      // Check if this drawing has a floor plan
-      const hasFloorPlanResult = await hasFloorPlan(drawing.id);
-      console.log(`Drawing ${drawing.id} has floor plan: ${hasFloorPlanResult}`);
-      
-      // Apply clip mask if needed
-      if (hasFloorPlanResult && isMounted && shouldApply) {
-        floorPlanApplied.set(drawing.id, now);
+      try {
+        // Check if this drawing has a floor plan with better debugging
+        const hasFloorPlanResult = await hasFloorPlan(drawing.id);
+        console.log(`📋 LayerCreator: Drawing ${drawing.id} has floor plan: ${hasFloorPlanResult}`);
         
-        setTimeout(() => {
-          if (isMounted) {
-            applyClipMaskToDrawing({
-              drawingId: drawing.id,
-              isMounted,
-              layer
-            }).then(success => {
-              if (success) {
-                console.log(`Successfully applied clip mask for ${drawing.id}`);
-                // Force an update
-                window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
-                  detail: { drawingId: drawing.id }
-                }));
-              }
-            });
+        if (hasFloorPlanResult) {
+          // Get the actual floor plan data
+          const floorPlanData = await getFloorPlanById(drawing.id);
+          console.log(`📋 LayerCreator: Floor plan data retrieved:`, {
+            hasData: !!floorPlanData,
+            hasImageData: !!(floorPlanData?.data),
+            dataLength: floorPlanData?.data?.length || 0
+          });
+          
+          if (floorPlanData && floorPlanData.data) {
+            // Check if we've recently applied a floor plan to this drawing
+            const lastApplied = floorPlanApplied.get(drawing.id) || 0;
+            const shouldApply = now - lastApplied > 2000; // 2 seconds debounce
+            
+            if (shouldApply && isMounted) {
+              floorPlanApplied.set(drawing.id, now);
+              
+              console.log(`🎨 LayerCreator: Applying floor plan to drawing ${drawing.id}`);
+              
+              // Apply clip mask with retry logic
+              setTimeout(async () => {
+                if (!isMounted) return;
+                
+                try {
+                  const success = await applyClipMaskToDrawing({
+                    drawingId: drawing.id,
+                    isMounted,
+                    layer,
+                    imageUrl: floorPlanData.data,
+                    retryOnFailure: true,
+                    maxRetries: 3
+                  });
+                  
+                  if (success) {
+                    console.log(`🎉 LayerCreator: Successfully applied floor plan to ${drawing.id}`);
+                    
+                    // Trigger floor plan updated event
+                    window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+                      detail: { 
+                        drawingId: drawing.id,
+                        success: true,
+                        freshlyUploaded: false
+                      }
+                    }));
+                  } else {
+                    console.error(`❌ LayerCreator: Failed to apply floor plan to ${drawing.id}`);
+                    
+                    // Trigger retry event
+                    setTimeout(() => {
+                      if (isMounted) {
+                        window.dispatchEvent(new CustomEvent('floorPlanUpdated', { 
+                          detail: { 
+                            drawingId: drawing.id,
+                            success: false,
+                            retryNeeded: true
+                          }
+                        }));
+                      }
+                    }, 1000);
+                  }
+                } catch (error) {
+                  console.error(`❌ LayerCreator: Error applying floor plan to ${drawing.id}:`, error);
+                }
+              }, 1000);
+            } else {
+              console.log(`⏭️ LayerCreator: Skipping floor plan application for ${drawing.id} (debounced or unmounted)`);
+            }
+          } else {
+            console.warn(`⚠️ LayerCreator: Floor plan exists but no data found for ${drawing.id}`);
           }
-        }, 1000);
+        } else {
+          console.log(`ℹ️ LayerCreator: No floor plan found for drawing ${drawing.id}`);
+        }
+      } catch (error) {
+        console.error(`❌ LayerCreator: Error checking/applying floor plan for ${drawing.id}:`, error);
       }
     }
   } catch (err) {
-    console.error('Error creating layer for drawing:', err);
+    console.error('❌ LayerCreator: Error creating layer for drawing:', err);
   }
 };
