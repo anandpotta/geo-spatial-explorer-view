@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { getCurrentUser } from '@/services/auth-service';
 
@@ -86,11 +87,11 @@ function cleanupOldFloorPlans(): void {
     
     const floorPlans = JSON.parse(floorPlansJson);
     const currentUser = getCurrentUser();
-    if (!currentUser) return;
+    const userId = currentUser?.id || 'anonymous';
     
     // Get user's floor plans and sort by timestamp
     const userPlans = Object.entries(floorPlans)
-      .filter(([_, plan]) => (plan as FloorPlan).userId === currentUser.id)
+      .filter(([_, plan]) => (plan as FloorPlan).userId === userId)
       .sort(([_, a], [__, b]) => {
         const timeA = new Date((a as FloorPlan).timestamp || 0).getTime();
         const timeB = new Date((b as FloorPlan).timestamp || 0).getTime();
@@ -120,10 +121,9 @@ export async function saveFloorPlan(
   floorPlan: FloorPlan
 ): Promise<boolean> {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    toast.error('Please log in to save floor plans');
-    return false;
-  }
+  const userId = currentUser?.id || 'anonymous';
+  
+  console.log(`🔄 saveFloorPlan: Saving floor plan for drawing ${drawingId} with user ${userId}`);
   
   try {
     let processedData = floorPlan.data;
@@ -139,7 +139,7 @@ export async function saveFloorPlan(
     const floorPlanWithUser = {
       ...floorPlan,
       data: processedData,
-      userId: currentUser.id,
+      userId: userId,
       timestamp: new Date().toISOString()
     };
     
@@ -170,6 +170,8 @@ export async function saveFloorPlan(
     // Save back to localStorage
     localStorage.setItem('floorPlans', JSON.stringify(floorPlans));
     
+    console.log(`✅ saveFloorPlan: Successfully saved floor plan for ${drawingId} with user ${userId}`);
+    
     // Show success message if this is a new upload
     if (!floorPlansJson || !JSON.parse(floorPlansJson)[drawingId]) {
       toast.success('Floor plan saved successfully');
@@ -177,7 +179,7 @@ export async function saveFloorPlan(
     
     // Dispatch event to trigger UI updates
     window.dispatchEvent(new CustomEvent('floorPlanUpdated', {
-      detail: { drawingId, userId: currentUser.id }
+      detail: { drawingId, userId }
     }));
     
     return true;
@@ -200,22 +202,35 @@ export async function saveFloorPlan(
  */
 export async function getFloorPlanById(drawingId: string): Promise<FloorPlan | null> {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
-    return null;
-  }
+  const userId = currentUser?.id || 'anonymous';
+  
+  console.log(`🔍 getFloorPlanById: Looking for floor plan for drawing ${drawingId} with user ${userId}`);
   
   try {
     const floorPlansJson = localStorage.getItem('floorPlans');
-    if (!floorPlansJson) return null;
+    if (!floorPlansJson) {
+      console.log(`❌ getFloorPlanById: No floorPlans found in localStorage`);
+      return null;
+    }
     
     const floorPlans = JSON.parse(floorPlansJson);
     const floorPlan = floorPlans[drawingId];
     
-    // Only return if it belongs to the current user
-    if (floorPlan && floorPlan.userId === currentUser.id) {
+    console.log(`🔍 getFloorPlanById: Floor plan data for ${drawingId}:`, {
+      exists: !!floorPlan,
+      userId: floorPlan?.userId,
+      currentUserId: userId,
+      hasData: !!floorPlan?.data,
+      dataLength: floorPlan?.data?.length || 0
+    });
+    
+    // Return if it belongs to the current user (including anonymous)
+    if (floorPlan && floorPlan.userId === userId) {
+      console.log(`✅ getFloorPlanById: Found floor plan for ${drawingId} with user ${userId}`);
       return floorPlan;
     }
     
+    console.log(`❌ getFloorPlanById: No matching floor plan found for ${drawingId} with user ${userId}`);
     return null;
   } catch (error) {
     console.error('Error retrieving floor plan:', error);

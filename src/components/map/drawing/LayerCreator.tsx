@@ -185,6 +185,11 @@ async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean, isE
   try {
     console.log(`🔍 LayerCreator: Checking for floor plan for drawing ${drawingId}`);
     
+    const currentUser = getCurrentUser();
+    const userId = currentUser?.id || 'anonymous';
+    
+    console.log(`👤 LayerCreator: Current user: ${userId}`);
+    
     // First check if we can get the floor plan data directly
     const floorPlanData = await getFloorPlanById(drawingId);
     const hasFloorPlanResult = !!floorPlanData && !!floorPlanData.data;
@@ -192,12 +197,12 @@ async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean, isE
     console.log(`📋 LayerCreator: Drawing ${drawingId} has floor plan: ${hasFloorPlanResult}`, {
       hasData: !!floorPlanData,
       hasImageData: !!(floorPlanData?.data),
-      dataLength: floorPlanData?.data?.length || 0
+      dataLength: floorPlanData?.data?.length || 0,
+      userId: floorPlanData?.userId,
+      currentUserId: userId
     });
     
     if (hasFloorPlanResult && floorPlanData && floorPlanData.data && isMounted) {
-      const currentUser = getCurrentUser();
-      
       console.log(`🚀 LayerCreator: Dispatching floorPlanUpdated event for ${drawingId}`);
       
       // Dispatch multiple times to ensure it's caught
@@ -206,7 +211,7 @@ async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean, isE
         success: true,
         freshlyUploaded: !isExistingLayer,
         retryNeeded: false,
-        userId: currentUser?.id || 'anonymous'
+        userId: userId
       };
       
       // Immediate dispatch
@@ -226,9 +231,9 @@ async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean, isE
         }
       }, 1000);
       
-      console.log(`Floor plan updated for drawing ${drawingId}, triggering refresh`);
+      console.log(`✅ LayerCreator: Floor plan found and events dispatched for drawing ${drawingId}`);
     } else {
-      console.log(`ℹ️ LayerCreator: No floor plan found for drawing ${drawingId}`);
+      console.log(`ℹ️ LayerCreator: No floor plan found for drawing ${drawingId} with user ${userId}`);
     }
   } catch (error) {
     console.error(`❌ LayerCreator: Error checking/applying floor plan for ${drawingId}:`, error);
