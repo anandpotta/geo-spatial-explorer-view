@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { findSvgPathByDrawingId } from '@/utils/svg-path-finder';
 import { applyImageClipMask } from '@/utils/svg-clip-mask';
@@ -10,7 +9,7 @@ export function useSvgPathManagement() {
   const isProcessingRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
   const processedDrawingsRef = useRef(new Set<string>());
-  const retryTimeoutsRef = useRef(new Map<string, number>());
+  const retryTimeoutsRef = useRef(new Map<string, NodeJS.Timeout>());
   
   // Stable function to apply clip mask
   const applyClipMaskStable = useCallback(async (drawingId: string, floorPlanData: any, retryCount = 0) => {
