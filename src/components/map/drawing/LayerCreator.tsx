@@ -216,11 +216,13 @@ async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean, isE
       
       // Immediate dispatch
       window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+      console.log(`📡 LayerCreator: Immediate floorPlanUpdated event dispatched for ${drawingId}`);
       
       // Delayed dispatch to ensure hooks are ready
       setTimeout(() => {
         if (isMounted) {
           window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+          console.log(`📡 LayerCreator: Delayed floorPlanUpdated event dispatched for ${drawingId}`);
         }
       }, 200);
       
@@ -228,6 +230,7 @@ async function checkAndApplyFloorPlan(drawingId: string, isMounted: boolean, isE
       setTimeout(() => {
         if (isMounted) {
           window.dispatchEvent(new CustomEvent('floorPlanUpdated', { detail: eventDetail }));
+          console.log(`📡 LayerCreator: Final floorPlanUpdated event dispatched for ${drawingId}`);
         }
       }, 1000);
       
