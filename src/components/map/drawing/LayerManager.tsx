@@ -4,12 +4,8 @@ import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
 import { useLayerUpdates } from '@/hooks/useLayerUpdates';
-import { createLayerControls } from './LayerControls';
 import { createLayerFromDrawing } from './LayerCreator';
 import { setupLayerClickHandlers } from './LayerEventHandlers';
-import { createRemoveButtonControl } from './controls/RemoveButtonControl';
-import { createUploadButtonControl } from './controls/UploadButtonControl';
-import { createImageControlsLayer } from './controls/ImageControlsLayer';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
@@ -54,6 +50,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
       return;
     }
 
+    // Process each drawing
     savedDrawings.forEach(async (drawing) => {
       console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
       
@@ -61,7 +58,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
         console.log(`🆕 LayerManager: Creating new layer for drawing ${drawing.id}`);
         
         try {
-          // createLayerFromDrawing returns Promise<void>, so we don't test its return value
+          // createLayerFromDrawing returns Promise<void>, so we await it
           await createLayerFromDrawing({
             drawing,
             featureGroup,
@@ -76,42 +73,37 @@ const LayerManager: React.FC<LayerManagerProps> = ({
             onUploadRequest
           });
           
-          // Get the layer after creation
-          const layer = layersRef.current.get(drawing.id);
-          if (layer) {
-            console.log(`✅ LayerManager: Layer created successfully for drawing ${drawing.id}`);
-            console.log(`🔧 LayerManager: About to call setupLayerClickHandlers for drawing ${drawing.id}`);
-            console.log(`🔧 LayerManager: Parameters:`, {
-              layer: !!layer,
-              layerType: (layer as any).constructor?.name || 'Unknown',
-              drawing: !!drawing,
-              drawingId: drawing.id,
-              mounted: mountedRef.current,
-              onRegionClick: typeof onRegionClick,
-              onRegionClickFunction: onRegionClick
-            });
-            
-            // Set up click handlers for the layer
-            setupLayerClickHandlers(
-              layer,
-              drawing,
-              mountedRef.current,
-              onRegionClick
-            );
-            
-            console.log(`✅ LayerManager: setupLayerClickHandlers called for drawing ${drawing.id}`);
-          } else {
-            console.error(`❌ LayerManager: Failed to create layer for drawing ${drawing.id}`);
-          }
+          console.log(`✅ LayerManager: Layer creation completed for drawing ${drawing.id}`);
+          
+          // Small delay to ensure layer is fully created before setting up handlers
+          setTimeout(() => {
+            const layer = layersRef.current.get(drawing.id);
+            if (layer && mountedRef.current) {
+              console.log(`🔧 LayerManager: Setting up click handlers for drawing ${drawing.id}`);
+              console.log(`🔧 LayerManager: Layer type:`, (layer as any).constructor?.name || 'Unknown');
+              
+              setupLayerClickHandlers(
+                layer,
+                drawing,
+                mountedRef.current,
+                onRegionClick
+              );
+              
+              console.log(`✅ LayerManager: Click handlers setup completed for drawing ${drawing.id}`);
+            } else {
+              console.error(`❌ LayerManager: Layer not found after creation for drawing ${drawing.id}`);
+            }
+          }, 100);
+          
         } catch (error) {
           console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
         }
       } else {
-        console.log(`♻️ LayerManager: Layer already exists for drawing ${drawing.id}, checking if handlers need update`);
+        console.log(`♻️ LayerManager: Layer already exists for drawing ${drawing.id}, updating handlers`);
         
         const existingLayer = layersRef.current.get(drawing.id);
-        if (existingLayer) {
-          console.log(`🔧 LayerManager: Re-calling setupLayerClickHandlers for existing drawing ${drawing.id}`);
+        if (existingLayer && mountedRef.current) {
+          console.log(`🔧 LayerManager: Re-setting up click handlers for existing drawing ${drawing.id}`);
           setupLayerClickHandlers(
             existingLayer,
             drawing,
