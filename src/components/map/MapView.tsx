@@ -1,4 +1,3 @@
-
 import { useState, useRef, useId } from 'react';
 import { LocationMarker } from '@/utils/marker-utils';
 import FloorPlanView from './FloorPlanView';
@@ -38,6 +37,8 @@ interface MapViewProps {
   isMapReady?: boolean;
   selectedLocation?: { x: number; y: number; label?: string };
   onClearSelectedLocation?: () => void;
+  showDownloadButton?: boolean;
+  showSavedLocationsDropdown?: boolean;
 }
 
 const MapView = ({
@@ -61,7 +62,9 @@ const MapView = ({
   onClearAll,
   isMapReady = false,
   selectedLocation,
-  onClearSelectedLocation
+  onClearSelectedLocation,
+  showDownloadButton = true,
+  showSavedLocationsDropdown = true
 }: MapViewProps) => {
   // Generate a stable ID unique to this component instance
   const instanceId = useId();
@@ -95,7 +98,9 @@ const MapView = ({
     <div className="w-full h-full relative">
       <MapHeader 
         onLocationSelect={handleLocationSelect} 
-        isMapReady={isMapReady} 
+        isMapReady={isMapReady}
+        showDownloadButton={showDownloadButton}
+        showSavedLocationsDropdown={showSavedLocationsDropdown}
       />
       
       <MapContainer

@@ -1,4 +1,3 @@
-
 # Component Library Documentation
 
 ## Overview
@@ -20,6 +19,8 @@ interface LeafletMapProps {
   onLocationSelect?: (location: Location) => void;
   onClearAll?: () => void;
   onClearSelectedLocation?: () => void;
+  showDownloadButton?: boolean;
+  showSavedLocationsDropdown?: boolean;
 }
 ```
 
@@ -29,6 +30,7 @@ interface LeafletMapProps {
 - Drawing tools integration
 - Location search and selection
 - Export capabilities
+- Configurable header controls
 
 **Usage**:
 ```typescript
@@ -36,6 +38,38 @@ interface LeafletMapProps {
   selectedLocation={selectedLocation}
   onMapReady={handleMapReady}
   onLocationSelect={handleLocationSelect}
+  showDownloadButton={true}
+  showSavedLocationsDropdown={false}
+/>
+```
+
+### MapHeader
+**Location**: `src/components/map/header/MapHeader.tsx`
+
+Header component containing map controls and navigation elements.
+
+```typescript
+interface MapHeaderProps {
+  onLocationSelect: (position: [number, number]) => void;
+  isMapReady?: boolean;
+  showDownloadButton?: boolean;
+  showSavedLocationsDropdown?: boolean;
+}
+```
+
+**Key Features**:
+- Conditional rendering of download button
+- Conditional rendering of saved locations dropdown
+- Map ready state detection
+- Auto-positioning and responsive layout
+
+**Usage**:
+```typescript
+<MapHeader
+  onLocationSelect={handleLocationSelect}
+  isMapReady={true}
+  showDownloadButton={true}
+  showSavedLocationsDropdown={false}
 />
 ```
 
@@ -62,7 +96,7 @@ interface ThreeGlobeMapProps {
 ### StandaloneMapComponent
 **Location**: `src/lib/react/StandaloneMapComponent.tsx`
 
-Self-contained map component for library usage.
+Self-contained map component for library usage with enhanced configuration options.
 
 ```typescript
 interface StandaloneMapProps {
@@ -73,12 +107,39 @@ interface StandaloneMapProps {
     label?: string;
   };
   showInternalSearch?: boolean;
+  showDownloadButton?: boolean;
+  showSavedLocationsDropdown?: boolean;
   width?: string | number;
   height?: string | number;
   onLocationChange?: (location: any) => void;
   onAnnotationsChange?: (annotations: any[]) => void;
   onGeoJSONGenerated?: (geojson: any) => void;
+  theme?: 'light' | 'dark';
+  initialZoom?: number;
+  defaultLocation?: { latitude: number; longitude: number };
 }
+```
+
+**Key Features**:
+- Standalone operation with minimal dependencies
+- Configurable UI elements (search, download, saved locations)
+- External location input support
+- Real-time annotation monitoring
+- Theme support
+- Customizable dimensions
+
+**Usage**:
+```typescript
+<StandaloneMapComponent
+  externalLocation={{ latitude: 40.7128, longitude: -74.0060 }}
+  showInternalSearch={true}
+  showDownloadButton={false}
+  showSavedLocationsDropdown={true}
+  width="100%"
+  height="500px"
+  onLocationChange={handleLocationChange}
+  onAnnotationsChange={handleAnnotationsChange}
+/>
 ```
 
 ## Drawing and Annotation Components
@@ -93,6 +154,7 @@ Main container for drawing tool functionality.
 - Edit mode for existing shapes
 - Layer management
 - Floor plan integration
+- Image overlay support with clip masking
 
 ### DrawTools
 **Location**: `src/components/map/DrawTools.tsx`
@@ -126,13 +188,38 @@ interface LocationSearchProps {
 ### SavedLocationsDropdown
 **Location**: `src/components/map/SavedLocationsDropdown.tsx`
 
-Management interface for saved locations.
+Management interface for saved locations with conditional rendering support.
+
+```typescript
+interface SavedLocationsDropdownProps {
+  onLocationSelect: (position: [number, number]) => void;
+  isMapReady?: boolean;
+}
+```
 
 **Features**:
 - List all saved locations
 - Quick navigation to saved locations
 - Location editing and deletion
 - Export functionality
+- Map ready state awareness
+
+### DownloadButton
+**Location**: `src/components/map/header/DownloadButton.tsx`
+
+GeoJSON export functionality with conditional rendering support.
+
+```typescript
+interface DownloadButtonProps {
+  disabled?: boolean;
+}
+```
+
+**Features**:
+- GeoJSON file generation and download
+- Data validation before download
+- Visual feedback and error handling
+- Disabled state management
 
 ### MarkerComponents
 - **UserMarker**: Represents user-created location markers
@@ -220,12 +307,12 @@ Drawing tool state and operations management.
 
 Location selection and navigation logic.
 
+### useSvgPathManagement
+**Location**: `src/hooks/useSvgPathManagement.ts`
+
+SVG path management for floor plan overlays and clip masking.
+
 ## Utility Components
-
-### MapHeader
-**Location**: `src/components/map/header/MapHeader.tsx`
-
-Top navigation and search bar for map interface.
 
 ### MapEvents
 **Location**: `src/components/map/MapEvents.tsx`
@@ -252,15 +339,27 @@ const MapContainer = () => {
     <MapView
       {...mapState}
       {...drawingControls}
+      showDownloadButton={true}
+      showSavedLocationsDropdown={true}
     />
   );
 };
 
 // Presentational (UI)
-const MapView = ({ position, markers, onMarkerClick }) => {
+const MapView = ({ 
+  position, 
+  markers, 
+  onMarkerClick,
+  showDownloadButton,
+  showSavedLocationsDropdown 
+}) => {
   return (
     <div className="map-container">
-      {/* Render UI based on props */}
+      <MapHeader
+        showDownloadButton={showDownloadButton}
+        showSavedLocationsDropdown={showSavedLocationsDropdown}
+      />
+      {/* Other map content */}
     </div>
   );
 };
@@ -279,6 +378,41 @@ Complex components use compound patterns for flexibility:
     <DrawingControls.Layer />
   </DrawingControls.Canvas>
 </DrawingControls>
+```
+
+## Configuration Examples
+
+### Minimal Map with Download Only
+```typescript
+<StandaloneMapComponent
+  showInternalSearch={false}
+  showDownloadButton={true}
+  showSavedLocationsDropdown={false}
+  width="100%"
+  height="400px"
+/>
+```
+
+### Full-Featured Map
+```typescript
+<StandaloneMapComponent
+  showInternalSearch={true}
+  showDownloadButton={true}
+  showSavedLocationsDropdown={true}
+  externalLocation={{ latitude: 40.7128, longitude: -74.0060 }}
+  onLocationChange={handleLocationChange}
+  onAnnotationsChange={handleAnnotationsChange}
+/>
+```
+
+### Custom Themed Map
+```typescript
+<StandaloneMapComponent
+  theme="dark"
+  showDownloadButton={false}
+  showSavedLocationsDropdown={true}
+  className="custom-map-styles"
+/>
 ```
 
 ## Error Boundary Components
@@ -305,3 +439,17 @@ Application-wide error handling and recovery.
 - Minimize prop drilling
 - Use context judiciously
 - Implement shouldComponentUpdate logic where needed
+
+## Recent Updates
+
+### v1.2.0 - Enhanced Component Configuration
+- Added `showDownloadButton` and `showSavedLocationsDropdown` props to MapHeader
+- Updated StandaloneMapComponent with new configuration options
+- Improved anonymous user support for clip mask operations
+- Enhanced SVG path management for floor plan overlays
+- Fixed authentication requirements for drawing annotations
+
+### Breaking Changes
+- MapHeader now requires explicit boolean props for header controls
+- StandaloneMapComponent interface updated with new optional props
+- Default behavior maintains backward compatibility (all controls shown by default)

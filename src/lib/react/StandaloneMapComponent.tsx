@@ -16,6 +16,8 @@ export interface StandaloneMapProps {
   
   // Component configuration
   showInternalSearch?: boolean;
+  showDownloadButton?: boolean;
+  showSavedLocationsDropdown?: boolean;
   width?: string | number;
   height?: string | number;
   className?: string;
@@ -40,6 +42,8 @@ export interface StandaloneMapProps {
 function StandaloneMapComponent({
   externalLocation,
   showInternalSearch = true,
+  showDownloadButton = true,
+  showSavedLocationsDropdown = true,
   width = '100%',
   height = '100vh',
   className = '',
@@ -219,6 +223,8 @@ function StandaloneMapComponent({
         onMapReady={handleMapReady}
         onLocationSelect={handleInternalLocationSelect}
         onClearSelectedLocation={handleClearSelectedLocation}
+        showDownloadButton={showDownloadButton}
+        showSavedLocationsDropdown={showSavedLocationsDropdown}
       />
     </div>
   );
