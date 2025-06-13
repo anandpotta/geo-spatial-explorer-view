@@ -20,6 +20,8 @@ interface LeafletMapProps {
   onLocationSelect?: (location: Location) => void;
   onClearAll?: () => void;
   onClearSelectedLocation?: () => void;
+  showDownloadButton?: boolean;
+  showSavedLocationsDropdown?: boolean;
 }
 
 const LeafletMap = ({ 
@@ -28,7 +30,9 @@ const LeafletMap = ({
   activeTool, 
   onLocationSelect, 
   onClearAll,
-  onClearSelectedLocation 
+  onClearSelectedLocation,
+  showDownloadButton = true,
+  showSavedLocationsDropdown = true
 }: LeafletMapProps) => {
   const [isMapReferenceSet, setIsMapReferenceSet] = useState(false);
   const [instanceKey, setInstanceKey] = useState<number>(Date.now());
@@ -156,6 +160,8 @@ const LeafletMap = ({
       isMapReady={isMapReady}
       selectedLocation={selectedLocation}
       onClearSelectedLocation={onClearSelectedLocation}
+      showDownloadButton={showDownloadButton}
+      showSavedLocationsDropdown={showSavedLocationsDropdown}
     />
   );
 };
