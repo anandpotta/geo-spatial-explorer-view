@@ -130,6 +130,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 
   useLayerUpdates({
     savedDrawings,
+    activeTool,
     layersRef: layersRef.current,
     removeButtonRoots: removeButtonRoots.current,
     uploadButtonRoots: uploadButtonRoots.current,
