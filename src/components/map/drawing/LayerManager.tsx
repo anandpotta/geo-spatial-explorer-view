@@ -1,172 +1,144 @@
-
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import L from 'leaflet';
 import { DrawingData } from '@/utils/drawing-utils';
-import { useLayerUpdates } from '@/hooks/useLayerUpdates';
 import { useLayerReferences } from '@/hooks/useLayerReferences';
+import { useLayerUpdates } from '@/hooks/useLayerUpdates';
+import { LayerControls } from './LayerControls';
+import { LayerCreator } from './LayerCreator';
+import { setupLayerClickHandlers } from './LayerEventHandlers';
+import { createRemoveButtonControl } from './controls/RemoveButtonControl';
+import { createUploadButtonControl } from './controls/UploadButtonControl';
+import { createImageControl } from './controls/ImageControl';
 
 interface LayerManagerProps {
   featureGroup: L.FeatureGroup;
   savedDrawings: DrawingData[];
   activeTool: string | null;
-  onRegionClick?: (drawing: DrawingData) => void;
+  onRegionClick: (drawing: DrawingData) => void;
   onRemoveShape?: (drawingId: string) => void;
-  onUploadRequest?: (drawingId: string) => void;
+  onUploadRequest: (drawingId: string) => void;
 }
 
-const LayerManager = ({
+const LayerManager: React.FC<LayerManagerProps> = ({
   featureGroup,
   savedDrawings,
   activeTool,
   onRegionClick,
   onRemoveShape,
   onUploadRequest
-}: LayerManagerProps) => {
-  const isMountedRef = useRef<boolean>(true);
-  const isInitialRenderRef = useRef(true);
-  const lastDrawingsRef = useRef<DrawingData[]>([]);
-  
-  const {
-    removeButtonRoots,
+}) => {
+  const mountedRef = useRef(true);
+  const { 
+    layerRefs, 
+    removeButtonRoots, 
     uploadButtonRoots,
-    layersRef,
-    imageControlRoots
+    imageControlRoots 
   } = useLayerReferences();
-
-  const { updateLayers, debouncedUpdateLayers } = useLayerUpdates({
-    featureGroup,
-    savedDrawings,
-    activeTool,
-    isMountedRef,
-    layersRef,
-    removeButtonRoots: removeButtonRoots.current,
-    uploadButtonRoots: uploadButtonRoots.current,
-    imageControlRoots: imageControlRoots.current,
-    onRegionClick,
-    onRemoveShape,
-    onUploadRequest
+  
+  console.log('🏗️ LayerManager: Rendering with:', {
+    savedDrawingsCount: savedDrawings.length,
+    onRegionClick: typeof onRegionClick,
+    onUploadRequest: typeof onUploadRequest,
+    activeTool
   });
 
-  // Safe unmounting of React roots
-  const safeUnmountRoots = () => {
-    // Unmount all React roots in a safe way
-    const unmountRoot = (root: any) => {
-      if (!root) return;
-      try {
-        // Check if the unmount method exists before calling it
-        if (root && typeof root.unmount === 'function') {
-          root.unmount();
-        }
-      } catch (err) {
-        console.error('Error unmounting root:', err);
-      }
-    };
-    
-    // Safely clear all roots
-    const safelyClearRoots = (rootsMap: Map<string, any>) => {
-      if (!rootsMap) return;
-      
-      // Create array of entries to avoid modification during iteration
-      const entries = Array.from(rootsMap.entries());
-      entries.forEach(([key, root]) => {
-        unmountRoot(root);
-        rootsMap.delete(key);
-      });
-    };
-    
-    // Clear all types of roots
-    safelyClearRoots(removeButtonRoots.current);
-    safelyClearRoots(uploadButtonRoots.current);
-    safelyClearRoots(imageControlRoots.current);
-  };
-
-  // Component lifecycle
   useEffect(() => {
-    isMountedRef.current = true;
-    
-    return () => {
-      isMountedRef.current = false;
-      safeUnmountRoots();
-      layersRef.current.clear();
-    };
-  }, []);
+    console.log('🔄 LayerManager: useEffect triggered with:', {
+      savedDrawingsCount: savedDrawings.length,
+      drawingIds: savedDrawings.map(d => d.id)
+    });
 
-  // Use a more stable approach for detecting real changes to drawings
-  useEffect(() => {
-    if (!isMountedRef.current) return;
-    
-    // Helper function to check if drawings have actually changed
-    const haveSavedDrawingsChanged = () => {
-      if (savedDrawings.length !== lastDrawingsRef.current.length) {
-        return true;
-      }
-      
-      // Check if the IDs match
-      const currentIds = new Set(savedDrawings.map(d => d.id));
-      return lastDrawingsRef.current.some(d => !currentIds.has(d.id));
-    };
-    
-    // First safely unmount any existing roots to prevent conflicts
-    safeUnmountRoots();
-    
-    // Only do a full update if drawings have changed or this is the first render
-    const shouldForceUpdate = isInitialRenderRef.current || haveSavedDrawingsChanged();
-    
-    if (shouldForceUpdate) {
-      // For initial render or when drawings change, use a short delay
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          updateLayers();
-          isInitialRenderRef.current = false;
-          lastDrawingsRef.current = [...savedDrawings];
-        }
-      }, 100);
-    } else if (activeTool === 'edit') {
-      // For edit mode changes, use the debounced version
-      debouncedUpdateLayers();
+    if (!featureGroup || !savedDrawings.length) {
+      console.log('❌ LayerManager: Missing featureGroup or no drawings, skipping layer creation');
+      return;
     }
-  }, [savedDrawings, activeTool, updateLayers, debouncedUpdateLayers]);
 
-  // Listen for resize events which might affect positioning
-  useEffect(() => {
-    const handleResize = () => {
-      if (isMountedRef.current) {
-        debouncedUpdateLayers();
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [debouncedUpdateLayers]);
-
-  // Handle storage events for cross-tab updates
-  useEffect(() => {
-    const handleStorageUpdate = () => {
-      if (isMountedRef.current) {
-        debouncedUpdateLayers();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('floorPlanUpdated', handleStorageUpdate);
-    
-    // Also listen for visibility changes to update when tab becomes visible
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && isMountedRef.current) {
-        debouncedUpdateLayers();
+    savedDrawings.forEach((drawing) => {
+      console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
+      
+      if (!layerRefs.current[drawing.id]) {
+        console.log(`🆕 LayerManager: Creating new layer for drawing ${drawing.id}`);
+        
+        try {
+          const layer = LayerCreator.createLayerFromDrawing(drawing, featureGroup);
+          
+          if (layer) {
+            console.log(`✅ LayerManager: Layer created successfully for drawing ${drawing.id}`);
+            layerRefs.current[drawing.id] = layer;
+            
+            console.log(`🔧 LayerManager: About to call setupLayerClickHandlers for drawing ${drawing.id}`);
+            console.log(`🔧 LayerManager: Parameters:`, {
+              layer: !!layer,
+              layerType: layer.constructor.name,
+              drawing: !!drawing,
+              drawingId: drawing.id,
+              mounted: mountedRef.current,
+              onRegionClick: typeof onRegionClick,
+              onRegionClickFunction: onRegionClick
+            });
+            
+            // Set up click handlers for the layer
+            setupLayerClickHandlers(
+              layer,
+              drawing,
+              mountedRef.current,
+              onRegionClick
+            );
+            
+            console.log(`✅ LayerManager: setupLayerClickHandlers called for drawing ${drawing.id}`);
+          } else {
+            console.error(`❌ LayerManager: Failed to create layer for drawing ${drawing.id}`);
+          }
+        } catch (error) {
+          console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
+        }
+      } else {
+        console.log(`♻️ LayerManager: Layer already exists for drawing ${drawing.id}, checking if handlers need update`);
+        
+        const existingLayer = layerRefs.current[drawing.id];
+        if (existingLayer) {
+          console.log(`🔧 LayerManager: Re-calling setupLayerClickHandlers for existing drawing ${drawing.id}`);
+          setupLayerClickHandlers(
+            existingLayer,
+            drawing,
+            mountedRef.current,
+            onRegionClick
+          );
+        }
       }
     });
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('floorPlanUpdated', handleStorageUpdate);
-      document.removeEventListener('visibilitychange', handleStorageUpdate);
-    };
-  }, [debouncedUpdateLayers]);
 
-  return null; // This is a non-visual component
+    return () => {
+      console.log('🧹 LayerManager: Cleanup function called');
+      mountedRef.current = false;
+    };
+  }, [savedDrawings, featureGroup, onRegionClick]);
+
+  useLayerUpdates({
+    savedDrawings,
+    layerRefs,
+    removeButtonRoots,
+    uploadButtonRoots,
+    imageControlRoots,
+    featureGroup,
+    onRemoveShape,
+    onUploadRequest,
+    isMounted: mountedRef.current
+  });
+
+  return (
+    <LayerControls
+      savedDrawings={savedDrawings}
+      layerRefs={layerRefs}
+      removeButtonRoots={removeButtonRoots}
+      uploadButtonRoots={uploadButtonRoots}
+      imageControlRoots={imageControlRoots}
+      featureGroup={featureGroup}
+      onRemoveShape={onRemoveShape}
+      onUploadRequest={onUploadRequest}
+      isMounted={mountedRef.current}
+    />
+  );
 };
 
 export default LayerManager;
