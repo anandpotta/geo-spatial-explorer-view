@@ -74,11 +74,12 @@ export function useSvgPathManagement() {
     }
   }, []);
   
-  // Floor plan update handler - stable callback
-  const handleFloorPlanUpdated = useCallback(async (event: CustomEvent) => {
+  // Floor plan update handler - stable callback with proper typing
+  const handleFloorPlanUpdated = useCallback(async (event: Event) => {
     if (!mountedRef.current) return;
     
-    const { drawingId, userId, freshlyUploaded } = event.detail;
+    const customEvent = event as CustomEvent;
+    const { drawingId, userId, freshlyUploaded } = customEvent.detail;
     
     console.log(`🔄 useSvgPathManagement: Processing floor plan update for ${drawingId}`, { 
       drawingId, 
@@ -137,7 +138,7 @@ export function useSvgPathManagement() {
     // Add the event listener only once
     if (!listenerAddedRef.current) {
       console.log(`🎧 useSvgPathManagement: Adding floor plan update listener`);
-      window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
+      window.addEventListener('floorPlanUpdated', handleFloorPlanUpdated);
       listenerAddedRef.current = true;
     }
     
@@ -181,7 +182,7 @@ export function useSvgPathManagement() {
       mountedRef.current = false;
       if (listenerAddedRef.current) {
         console.log(`🔇 useSvgPathManagement: Removing floor plan update listener`);
-        window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated as EventListener);
+        window.removeEventListener('floorPlanUpdated', handleFloorPlanUpdated);
         listenerAddedRef.current = false;
       }
     };
