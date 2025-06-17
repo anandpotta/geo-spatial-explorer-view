@@ -33,78 +33,7 @@ const applyAttributesToPath = (pathElement: SVGPathElement, drawingId: string): 
 };
 
 /**
- * Finds and applies attributes to SVG path elements in the map
- */
-const findAndApplyToMapPaths = (layer: L.Layer, drawingId: string): boolean => {
-  const map = (layer as any)._map;
-  if (!map || !map.getContainer) return false;
-  
-  const container = map.getContainer();
-  if (!container) return false;
-  
-  // Look for recently created paths that don't have our attributes yet
-  const paths = container.querySelectorAll('.leaflet-overlay-pane path:not([data-drawing-id])');
-  let applied = false;
-  
-  paths.forEach((path: Element) => {
-    if (path instanceof SVGPathElement) {
-      // Check if this path belongs to our layer by checking proximity or other indicators
-      applyAttributesToPath(path, drawingId);
-      applied = true;
-    }
-  });
-  
-  return applied;
-};
-
-/**
- * Applies attributes to a layer using multiple strategies
- */
-const applyAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
-  try {
-    console.log(`Applying attributes to layer for drawing ${drawingId}`);
-    
-    // Store drawing ID on the layer object itself
-    (layer as any).drawingId = drawingId;
-    
-    // Strategy 1: Direct access to the layer's path element
-    if ((layer as any)._path && (layer as any)._path.tagName === 'path') {
-      applyAttributesToPath((layer as any)._path, drawingId);
-      return;
-    }
-    
-    // Strategy 2: Look for paths in the map that don't have attributes yet
-    if (findAndApplyToMapPaths(layer, drawingId)) {
-      return;
-    }
-    
-    // Strategy 3: Set up observer for path creation
-    const checkForPath = () => {
-      if ((layer as any)._path && (layer as any)._path.tagName === 'path') {
-        applyAttributesToPath((layer as any)._path, drawingId);
-        return true;
-      }
-      return findAndApplyToMapPaths(layer, drawingId);
-    };
-    
-    // Check immediately and with delays
-    if (!checkForPath()) {
-      setTimeout(() => {
-        if (!checkForPath()) {
-          setTimeout(() => {
-            checkForPath();
-          }, 100);
-        }
-      }, 50);
-    }
-    
-  } catch (err) {
-    console.error('Error applying attributes to layer:', err);
-  }
-};
-
-/**
- * Sets up a global observer for newly created drawing paths
+ * Sets up a robust observer for newly created drawing paths
  */
 export const setupDrawingPathObserver = (): (() => void) => {
   let observer: MutationObserver | null = null;
@@ -120,25 +49,44 @@ export const setupDrawingPathObserver = (): (() => void) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node instanceof SVGPathElement) {
-          // Check if this is a drawing path that needs attributes
-          if (node.classList.contains('leaflet-interactive') && 
-              !node.getAttribute('data-drawing-id')) {
+          console.log('🔍 Observer: New SVG path detected:', node);
+          
+          // Check if this is a drawing path that needs processing
+          const hasDrawingId = node.getAttribute('data-drawing-id');
+          const isInteractive = node.classList.contains('leaflet-interactive');
+          
+          if (isInteractive && !hasDrawingId) {
+            console.log('🎯 Observer: Found unprocessed interactive path');
             
-            console.log('Found new drawing path without attributes:', node);
-            
-            // Mark it and store creation time for later identification
-            node.setAttribute('data-needs-drawing-id', 'true');
-            node.setAttribute('data-created-at', Date.now().toString());
-            
-            // Try to apply attributes immediately if we have a recent drawing context
-            const recentDrawingId = (window as any).lastCreatedDrawingId;
-            if (recentDrawingId) {
-              console.log(`Applying immediate attributes with drawing ID: ${recentDrawingId}`);
-              node.removeAttribute('data-needs-drawing-id');
-              node.removeAttribute('data-created-at');
-              applyAttributesToPath(node, recentDrawingId);
+            // Check if we have a current drawing context
+            const currentDrawingId = (window as any).lastCreatedDrawingId;
+            if (currentDrawingId) {
+              console.log(`🔧 Observer: Applying drawing ID ${currentDrawingId} to new path`);
+              applyAttributesToPath(node, currentDrawingId);
+              
+              // Set up click handler immediately
+              setupPathClickHandler(node, currentDrawingId);
+            } else {
+              // Mark for later processing
+              node.setAttribute('data-needs-processing', 'true');
+              node.setAttribute('data-created-timestamp', Date.now().toString());
             }
           }
+        }
+        
+        // Also check for SVG elements being added
+        if (node instanceof SVGElement || node instanceof Element) {
+          const paths = node.querySelectorAll('path.leaflet-interactive:not([data-drawing-id])');
+          paths.forEach((path) => {
+            if (path instanceof SVGPathElement) {
+              console.log('🔍 Observer: Found nested unprocessed path');
+              const currentDrawingId = (window as any).lastCreatedDrawingId;
+              if (currentDrawingId) {
+                applyAttributesToPath(path, currentDrawingId);
+                setupPathClickHandler(path, currentDrawingId);
+              }
+            }
+          });
         }
       });
     });
@@ -149,94 +97,145 @@ export const setupDrawingPathObserver = (): (() => void) => {
     subtree: true
   });
   
+  console.log('🎧 Observer: Drawing path observer set up');
+  
   return () => {
     if (observer) {
       observer.disconnect();
       observer = null;
+      console.log('🔇 Observer: Drawing path observer disconnected');
     }
   };
 };
 
 /**
- * Applies drawing ID to paths that were marked as needing it
+ * Sets up click handler for a specific path element
  */
-export const applyDrawingIdToMarkedPaths = (drawingId: string): void => {
-  console.log(`Looking for marked paths to apply drawing ID: ${drawingId}`);
-  
-  const paths = document.querySelectorAll('path[data-needs-drawing-id="true"]');
-  console.log(`Found ${paths.length} paths marked as needing drawing ID`);
-  
-  paths.forEach((path) => {
-    if (path instanceof SVGPathElement) {
-      console.log(`Applying drawing ID ${drawingId} to marked path`);
-      path.removeAttribute('data-needs-drawing-id');
-      path.removeAttribute('data-created-at');
-      applyAttributesToPath(path, drawingId);
+const setupPathClickHandler = (pathElement: SVGPathElement, drawingId: string) => {
+  const clickHandler = (event: Event) => {
+    console.log(`🖱️ Path click detected for drawing ${drawingId}`);
+    event.stopPropagation();
+    event.preventDefault();
+    
+    // Get the drawing handler from global storage
+    const handlers = (window as any).drawingClickHandlers;
+    if (handlers && handlers.has && handlers.has(drawingId)) {
+      const { drawing, onRegionClick } = handlers.get(drawingId);
+      console.log(`📞 Calling onRegionClick for ${drawingId}`);
+      onRegionClick(drawing);
+    } else {
+      console.warn(`❌ No handler found for drawing ${drawingId}`);
     }
-  });
+  };
   
-  // Also check for any recent paths without our attributes
-  const allPaths = document.querySelectorAll('.leaflet-overlay-pane path:not([data-drawing-id])');
-  console.log(`Found ${allPaths.length} additional paths without drawing ID`);
+  pathElement.addEventListener('click', clickHandler);
+  console.log(`✅ Click handler set up for path ${drawingId}`);
+};
+
+/**
+ * Processes paths that were marked as needing processing
+ */
+export const processMarkedPaths = (drawingId: string): void => {
+  console.log(`🔧 Processing marked paths for drawing ID: ${drawingId}`);
   
-  allPaths.forEach((path) => {
-    if (path instanceof SVGPathElement && 
-        path.classList.contains('leaflet-interactive')) {
-      console.log(`Applying drawing ID ${drawingId} to unmarked interactive path`);
-      applyAttributesToPath(path, drawingId);
+  const markedPaths = document.querySelectorAll('path[data-needs-processing="true"]');
+  console.log(`Found ${markedPaths.length} paths marked for processing`);
+  
+  markedPaths.forEach((path) => {
+    if (path instanceof SVGPathElement) {
+      const timestamp = path.getAttribute('data-created-timestamp');
+      const age = timestamp ? Date.now() - parseInt(timestamp) : 0;
+      
+      // Only process recent paths (within 30 seconds)
+      if (age < 30000) {
+        console.log(`🎯 Processing marked path for ${drawingId}`);
+        path.removeAttribute('data-needs-processing');
+        path.removeAttribute('data-created-timestamp');
+        applyAttributesToPath(path, drawingId);
+        setupPathClickHandler(path, drawingId);
+      }
     }
   });
 };
 
 /**
- * Sets the current drawing context for immediate application
+ * Sets the current drawing context and processes any waiting paths
  */
 export const setCurrentDrawingContext = (drawingId: string): void => {
   (window as any).lastCreatedDrawingId = drawingId;
-  console.log(`Set current drawing context to: ${drawingId}`);
+  console.log(`🎯 Set current drawing context to: ${drawingId}`);
   
-  // Extend the context duration to allow for polygon completion
+  // Process any paths that were waiting for a drawing ID
+  processMarkedPaths(drawingId);
+  
+  // Clear context after a reasonable time
   setTimeout(() => {
     if ((window as any).lastCreatedDrawingId === drawingId) {
       (window as any).lastCreatedDrawingId = null;
-      console.log(`Cleared drawing context for: ${drawingId}`);
+      console.log(`🧹 Cleared drawing context for: ${drawingId}`);
     }
-  }, 10000); // Increased from 2000 to 10000 milliseconds to allow polygon completion
+  }, 15000); // 15 seconds to allow for complex polygon drawing
 };
 
 /**
- * Adds drawing ID attributes to SVG paths using multiple strategies
+ * Main function to apply drawing attributes to a layer
  */
 export const addDrawingAttributesToLayer = (layer: L.Layer, drawingId: string): void => {
   if (!layer) return;
 
   try {
-    console.log(`Adding drawing attributes for ${drawingId}`);
+    console.log(`🎯 Adding drawing attributes for ${drawingId}`);
     
-    // Set the current drawing context for immediate application
+    // Set the current drawing context immediately
     setCurrentDrawingContext(drawingId);
     
-    // Store drawing ID on the layer object itself
+    // Store drawing ID on the layer object
     (layer as any).drawingId = drawingId;
     
-    // Apply attributes immediately
-    applyAttributesToLayer(layer, drawingId);
-    
-    // Also apply to any recently marked paths
-    applyDrawingIdToMarkedPaths(drawingId);
-    
-    // Set up multiple fallback checks with increasing delays
-    const applyWithDelay = (delay: number) => {
-      setTimeout(() => {
-        applyAttributesToLayer(layer, drawingId);
-        applyDrawingIdToMarkedPaths(drawingId);
-      }, delay);
+    // Try to find and process the path immediately
+    const processLayer = () => {
+      // Strategy 1: Direct access to layer's path
+      if ((layer as any)._path && (layer as any)._path.tagName === 'path') {
+        console.log(`✅ Found direct path for ${drawingId}`);
+        applyAttributesToPath((layer as any)._path, drawingId);
+        setupPathClickHandler((layer as any)._path, drawingId);
+        return true;
+      }
+      
+      // Strategy 2: Find by various selectors
+      const selectors = [
+        `path[id*="${drawingId}"]`,
+        `path.leaflet-interactive:not([data-drawing-id])`,
+        'path[data-needs-processing="true"]'
+      ];
+      
+      for (const selector of selectors) {
+        const paths = document.querySelectorAll(selector);
+        for (const path of Array.from(paths)) {
+          if (path instanceof SVGPathElement) {
+            console.log(`✅ Found path via selector ${selector} for ${drawingId}`);
+            applyAttributesToPath(path, drawingId);
+            setupPathClickHandler(path, drawingId);
+            return true;
+          }
+        }
+      }
+      
+      return false;
     };
     
-    applyWithDelay(200);
-    applyWithDelay(500);
-    applyWithDelay(1000);
-    applyWithDelay(2000);
+    // Try immediate processing
+    if (!processLayer()) {
+      // Set up delayed processing with multiple attempts
+      const retryDelays = [100, 300, 600, 1000, 2000];
+      retryDelays.forEach((delay) => {
+        setTimeout(() => {
+          if (!processLayer()) {
+            console.log(`⏰ Retry ${delay}ms failed for ${drawingId}`);
+          }
+        }, delay);
+      });
+    }
     
   } catch (err) {
     console.error('Error adding drawing attributes to layer:', err);
