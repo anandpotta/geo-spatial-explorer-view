@@ -44,33 +44,40 @@ export function useHandleShapeCreation(
               (shape.layer as any).drawingId = finalDrawingId;
             }
             
-            // IMPORTANT: Process marked paths immediately with the final UUID
-            console.log(`🔧 About to process marked paths with final ID: ${finalDrawingId}`);
-            processMarkedPaths(finalDrawingId);
-            
             // Set drawing context with the final UUID for any future paths
             setCurrentDrawingContext(finalDrawingId);
             
-            // Apply attributes again with delays to ensure DOM is ready
+            // Call onCreated first to trigger LayerManager setup
+            onCreated(shape);
+            
+            // Wait a bit for LayerManager to set up handlers, then process paths
             setTimeout(() => {
-              console.log(`🔧 Retry processing marked paths after 200ms for: ${finalDrawingId}`);
+              console.log(`🔧 Processing marked paths after LayerManager setup for: ${finalDrawingId}`);
               processMarkedPaths(finalDrawingId);
-            }, 200);
+            }, 100);
+            
+            // Additional retries to ensure DOM is ready
+            setTimeout(() => {
+              console.log(`🔧 Retry processing marked paths after 300ms for: ${finalDrawingId}`);
+              processMarkedPaths(finalDrawingId);
+            }, 300);
             
             setTimeout(() => {
-              console.log(`🔧 Final retry processing marked paths after 500ms for: ${finalDrawingId}`);
+              console.log(`🔧 Final retry processing marked paths after 600ms for: ${finalDrawingId}`);
               processMarkedPaths(finalDrawingId);
-            }, 500);
+            }, 600);
             
           } else {
             console.error('Could not find saved drawing with UUID');
+            // Fallback to original behavior
+            onCreated(shape);
           }
           
         } catch (saveError) {
           console.error('Error saving drawing:', saveError);
+          // Fallback to original behavior
+          onCreated(shape);
         }
-        
-        onCreated(shape);
       }
       
       // Update SVG paths if callback provided
