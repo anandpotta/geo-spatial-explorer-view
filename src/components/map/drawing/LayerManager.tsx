@@ -27,6 +27,7 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 }) => {
   const mountedRef = useRef(true);
   const setupCompletedRef = useRef(new Set<string>());
+  const processedDrawingsRef = useRef(new Set<string>());
   const { 
     layersRef, 
     removeButtonRoots, 
@@ -41,8 +42,70 @@ const LayerManager: React.FC<LayerManagerProps> = ({
     savedDrawingsCount: savedDrawings.length,
     onRegionClick: typeof onRegionClick,
     onUploadRequest: typeof onUploadRequest,
-    activeTool
+    activeTool,
+    processedDrawings: Array.from(processedDrawingsRef.current)
   });
+
+  const processDrawing = useCallback(async (drawing: DrawingData) => {
+    if (processedDrawingsRef.current.has(drawing.id)) {
+      console.log(`⏭️ LayerManager: Skipping already processed drawing ${drawing.id}`);
+      return;
+    }
+
+    console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
+    
+    // Mark as processed immediately
+    processedDrawingsRef.current.add(drawing.id);
+    
+    // Create layer if it doesn't exist
+    if (!layersRef.current.has(drawing.id)) {
+      console.log(`🆕 LayerManager: Creating new layer for drawing ${drawing.id}`);
+      
+      try {
+        await createLayerFromDrawing({
+          drawing,
+          featureGroup,
+          activeTool,
+          isMounted: mountedRef.current,
+          layersRef: layersRef.current,
+          removeButtonRoots: removeButtonRoots.current,
+          uploadButtonRoots: uploadButtonRoots.current,
+          imageControlRoots: imageControlRoots.current,
+          onRegionClick,
+          onRemoveShape,
+          onUploadRequest
+        });
+        
+        console.log(`✅ LayerManager: Layer creation completed for drawing ${drawing.id}`);
+        
+      } catch (error) {
+        console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
+        // Remove from processed set so it can be retried
+        processedDrawingsRef.current.delete(drawing.id);
+        return;
+      }
+    }
+
+    // Setup handlers immediately after layer creation
+    if (!setupCompletedRef.current.has(drawing.id) && mountedRef.current) {
+      const layer = layersRef.current.get(drawing.id);
+      if (layer) {
+        console.log(`🔧 LayerManager: Setting up click handlers immediately for drawing ${drawing.id}`);
+        setupLayerClickHandlers(
+          layer,
+          drawing,
+          mountedRef.current,
+          onRegionClick
+        );
+        setupCompletedRef.current.add(drawing.id);
+        console.log(`✅ LayerManager: Setup completed immediately for drawing ${drawing.id}`);
+      } else {
+        console.error(`❌ LayerManager: Layer not found after creation for drawing ${drawing.id}`);
+        // Remove from processed set so it can be retried
+        processedDrawingsRef.current.delete(drawing.id);
+      }
+    }
+  }, [featureGroup, activeTool, onRegionClick, onRemoveShape, onUploadRequest]);
 
   // Process each drawing immediately when it's created or the array changes
   useEffect(() => {
@@ -52,64 +115,28 @@ const LayerManager: React.FC<LayerManagerProps> = ({
 
     console.log('🔄 LayerManager: Processing drawings:', {
       savedDrawingsCount: savedDrawings.length,
-      drawingIds: savedDrawings.map(d => d.id)
+      drawingIds: savedDrawings.map(d => d.id),
+      alreadyProcessed: Array.from(processedDrawingsRef.current)
     });
 
-    const processDrawing = async (drawing: DrawingData) => {
-      console.log(`🎯 LayerManager: Processing drawing ${drawing.id}`);
-      
-      // Create layer if it doesn't exist
-      if (!layersRef.current.has(drawing.id)) {
-        console.log(`🆕 LayerManager: Creating new layer for drawing ${drawing.id}`);
-        
-        try {
-          await createLayerFromDrawing({
-            drawing,
-            featureGroup,
-            activeTool,
-            isMounted: mountedRef.current,
-            layersRef: layersRef.current,
-            removeButtonRoots: removeButtonRoots.current,
-            uploadButtonRoots: uploadButtonRoots.current,
-            imageControlRoots: imageControlRoots.current,
-            onRegionClick,
-            onRemoveShape,
-            onUploadRequest
-          });
-          
-          console.log(`✅ LayerManager: Layer creation completed for drawing ${drawing.id}`);
-          
-        } catch (error) {
-          console.error(`❌ LayerManager: Error creating layer for drawing ${drawing.id}:`, error);
-          return;
-        }
-      }
-
-      // Setup handlers immediately after layer creation - no delay
-      if (!setupCompletedRef.current.has(drawing.id) && mountedRef.current) {
-        const layer = layersRef.current.get(drawing.id);
-        if (layer) {
-          console.log(`🔧 LayerManager: Setting up click handlers immediately for drawing ${drawing.id}`);
-          setupLayerClickHandlers(
-            layer,
-            drawing,
-            mountedRef.current,
-            onRegionClick
-          );
-          setupCompletedRef.current.add(drawing.id);
-          console.log(`✅ LayerManager: Setup completed immediately for drawing ${drawing.id}`);
-        } else {
-          console.error(`❌ LayerManager: Layer not found after creation for drawing ${drawing.id}`);
-        }
-      }
-    };
-
-    // Process all drawings
+    // Process all drawings, but processDrawing will skip already processed ones
     savedDrawings.forEach(drawing => {
       processDrawing(drawing);
     });
 
-  }, [savedDrawings, onRegionClick, onRemoveShape, onUploadRequest, featureGroup, activeTool]);
+    // Clean up processed drawings that are no longer in the saved drawings
+    const currentDrawingIds = new Set(savedDrawings.map(d => d.id));
+    const processedIds = Array.from(processedDrawingsRef.current);
+    
+    processedIds.forEach(id => {
+      if (!currentDrawingIds.has(id)) {
+        console.log(`🧹 LayerManager: Cleaning up removed drawing ${id}`);
+        processedDrawingsRef.current.delete(id);
+        setupCompletedRef.current.delete(id);
+      }
+    });
+
+  }, [savedDrawings, processDrawing]);
 
   useEffect(() => {
     return () => {
