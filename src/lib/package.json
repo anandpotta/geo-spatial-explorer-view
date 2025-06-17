@@ -2,7 +2,7 @@
 {
   "name": "geospatial-explorer-lib",
   "version": "0.1.3",
-  "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular",
+  "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular with advanced drawing capabilities",
   "main": "dist/cjs/lib/index.js",
   "module": "dist/esm/lib/index.js",
   "types": "dist/types/lib/index.d.ts",
@@ -61,6 +61,11 @@
     "cesium",
     "three.js",
     "typescript",
+    "drawing",
+    "annotations",
+    "floor-plans",
+    "svg",
+    "click-handlers",
     "npm",
     "library"
   ],
@@ -80,7 +85,9 @@
     "react-native": ">=0.60.0",
     "react-native-webview": ">=11.0.0",
     "@angular/core": ">=13.0.0",
-    "three": ">=0.133.0"
+    "three": ">=0.133.0",
+    "leaflet": ">=1.9.0",
+    "leaflet-draw": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -97,6 +104,12 @@
     },
     "@angular/core": {
       "optional": true
+    },
+    "leaflet": {
+      "optional": true
+    },
+    "leaflet-draw": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -104,6 +117,8 @@
     "@types/react-dom": ">=16.8.0",
     "@types/react-native": ">=0.60.0",
     "@types/three": ">=0.133.0",
+    "@types/leaflet": ">=1.9.0",
+    "@types/leaflet-draw": ">=1.0.0",
     "typescript": ">=4.5.0",
     "rimraf": "^3.0.2"
   },

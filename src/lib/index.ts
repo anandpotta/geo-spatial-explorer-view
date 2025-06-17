@@ -26,10 +26,19 @@ export type {
   GlobeEventHandlers
 } from './geospatial-core/types';
 
+// Drawing-related type exports
+export type {
+  DrawingData
+} from '../utils/drawing-utils';
+
 // Default exports for easy importing
 export { StandaloneMapComponent as MapComponent } from './react/StandaloneMapComponent';
 export { GlobeComponent } from './react/GlobeComponent';
 
+// Drawing hooks and utilities for React
+export { useDrawingFileUpload } from '../hooks/useDrawingFileUpload';
+export { useHandleShapeCreation } from '../hooks/useHandleShapeCreation';
+
 // Version info
-export const VERSION = '0.1.2';
+export const VERSION = '0.1.3';
 export const PACKAGE_NAME = 'geospatial-explorer-lib';

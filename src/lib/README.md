@@ -19,7 +19,7 @@ npm install geospatial-explorer-lib
 
 ### React
 
-The React components provide full 3D globe visualization and 2D mapping capabilities.
+The React components provide full 3D globe visualization and 2D mapping capabilities with advanced drawing tools.
 
 #### Basic Map Component
 
@@ -49,7 +49,7 @@ function App() {
 export default App;
 ```
 
-#### Standalone Map with Search
+#### Standalone Map with Advanced Drawing
 
 ```tsx
 import React from 'react';
@@ -62,6 +62,10 @@ function MapApp() {
 
   const handleAnnotationsChange = (annotations) => {
     console.log('Annotations updated:', annotations);
+  };
+
+  const handleRegionClick = (drawing) => {
+    console.log('Drawing region clicked:', drawing);
   };
 
   return (
@@ -81,6 +85,7 @@ function MapApp() {
       initialZoom={10}
       onLocationChange={handleLocationChange}
       onAnnotationsChange={handleAnnotationsChange}
+      onRegionClick={handleRegionClick}
       onGeoJSONGenerated={(geojson) => {
         console.log('GeoJSON generated:', geojson);
       }}
@@ -89,6 +94,40 @@ function MapApp() {
 }
 
 export default MapApp;
+```
+
+#### Drawing Tools and File Upload
+
+```tsx
+import React from 'react';
+import { StandaloneMapComponent } from 'geospatial-explorer-lib/react';
+import { useDrawingFileUpload } from 'geospatial-explorer-lib/react';
+
+function DrawingApp() {
+  const { handleUploadToDrawing } = useDrawingFileUpload();
+
+  const handleDrawingUpload = (drawingId, file) => {
+    // Upload floor plans or images to specific drawings
+    handleUploadToDrawing(drawingId, file);
+  };
+
+  return (
+    <StandaloneMapComponent
+      showInternalSearch={true}
+      showDownloadButton={true}
+      enableDrawingTools={true}
+      onDrawingCreated={(drawing) => {
+        console.log('New drawing created:', drawing);
+      }}
+      onDrawingUpload={handleDrawingUpload}
+      onRegionClick={(drawing) => {
+        console.log('Drawing clicked:', drawing);
+      }}
+    />
+  );
+}
+
+export default DrawingApp;
 ```
 
 #### 3D Globe Component
@@ -126,7 +165,7 @@ export default GlobeApp;
 
 ### React Native
 
-React Native components are optimized for mobile devices.
+React Native components are optimized for mobile devices with touch-friendly drawing tools.
 
 #### Basic Setup
 
@@ -140,6 +179,10 @@ const App = () => {
     console.log('Mobile map is ready!');
   };
 
+  const handleDrawingInteraction = (drawing) => {
+    console.log('Drawing interaction on mobile:', drawing);
+  };
+
   return (
     <View style={styles.container}>
       <MapComponent
@@ -150,9 +193,11 @@ const App = () => {
           y: 37.7749    // latitude
         }}
         onReady={handleMapReady}
+        onRegionClick={handleDrawingInteraction}
         options={{
           initialZoom: 12,
-          maxZoom: 18
+          maxZoom: 18,
+          enableTouchDrawing: true
         }}
       />
     </View>
@@ -169,17 +214,19 @@ const styles = StyleSheet.create({
 export default App;
 ```
 
-#### Globe in React Native
+#### Mobile Drawing Features
 
 ```tsx
 import React from 'react';
 import { View } from 'react-native';
-import { GlobeComponent } from 'geospatial-explorer-lib/react-native';
+import { MapComponent, useDrawingFileUpload } from 'geospatial-explorer-lib/react-native';
 
-const GlobeScreen = () => {
+const DrawingScreen = () => {
+  const { handleUploadToDrawing } = useDrawingFileUpload();
+
   return (
     <View style={{ flex: 1 }}>
-      <GlobeComponent
+      <MapComponent
         selectedLocation={{
           id: 'london',
           label: 'London',
@@ -187,19 +234,29 @@ const GlobeScreen = () => {
           y: 51.5074   // latitude
         }}
         onReady={(api) => {
-          console.log('Mobile globe ready:', api);
+          console.log('Mobile map ready:', api);
+        }}
+        onDrawingCreated={(drawing) => {
+          console.log('Mobile drawing created:', drawing);
+        }}
+        onRegionClick={(drawing) => {
+          console.log('Mobile drawing clicked:', drawing);
+        }}
+        options={{
+          enableTouchDrawing: true,
+          supportFileUpload: true
         }}
       />
     </View>
   );
 };
 
-export default GlobeScreen;
+export default DrawingScreen;
 ```
 
 ### Angular
 
-Angular components integrate seamlessly with Angular applications.
+Angular components integrate seamlessly with Angular applications and provide robust drawing capabilities.
 
 #### Module Setup
 
@@ -274,24 +331,38 @@ export class MapComponent implements OnInit, OnDestroy {
     console.log('Location selected in Angular:', location);
     this.selectedLocation = location;
   }
+
+  onRegionClick(drawing: any) {
+    console.log('Drawing clicked in Angular:', drawing);
+    // Handle drawing interactions
+  }
+
+  onDrawingCreated(drawing: any) {
+    console.log('Drawing created in Angular:', drawing);
+    // Handle new drawing creation
+  }
 }
 ```
 
-#### Globe Component in Angular
+#### Advanced Drawing Integration
 
 ```typescript
-// globe.component.ts
+// drawing.component.ts
 import { Component, OnInit } from '@angular/core';
 import { GlobeComponent } from 'geospatial-explorer-lib/angular';
 import type { GeoLocation, GlobeOptions } from 'geospatial-explorer-lib/angular';
 
 @Component({
-  selector: 'app-globe',
+  selector: 'app-drawing-map',
   template: `
-    <div class="globe-container" style="width: 100%; height: 500px;">
-      <div *ngIf="!isGlobeReady" class="globe-loading">
+    <div class="drawing-container" style="width: 100%; height: 600px;">
+      <div *ngIf="!isMapReady" class="map-loading">
         <div class="spinner"></div>
-        <h3>Loading 3D Globe...</h3>
+        <h3>Loading Drawing Tools...</h3>
+      </div>
+      <div class="drawing-controls" *ngIf="isMapReady">
+        <button (click)="enableDrawing()" class="draw-btn">Enable Drawing</button>
+        <input type="file" (change)="onFileUpload($event)" accept="image/*,.pdf" />
       </div>
     </div>
   `,
@@ -309,17 +380,17 @@ import type { GeoLocation, GlobeOptions } from 'geospatial-explorer-lib/angular'
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    .drawing-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+    }
   `]
 })
-export class AppGlobeComponent implements OnInit {
-  isGlobeReady = false;
+export class DrawingMapComponent implements OnInit {
+  isMapReady = false;
   
-  globeOptions: Partial<GlobeOptions> = {
-    enableControls: true,
-    showAtmosphere: true,
-    enableAutoRotate: false
-  };
-
   selectedLocation: GeoLocation = {
     id: 'tokyo',
     label: 'Tokyo',
@@ -328,13 +399,35 @@ export class AppGlobeComponent implements OnInit {
   };
 
   ngOnInit() {
-    console.log('Globe component initialized');
-    // Initialize globe with GlobeComponent configuration
+    console.log('Drawing map component initialized');
   }
 
-  onGlobeReady(api: any) {
-    this.isGlobeReady = true;
-    console.log('Angular globe ready:', api);
+  onMapReady(api: any) {
+    this.isMapReady = true;
+    console.log('Angular drawing map ready:', api);
+  }
+
+  onRegionClick(drawing: any) {
+    console.log('Drawing region clicked:', drawing);
+    // Handle drawing clicks with improved event handling
+  }
+
+  onDrawingCreated(drawing: any) {
+    console.log('New drawing created:', drawing);
+    // Handle newly created drawings
+  }
+
+  enableDrawing() {
+    // Enable drawing tools
+    console.log('Drawing tools enabled');
+  }
+
+  onFileUpload(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      console.log('File selected for upload:', file.name);
+      // Handle file upload to drawings
+    }
   }
 }
 ```
@@ -354,6 +447,8 @@ interface MapViewOptions {
   initialCenter?: [number, number];
   initialZoom?: number;
   maxZoom?: number;
+  enableTouchDrawing?: boolean; // For mobile
+  supportFileUpload?: boolean;
 }
 
 interface GlobeOptions {
@@ -361,6 +456,15 @@ interface GlobeOptions {
   showAtmosphere?: boolean;
   enableAutoRotate?: boolean;
   rotationSpeed?: number;
+}
+
+interface DrawingData {
+  id: string;
+  type: 'polygon' | 'marker' | 'polyline';
+  coordinates: number[][];
+  properties?: Record<string, any>;
+  userId?: string;
+  timestamp?: string;
 }
 
 // React-specific types
@@ -374,12 +478,16 @@ interface StandaloneMapProps {
   showInternalSearch?: boolean;
   showDownloadButton?: boolean;
   showSavedLocationsDropdown?: boolean;
+  enableDrawingTools?: boolean;
   width?: string | number;
   height?: string | number;
   className?: string;
   onLocationChange?: (location: any) => void;
   onAnnotationsChange?: (annotations: any[]) => void;
   onGeoJSONGenerated?: (geojson: any) => void;
+  onDrawingCreated?: (drawing: DrawingData) => void;
+  onRegionClick?: (drawing: DrawingData) => void;
+  onDrawingUpload?: (drawingId: string, file: File) => void;
   theme?: 'light' | 'dark';
   initialZoom?: number;
   defaultLocation?: {
@@ -389,22 +497,47 @@ interface StandaloneMapProps {
 }
 ```
 
+## Advanced Features
+
+### Drawing and Annotation Tools
+- Polygon drawing with click handlers
+- File upload to drawings (images, PDFs)
+- SVG path manipulation and clipping
+- Interactive drawing controls
+- Floor plan overlay support
+
+### Event Handling
+- Robust click detection on drawings
+- Layer-based event management
+- Global path click handlers
+- Touch-optimized mobile interactions
+
+### Data Management
+- Local storage integration
+- User-based data isolation
+- Drawing persistence
+- GeoJSON export functionality
+
 ## Platform-Specific Features
 
 ### React Features
 - Full 3D globe with Three.js
 - 2D mapping with Leaflet
-- Drawing tools and annotations
+- Advanced drawing tools and annotations
+- File upload and floor plan integration
 - GeoJSON export functionality
 - Location search integration
 - Responsive design
+- Robust click event handling
 
 ### React Native Features
 - Native mobile map components
-- Touch-optimized controls
+- Touch-optimized drawing controls
 - Offline capability
 - GPS integration support
 - Performance optimized for mobile
+- File upload support
+- Gesture-based interactions
 
 ### Angular Features
 - Angular service integration
@@ -412,6 +545,8 @@ interface StandaloneMapProps {
 - RxJS observable support
 - Angular forms integration
 - Dependency injection ready
+- TypeScript-first development
+- Event binding integration
 
 ## Installation Examples
 
@@ -419,7 +554,7 @@ interface StandaloneMapProps {
 ```bash
 npm install geospatial-explorer-lib
 # Peer dependencies for React
-npm install react react-dom three leaflet
+npm install react react-dom three leaflet leaflet-draw
 ```
 
 ### React Native Project
@@ -438,17 +573,31 @@ npm install @angular/core @angular/common
 
 ## Advanced Usage
 
-### Custom Styling
-```css
-/* Custom CSS for map components */
-.geo-map-container {
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+### Custom Drawing Event Handling
+```typescript
+// React implementation
+const handleDrawingInteraction = (drawing: DrawingData) => {
+  console.log('Drawing clicked:', drawing);
+  // Custom logic for drawing interactions
+};
 
-.geo-globe-container {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+// Angular implementation
+onDrawingClick(drawing: DrawingData) {
+  console.log('Angular drawing click:', drawing);
+  // Handle drawing clicks in Angular
 }
+```
+
+### File Upload Integration
+```typescript
+// React hook usage
+import { useDrawingFileUpload } from 'geospatial-explorer-lib/react';
+
+const { handleUploadToDrawing } = useDrawingFileUpload();
+
+const uploadFile = (drawingId: string, file: File) => {
+  handleUploadToDrawing(drawingId, file);
+};
 ```
 
 ### Error Handling
@@ -472,6 +621,21 @@ onMapError(error: Error) {
 - **React Native**: iOS 10+, Android 6.0+ (API level 23+)
 - **Angular**: Angular 13+ with modern browser support
 
+## Recent Updates
+
+### v0.1.3
+- Enhanced drawing click detection and event handling
+- Improved layer management for better performance
+- Added robust SVG path manipulation
+- Better file upload integration
+- Enhanced mobile touch interactions
+- Improved TypeScript definitions
+
+### v0.1.2
+- Initial cross-platform release
+- React and Angular support
+- Core mapping functionality
+
 ## Contributing
 
 We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) for more details.
@@ -485,16 +649,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - [GitHub Issues](https://github.com/your-org/geospatial-explorer-lib/issues)
 - [Documentation](https://docs.geospatial-explorer-lib.com)
 - [Discord Community](https://discord.gg/geospatial-explorer)
-
-## Changelog
-
-### v0.1.3
-- Added React Native support
-- Enhanced Angular integration
-- Improved TypeScript definitions
-- Better error handling
-
-### v0.1.2
-- Initial cross-platform release
-- React and Angular support
-- Core mapping functionality
