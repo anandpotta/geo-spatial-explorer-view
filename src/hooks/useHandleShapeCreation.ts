@@ -21,8 +21,12 @@ export function useHandleShapeCreation(
       } else {
         console.log('Creating polygon shape - no marker creation');
         
-        // Save the drawing first to get the actual saved drawing with UUID
+        // Set the current drawing context with the original shape ID first
+        setCurrentDrawingContext(shape.id);
+        
+        // Save the drawing to get the actual saved drawing with UUID
         try {
+          console.log(`Saving drawing with original ID: ${shape.id}`);
           saveDrawing(shape);
           
           // Get the actual saved drawing by finding the most recently saved one
@@ -40,18 +44,24 @@ export function useHandleShapeCreation(
               (shape.layer as any).drawingId = finalDrawingId;
             }
             
-            // Set drawing context with the final UUID
+            // IMPORTANT: Process marked paths immediately with the final UUID
+            console.log(`🔧 About to process marked paths with final ID: ${finalDrawingId}`);
+            processMarkedPaths(finalDrawingId);
+            
+            // Set drawing context with the final UUID for any future paths
             setCurrentDrawingContext(finalDrawingId);
             
-            // Apply attributes to any marked paths with the final UUID
+            // Apply attributes again with delays to ensure DOM is ready
             setTimeout(() => {
+              console.log(`🔧 Retry processing marked paths after 200ms for: ${finalDrawingId}`);
               processMarkedPaths(finalDrawingId);
-            }, 100);
+            }, 200);
             
-            // Apply attributes again with a longer delay to ensure DOM is ready
             setTimeout(() => {
+              console.log(`🔧 Final retry processing marked paths after 500ms for: ${finalDrawingId}`);
               processMarkedPaths(finalDrawingId);
-            }, 300);
+            }, 500);
+            
           } else {
             console.error('Could not find saved drawing with UUID');
           }
