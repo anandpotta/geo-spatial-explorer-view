@@ -25,3 +25,11 @@ export type {
   GlobeOptions,
   GlobeEventHandlers
 } from './geospatial-core/types';
+
+// Default exports for easy importing
+export { StandaloneMapComponent as MapComponent } from './react/StandaloneMapComponent';
+export { GlobeComponent } from './react/GlobeComponent';
+
+// Version info
+export const VERSION = '0.1.2';
+export const PACKAGE_NAME = 'geospatial-explorer-lib';

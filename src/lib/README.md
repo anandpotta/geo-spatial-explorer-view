@@ -1,6 +1,7 @@
-# GeoSpatial Explorer Library
 
-A cross-platform geospatial library supporting React, React Native, and Angular applications.
+# Geospatial Explorer Library
+
+A cross-platform geospatial mapping library that works with React, React Native, and Angular applications.
 
 ## Installation
 
@@ -8,25 +9,25 @@ A cross-platform geospatial library supporting React, React Native, and Angular 
 npm install geospatial-explorer-lib
 ```
 
-## Usage
+## Quick Start
 
 ### React
 
 ```tsx
-import { MapComponent, GlobeComponent } from 'geospatial-explorer-lib/react';
+import { StandaloneMapComponent } from 'geospatial-explorer-lib/react';
 
 function App() {
   return (
-    <div>
-      <MapComponent
-        options={{ initialZoom: 10 }}
-        onLocationSelect={(location) => console.log('Selected:', location)}
-      />
-      <GlobeComponent
-        options={{ earthRadius: 5 }}
-        onReady={(api) => console.log('Globe ready')}
-      />
-    </div>
+    <StandaloneMapComponent
+      externalLocation={{
+        latitude: 40.7128,
+        longitude: -74.0060,
+        label: "New York City"
+      }}
+      onLocationChange={(location) => {
+        console.log('Location changed:', location);
+      }}
+    />
   );
 }
 ```
@@ -34,16 +35,19 @@ function App() {
 ### React Native
 
 ```tsx
-import { MapComponent, GlobeComponent } from 'geospatial-explorer-lib/react-native';
+import { MapComponent } from 'geospatial-explorer-lib/react-native';
 
 function App() {
   return (
-    <View style={{ flex: 1 }}>
-      <MapComponent
-        options={{ initialZoom: 10 }}
-        onLocationSelect={(location) => console.log('Selected:', location)}
-      />
-    </View>
+    <MapComponent
+      selectedLocation={{
+        id: '1',
+        label: 'NYC',
+        x: -74.0060,
+        y: 40.7128
+      }}
+      onReady={() => console.log('Map ready!')}
+    />
   );
 }
 ```
@@ -53,24 +57,79 @@ function App() {
 ```typescript
 import { MapComponentAngular } from 'geospatial-explorer-lib/angular';
 
-// Use in your Angular module
+// Use in your Angular component template
+// <geo-map [selectedLocation]="location" (ready)="onMapReady()"></geo-map>
 ```
+
+## Core Features
+
+- **Cross-platform**: Works with React, React Native, and Angular
+- **TypeScript Support**: Full TypeScript definitions included
+- **3D Globe**: Three.js-powered 3D globe visualization
+- **2D Maps**: Leaflet-based 2D mapping
+- **Drawing Tools**: Built-in annotation and drawing capabilities
+- **GeoJSON Export**: Export annotations as GeoJSON
+- **Location Search**: Integrated location search functionality
 
 ## API Reference
 
+### StandaloneMapComponent (React)
+
+```tsx
+interface StandaloneMapProps {
+  externalLocation?: {
+    latitude: number;
+    longitude: number;
+    searchString?: string;
+    label?: string;
+  };
+  showInternalSearch?: boolean;
+  showDownloadButton?: boolean;
+  showSavedLocationsDropdown?: boolean;
+  width?: string | number;
+  height?: string | number;
+  className?: string;
+  onLocationChange?: (location: LocationChangeEvent) => void;
+  onAnnotationsChange?: (annotations: any[]) => void;
+  onGeoJSONGenerated?: (geojson: any) => void;
+  theme?: 'light' | 'dark';
+  initialZoom?: number;
+  defaultLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+```
+
 ### Core Types
 
-- `GeoLocation`: Represents a geographic location
-- `MapViewOptions`: Configuration options for map components
-- `GlobeOptions`: Configuration options for globe components
+```typescript
+interface GeoLocation {
+  id: string;
+  label: string;
+  x: number; // longitude
+  y: number; // latitude
+}
 
-### Utilities
+interface MapViewOptions {
+  initialCenter?: [number, number];
+  initialZoom?: number;
+  maxZoom?: number;
+}
+```
 
-- `calculateDistance(lat1, lng1, lat2, lng2)`: Calculate distance between two points
-- `formatCoordinate(coord, type)`: Format coordinates for display
-- `isWeb()`: Check if running in web environment
-- `isReactNative()`: Check if running in React Native environment
+## Examples
+
+Check out the examples directory for complete implementation examples:
+
+- React Web Application
+- React Native Mobile App
+- Angular Application
+
+## Contributing
+
+We welcome contributions! Please see our contributing guidelines for more details.
 
 ## License
 
-MIT
+MIT License - see LICENSE file for details.

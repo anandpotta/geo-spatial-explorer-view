@@ -1,7 +1,7 @@
 
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular",
   "main": "dist/cjs/lib/index.js",
   "module": "dist/esm/lib/index.js",
@@ -26,6 +26,11 @@
       "import": "./dist/esm/lib/angular/index.js",
       "require": "./dist/cjs/lib/angular/index.js",
       "types": "./dist/types/lib/angular/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/esm/lib/geospatial-core/index.js",
+      "require": "./dist/cjs/lib/geospatial-core/index.js",
+      "types": "./dist/types/lib/geospatial-core/index.d.ts"
     }
   },
   "files": [
@@ -40,7 +45,8 @@
     "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --rootDir ../../", 
     "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --rootDir ../../",
     "prepublishOnly": "npm run build",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "keywords": [
     "geospatial",
@@ -53,10 +59,21 @@
     "angular",
     "leaflet",
     "cesium",
-    "three.js"
+    "three.js",
+    "typescript",
+    "npm",
+    "library"
   ],
-  "author": "",
+  "author": "Geospatial Explorer Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/geospatial-explorer-lib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/geospatial-explorer-lib/issues"
+  },
+  "homepage": "https://github.com/your-org/geospatial-explorer-lib#readme",
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-dom": ">=16.8.0",
@@ -88,12 +105,14 @@
     "@types/react-native": ">=0.60.0",
     "@types/three": ">=0.133.0",
     "typescript": ">=4.5.0",
-    "rimraf": "^3.0.2",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0"
+    "rimraf": "^3.0.2"
   },
   "dependencies": {
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
   }
 }

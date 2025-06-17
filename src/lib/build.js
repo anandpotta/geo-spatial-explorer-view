@@ -47,7 +47,13 @@ try {
     console.warn('README.md not found in library directory');
   }
 
+  // Create an index.d.ts file in the root of dist for better TypeScript support
+  const indexDts = `export * from './types/lib/index';`;
+  fs.writeFileSync('./dist/index.d.ts', indexDts);
+
   console.log('Build completed successfully!');
+  console.log('Package is ready for publishing with:');
+  console.log('  npm publish ./dist');
 } catch (error) {
   console.error('Build failed:', error.message);
   process.exit(1);

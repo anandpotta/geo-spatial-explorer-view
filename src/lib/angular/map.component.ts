@@ -1,66 +1,88 @@
 
 /**
- * This is a simplified Angular component definition
- * In a real application, this would be a proper Angular component
+ * Angular Map Component for Geospatial Explorer
  */
 
-export const MapComponentAngular = {
+// Define the Angular component structure for TypeScript compatibility
+export interface AngularMapComponent {
+  selector: string;
+  template: string;
+  styleUrls?: string[];
+  inputs: string[];
+  outputs: string[];
+}
+
+export const MapComponentAngular: AngularMapComponent = {
   selector: 'geo-map',
   template: `
-    <div class="geo-map-container" #mapContainer>
+    <div class="geo-map-container" #mapContainer [style.width]="width || '100%'" [style.height]="height || '400px'">
       <div *ngIf="!isReady" class="geo-map-loading">
         <div class="geo-map-spinner"></div>
         <h3>Loading Map</h3>
       </div>
+      <div class="geo-map-canvas" [style.display]="isReady ? 'block' : 'none'"></div>
     </div>
   `,
   styleUrls: ['./map.component.css'],
-  inputs: ['options', 'selectedLocation'],
-  outputs: ['ready', 'locationSelect', 'error'],
-  
-  // This would be a proper Angular component class with lifecycle hooks
-  controller: class {
-    options;
-    selectedLocation;
-    ready;
-    locationSelect;
-    error;
-    isReady = false;
-    mapInstance = null;
-    
-    ngOnInit() {
-      console.log('Angular Map Component initialized');
-    }
-    
-    ngAfterViewInit() {
-      this.initMap();
-    }
-    
-    initMap() {
-      // In a real component, this would initialize the map library
-      console.log('Map initialization would happen here');
-      setTimeout(() => {
-        this.isReady = true;
-        this.ready.emit({});
-      }, 1000);
-    }
-    
-    ngOnChanges(changes) {
-      if (changes.selectedLocation && !changes.selectedLocation.firstChange) {
-        this.centerMap(
-          this.selectedLocation.y,
-          this.selectedLocation.x
-        );
-      }
-    }
-    
-    centerMap(lat, lng) {
-      console.log(`Centering map at ${lat}, ${lng}`);
-    }
-    
-    ngOnDestroy() {
-      console.log('Map component destroyed');
-    }
-  }
+  inputs: ['options', 'selectedLocation', 'width', 'height'],
+  outputs: ['ready', 'locationSelect', 'error', 'annotationsChange']
 };
 
+// TypeScript interface for the component class
+export interface MapComponentClass {
+  // Inputs
+  options?: any;
+  selectedLocation?: any;
+  width?: string;
+  height?: string;
+  
+  // Outputs (EventEmitter equivalents)
+  ready: any;
+  locationSelect: any;
+  error: any;
+  annotationsChange: any;
+  
+  // Properties
+  isReady: boolean;
+  mapInstance: any;
+  
+  // Lifecycle methods
+  ngOnInit(): void;
+  ngAfterViewInit(): void;
+  ngOnChanges(changes: any): void;
+  ngOnDestroy(): void;
+  
+  // Methods
+  initMap(): void;
+  centerMap(lat: number, lng: number): void;
+  addMarker(location: any): void;
+}
+
+// Example implementation guide for Angular developers
+export const ANGULAR_IMPLEMENTATION_GUIDE = `
+To use this component in your Angular application:
+
+1. Install the package:
+   npm install geospatial-explorer-lib
+
+2. Import in your module:
+   import { MapComponentAngular } from 'geospatial-explorer-lib/angular';
+
+3. Create your component:
+   @Component({
+     selector: 'app-map',
+     template: MapComponentAngular.template,
+     styleUrls: MapComponentAngular.styleUrls
+   })
+   export class MapComponent implements OnInit, OnDestroy {
+     // Implementation based on MapComponentClass interface
+   }
+
+4. Use in template:
+   <geo-map 
+     [selectedLocation]="location" 
+     [options]="mapOptions"
+     (ready)="onMapReady($event)"
+     (locationSelect)="onLocationSelect($event)">
+   </geo-map>
+`;
