@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { saveDrawing } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
-import { setCurrentDrawingContext, applyDrawingIdToMarkedPaths } from '@/components/map/drawing/LayerAttributeManager';
+import { setCurrentDrawingContext, processMarkedPaths } from '@/components/map/drawing/LayerAttributeManager';
 
 export function useHandleShapeCreation(
   onCreated: (shape: any) => void,
@@ -27,7 +27,7 @@ export function useHandleShapeCreation(
       
       // Apply attributes to any marked paths immediately
       setTimeout(() => {
-        applyDrawingIdToMarkedPaths(drawingId);
+        processMarkedPaths(drawingId);
       }, 100);
       
       // Handle different shape types
@@ -45,7 +45,7 @@ export function useHandleShapeCreation(
           
           // Apply attributes again with the drawing ID we already have
           setTimeout(() => {
-            applyDrawingIdToMarkedPaths(drawingId);
+            processMarkedPaths(drawingId);
           }, 200);
         } catch (saveError) {
           console.error('Error saving drawing:', saveError);
