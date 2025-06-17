@@ -21,10 +21,10 @@ export function useHandleShapeCreation(
       } else {
         console.log('Creating polygon shape - no marker creation');
         
-        // Save the drawing first to get the proper ID
+        // Save the drawing first - saveDrawing returns void, so we use the shape's existing ID
         try {
-          const savedDrawing = saveDrawing(shape);
-          const finalDrawingId = savedDrawing.id;
+          saveDrawing(shape);
+          const finalDrawingId = shape.id; // Use the shape's existing ID
           console.log(`Drawing saved with final ID: ${finalDrawingId}`);
           
           // Store the final drawing ID on the layer
