@@ -97,13 +97,13 @@ const MapContentContainer: React.FC<MapContentContainerProps> = ({
           handleClearAll={handleClearAll}
         />
         
-        <DrawingTools 
+        {/*<DrawingTools 
           onToolSelect={handleToolSelect}
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onReset={handleResetView}
           onClearAll={handleClearAll}
-        />
+        />*/}
         
         <DrawingToolHandler
           currentView={currentView}
