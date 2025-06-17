@@ -141,36 +141,54 @@ const setupPathClickHandler = (pathElement: SVGPathElement, drawingId: string) =
 export const processMarkedPaths = (drawingId: string): void => {
   console.log(`🔧 Processing marked paths for drawing ID: ${drawingId}`);
   
+  // Find all paths that need processing
   const markedPaths = document.querySelectorAll('path[data-needs-processing="true"]');
   console.log(`Found ${markedPaths.length} paths marked for processing`);
+  
+  let processedCount = 0;
   
   markedPaths.forEach((path) => {
     if (path instanceof SVGPathElement) {
       const timestamp = path.getAttribute('data-created-timestamp');
       const age = timestamp ? Date.now() - parseInt(timestamp) : 0;
       
-      // Only process recent paths (within 30 seconds)
-      if (age < 30000) {
-        console.log(`🎯 Processing marked path for ${drawingId}`);
+      // Process recent paths (within 30 seconds) or if no timestamp
+      if (!timestamp || age < 30000) {
+        console.log(`🎯 Processing marked path for ${drawingId}`, { timestamp, age });
+        
+        // Remove the processing flags
         path.removeAttribute('data-needs-processing');
         path.removeAttribute('data-created-timestamp');
+        
+        // Apply drawing attributes
         applyAttributesToPath(path, drawingId);
         setupPathClickHandler(path, drawingId);
+        
+        processedCount++;
+      } else {
+        console.log(`⏰ Skipping old marked path (age: ${age}ms)`);
       }
     }
   });
   
-  // Also find and process any existing paths without drawing IDs
-  const unprocessedPaths = document.querySelectorAll('path.leaflet-interactive:not([data-drawing-id])');
+  console.log(`✅ Processed ${processedCount} marked paths for ${drawingId}`);
+  
+  // Also find and process any existing paths without drawing IDs that are interactive
+  const unprocessedPaths = document.querySelectorAll('path.leaflet-interactive:not([data-drawing-id]):not([data-needs-processing])');
   console.log(`Found ${unprocessedPaths.length} unprocessed interactive paths`);
+  
+  let additionalProcessed = 0;
   
   unprocessedPaths.forEach((path) => {
     if (path instanceof SVGPathElement) {
       console.log(`🎯 Processing unprocessed interactive path for ${drawingId}`);
       applyAttributesToPath(path, drawingId);
       setupPathClickHandler(path, drawingId);
+      additionalProcessed++;
     }
   });
+  
+  console.log(`✅ Additionally processed ${additionalProcessed} unprocessed paths for ${drawingId}`);
 };
 
 /**
