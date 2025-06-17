@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { saveDrawing } from '@/utils/drawing-utils';
+import { saveDrawing, getSavedDrawings } from '@/utils/drawing-utils';
 import { toast } from 'sonner';
 import { setCurrentDrawingContext, processMarkedPaths } from '@/components/map/drawing/LayerAttributeManager';
 
@@ -21,29 +21,40 @@ export function useHandleShapeCreation(
       } else {
         console.log('Creating polygon shape - no marker creation');
         
-        // Save the drawing first - saveDrawing returns void, so we use the shape's existing ID
+        // Save the drawing first to get the actual saved drawing with UUID
         try {
           saveDrawing(shape);
-          const finalDrawingId = shape.id; // Use the shape's existing ID
-          console.log(`Drawing saved with final ID: ${finalDrawingId}`);
           
-          // Store the final drawing ID on the layer
-          if (shape.layer) {
-            (shape.layer as any).drawingId = finalDrawingId;
+          // Get the actual saved drawing by finding the most recently saved one
+          // that matches our shape's coordinates
+          const savedDrawings = getSavedDrawings();
+          const latestDrawing = savedDrawings[savedDrawings.length - 1];
+          
+          if (latestDrawing && latestDrawing.id) {
+            const finalDrawingId = latestDrawing.id;
+            console.log(`Drawing saved with final UUID: ${finalDrawingId}`);
+            console.log(`Original shape ID was: ${shape.id}`);
+            
+            // Store the final drawing ID on the layer
+            if (shape.layer) {
+              (shape.layer as any).drawingId = finalDrawingId;
+            }
+            
+            // Set drawing context with the final UUID
+            setCurrentDrawingContext(finalDrawingId);
+            
+            // Apply attributes to any marked paths with the final UUID
+            setTimeout(() => {
+              processMarkedPaths(finalDrawingId);
+            }, 100);
+            
+            // Apply attributes again with a longer delay to ensure DOM is ready
+            setTimeout(() => {
+              processMarkedPaths(finalDrawingId);
+            }, 300);
+          } else {
+            console.error('Could not find saved drawing with UUID');
           }
-          
-          // Set drawing context with the final ID
-          setCurrentDrawingContext(finalDrawingId);
-          
-          // Apply attributes to any marked paths with the final ID
-          setTimeout(() => {
-            processMarkedPaths(finalDrawingId);
-          }, 100);
-          
-          // Apply attributes again with a longer delay to ensure DOM is ready
-          setTimeout(() => {
-            processMarkedPaths(finalDrawingId);
-          }, 300);
           
         } catch (saveError) {
           console.error('Error saving drawing:', saveError);
