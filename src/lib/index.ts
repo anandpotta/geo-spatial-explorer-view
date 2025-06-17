@@ -40,5 +40,5 @@ export { useDrawingFileUpload } from '../hooks/useDrawingFileUpload';
 export { useHandleShapeCreation } from '../hooks/useHandleShapeCreation';
 
 // Version info
-export const VERSION = '0.1.3';
+export const VERSION = '0.1.4';
 export const PACKAGE_NAME = 'geospatial-explorer-lib';
