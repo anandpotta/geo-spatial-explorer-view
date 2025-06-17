@@ -13,23 +13,6 @@ export function useHandleShapeCreation(
     console.log('handleShapeCreated called with shape type:', shape.layerType);
     
     try {
-      // Set drawing context immediately when shape is created
-      const drawingId = shape.layer?.drawingId || `drawing-${Date.now()}`;
-      console.log(`Setting drawing context for new shape: ${drawingId}`);
-      
-      // Set the context before any processing
-      setCurrentDrawingContext(drawingId);
-      
-      // Store the drawing ID on the layer
-      if (shape.layer) {
-        (shape.layer as any).drawingId = drawingId;
-      }
-      
-      // Apply attributes to any marked paths immediately
-      setTimeout(() => {
-        processMarkedPaths(drawingId);
-      }, 100);
-      
       // Handle different shape types
       if (shape.layerType === 'marker') {
         console.log('Creating marker shape');
@@ -38,15 +21,30 @@ export function useHandleShapeCreation(
       } else {
         console.log('Creating polygon shape - no marker creation');
         
-        // Save the drawing (returns void, so no return value to check)
+        // Save the drawing first to get the proper ID
         try {
-          saveDrawing(shape);
-          console.log(`Drawing saved with ID: ${drawingId}`);
+          const savedDrawing = saveDrawing(shape);
+          const finalDrawingId = savedDrawing.id;
+          console.log(`Drawing saved with final ID: ${finalDrawingId}`);
           
-          // Apply attributes again with the drawing ID we already have
+          // Store the final drawing ID on the layer
+          if (shape.layer) {
+            (shape.layer as any).drawingId = finalDrawingId;
+          }
+          
+          // Set drawing context with the final ID
+          setCurrentDrawingContext(finalDrawingId);
+          
+          // Apply attributes to any marked paths with the final ID
           setTimeout(() => {
-            processMarkedPaths(drawingId);
-          }, 200);
+            processMarkedPaths(finalDrawingId);
+          }, 100);
+          
+          // Apply attributes again with a longer delay to ensure DOM is ready
+          setTimeout(() => {
+            processMarkedPaths(finalDrawingId);
+          }, 300);
+          
         } catch (saveError) {
           console.error('Error saving drawing:', saveError);
         }

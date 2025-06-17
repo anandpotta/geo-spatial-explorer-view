@@ -119,12 +119,15 @@ const setupPathClickHandler = (pathElement: SVGPathElement, drawingId: string) =
     
     // Get the drawing handler from global storage
     const handlers = (window as any).drawingClickHandlers;
+    console.log(`🔍 Looking for handler for ${drawingId} in handlers:`, handlers ? Array.from(handlers.keys()) : 'No handlers');
+    
     if (handlers && handlers.has && handlers.has(drawingId)) {
       const { drawing, onRegionClick } = handlers.get(drawingId);
       console.log(`📞 Calling onRegionClick for ${drawingId}`);
       onRegionClick(drawing);
     } else {
       console.warn(`❌ No handler found for drawing ${drawingId}`);
+      console.log(`🔍 Available handler keys:`, handlers ? Array.from(handlers.keys()) : 'No handlers map');
     }
   };
   
@@ -156,6 +159,18 @@ export const processMarkedPaths = (drawingId: string): void => {
       }
     }
   });
+  
+  // Also find and process any existing paths without drawing IDs
+  const unprocessedPaths = document.querySelectorAll('path.leaflet-interactive:not([data-drawing-id])');
+  console.log(`Found ${unprocessedPaths.length} unprocessed interactive paths`);
+  
+  unprocessedPaths.forEach((path) => {
+    if (path instanceof SVGPathElement) {
+      console.log(`🎯 Processing unprocessed interactive path for ${drawingId}`);
+      applyAttributesToPath(path, drawingId);
+      setupPathClickHandler(path, drawingId);
+    }
+  });
 };
 
 /**
@@ -165,7 +180,7 @@ export const setCurrentDrawingContext = (drawingId: string): void => {
   (window as any).lastCreatedDrawingId = drawingId;
   console.log(`🎯 Set current drawing context to: ${drawingId}`);
   
-  // Process any paths that were waiting for a drawing ID
+  // Process any paths that were waiting for a drawing ID immediately
   processMarkedPaths(drawingId);
   
   // Clear context after a reasonable time
@@ -175,6 +190,40 @@ export const setCurrentDrawingContext = (drawingId: string): void => {
       console.log(`🧹 Cleared drawing context for: ${drawingId}`);
     }
   }, 15000); // 15 seconds to allow for complex polygon drawing
+};
+
+/**
+ * Updates the drawing ID on existing path elements
+ */
+export const updatePathDrawingId = (oldId: string, newId: string): void => {
+  console.log(`🔄 Updating path drawing ID from ${oldId} to ${newId}`);
+  
+  // Find paths with the old ID
+  const paths = document.querySelectorAll(`path[data-drawing-id="${oldId}"]`);
+  console.log(`Found ${paths.length} paths to update`);
+  
+  paths.forEach((path) => {
+    if (path instanceof SVGPathElement) {
+      // Update the drawing ID attribute
+      path.setAttribute('data-drawing-id', newId);
+      path.setAttribute('id', `drawing-path-${newId}`);
+      
+      // Update the UID
+      const newUid = `uid-${newId}-${Date.now()}`;
+      path.setAttribute('data-path-uid', newUid);
+      
+      // Update CSS classes
+      const oldClass = `drawing-path-${oldId.substring(0, 8)}`;
+      const newClass = `drawing-path-${newId.substring(0, 8)}`;
+      path.classList.remove(oldClass);
+      path.classList.add(newClass);
+      
+      console.log(`✅ Updated path attributes for ${newId}`);
+      
+      // Update click handler
+      setupPathClickHandler(path, newId);
+    }
+  });
 };
 
 /**
