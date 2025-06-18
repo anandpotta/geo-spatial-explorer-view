@@ -1,7 +1,6 @@
-
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular with advanced drawing capabilities",
   "main": "dist/cjs/lib/index.js",
   "module": "dist/esm/lib/index.js",
