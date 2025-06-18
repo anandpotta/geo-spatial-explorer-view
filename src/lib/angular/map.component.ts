@@ -1,7 +1,32 @@
 
-// Conditional Angular imports
+// Conditional Angular imports with proper TypeScript interfaces
 let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
 let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
+
+// TypeScript interfaces for non-Angular environments
+interface MockOnInit {
+  ngOnInit?(): void;
+}
+
+interface MockAfterViewInit {
+  ngAfterViewInit?(): void;
+}
+
+interface MockOnDestroy {
+  ngOnDestroy?(): void;
+}
+
+interface MockOnChanges {
+  ngOnChanges?(changes: any): void;
+}
+
+interface MockElementRef {
+  nativeElement?: any;
+}
+
+class MockEventEmitter<T = any> {
+  emit(value?: T): void {}
+}
 
 try {
   if (typeof window !== 'undefined' && (window as any).ng) {
@@ -21,15 +46,15 @@ try {
 } catch (error) {
   // Mock implementations for non-Angular environments
   Component = () => () => {};
-  ElementRef = class {};
+  ElementRef = class implements MockElementRef {};
   ViewChild = () => () => {};
   Input = () => () => {};
   Output = () => () => {};
-  EventEmitter = class { emit() {} };
-  OnInit = class {};
-  OnDestroy = class {};
-  AfterViewInit = class {};
-  OnChanges = class {};
+  EventEmitter = MockEventEmitter;
+  OnInit = class implements MockOnInit {};
+  OnDestroy = class implements MockOnDestroy {};
+  AfterViewInit = class implements MockAfterViewInit {};
+  OnChanges = class implements MockOnChanges {};
   SimpleChanges = class {};
 }
 
@@ -37,8 +62,8 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 import type { DrawingData } from '../../utils/drawing-utils';
 
 // Component decorator with conditional application
-const AngularMapComponentClass = class implements OnInit, AfterViewInit, OnDestroy, OnChanges {
-  mapContainer!: ElementRef;
+const AngularMapComponentClass = class implements MockOnInit, MockAfterViewInit, MockOnDestroy, MockOnChanges {
+  mapContainer!: MockElementRef;
   
   options?: Partial<MapViewOptions>;
   selectedLocation?: GeoLocation | null;
@@ -46,12 +71,12 @@ const AngularMapComponentClass = class implements OnInit, AfterViewInit, OnDestr
   height?: string;
   enableDrawing?: boolean = false;
   
-  ready = new EventEmitter<any>();
-  locationSelect = new EventEmitter<GeoLocation>();
-  error = new EventEmitter<Error>();
-  annotationsChange = new EventEmitter<any[]>();
-  drawingCreated = new EventEmitter<DrawingData>();
-  regionClick = new EventEmitter<DrawingData>();
+  ready = new MockEventEmitter<any>();
+  locationSelect = new MockEventEmitter<GeoLocation>();
+  error = new MockEventEmitter<Error>();
+  annotationsChange = new MockEventEmitter<any[]>();
+  drawingCreated = new MockEventEmitter<DrawingData>();
+  regionClick = new MockEventEmitter<DrawingData>();
   
   isReady = false;
   private mapInstance: any = null;

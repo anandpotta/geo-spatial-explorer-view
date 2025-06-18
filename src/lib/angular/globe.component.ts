@@ -1,7 +1,32 @@
 
-// Conditional Angular imports
+// Conditional Angular imports with proper TypeScript interfaces
 let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
 let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
+
+// TypeScript interfaces for non-Angular environments
+interface MockOnInit {
+  ngOnInit?(): void;
+}
+
+interface MockAfterViewInit {
+  ngAfterViewInit?(): void;
+}
+
+interface MockOnDestroy {
+  ngOnDestroy?(): void;
+}
+
+interface MockOnChanges {
+  ngOnChanges?(changes: any): void;
+}
+
+interface MockElementRef {
+  nativeElement?: any;
+}
+
+class MockEventEmitter<T = any> {
+  emit(value?: T): void {}
+}
 
 try {
   if (typeof window !== 'undefined' && (window as any).ng) {
@@ -21,33 +46,33 @@ try {
 } catch (error) {
   // Mock implementations for non-Angular environments
   Component = () => () => {};
-  ElementRef = class {};
+  ElementRef = class implements MockElementRef {};
   ViewChild = () => () => {};
   Input = () => () => {};
   Output = () => () => {};
-  EventEmitter = class { emit() {} };
-  OnInit = class {};
-  OnDestroy = class {};
-  AfterViewInit = class {};
-  OnChanges = class {};
+  EventEmitter = MockEventEmitter;
+  OnInit = class implements MockOnInit {};
+  OnDestroy = class implements MockOnDestroy {};
+  AfterViewInit = class implements MockAfterViewInit {};
+  OnChanges = class implements MockOnChanges {};
   SimpleChanges = class {};
 }
 
 import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 // Component class without decorators
-const AngularGlobeComponentClass = class implements OnInit, AfterViewInit, OnDestroy, OnChanges {
-  globeContainer!: ElementRef;
+const AngularGlobeComponentClass = class implements MockOnInit, MockAfterViewInit, MockOnDestroy, MockOnChanges {
+  globeContainer!: MockElementRef;
   
   options?: Partial<GlobeOptions>;
   selectedLocation?: GeoLocation | null;
   width?: string;
   height?: string;
   
-  ready = new EventEmitter<any>();
-  flyComplete = new EventEmitter<void>();
-  error = new EventEmitter<Error>();
-  locationSelect = new EventEmitter<GeoLocation>();
+  ready = new MockEventEmitter<any>();
+  flyComplete = new MockEventEmitter<void>();
+  error = new MockEventEmitter<Error>();
+  locationSelect = new MockEventEmitter<GeoLocation>();
   
   isReady = false;
   private globeInstance: any = null;
