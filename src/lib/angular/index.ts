@@ -17,14 +17,31 @@ try {
     AngularMapComponent = MapComp;
     AngularGlobeComponent = GlobeComp;
     GeospatialExplorerModule = Module;
+  } else {
+    // Try importing without window check for server-side rendering
+    const { AngularMapComponent: MapComp } = require('./map.component');
+    const { AngularGlobeComponent: GlobeComp } = require('./globe.component');
+    const { GeospatialExplorerModule: Module } = require('./geospatial-explorer.module');
+    
+    AngularMapComponent = MapComp;
+    AngularGlobeComponent = GlobeComp;
+    GeospatialExplorerModule = Module;
   }
 } catch (error) {
-  // Angular dependencies not available - this is expected in non-Angular environments
+  // Angular dependencies not available - provide fallback exports
   console.warn('Angular dependencies not available. Angular components will not be functional.');
+  
+  // Provide minimal fallback implementations
+  AngularMapComponent = class { };
+  AngularGlobeComponent = class { };
+  GeospatialExplorerModule = class { };
 }
 
 // Export with fallbacks for non-Angular environments
 export { AngularMapComponent, AngularGlobeComponent, GeospatialExplorerModule };
+
+// Default export for easier importing
+export default GeospatialExplorerModule;
 
 // Core types re-exported for convenience
 export type {

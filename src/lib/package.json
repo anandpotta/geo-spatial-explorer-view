@@ -1,6 +1,7 @@
+
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular with advanced drawing capabilities",
   "main": "dist/cjs/lib/index.js",
   "module": "dist/esm/lib/index.js",
@@ -40,9 +41,9 @@
   "sideEffects": false,
   "scripts": {
     "build": "node build.js",
-    "build:cjs": "tsc -p tsconfig.json --module commonjs --outDir dist/cjs --declaration false --rootDir ../../",
-    "build:esm": "tsc -p tsconfig.json --module es2015 --outDir dist/esm --declaration false --rootDir ../../", 
-    "build:types": "tsc -p tsconfig.json --declaration --declarationDir dist/types --emitDeclarationOnly --rootDir ../../",
+    "build:cjs": "tsc -p tsconfig.build.json --module commonjs --outDir dist/cjs --declaration false --rootDir ../../",
+    "build:esm": "tsc -p tsconfig.build.json --module es2015 --outDir dist/esm --declaration false --rootDir ../../", 
+    "build:types": "tsc -p tsconfig.build.json --declaration --declarationDir dist/types --emitDeclarationOnly --rootDir ../../",
     "prepublishOnly": "npm run build",
     "test": "echo \"No tests specified\" && exit 0",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
@@ -84,6 +85,7 @@
     "react-native": ">=0.60.0",
     "react-native-webview": ">=11.0.0",
     "@angular/core": ">=13.0.0",
+    "@angular/common": ">=13.0.0",
     "three": ">=0.133.0",
     "leaflet": ">=1.9.0",
     "leaflet-draw": ">=1.0.0"
@@ -102,6 +104,9 @@
       "optional": true
     },
     "@angular/core": {
+      "optional": true
+    },
+    "@angular/common": {
       "optional": true
     },
     "leaflet": {
@@ -123,7 +128,8 @@
   },
   "dependencies": {
     "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0"
+    "tailwind-merge": "^2.0.0",
+    "uuid": "^11.1.0"
   },
   "engines": {
     "node": ">=14.0.0",

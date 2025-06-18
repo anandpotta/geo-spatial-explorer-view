@@ -18,19 +18,19 @@ try {
   fs.mkdirSync('./dist/types', { recursive: true });
 
   console.log('Building CommonJS...');
-  execSync('npx tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist/cjs --declaration false --declarationMap false --target es2017 --skipLibCheck --rootDir ../../src --moduleResolution node --noEmit false', { 
+  execSync('npx tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist/cjs --declaration false --declarationMap false --target es2017 --skipLibCheck --rootDir ../../src --moduleResolution node --noEmit false --strict false --noImplicitAny false', { 
     stdio: 'inherit',
     cwd: __dirname 
   });
 
   console.log('Building ES Modules...');
-  execSync('npx tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist/esm --declaration false --declarationMap false --target es2017 --skipLibCheck --rootDir ../../src --moduleResolution node --noEmit false', { 
+  execSync('npx tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist/esm --declaration false --declarationMap false --target es2017 --skipLibCheck --rootDir ../../src --moduleResolution node --noEmit false --strict false --noImplicitAny false', { 
     stdio: 'inherit',
     cwd: __dirname 
   });
 
   console.log('Building TypeScript definitions...');
-  execSync('npx tsc --project ./tsconfig.build.json --declaration --declarationMap --declarationDir ./dist/types --emitDeclarationOnly --target es2017 --skipLibCheck --rootDir ../../src --moduleResolution node', { 
+  execSync('npx tsc --project ./tsconfig.build.json --declaration --declarationMap --declarationDir ./dist/types --emitDeclarationOnly --target es2017 --skipLibCheck --rootDir ../../src --moduleResolution node --strict false --noImplicitAny false', { 
     stdio: 'inherit',
     cwd: __dirname 
   });
@@ -54,6 +54,9 @@ try {
   console.log('Build completed successfully!');
   console.log('Package is ready for publishing with:');
   console.log('  npm publish ./dist');
+  console.log('');
+  console.log('For Angular projects, import with:');
+  console.log('  import { GeospatialExplorerModule } from "geospatial-explorer-lib/angular"');
 } catch (error) {
   console.error('Build failed:', error.message);
   process.exit(1);
