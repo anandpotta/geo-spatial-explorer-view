@@ -35,9 +35,21 @@ try {
     cwd: __dirname 
   });
 
-  // Copy package.json to dist
-  const packageJson = require('./package.json');
-  fs.writeFileSync('./dist/package.json', JSON.stringify(packageJson, null, 2));
+  // Read package.json from current directory and copy to dist
+  const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+  
+  // Update the package.json for the dist version
+  const distPackageJson = {
+    ...packageJson,
+    main: "cjs/lib/index.js",
+    module: "esm/lib/index.js", 
+    types: "types/lib/index.d.ts",
+    scripts: {
+      test: "echo \"No tests specified\" && exit 0"
+    }
+  };
+  
+  fs.writeFileSync('./dist/package.json', JSON.stringify(distPackageJson, null, 2));
 
   // Copy README.md to dist
   if (fs.existsSync('./README.md')) {
