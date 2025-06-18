@@ -1,21 +1,151 @@
 
-import { 
-  Component, 
-  ElementRef, 
-  ViewChild, 
-  Input, 
-  Output, 
-  EventEmitter, 
-  OnInit, 
-  OnDestroy, 
-  AfterViewInit,
-  OnChanges,
-  SimpleChanges
-} from '@angular/core';
+// Conditional Angular imports
+let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
+let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
+
+try {
+  if (typeof window !== 'undefined' && (window as any).ng) {
+    const angular = require('@angular/core');
+    Component = angular.Component;
+    ElementRef = angular.ElementRef;
+    ViewChild = angular.ViewChild;
+    Input = angular.Input;
+    Output = angular.Output;
+    EventEmitter = angular.EventEmitter;
+    OnInit = angular.OnInit;
+    OnDestroy = angular.OnDestroy;
+    AfterViewInit = angular.AfterViewInit;
+    OnChanges = angular.OnChanges;
+    SimpleChanges = angular.SimpleChanges;
+  }
+} catch (error) {
+  // Mock implementations for non-Angular environments
+  Component = () => () => {};
+  ElementRef = class {};
+  ViewChild = () => () => {};
+  Input = () => () => {};
+  Output = () => () => {};
+  EventEmitter = class { emit() {} };
+  OnInit = class {};
+  OnDestroy = class {};
+  AfterViewInit = class {};
+  OnChanges = class {};
+  SimpleChanges = class {};
+}
+
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 import type { DrawingData } from '../../utils/drawing-utils';
 
-@Component({
+// Component decorator with conditional application
+const AngularMapComponentClass = class implements OnInit, AfterViewInit, OnDestroy, OnChanges {
+  mapContainer!: ElementRef;
+  
+  options?: Partial<MapViewOptions>;
+  selectedLocation?: GeoLocation | null;
+  width?: string;
+  height?: string;
+  enableDrawing?: boolean = false;
+  
+  ready = new EventEmitter<any>();
+  locationSelect = new EventEmitter<GeoLocation>();
+  error = new EventEmitter<Error>();
+  annotationsChange = new EventEmitter<any[]>();
+  drawingCreated = new EventEmitter<DrawingData>();
+  regionClick = new EventEmitter<DrawingData>();
+  
+  isReady = false;
+  private mapInstance: any = null;
+  private resizeObserver?: ResizeObserver;
+  
+  ngOnInit() {
+    console.log('AngularMapComponent: Initializing...');
+  }
+  
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.initMap();
+    }, 100);
+  }
+  
+  ngOnChanges(changes: any) {
+    if (this.isReady && this.mapInstance) {
+      if (changes['selectedLocation'] && this.selectedLocation) {
+        this.centerMap(this.selectedLocation.y, this.selectedLocation.x);
+      }
+    }
+  }
+  
+  ngOnDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    if (this.mapInstance) {
+      this.mapInstance = null;
+    }
+  }
+  
+  private initMap() {
+    try {
+      console.log('AngularMapComponent: Initializing map instance');
+      
+      setTimeout(() => {
+        this.isReady = true;
+        this.mapInstance = {
+          center: this.selectedLocation ? [this.selectedLocation.y, this.selectedLocation.x] : [0, 0],
+          zoom: this.options?.initialZoom || 10
+        };
+        
+        this.ready.emit(this.mapInstance);
+        console.log('AngularMapComponent: Map ready');
+      }, 1000);
+      
+      this.setupResizeObserver();
+      
+    } catch (error) {
+      console.error('AngularMapComponent: Failed to initialize map', error);
+      this.error.emit(error as Error);
+    }
+  }
+  
+  private setupResizeObserver() {
+    if (this.mapContainer?.nativeElement && 'ResizeObserver' in window) {
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.mapInstance) {
+          console.log('AngularMapComponent: Map container resized');
+        }
+      });
+      this.resizeObserver.observe(this.mapContainer.nativeElement);
+    }
+  }
+  
+  centerMap(lat: number, lng: number) {
+    if (this.mapInstance) {
+      console.log(`AngularMapComponent: Centering map to ${lat}, ${lng}`);
+      this.mapInstance.center = [lat, lng];
+    }
+  }
+  
+  addMarker(location: GeoLocation) {
+    if (this.mapInstance) {
+      console.log('AngularMapComponent: Adding marker', location);
+    }
+  }
+  
+  onLocationClick(location: GeoLocation) {
+    this.locationSelect.emit(location);
+  }
+  
+  onDrawingCreate(drawing: DrawingData) {
+    this.drawingCreated.emit(drawing);
+  }
+  
+  onRegionClick(drawing: DrawingData) {
+    this.regionClick.emit(drawing);
+  }
+};
+
+// Apply Angular decorators only if available
+export const AngularMapComponent = Component && Component({
   selector: 'geo-map',
   template: `
     <div class="geo-map-container" 
@@ -71,116 +201,4 @@ import type { DrawingData } from '../../utils/drawing-utils';
       100% { transform: rotate(360deg); }
     }
   `]
-})
-export class AngularMapComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
-  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
-  
-  @Input() options?: Partial<MapViewOptions>;
-  @Input() selectedLocation?: GeoLocation | null;
-  @Input() width?: string;
-  @Input() height?: string;
-  @Input() enableDrawing?: boolean = false;
-  
-  @Output() ready = new EventEmitter<any>();
-  @Output() locationSelect = new EventEmitter<GeoLocation>();
-  @Output() error = new EventEmitter<Error>();
-  @Output() annotationsChange = new EventEmitter<any[]>();
-  @Output() drawingCreated = new EventEmitter<DrawingData>();
-  @Output() regionClick = new EventEmitter<DrawingData>();
-  
-  isReady = false;
-  private mapInstance: any = null;
-  private resizeObserver?: ResizeObserver;
-  
-  ngOnInit() {
-    console.log('AngularMapComponent: Initializing...');
-  }
-  
-  ngAfterViewInit() {
-    // Initialize map after view is ready
-    setTimeout(() => {
-      this.initMap();
-    }, 100);
-  }
-  
-  ngOnChanges(changes: SimpleChanges) {
-    if (this.isReady && this.mapInstance) {
-      if (changes['selectedLocation'] && this.selectedLocation) {
-        this.centerMap(this.selectedLocation.y, this.selectedLocation.x);
-      }
-    }
-  }
-  
-  ngOnDestroy() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
-    if (this.mapInstance) {
-      // Cleanup map instance
-      this.mapInstance = null;
-    }
-  }
-  
-  private initMap() {
-    try {
-      console.log('AngularMapComponent: Initializing map instance');
-      
-      // Simulate map initialization
-      setTimeout(() => {
-        this.isReady = true;
-        this.mapInstance = {
-          center: this.selectedLocation ? [this.selectedLocation.y, this.selectedLocation.x] : [0, 0],
-          zoom: this.options?.initialZoom || 10
-        };
-        
-        this.ready.emit(this.mapInstance);
-        console.log('AngularMapComponent: Map ready');
-      }, 1000);
-      
-      // Setup resize observer
-      this.setupResizeObserver();
-      
-    } catch (error) {
-      console.error('AngularMapComponent: Failed to initialize map', error);
-      this.error.emit(error as Error);
-    }
-  }
-  
-  private setupResizeObserver() {
-    if (this.mapContainer?.nativeElement && 'ResizeObserver' in window) {
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.mapInstance) {
-          console.log('AngularMapComponent: Map container resized');
-          // Handle map resize
-        }
-      });
-      this.resizeObserver.observe(this.mapContainer.nativeElement);
-    }
-  }
-  
-  centerMap(lat: number, lng: number) {
-    if (this.mapInstance) {
-      console.log(`AngularMapComponent: Centering map to ${lat}, ${lng}`);
-      this.mapInstance.center = [lat, lng];
-    }
-  }
-  
-  addMarker(location: GeoLocation) {
-    if (this.mapInstance) {
-      console.log('AngularMapComponent: Adding marker', location);
-      // Add marker logic here
-    }
-  }
-  
-  onLocationClick(location: GeoLocation) {
-    this.locationSelect.emit(location);
-  }
-  
-  onDrawingCreate(drawing: DrawingData) {
-    this.drawingCreated.emit(drawing);
-  }
-  
-  onRegionClick(drawing: DrawingData) {
-    this.regionClick.emit(drawing);
-  }
-}
+})(AngularMapComponentClass) || AngularMapComponentClass;
