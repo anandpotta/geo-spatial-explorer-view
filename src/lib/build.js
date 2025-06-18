@@ -38,7 +38,7 @@ try {
   // Read package.json from current directory and copy to dist
   const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
   
-  // Update the package.json for the dist version
+  // Update the package.json for the dist version - remove prepublishOnly script
   const distPackageJson = {
     ...packageJson,
     main: "cjs/lib/index.js",
@@ -48,6 +48,13 @@ try {
       test: "echo \"No tests specified\" && exit 0"
     }
   };
+  
+  // Remove prepublishOnly script from dist package.json since build is already done
+  delete distPackageJson.scripts.prepublishOnly;
+  delete distPackageJson.scripts.build;
+  delete distPackageJson.scripts['build:cjs'];
+  delete distPackageJson.scripts['build:esm'];
+  delete distPackageJson.scripts['build:types'];
   
   fs.writeFileSync('./dist/package.json', JSON.stringify(distPackageJson, null, 2));
 
