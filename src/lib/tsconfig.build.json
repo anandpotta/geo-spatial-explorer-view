@@ -1,0 +1,30 @@
+
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noEmitOnError": false
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../**/*.ts",
+    "../**/*.tsx",
+    "../types/**/*",
+    "../vite-env.d.ts"
+  ],
+  "exclude": [
+    "./dist/**/*",
+    "./node_modules/**/*",
+    "../../node_modules/**/*",
+    "./**/*.test.*",
+    "./**/*.spec.*",
+    "./build.js",
+    "../../server/**/*",
+    "../../public/**/*",
+    "./angular/**/*",
+    "../angular/**/*",
+    "../../src/lib/angular/**/*",
+    "**/angular/**/*"
+  ]
+}

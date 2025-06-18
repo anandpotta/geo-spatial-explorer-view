@@ -45,6 +45,7 @@
     "../../server/**/*",
     "../../public/**/*",
     "./angular/**/*",
-    "../angular/**/*"
+    "../angular/**/*",
+    "../../src/lib/angular/**/*"
   ]
 }
