@@ -1,88 +1,186 @@
 
-/**
- * Angular Map Component for Geospatial Explorer
- */
+import { 
+  Component, 
+  ElementRef, 
+  ViewChild, 
+  Input, 
+  Output, 
+  EventEmitter, 
+  OnInit, 
+  OnDestroy, 
+  AfterViewInit,
+  OnChanges,
+  SimpleChanges
+} from '@angular/core';
+import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
+import type { DrawingData } from '../../utils/drawing-utils';
 
-// Define the Angular component structure for TypeScript compatibility
-export interface AngularMapComponent {
-  selector: string;
-  template: string;
-  styleUrls?: string[];
-  inputs: string[];
-  outputs: string[];
-}
-
-export const MapComponentAngular: AngularMapComponent = {
+@Component({
   selector: 'geo-map',
   template: `
-    <div class="geo-map-container" #mapContainer [style.width]="width || '100%'" [style.height]="height || '400px'">
+    <div class="geo-map-container" 
+         #mapContainer 
+         [style.width]="width || '100%'" 
+         [style.height]="height || '400px'">
       <div *ngIf="!isReady" class="geo-map-loading">
         <div class="geo-map-spinner"></div>
-        <h3>Loading Map</h3>
+        <h3>Loading Map...</h3>
       </div>
-      <div class="geo-map-canvas" [style.display]="isReady ? 'block' : 'none'"></div>
+      <div class="geo-map-canvas" 
+           [style.display]="isReady ? 'block' : 'none'">
+      </div>
     </div>
   `,
-  styleUrls: ['./map.component.css'],
-  inputs: ['options', 'selectedLocation', 'width', 'height'],
-  outputs: ['ready', 'locationSelect', 'error', 'annotationsChange']
-};
-
-// TypeScript interface for the component class
-export interface MapComponentClass {
-  // Inputs
-  options?: any;
-  selectedLocation?: any;
-  width?: string;
-  height?: string;
+  styles: [`
+    .geo-map-container {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .geo-map-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #f5f5f5;
+      z-index: 1000;
+    }
+    
+    .geo-map-spinner {
+      border: 4px solid rgba(0,0,0,0.1);
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    
+    .geo-map-canvas {
+      width: 100%;
+      height: 100%;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `]
+})
+export class AngularMapComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
+  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
   
-  // Outputs (EventEmitter equivalents)
-  ready: any;
-  locationSelect: any;
-  error: any;
-  annotationsChange: any;
+  @Input() options?: Partial<MapViewOptions>;
+  @Input() selectedLocation?: GeoLocation | null;
+  @Input() width?: string;
+  @Input() height?: string;
+  @Input() enableDrawing?: boolean = false;
   
-  // Properties
-  isReady: boolean;
-  mapInstance: any;
+  @Output() ready = new EventEmitter<any>();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() error = new EventEmitter<Error>();
+  @Output() annotationsChange = new EventEmitter<any[]>();
+  @Output() drawingCreated = new EventEmitter<DrawingData>();
+  @Output() regionClick = new EventEmitter<DrawingData>();
   
-  // Lifecycle methods
-  ngOnInit(): void;
-  ngAfterViewInit(): void;
-  ngOnChanges(changes: any): void;
-  ngOnDestroy(): void;
+  isReady = false;
+  private mapInstance: any = null;
+  private resizeObserver?: ResizeObserver;
   
-  // Methods
-  initMap(): void;
-  centerMap(lat: number, lng: number): void;
-  addMarker(location: any): void;
+  ngOnInit() {
+    console.log('AngularMapComponent: Initializing...');
+  }
+  
+  ngAfterViewInit() {
+    // Initialize map after view is ready
+    setTimeout(() => {
+      this.initMap();
+    }, 100);
+  }
+  
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.isReady && this.mapInstance) {
+      if (changes['selectedLocation'] && this.selectedLocation) {
+        this.centerMap(this.selectedLocation.y, this.selectedLocation.x);
+      }
+    }
+  }
+  
+  ngOnDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    if (this.mapInstance) {
+      // Cleanup map instance
+      this.mapInstance = null;
+    }
+  }
+  
+  private initMap() {
+    try {
+      console.log('AngularMapComponent: Initializing map instance');
+      
+      // Simulate map initialization
+      setTimeout(() => {
+        this.isReady = true;
+        this.mapInstance = {
+          center: this.selectedLocation ? [this.selectedLocation.y, this.selectedLocation.x] : [0, 0],
+          zoom: this.options?.initialZoom || 10
+        };
+        
+        this.ready.emit(this.mapInstance);
+        console.log('AngularMapComponent: Map ready');
+      }, 1000);
+      
+      // Setup resize observer
+      this.setupResizeObserver();
+      
+    } catch (error) {
+      console.error('AngularMapComponent: Failed to initialize map', error);
+      this.error.emit(error as Error);
+    }
+  }
+  
+  private setupResizeObserver() {
+    if (this.mapContainer?.nativeElement && 'ResizeObserver' in window) {
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.mapInstance) {
+          console.log('AngularMapComponent: Map container resized');
+          // Handle map resize
+        }
+      });
+      this.resizeObserver.observe(this.mapContainer.nativeElement);
+    }
+  }
+  
+  centerMap(lat: number, lng: number) {
+    if (this.mapInstance) {
+      console.log(`AngularMapComponent: Centering map to ${lat}, ${lng}`);
+      this.mapInstance.center = [lat, lng];
+    }
+  }
+  
+  addMarker(location: GeoLocation) {
+    if (this.mapInstance) {
+      console.log('AngularMapComponent: Adding marker', location);
+      // Add marker logic here
+    }
+  }
+  
+  onLocationClick(location: GeoLocation) {
+    this.locationSelect.emit(location);
+  }
+  
+  onDrawingCreate(drawing: DrawingData) {
+    this.drawingCreated.emit(drawing);
+  }
+  
+  onRegionClick(drawing: DrawingData) {
+    this.regionClick.emit(drawing);
+  }
 }
-
-// Example implementation guide for Angular developers
-export const ANGULAR_IMPLEMENTATION_GUIDE = `
-To use this component in your Angular application:
-
-1. Install the package:
-   npm install geospatial-explorer-lib
-
-2. Import in your module:
-   import { MapComponentAngular } from 'geospatial-explorer-lib/angular';
-
-3. Create your component:
-   @Component({
-     selector: 'app-map',
-     template: MapComponentAngular.template,
-     styleUrls: MapComponentAngular.styleUrls
-   })
-   export class MapComponent implements OnInit, OnDestroy {
-     // Implementation based on MapComponentClass interface
-   }
-
-4. Use in template:
-   <geo-map 
-     [selectedLocation]="location" 
-     [options]="mapOptions"
-     (ready)="onMapReady($event)"
-     (locationSelect)="onLocationSelect($event)">
-   </geo-map>
-`;

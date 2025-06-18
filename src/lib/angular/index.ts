@@ -1,6 +1,8 @@
 
-export { MapComponentAngular } from './map.component';
-export { GlobeComponent } from './globe.component';
+// Angular module and components
+export { GeospatialExplorerModule } from './geospatial-explorer.module';
+export { AngularMapComponent } from './map.component';
+export { AngularGlobeComponent } from './globe.component';
 
 // Core types re-exported for convenience
 export type {
@@ -24,3 +26,7 @@ export interface AngularDrawingService {
   handleShapeCreation: (shape: any) => void;
   setupEventHandlers: (element: Element) => void;
 }
+
+// Legacy exports for backwards compatibility
+export { AngularMapComponent as MapComponentAngular } from './map.component';
+export { AngularGlobeComponent as GlobeComponent } from './globe.component';

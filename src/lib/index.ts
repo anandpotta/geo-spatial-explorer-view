@@ -35,6 +35,14 @@ export type {
 export { StandaloneMapComponent as MapComponent } from './react/StandaloneMapComponent';
 export { GlobeComponent } from './react/GlobeComponent';
 
+// Angular-specific exports
+export { GeospatialExplorerModule } from './angular/geospatial-explorer.module';
+export { AngularMapComponent } from './angular/map.component';
+export { AngularGlobeComponent } from './angular/globe.component';
+
+// Main GeospatialExplorer export for Angular compatibility
+export { GeospatialExplorerModule as GeospatialExplorer } from './angular/geospatial-explorer.module';
+
 // Drawing hooks and utilities for React
 export { useDrawingFileUpload } from '../hooks/useDrawingFileUpload';
 export { useHandleShapeCreation } from '../hooks/useHandleShapeCreation';

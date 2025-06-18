@@ -1,50 +1,70 @@
 
-/**
- * Example Angular component for the globe
- * This would be in a separate Angular project with its own build system
- */
-
-/* 
-// This is how the Angular component would look:
-
-import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
-import { ThreeGlobeCore } from '../geospatial-core';
-import { GlobeOptions, GeoLocation } from '../geospatial-core/types';
+import { 
+  Component, 
+  ElementRef, 
+  ViewChild, 
+  Input, 
+  Output, 
+  EventEmitter, 
+  OnInit, 
+  OnDestroy, 
+  AfterViewInit,
+  OnChanges,
+  SimpleChanges
+} from '@angular/core';
+import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 @Component({
-  selector: 'app-globe',
+  selector: 'geo-globe',
   template: `
-    <div #container 
-         class="globe-container"
-         [ngStyle]="{
-           'width': '100%',
-           'height': '100%',
-           'position': 'relative',
-           'background-color': 'black'
-         }">
-      <div *ngIf="!isReady" 
-           class="loading-overlay"
-           style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.8);">
-        <div class="loading-content" style="text-align: center; color: white;">
-          <div class="spinner"></div>
-          <h3>Loading Globe</h3>
-        </div>
+    <div class="geo-globe-container" 
+         #globeContainer 
+         [style.width]="width || '100%'" 
+         [style.height]="height || '600px'">
+      <div *ngIf="!isReady" class="geo-globe-loading">
+        <div class="geo-globe-spinner"></div>
+        <h3>Loading Globe...</h3>
+      </div>
+      <div class="geo-globe-canvas" 
+           [style.display]="isReady ? 'block' : 'none'">
       </div>
     </div>
   `,
   styles: [`
-    .globe-container {
+    .geo-globe-container {
+      position: relative;
       overflow: hidden;
+      background-color: #000;
     }
     
-    .spinner {
+    .geo-globe-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0,0,0,0.8);
+      color: white;
+      z-index: 1000;
+    }
+    
+    .geo-globe-spinner {
       border: 4px solid rgba(255,255,255,0.3);
       border-radius: 50%;
       border-top: 4px solid #3498db;
       width: 40px;
       height: 40px;
       animation: spin 1s linear infinite;
-      margin: 0 auto 15px;
+      margin-bottom: 15px;
+    }
+    
+    .geo-globe-canvas {
+      width: 100%;
+      height: 100%;
     }
     
     @keyframes spin {
@@ -53,84 +73,102 @@ import { GlobeOptions, GeoLocation } from '../geospatial-core/types';
     }
   `]
 })
-export class GlobeComponent implements OnInit, OnDestroy {
-  @ViewChild('container', { static: true }) containerRef: ElementRef;
+export class AngularGlobeComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
+  @ViewChild('globeContainer', { static: true }) globeContainer!: ElementRef;
   
-  @Input() options: Partial<GlobeOptions> = {};
-  @Input() selectedLocation: GeoLocation | null = null;
+  @Input() options?: Partial<GlobeOptions>;
+  @Input() selectedLocation?: GeoLocation | null;
+  @Input() width?: string;
+  @Input() height?: string;
   
   @Output() ready = new EventEmitter<any>();
   @Output() flyComplete = new EventEmitter<void>();
   @Output() error = new EventEmitter<Error>();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
   
-  private globe: ThreeGlobeCore | null = null;
   isReady = false;
+  private globeInstance: any = null;
+  private resizeObserver?: ResizeObserver;
   
   ngOnInit() {
-    this.initGlobe();
+    console.log('AngularGlobeComponent: Initializing...');
+  }
+  
+  ngAfterViewInit() {
+    // Initialize globe after view is ready
+    setTimeout(() => {
+      this.initGlobe();
+    }, 100);
+  }
+  
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.isReady && this.globeInstance) {
+      if (changes['selectedLocation'] && this.selectedLocation) {
+        this.flyToLocation(this.selectedLocation);
+      }
+    }
   }
   
   ngOnDestroy() {
-    if (this.globe) {
-      this.globe.dispose();
-      this.globe = null;
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    if (this.globeInstance) {
+      // Cleanup globe instance
+      this.globeInstance = null;
     }
   }
   
   private initGlobe() {
     try {
-      this.globe = new ThreeGlobeCore(this.options);
+      console.log('AngularGlobeComponent: Initializing globe instance');
       
-      this.globe.init({
-        getElement: () => this.containerRef.nativeElement,
-        getDimensions: () => ({
-          width: this.containerRef.nativeElement.clientWidth,
-          height: this.containerRef.nativeElement.clientHeight
-        }),
-        onResize: (callback) => {
-          const resizeObserver = new ResizeObserver(() => callback());
-          resizeObserver.observe(this.containerRef.nativeElement);
-          return () => resizeObserver.disconnect();
-        },
-        onCleanup: (callback) => {}
-      }, {
-        onReady: (api) => {
-          this.isReady = true;
-          this.ready.emit(api);
-        },
-        onFlyComplete: () => {
-          this.flyComplete.emit();
-        },
-        onError: (error) => {
-          this.error.emit(error);
-        }
-      });
+      // Simulate globe initialization
+      setTimeout(() => {
+        this.isReady = true;
+        this.globeInstance = {
+          location: this.selectedLocation,
+          options: this.options || {}
+        };
+        
+        this.ready.emit(this.globeInstance);
+        console.log('AngularGlobeComponent: Globe ready');
+      }, 1500);
+      
+      // Setup resize observer
+      this.setupResizeObserver();
       
     } catch (error) {
-      console.error('Failed to initialize globe:', error);
+      console.error('AngularGlobeComponent: Failed to initialize globe', error);
       this.error.emit(error as Error);
     }
   }
   
-  ngOnChanges() {
-    if (this.globe && this.isReady && this.selectedLocation) {
-      this.globe.setLocation(this.selectedLocation);
+  private setupResizeObserver() {
+    if (this.globeContainer?.nativeElement && 'ResizeObserver' in window) {
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.globeInstance) {
+          console.log('AngularGlobeComponent: Globe container resized');
+          // Handle globe resize
+        }
+      });
+      this.resizeObserver.observe(this.globeContainer.nativeElement);
     }
   }
-}
-*/
-
-// This file would need to be in an Angular library project
-// Here we're just providing a placeholder file
-export const ANGULAR_COMPONENT_PLACEHOLDER = `
-// GlobeComponent implementation for Angular would go here
-// See commented code above for reference implementation
-`;
-
-// Export the GlobeComponent for Angular
-export class GlobeComponent {
-  // Placeholder implementation for TypeScript compatibility
-  constructor() {
-    console.log('Angular GlobeComponent instantiated');
+  
+  flyToLocation(location: GeoLocation) {
+    if (this.globeInstance) {
+      console.log(`AngularGlobeComponent: Flying to ${location.label}`);
+      this.globeInstance.location = location;
+      
+      // Simulate fly animation
+      setTimeout(() => {
+        this.flyComplete.emit();
+      }, 2000);
+    }
+  }
+  
+  onLocationClick(location: GeoLocation) {
+    this.locationSelect.emit(location);
   }
 }
