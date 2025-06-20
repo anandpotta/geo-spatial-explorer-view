@@ -1,82 +1,80 @@
 
-// Conditional Angular imports with proper TypeScript interfaces
-let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
-let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
-
-// TypeScript interfaces for non-Angular environments
-interface MockOnInit {
-  ngOnInit?(): void;
-}
-
-interface MockAfterViewInit {
-  ngAfterViewInit?(): void;
-}
-
-interface MockOnDestroy {
-  ngOnDestroy?(): void;
-}
-
-interface MockOnChanges {
-  ngOnChanges?(changes: any): void;
-}
-
-interface MockElementRef {
-  nativeElement?: any;
-}
-
-class MockEventEmitter<T = any> {
-  emit(value?: T): void {}
-}
-
-try {
-  if (typeof window !== 'undefined' && (window as any).ng) {
-    const angular = require('@angular/core');
-    Component = angular.Component;
-    ElementRef = angular.ElementRef;
-    ViewChild = angular.ViewChild;
-    Input = angular.Input;
-    Output = angular.Output;
-    EventEmitter = angular.EventEmitter;
-    OnInit = angular.OnInit;
-    OnDestroy = angular.OnDestroy;
-    AfterViewInit = angular.AfterViewInit;
-    OnChanges = angular.OnChanges;
-    SimpleChanges = angular.SimpleChanges;
-  }
-} catch (error) {
-  // Mock implementations for non-Angular environments
-  Component = () => () => {};
-  ElementRef = class implements MockElementRef {};
-  ViewChild = () => () => {};
-  Input = () => () => {};
-  Output = () => () => {};
-  EventEmitter = MockEventEmitter;
-  OnInit = class implements MockOnInit {};
-  OnDestroy = class implements MockOnDestroy {};
-  AfterViewInit = class implements MockAfterViewInit {};
-  OnChanges = class implements MockOnChanges {};
-  SimpleChanges = class {};
-}
-
+import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 import type { DrawingData } from '../../utils/drawing-utils';
 
-// Component decorator with conditional application
-const AngularMapComponentClass = class implements MockOnInit, MockAfterViewInit, MockOnDestroy, MockOnChanges {
-  mapContainer!: MockElementRef;
+@Component({
+  selector: 'geo-map',
+  template: `
+    <div class="geo-map-container" 
+         #mapContainer 
+         [style.width]="width || '100%'" 
+         [style.height]="height || '400px'">
+      <div *ngIf="!isReady" class="geo-map-loading">
+        <div class="geo-map-spinner"></div>
+        <h3>Loading Map...</h3>
+      </div>
+      <div class="geo-map-canvas" 
+           [style.display]="isReady ? 'block' : 'none'">
+      </div>
+    </div>
+  `,
+  styles: [`
+    .geo-map-container {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .geo-map-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #f5f5f5;
+      z-index: 1000;
+    }
+    
+    .geo-map-spinner {
+      border: 4px solid rgba(0,0,0,0.1);
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    
+    .geo-map-canvas {
+      width: 100%;
+      height: 100%;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `]
+})
+export class AngularMapComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
+  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
   
-  options?: Partial<MapViewOptions>;
-  selectedLocation?: GeoLocation | null;
-  width?: string;
-  height?: string;
-  enableDrawing?: boolean = false;
+  @Input() options?: Partial<MapViewOptions>;
+  @Input() selectedLocation?: GeoLocation | null;
+  @Input() width?: string;
+  @Input() height?: string;
+  @Input() enableDrawing?: boolean = false;
   
-  ready = new MockEventEmitter<any>();
-  locationSelect = new MockEventEmitter<GeoLocation>();
-  error = new MockEventEmitter<Error>();
-  annotationsChange = new MockEventEmitter<any[]>();
-  drawingCreated = new MockEventEmitter<DrawingData>();
-  regionClick = new MockEventEmitter<DrawingData>();
+  @Output() ready = new EventEmitter<any>();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() error = new EventEmitter<Error>();
+  @Output() annotationsChange = new EventEmitter<any[]>();
+  @Output() drawingCreated = new EventEmitter<DrawingData>();
+  @Output() regionClick = new EventEmitter<DrawingData>();
   
   isReady = false;
   private mapInstance: any = null;
@@ -92,7 +90,7 @@ const AngularMapComponentClass = class implements MockOnInit, MockAfterViewInit,
     }, 100);
   }
   
-  ngOnChanges(changes: any) {
+  ngOnChanges(changes: SimpleChanges) {
     if (this.isReady && this.mapInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.centerMap(this.selectedLocation.y, this.selectedLocation.x);
@@ -167,63 +165,4 @@ const AngularMapComponentClass = class implements MockOnInit, MockAfterViewInit,
   onRegionClick(drawing: DrawingData) {
     this.regionClick.emit(drawing);
   }
-};
-
-// Apply Angular decorators only if available
-export const AngularMapComponent = Component && Component({
-  selector: 'geo-map',
-  template: `
-    <div class="geo-map-container" 
-         #mapContainer 
-         [style.width]="width || '100%'" 
-         [style.height]="height || '400px'">
-      <div *ngIf="!isReady" class="geo-map-loading">
-        <div class="geo-map-spinner"></div>
-        <h3>Loading Map...</h3>
-      </div>
-      <div class="geo-map-canvas" 
-           [style.display]="isReady ? 'block' : 'none'">
-      </div>
-    </div>
-  `,
-  styles: [`
-    .geo-map-container {
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .geo-map-loading {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: #f5f5f5;
-      z-index: 1000;
-    }
-    
-    .geo-map-spinner {
-      border: 4px solid rgba(0,0,0,0.1);
-      border-radius: 50%;
-      border-top: 4px solid #3498db;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 15px;
-    }
-    
-    .geo-map-canvas {
-      width: 100%;
-      height: 100%;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `]
-})(AngularMapComponentClass) || AngularMapComponentClass;
+}

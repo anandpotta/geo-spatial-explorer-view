@@ -24,10 +24,6 @@
     "./**/*.spec.*",
     "./build.js",
     "../../server/**/*",
-    "../../public/**/*",
-    "./angular/**/*",
-    "../angular/**/*",
-    "../../src/lib/angular/**/*",
-    "**/angular/**/*"
+    "../../public/**/*"
   ]
 }

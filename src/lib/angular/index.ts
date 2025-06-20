@@ -1,47 +1,11 @@
 
-// Angular module and components - only available when Angular is installed
-// These exports will only work in Angular projects with proper dependencies
-
-let AngularMapComponent: any = null;
-let AngularGlobeComponent: any = null;
-let GeospatialExplorerModule: any = null;
-
-try {
-  // Dynamic imports that only work when @angular/core is available
-  if (typeof window !== 'undefined' && (window as any).ng) {
-    // Angular environment detected
-    const { AngularMapComponent: MapComp } = require('./map.component');
-    const { AngularGlobeComponent: GlobeComp } = require('./globe.component');
-    const { GeospatialExplorerModule: Module } = require('./geospatial-explorer.module');
-    
-    AngularMapComponent = MapComp;
-    AngularGlobeComponent = GlobeComp;
-    GeospatialExplorerModule = Module;
-  } else {
-    // Try importing without window check for server-side rendering
-    const { AngularMapComponent: MapComp } = require('./map.component');
-    const { AngularGlobeComponent: GlobeComp } = require('./globe.component');
-    const { GeospatialExplorerModule: Module } = require('./geospatial-explorer.module');
-    
-    AngularMapComponent = MapComp;
-    AngularGlobeComponent = GlobeComp;
-    GeospatialExplorerModule = Module;
-  }
-} catch (error) {
-  // Angular dependencies not available - provide fallback exports
-  console.warn('Angular dependencies not available. Angular components will not be functional.');
-  
-  // Provide minimal fallback implementations
-  AngularMapComponent = class { };
-  AngularGlobeComponent = class { };
-  GeospatialExplorerModule = class { };
-}
-
-// Export with fallbacks for non-Angular environments
-export { AngularMapComponent, AngularGlobeComponent, GeospatialExplorerModule };
+// Angular module and components for Angular environments only
+export { AngularMapComponent } from './map.component';
+export { AngularGlobeComponent } from './globe.component';
+export { GeospatialExplorerModule } from './geospatial-explorer.module';
 
 // Default export for easier importing
-export default GeospatialExplorerModule;
+export { GeospatialExplorerModule as default } from './geospatial-explorer.module';
 
 // Core types re-exported for convenience
 export type {

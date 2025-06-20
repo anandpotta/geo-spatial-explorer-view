@@ -1,78 +1,78 @@
 
-// Conditional Angular imports with proper TypeScript interfaces
-let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
-let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
-
-// TypeScript interfaces for non-Angular environments
-interface MockOnInit {
-  ngOnInit?(): void;
-}
-
-interface MockAfterViewInit {
-  ngAfterViewInit?(): void;
-}
-
-interface MockOnDestroy {
-  ngOnDestroy?(): void;
-}
-
-interface MockOnChanges {
-  ngOnChanges?(changes: any): void;
-}
-
-interface MockElementRef {
-  nativeElement?: any;
-}
-
-class MockEventEmitter<T = any> {
-  emit(value?: T): void {}
-}
-
-try {
-  if (typeof window !== 'undefined' && (window as any).ng) {
-    const angular = require('@angular/core');
-    Component = angular.Component;
-    ElementRef = angular.ElementRef;
-    ViewChild = angular.ViewChild;
-    Input = angular.Input;
-    Output = angular.Output;
-    EventEmitter = angular.EventEmitter;
-    OnInit = angular.OnInit;
-    OnDestroy = angular.OnDestroy;
-    AfterViewInit = angular.AfterViewInit;
-    OnChanges = angular.OnChanges;
-    SimpleChanges = angular.SimpleChanges;
-  }
-} catch (error) {
-  // Mock implementations for non-Angular environments
-  Component = () => () => {};
-  ElementRef = class implements MockElementRef {};
-  ViewChild = () => () => {};
-  Input = () => () => {};
-  Output = () => () => {};
-  EventEmitter = MockEventEmitter;
-  OnInit = class implements MockOnInit {};
-  OnDestroy = class implements MockOnDestroy {};
-  AfterViewInit = class implements MockAfterViewInit {};
-  OnChanges = class implements MockOnChanges {};
-  SimpleChanges = class {};
-}
-
+import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
 import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
-// Component class without decorators
-const AngularGlobeComponentClass = class implements MockOnInit, MockAfterViewInit, MockOnDestroy, MockOnChanges {
-  globeContainer!: MockElementRef;
+@Component({
+  selector: 'geo-globe',
+  template: `
+    <div class="geo-globe-container" 
+         #globeContainer 
+         [style.width]="width || '100%'" 
+         [style.height]="height || '600px'">
+      <div *ngIf="!isReady" class="geo-globe-loading">
+        <div class="geo-globe-spinner"></div>
+        <h3>Loading Globe...</h3>
+      </div>
+      <div class="geo-globe-canvas" 
+           [style.display]="isReady ? 'block' : 'none'">
+      </div>
+    </div>
+  `,
+  styles: [`
+    .geo-globe-container {
+      position: relative;
+      overflow: hidden;
+      background-color: #000;
+    }
+    
+    .geo-globe-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0,0,0,0.8);
+      color: white;
+      z-index: 1000;
+    }
+    
+    .geo-globe-spinner {
+      border: 4px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    
+    .geo-globe-canvas {
+      width: 100%;
+      height: 100%;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `]
+})
+export class AngularGlobeComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
+  @ViewChild('globeContainer', { static: true }) globeContainer!: ElementRef;
   
-  options?: Partial<GlobeOptions>;
-  selectedLocation?: GeoLocation | null;
-  width?: string;
-  height?: string;
+  @Input() options?: Partial<GlobeOptions>;
+  @Input() selectedLocation?: GeoLocation | null;
+  @Input() width?: string;
+  @Input() height?: string;
   
-  ready = new MockEventEmitter<any>();
-  flyComplete = new MockEventEmitter<void>();
-  error = new MockEventEmitter<Error>();
-  locationSelect = new MockEventEmitter<GeoLocation>();
+  @Output() ready = new EventEmitter<any>();
+  @Output() flyComplete = new EventEmitter<void>();
+  @Output() error = new EventEmitter<Error>();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
   
   isReady = false;
   private globeInstance: any = null;
@@ -88,7 +88,7 @@ const AngularGlobeComponentClass = class implements MockOnInit, MockAfterViewIni
     }, 100);
   }
   
-  ngOnChanges(changes: any) {
+  ngOnChanges(changes: SimpleChanges) {
     if (this.isReady && this.globeInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.flyToLocation(this.selectedLocation);
@@ -153,65 +153,4 @@ const AngularGlobeComponentClass = class implements MockOnInit, MockAfterViewIni
   onLocationClick(location: GeoLocation) {
     this.locationSelect.emit(location);
   }
-};
-
-// Apply Angular decorators only if available
-export const AngularGlobeComponent = Component && Component({
-  selector: 'geo-globe',
-  template: `
-    <div class="geo-globe-container" 
-         #globeContainer 
-         [style.width]="width || '100%'" 
-         [style.height]="height || '600px'">
-      <div *ngIf="!isReady" class="geo-globe-loading">
-        <div class="geo-globe-spinner"></div>
-        <h3>Loading Globe...</h3>
-      </div>
-      <div class="geo-globe-canvas" 
-           [style.display]="isReady ? 'block' : 'none'">
-      </div>
-    </div>
-  `,
-  styles: [`
-    .geo-globe-container {
-      position: relative;
-      overflow: hidden;
-      background-color: #000;
-    }
-    
-    .geo-globe-loading {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: rgba(0,0,0,0.8);
-      color: white;
-      z-index: 1000;
-    }
-    
-    .geo-globe-spinner {
-      border: 4px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top: 4px solid #3498db;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 15px;
-    }
-    
-    .geo-globe-canvas {
-      width: 100%;
-      height: 100%;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `]
-})(AngularGlobeComponentClass) || AngularGlobeComponentClass;
+}
