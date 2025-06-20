@@ -3,6 +3,24 @@
 let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
 let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
 
+// Type interfaces for when Angular is not available
+interface AngularLifecycleStub {
+  ngOnInit?(): void;
+  ngAfterViewInit?(): void;
+  ngOnDestroy?(): void;
+  ngOnChanges?(changes: any): void;
+}
+
+interface ElementRefStub {
+  nativeElement?: HTMLElement;
+}
+
+interface EventEmitterStub<T = any> {
+  emit(value?: T): void;
+}
+
+// Conditional Angular imports with proper fallback types
+let hasAngular = false;
 try {
   const angularCore = require('@angular/core');
   Component = angularCore.Component;
@@ -16,14 +34,15 @@ try {
   AfterViewInit = angularCore.AfterViewInit;
   OnChanges = angularCore.OnChanges;
   SimpleChanges = angularCore.SimpleChanges;
+  hasAngular = true;
 } catch (error) {
-  // Angular not available - create stub decorators
+  // Angular not available - create stub decorators and classes
   Component = () => (target: any) => target;
-  ElementRef = class {};
-  ViewChild = () => (target: any) => target;
-  Input = () => (target: any) => target;
-  Output = () => (target: any) => target;
-  EventEmitter = class { emit() {} };
+  ElementRef = class implements ElementRefStub { nativeElement?: HTMLElement; };
+  ViewChild = () => () => {};
+  Input = () => () => {};
+  Output = () => () => {};
+  EventEmitter = class implements EventEmitterStub { emit() {} };
   OnInit = class {};
   OnDestroy = class {};
   AfterViewInit = class {};
@@ -91,8 +110,8 @@ import type { DrawingData } from '../../utils/drawing-utils';
     }
   `]
 })
-export class AngularMapComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
-  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
+export class AngularMapComponent implements AngularLifecycleStub {
+  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRefStub;
   
   @Input() options?: Partial<MapViewOptions>;
   @Input() selectedLocation?: GeoLocation | null;
@@ -121,7 +140,7 @@ export class AngularMapComponent implements OnInit, AfterViewInit, OnDestroy, On
     }, 100);
   }
   
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges(changes: any) {
     if (this.isReady && this.mapInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.centerMap(this.selectedLocation.y, this.selectedLocation.x);
