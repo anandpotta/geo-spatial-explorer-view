@@ -119,12 +119,12 @@ export class AngularMapComponent implements AngularLifecycleStub {
   @Input() height?: string;
   @Input() enableDrawing?: boolean = false;
   
-  @Output() ready = new EventEmitter<any>();
-  @Output() locationSelect = new EventEmitter<GeoLocation>();
-  @Output() error = new EventEmitter<Error>();
-  @Output() annotationsChange = new EventEmitter<any[]>();
-  @Output() drawingCreated = new EventEmitter<DrawingData>();
-  @Output() regionClick = new EventEmitter<DrawingData>();
+  @Output() ready = new EventEmitter();
+  @Output() locationSelect = new EventEmitter();
+  @Output() error = new EventEmitter();
+  @Output() annotationsChange = new EventEmitter();
+  @Output() drawingCreated = new EventEmitter();
+  @Output() regionClick = new EventEmitter();
   
   isReady = false;
   private mapInstance: any = null;

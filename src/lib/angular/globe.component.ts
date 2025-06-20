@@ -119,10 +119,10 @@ export class AngularGlobeComponent implements AngularLifecycleStub {
   @Input() width?: string;
   @Input() height?: string;
   
-  @Output() ready = new EventEmitter<any>();
-  @Output() flyComplete = new EventEmitter<void>();
-  @Output() error = new EventEmitter<Error>();
-  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() ready = new EventEmitter();
+  @Output() flyComplete = new EventEmitter();
+  @Output() error = new EventEmitter();
+  @Output() locationSelect = new EventEmitter();
   
   isReady = false;
   private globeInstance: any = null;
