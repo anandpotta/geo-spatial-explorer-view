@@ -1,6 +1,6 @@
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular with advanced drawing capabilities",
   "main": "cjs/lib/index.js",
   "module": "esm/lib/index.js",
@@ -34,7 +34,7 @@
   },
   "files": [
     "cjs",
-    "esm", 
+    "esm",
     "types",
     "LICENSE",
     "README.md",
@@ -44,7 +44,7 @@
   "scripts": {
     "build": "node ../lib/build.js",
     "build:cjs": "tsc -p ../lib/tsconfig.build.json --module commonjs --outDir cjs --declaration false --rootDir ../../",
-    "build:esm": "tsc -p ../lib/tsconfig.build.json --module es2015 --outDir esm --declaration false --rootDir ../../", 
+    "build:esm": "tsc -p ../lib/tsconfig.build.json --module es2015 --outDir esm --declaration false --rootDir ../../",
     "build:types": "tsc -p ../lib/tsconfig.build.json --declaration --declarationDir types --emitDeclarationOnly --rootDir ../../",
     "prepublishOnly": "node ../lib/build.js",
     "test": "echo \"No tests specified\" && exit 0",
