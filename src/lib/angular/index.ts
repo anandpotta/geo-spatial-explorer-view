@@ -1,11 +1,29 @@
 
 // Angular module and components for Angular environments only
-export { AngularMapComponent } from './map.component';
-export { AngularGlobeComponent } from './globe.component';
-export { GeospatialExplorerModule } from './geospatial-explorer.module';
+// Import components conditionally
+let AngularMapComponent: any, AngularGlobeComponent: any, GeospatialExplorerModule: any;
+
+try {
+  const mapComponent = require('./map.component');
+  const globeComponent = require('./globe.component');
+  const module = require('./geospatial-explorer.module');
+  
+  AngularMapComponent = mapComponent.AngularMapComponent;
+  AngularGlobeComponent = globeComponent.AngularGlobeComponent;
+  GeospatialExplorerModule = module.GeospatialExplorerModule;
+} catch (error) {
+  // Angular not available - create stub exports
+  AngularMapComponent = class {};
+  AngularGlobeComponent = class {};
+  GeospatialExplorerModule = class {};
+}
+
+export { AngularMapComponent };
+export { AngularGlobeComponent };
+export { GeospatialExplorerModule };
 
 // Default export for easier importing
-export { GeospatialExplorerModule as default } from './geospatial-explorer.module';
+export { GeospatialExplorerModule as default };
 
 // Core types re-exported for convenience
 export type {
@@ -30,6 +48,6 @@ export interface AngularDrawingService {
   setupEventHandlers: (element: Element) => void;
 }
 
-// Legacy exports for backwards compatibility
+// Legacy exports for backwards compatibility - use the correctly imported components
 export const MapComponentAngular = AngularMapComponent;
 export const GlobeComponent = AngularGlobeComponent;

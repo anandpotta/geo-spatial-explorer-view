@@ -1,5 +1,36 @@
 
-import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
+// Angular map component - only available when Angular is installed
+let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
+let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
+
+try {
+  const angularCore = require('@angular/core');
+  Component = angularCore.Component;
+  ElementRef = angularCore.ElementRef;
+  ViewChild = angularCore.ViewChild;
+  Input = angularCore.Input;
+  Output = angularCore.Output;
+  EventEmitter = angularCore.EventEmitter;
+  OnInit = angularCore.OnInit;
+  OnDestroy = angularCore.OnDestroy;
+  AfterViewInit = angularCore.AfterViewInit;
+  OnChanges = angularCore.OnChanges;
+  SimpleChanges = angularCore.SimpleChanges;
+} catch (error) {
+  // Angular not available - create stub decorators
+  Component = () => (target: any) => target;
+  ElementRef = class {};
+  ViewChild = () => (target: any) => target;
+  Input = () => (target: any) => target;
+  Output = () => (target: any) => target;
+  EventEmitter = class { emit() {} };
+  OnInit = class {};
+  OnDestroy = class {};
+  AfterViewInit = class {};
+  OnChanges = class {};
+  SimpleChanges = class {};
+}
+
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 import type { DrawingData } from '../../utils/drawing-utils';
 
