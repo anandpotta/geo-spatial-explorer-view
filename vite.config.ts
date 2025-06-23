@@ -25,40 +25,19 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: 'esnext',
-    // Completely disable rollup for problematic modules
     rollupOptions: {
-      external: [
-        '@rollup/rollup-linux-x64-gnu',
-        '@rollup/rollup-linux-arm64-gnu', 
-        '@rollup/rollup-darwin-x64',
-        '@rollup/rollup-darwin-arm64',
-        '@rollup/rollup-win32-x64-msvc'
-      ],
       output: {
         manualChunks: undefined,
       },
     },
   },
   optimizeDeps: {
-    // Force exclude all rollup native binaries
-    exclude: [
-      '@rollup/rollup-linux-x64-gnu',
-      '@rollup/rollup-linux-arm64-gnu', 
-      '@rollup/rollup-darwin-x64',
-      '@rollup/rollup-darwin-arm64',
-      '@rollup/rollup-win32-x64-msvc'
-    ],
-    // Force immediate re-bundling
     force: true,
-    // Use esbuild exclusively
     esbuildOptions: {
       target: 'esnext',
       define: {
         global: 'globalThis',
       },
-      // Prevent any native module loading
-      platform: 'browser',
-      format: 'esm',
     },
   },
   esbuild: {
@@ -67,8 +46,5 @@ export default defineConfig(({ mode }) => ({
     define: {
       global: 'globalThis',
     },
-    // Ensure esbuild handles everything
-    platform: 'browser',
-    format: 'esm',
   },
 }));
