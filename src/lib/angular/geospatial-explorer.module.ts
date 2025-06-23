@@ -18,16 +18,43 @@ try {
   AngularMapComponent = mapComponent.AngularMapComponent;
   AngularGlobeComponent = globeComponent.AngularGlobeComponent;
 } catch (error) {
-  // Angular not available - create stub module and components
-  NgModule = () => (target: any) => target;
-  CommonModule = class {};
-  AngularMapComponent = class {
-    static ɵcmp = {};
-    static ɵfac = () => {};
+  // Angular not available - create stub module and components with proper structure
+  NgModule = (config: any) => (target: any) => {
+    target.ɵmod = {
+      type: target,
+      declarations: config.declarations || [],
+      imports: config.imports || [],
+      exports: config.exports || []
+    };
+    target.ɵinj = {
+      factory: () => new target(),
+      providers: config.providers || [],
+      imports: config.imports || []
+    };
+    return target;
   };
+  
+  CommonModule = class {
+    static ɵmod = { type: CommonModule };
+    static ɵinj = { factory: () => new CommonModule() };
+  };
+  
+  AngularMapComponent = class {
+    static ɵcmp = {
+      type: AngularMapComponent,
+      selectors: [['geo-map']],
+      standalone: false
+    };
+    static ɵfac = () => new AngularMapComponent();
+  };
+  
   AngularGlobeComponent = class {
-    static ɵcmp = {};
-    static ɵfac = () => {};
+    static ɵcmp = {
+      type: AngularGlobeComponent,
+      selectors: [['geo-globe']],
+      standalone: false
+    };
+    static ɵfac = () => new AngularGlobeComponent();
   };
 }
 
@@ -65,7 +92,7 @@ export type {
   GlobeOptions
 } from '../geospatial-core/types';
 
-// Remove problematic DrawingData export that has dependencies
+// Simple DrawingData interface without dependencies
 export interface DrawingData {
   id: string;
   type: string;

@@ -17,10 +17,17 @@ try {
   AngularGlobeComponent = globeComponent.AngularGlobeComponent;
   GeospatialExplorerModule = module.GeospatialExplorerModule;
 } catch (error) {
-  // Angular not available - create stub exports that won't cause compilation errors
+  // Angular not available - create proper stub exports with Angular module structure
   const createAngularComponent = () => {
     class StubComponent {
-      static ɵcmp = { type: StubComponent, selectors: [['stub']], decls: 0, vars: 0, template: function() { return ''; } };
+      static ɵcmp = { 
+        type: StubComponent, 
+        selectors: [['stub']], 
+        decls: 0, 
+        vars: 0, 
+        template: function() { return ''; },
+        standalone: false
+      };
       static ɵfac = function() { return new StubComponent(); };
     }
     return StubComponent;
@@ -28,16 +35,28 @@ try {
   
   AngularMapComponent = createAngularComponent();
   AngularGlobeComponent = createAngularComponent();
-  GeospatialExplorerModule = class {
-    static ɵmod = { type: GeospatialExplorerModule };
-    static ɵinj = { factory: function() { return new GeospatialExplorerModule(); } };
+  
+  // Create proper Angular module stub
+  class StubModule {
+    static ɵmod = { 
+      type: StubModule,
+      declarations: [],
+      imports: [],
+      exports: []
+    };
+    static ɵinj = { 
+      factory: function() { return new StubModule(); },
+      providers: [],
+      imports: []
+    };
     static forRoot() {
       return {
-        ngModule: GeospatialExplorerModule,
+        ngModule: StubModule,
         providers: []
       };
     }
-  };
+  }
+  GeospatialExplorerModule = StubModule;
 }
 
 // Primary exports with consistent naming

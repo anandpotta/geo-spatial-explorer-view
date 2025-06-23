@@ -39,7 +39,7 @@ export interface DrawingData {
 export { StandaloneMapComponent as MapComponent } from './react/StandaloneMapComponent';
 export { GlobeComponent } from './react/GlobeComponent';
 
-// Angular-specific exports with conditional loading
+// Angular-specific exports with conditional loading and proper module structure
 let GeospatialExplorerModule: any = null;
 let AngularMapComponent: any = null;
 let AngularGlobeComponent: any = null;
@@ -50,11 +50,20 @@ try {
   AngularMapComponent = angularExports.AngularMapComponent;
   AngularGlobeComponent = angularExports.AngularGlobeComponent;
 } catch (error) {
-  // Angular not available - create proper stub components for TypeScript
+  // Angular not available - create proper stub components with Angular module structure
   const createStubModule = () => {
     class StubModule {
-      static ɵmod = { type: StubModule };
-      static ɵinj = { factory: function() { return new StubModule(); } };
+      static ɵmod = { 
+        type: StubModule,
+        declarations: [],
+        imports: [],
+        exports: []
+      };
+      static ɵinj = { 
+        factory: function() { return new StubModule(); },
+        providers: [],
+        imports: []
+      };
       static forRoot() {
         return {
           ngModule: StubModule,
@@ -67,7 +76,14 @@ try {
   
   const createStubComponent = () => {
     class StubComponent {
-      static ɵcmp = { type: StubComponent, selectors: [['stub']], decls: 0, vars: 0, template: function() { return ''; } };
+      static ɵcmp = { 
+        type: StubComponent, 
+        selectors: [['stub']], 
+        decls: 0, 
+        vars: 0, 
+        template: function() { return ''; },
+        standalone: false
+      };
       static ɵfac = function() { return new StubComponent(); };
     }
     return StubComponent;
