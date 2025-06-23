@@ -2,7 +2,7 @@
 export { GlobeComponent } from './GlobeComponent';
 export { MapComponent } from './MapComponent';
 export { StandaloneMapComponent, StandaloneMapComponent as default } from './StandaloneMapComponent';
-export type { StandaloneMapProps } from './StandaloneMapComponent';
+export type { StandaloneMapComponentProps, StandaloneMapProps } from './StandaloneMapComponent';
 
 // Enhanced utilities
 export { 

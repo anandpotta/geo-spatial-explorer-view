@@ -3,19 +3,35 @@ import React, { useRef, useEffect, useState } from 'react';
 import { MapCore } from '../geospatial-core/map/index';
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 
-interface StandaloneMapComponentProps {
+export interface StandaloneMapComponentProps {
   options?: Partial<MapViewOptions>;
   selectedLocation?: GeoLocation;
+  externalLocation?: {
+    latitude: number;
+    longitude: number;
+    searchString?: string;
+  };
   width?: string;
   height?: string;
   enableDrawing?: boolean;
+  showInternalSearch?: boolean;
+  theme?: string;
+  className?: string;
   onReady?: (api: any) => void;
   onLocationSelect?: (location: GeoLocation) => void;
+  onLocationChange?: (location: {
+    latitude: number;
+    longitude: number;
+    searchString?: string;
+  }) => void;
   onError?: (error: Error) => void;
   onAnnotationsChange?: (annotations: any[]) => void;
   onDrawingCreated?: (drawing: any) => void;
   onRegionClick?: (region: any) => void;
 }
+
+// Export props type for external usage
+export type StandaloneMapProps = StandaloneMapComponentProps;
 
 /**
  * Standalone React Map component that can be used independently
@@ -23,11 +39,16 @@ interface StandaloneMapComponentProps {
 export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
   options,
   selectedLocation,
+  externalLocation,
   width = '100%',
   height = '400px',
   enableDrawing = false,
+  showInternalSearch = true,
+  theme = 'light',
+  className = '',
   onReady,
   onLocationSelect,
+  onLocationChange,
   onError,
   onAnnotationsChange,
   onDrawingCreated,
@@ -77,7 +98,26 @@ export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
     };
   }, []); // Empty dependency array means initialize once
   
-  // Handle location changes
+  // Handle external location changes
+  useEffect(() => {
+    if (mapRef.current && isReady && externalLocation) {
+      const geoLocation: GeoLocation = {
+        id: `external-${Date.now()}`,
+        label: externalLocation.searchString || `Location at ${externalLocation.latitude}, ${externalLocation.longitude}`,
+        x: externalLocation.longitude,
+        y: externalLocation.latitude,
+      };
+      
+      mapRef.current.centerMap(externalLocation.latitude, externalLocation.longitude);
+      mapRef.current.addMarker(geoLocation);
+      
+      if (onLocationChange) {
+        onLocationChange(externalLocation);
+      }
+    }
+  }, [externalLocation, isReady, onLocationChange]);
+  
+  // Handle selected location changes
   useEffect(() => {
     if (mapRef.current && isReady && selectedLocation) {
       mapRef.current.centerMap(selectedLocation.y, selectedLocation.x);
@@ -100,7 +140,16 @@ export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
           x: x,
           y: y,
         };
+        
         onLocationSelect(mockLocation);
+        
+        if (onLocationChange) {
+          onLocationChange({
+            latitude: y,
+            longitude: x,
+            searchString: mockLocation.label
+          });
+        }
       }
     }
   };
@@ -114,14 +163,17 @@ export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
     if (onDrawingCreated) onDrawingCreated(drawing);
   };
   
+  const containerClasses = `relative overflow-hidden border border-gray-300 rounded-lg ${className}`;
+  const backgroundTheme = theme === 'dark' ? 'bg-gray-900' : 'bg-blue-50';
+  
   return (
     <div 
       style={{ width, height }}
-      className="relative overflow-hidden border border-gray-300 rounded-lg"
+      className={containerClasses}
     >
       <div 
         ref={containerRef} 
-        className="w-full h-full relative overflow-hidden bg-blue-50"
+        className={`w-full h-full relative overflow-hidden ${backgroundTheme}`}
         onClick={handleMapClick}
       >
         {!isReady && (
@@ -129,6 +181,14 @@ export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <h3 className="text-xl font-bold">Loading Map</h3>
+            </div>
+          </div>
+        )}
+        
+        {isReady && showInternalSearch && (
+          <div className="absolute top-2 right-2 bg-white rounded shadow-md p-2 z-10">
+            <div className="text-xs text-gray-600">
+              Internal Search: {showInternalSearch ? 'Enabled' : 'Disabled'}
             </div>
           </div>
         )}
