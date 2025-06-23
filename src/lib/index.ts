@@ -50,8 +50,32 @@ try {
   AngularMapComponent = angularExports.AngularMapComponent;
   AngularGlobeComponent = angularExports.AngularGlobeComponent;
 } catch (error) {
-  // Angular not available - this is expected in non-Angular environments
-  console.log('Angular components not available - this is normal for non-Angular environments');
+  // Angular not available - create proper stub components for TypeScript
+  const createStubModule = () => {
+    class StubModule {
+      static ɵmod = { type: StubModule };
+      static ɵinj = { factory: function() { return new StubModule(); } };
+      static forRoot() {
+        return {
+          ngModule: StubModule,
+          providers: []
+        };
+      }
+    }
+    return StubModule;
+  };
+  
+  const createStubComponent = () => {
+    class StubComponent {
+      static ɵcmp = { type: StubComponent, selectors: [['stub']], decls: 0, vars: 0, template: function() { return ''; } };
+      static ɵfac = function() { return new StubComponent(); };
+    }
+    return StubComponent;
+  };
+  
+  GeospatialExplorerModule = createStubModule();
+  AngularMapComponent = createStubComponent();
+  AngularGlobeComponent = createStubComponent();
 }
 
 export { GeospatialExplorerModule, AngularMapComponent, AngularGlobeComponent };

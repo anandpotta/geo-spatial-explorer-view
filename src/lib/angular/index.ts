@@ -17,16 +17,20 @@ try {
   AngularGlobeComponent = globeComponent.AngularGlobeComponent;
   GeospatialExplorerModule = module.GeospatialExplorerModule;
 } catch (error) {
-  // Angular not available - create stub exports
-  AngularMapComponent = class {
-    static ɵcmp = {};
-    static ɵfac = () => {};
+  // Angular not available - create stub exports that won't cause compilation errors
+  const createAngularComponent = () => {
+    class StubComponent {
+      static ɵcmp = { type: StubComponent, selectors: [['stub']], decls: 0, vars: 0, template: function() { return ''; } };
+      static ɵfac = function() { return new StubComponent(); };
+    }
+    return StubComponent;
   };
-  AngularGlobeComponent = class {
-    static ɵcmp = {};
-    static ɵfac = () => {};
-  };
+  
+  AngularMapComponent = createAngularComponent();
+  AngularGlobeComponent = createAngularComponent();
   GeospatialExplorerModule = class {
+    static ɵmod = { type: GeospatialExplorerModule };
+    static ɵinj = { factory: function() { return new GeospatialExplorerModule(); } };
     static forRoot() {
       return {
         ngModule: GeospatialExplorerModule,
