@@ -23,8 +23,37 @@ export default defineConfig(({ mode }) => ({
   define: {
     global: 'globalThis',
   },
+  build: {
+    target: 'esnext',
+    rollupOptions: {
+      // Force fallback to JS version of Rollup
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
+  optimizeDeps: {
+    // Exclude problematic native binaries and force JS fallback
+    exclude: [
+      '@rollup/rollup-linux-x64-gnu',
+      '@rollup/rollup-linux-arm64-gnu', 
+      '@rollup/rollup-darwin-x64',
+      '@rollup/rollup-darwin-arm64',
+      '@rollup/rollup-win32-x64-msvc'
+    ],
+    force: true,
+    esbuildOptions: {
+      target: 'esnext',
+      define: {
+        global: 'globalThis',
+      },
+    },
+  },
   esbuild: {
-    // Force esbuild to handle bundling instead of rollup for problematic modules
+    target: 'esnext',
     include: /\.(ts|tsx|js|jsx)$/,
+    define: {
+      global: 'globalThis',
+    },
   },
 }));
