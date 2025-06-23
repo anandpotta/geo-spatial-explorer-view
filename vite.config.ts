@@ -24,28 +24,6 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       external: [
         /three\/webgpu/
-      ],
-      plugins: [
-        {
-          name: 'disable-rollup-native',
-          buildStart() {
-            // Force rollup to use JS fallback instead of native binaries
-            const rollupNative = require.resolve('rollup/dist/native.js');
-            const Module = require('module');
-            const originalRequire = Module.prototype.require;
-            
-            Module.prototype.require = function(id) {
-              if (id.includes('@rollup/rollup-') && (
-                id.includes('linux') || 
-                id.includes('darwin') || 
-                id.includes('android')
-              )) {
-                throw new Error(`Skipping native rollup binary: ${id}`);
-              }
-              return originalRequire.apply(this, arguments);
-            };
-          }
-        }
       ]
     },
   },
