@@ -1,234 +1,166 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { EnhancedLocation } from '@/utils/enhanced-geo-utils';
-import { useToast } from '@/components/ui/use-toast';
-import LocationSearch from '@/components/LocationSearch';
-import LeafletMap from '@/components/map/LeafletMap';
-import { toast } from 'sonner';
 
-export interface StandaloneMapProps {
-  // External location input
-  externalLocation?: {
-    latitude: number;
-    longitude: number;
-    searchString?: string;
-    label?: string;
-  };
-  
-  // Component configuration
-  showInternalSearch?: boolean;
-  showDownloadButton?: boolean;
-  showSavedLocationsDropdown?: boolean;
-  width?: string | number;
-  height?: string | number;
-  className?: string;
-  
-  // Callbacks
-  onLocationChange?: (location: { latitude: number; longitude: number; searchString?: string }) => void;
+import React, { useRef, useEffect, useState } from 'react';
+import { MapCore } from '../geospatial-core/map/index';
+import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
+
+interface StandaloneMapComponentProps {
+  options?: Partial<MapViewOptions>;
+  selectedLocation?: GeoLocation;
+  width?: string;
+  height?: string;
+  enableDrawing?: boolean;
+  onReady?: (api: any) => void;
+  onLocationSelect?: (location: GeoLocation) => void;
+  onError?: (error: Error) => void;
   onAnnotationsChange?: (annotations: any[]) => void;
-  onGeoJSONGenerated?: (geojson: any) => void;
-  
-  // Styling
-  theme?: 'light' | 'dark';
-  
-  // Initial map settings
-  initialZoom?: number;
-  defaultLocation?: {
-    latitude: number;
-    longitude: number;
-  };
+  onDrawingCreated?: (drawing: any) => void;
+  onRegionClick?: (region: any) => void;
 }
 
-// Change from FC to regular function component to fix JSX type issues
-function StandaloneMapComponent({
-  externalLocation,
-  showInternalSearch = true,
-  showDownloadButton = true,
-  showSavedLocationsDropdown = true,
+/**
+ * Standalone React Map component that can be used independently
+ */
+export const StandaloneMapComponent: React.FC<StandaloneMapComponentProps> = ({
+  options,
+  selectedLocation,
   width = '100%',
-  height = '100vh',
-  className = '',
-  onLocationChange,
+  height = '400px',
+  enableDrawing = false,
+  onReady,
+  onLocationSelect,
+  onError,
   onAnnotationsChange,
-  onGeoJSONGenerated,
-  theme = 'light',
-  initialZoom = 15,
-  defaultLocation = { latitude: 40.7128, longitude: -74.0060 } // NYC default
-}: StandaloneMapProps) {
-  const [selectedLocation, setSelectedLocation] = useState<EnhancedLocation | undefined>();
-  const [isMapReady, setIsMapReady] = useState(false);
-  const mapRef = useRef<any>(null);
-
-  // Convert external location to internal format
+  onDrawingCreated,
+  onRegionClick
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapCore | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [annotations, setAnnotations] = useState<any[]>([]);
+  
+  // Initialize map when component mounts
   useEffect(() => {
-    if (externalLocation) {
-      const location: EnhancedLocation = {
-        id: `external-${externalLocation.latitude}-${externalLocation.longitude}`,
-        label: externalLocation.label || externalLocation.searchString || `Location at ${externalLocation.latitude.toFixed(4)}, ${externalLocation.longitude.toFixed(4)}`,
-        x: externalLocation.longitude,
-        y: externalLocation.latitude,
-        searchString: externalLocation.searchString // Store search string for GeoJSON export
-      };
-      
-      setSelectedLocation(location);
-      
-      // Notify parent of location change
-      if (onLocationChange) {
-        onLocationChange({
-          latitude: externalLocation.latitude,
-          longitude: externalLocation.longitude,
-          searchString: externalLocation.searchString
-        });
-      }
-      
-      toast.success(`Navigating to ${location.label}`);
-    }
-  }, [externalLocation, onLocationChange]);
-
-  // Handle internal location selection
-  const handleInternalLocationSelect = useCallback((location: any) => {
-    console.log('Internal location selected:', location);
+    if (!containerRef.current) return;
     
-    // Convert to EnhancedLocation format
-    const enhancedLocation: EnhancedLocation = {
-      id: location.id,
-      label: location.label,
-      x: location.x,
-      y: location.y,
-      searchString: location.label,
-      timestamp: new Date().toISOString(),
-      source: 'internal'
-    };
-    
-    setSelectedLocation(enhancedLocation);
-    
-    // Notify parent of location change
-    if (onLocationChange) {
-      onLocationChange({
-        latitude: location.y,
-        longitude: location.x,
-        searchString: location.label
-      });
-    }
-    
-    toast.success(`Navigating to ${location.label}`);
-  }, [onLocationChange]);
-
-  // Handle map ready
-  const handleMapReady = useCallback((map: any) => {
-    console.log('Standalone map ready');
+    const map = new MapCore(options);
     mapRef.current = map;
-    setIsMapReady(true);
-  }, []);
-
-  // Handle clear selected location
-  const handleClearSelectedLocation = useCallback(() => {
-    setSelectedLocation(undefined);
     
-    if (onLocationChange) {
-      onLocationChange({
-        latitude: defaultLocation.latitude,
-        longitude: defaultLocation.longitude
+    try {
+      map.init({
+        getElement: () => containerRef.current,
+        getDimensions: () => ({
+          width: containerRef.current?.clientWidth || 300,
+          height: containerRef.current?.clientHeight || 300
+        }),
+        onResize: (callback) => {
+          const handleResize = () => {
+            if (containerRef.current) callback();
+          };
+          window.addEventListener('resize', handleResize);
+          return () => window.removeEventListener('resize', handleResize);
+        },
+        onCleanup: (callback) => {}
       });
+      
+      setIsReady(true);
+      if (onReady) onReady(map);
+    } catch (error) {
+      console.error('Failed to initialize map:', error);
+      if (onError) onError(error as Error);
     }
-  }, [onLocationChange, defaultLocation]);
-
-  // Monitor annotations and notify parent
-  useEffect(() => {
-    const handleAnnotationsUpdate = () => {
-      // Get current annotations from localStorage
-      try {
-        const savedMarkers = JSON.parse(localStorage.getItem('savedMarkers') || '[]');
-        const savedDrawings = JSON.parse(localStorage.getItem('savedDrawings') || '[]');
-        
-        const allAnnotations = [
-          ...savedMarkers.map((marker: any) => ({
-            type: 'marker',
-            ...marker,
-            searchLocation: selectedLocation ? {
-              latitude: selectedLocation.y,
-              longitude: selectedLocation.x,
-              searchString: selectedLocation.searchString || selectedLocation.label
-            } : null
-          })),
-          ...savedDrawings.map((drawing: any) => ({
-            type: 'drawing',
-            ...drawing,
-            searchLocation: selectedLocation ? {
-              latitude: selectedLocation.y,
-              longitude: selectedLocation.x,
-              searchString: selectedLocation.searchString || selectedLocation.label
-            } : null
-          }))
-        ];
-        
-        if (onAnnotationsChange) {
-          onAnnotationsChange(allAnnotations);
-        }
-      } catch (error) {
-        console.error('Error reading annotations:', error);
+    
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.dispose();
+        mapRef.current = null;
       }
     };
-
-    // Listen for storage changes
-    window.addEventListener('storage', handleAnnotationsUpdate);
-    window.addEventListener('markersUpdated', handleAnnotationsUpdate);
-    window.addEventListener('drawingCreated', handleAnnotationsUpdate);
-    window.addEventListener('drawingDeleted', handleAnnotationsUpdate);
-
-    // Initial load
-    handleAnnotationsUpdate();
-
-    return () => {
-      window.removeEventListener('storage', handleAnnotationsUpdate);
-      window.removeEventListener('markersUpdated', handleAnnotationsUpdate);
-      window.removeEventListener('drawingCreated', handleAnnotationsUpdate);
-      window.removeEventListener('drawingDeleted', handleAnnotationsUpdate);
-    };
-  }, [onAnnotationsChange, selectedLocation]);
-
-  const containerStyle: React.CSSProperties = {
-    width,
-    height,
-    position: 'relative',
-    overflow: 'hidden'
+  }, []); // Empty dependency array means initialize once
+  
+  // Handle location changes
+  useEffect(() => {
+    if (mapRef.current && isReady && selectedLocation) {
+      mapRef.current.centerMap(selectedLocation.y, selectedLocation.x);
+      mapRef.current.addMarker(selectedLocation);
+    }
+  }, [selectedLocation, isReady]);
+  
+  // Handle location selection
+  const handleMapClick = (event: React.MouseEvent) => {
+    if (onLocationSelect && mapRef.current) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        // Convert screen coordinates to geo coordinates (simplified)
+        const x = ((event.clientX - rect.left) / rect.width) * 360 - 180;
+        const y = 90 - ((event.clientY - rect.top) / rect.height) * 180;
+        
+        const mockLocation: GeoLocation = {
+          id: `loc-${Date.now()}`,
+          label: `Location at ${y.toFixed(4)}, ${x.toFixed(4)}`,
+          x: x,
+          y: y,
+        };
+        onLocationSelect(mockLocation);
+      }
+    }
   };
-
-  // Convert EnhancedLocation back to the format expected by LeafletMap
-  const leafletLocation = selectedLocation ? {
-    id: selectedLocation.id,
-    label: selectedLocation.label,
-    x: selectedLocation.x,
-    y: selectedLocation.y,
-    raw: selectedLocation.raw
-  } : undefined;
-
+  
+  // Handle drawing creation
+  const handleDrawingCreate = (drawing: any) => {
+    const newAnnotations = [...annotations, drawing];
+    setAnnotations(newAnnotations);
+    
+    if (onAnnotationsChange) onAnnotationsChange(newAnnotations);
+    if (onDrawingCreated) onDrawingCreated(drawing);
+  };
+  
   return (
     <div 
-      className={`standalone-map-container ${theme} ${className}`}
-      style={containerStyle}
+      style={{ width, height }}
+      className="relative overflow-hidden border border-gray-300 rounded-lg"
     >
-      {/* Internal search - can be hidden */}
-      {showInternalSearch && (
-        <div 
-          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[10000]" 
-          style={{ maxWidth: '400px', width: '90%' }}
-        >
-          <LocationSearch onLocationSelect={handleInternalLocationSelect} />
-        </div>
-      )}
-      
-      {/* Main map component */}
-      <LeafletMap
-        selectedLocation={leafletLocation}
-        onMapReady={handleMapReady}
-        onLocationSelect={handleInternalLocationSelect}
-        onClearSelectedLocation={handleClearSelectedLocation}
-        showDownloadButton={showDownloadButton}
-        showSavedLocationsDropdown={showSavedLocationsDropdown}
-      />
+      <div 
+        ref={containerRef} 
+        className="w-full h-full relative overflow-hidden bg-blue-50"
+        onClick={handleMapClick}
+      >
+        {!isReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-700">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <h3 className="text-xl font-bold">Loading Map</h3>
+            </div>
+          </div>
+        )}
+        
+        {isReady && enableDrawing && (
+          <div className="absolute top-2 left-2 bg-white rounded shadow-md p-2 z-10">
+            <button
+              onClick={() => handleDrawingCreate({ 
+                id: `drawing-${Date.now()}`, 
+                type: 'polygon',
+                data: { coordinates: [[0, 0], [1, 0], [1, 1], [0, 1]] }
+              })}
+              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+            >
+              Add Drawing
+            </button>
+          </div>
+        )}
+        
+        {annotations.length > 0 && (
+          <div className="absolute bottom-2 left-2 bg-white rounded shadow-md p-2 z-10 max-w-xs">
+            <h4 className="font-semibold text-sm mb-1">Annotations ({annotations.length})</h4>
+            <div className="text-xs text-gray-600 max-h-20 overflow-y-auto">
+              {annotations.map((annotation, index) => (
+                <div key={annotation.id || index} className="mb-1">
+                  {annotation.type}: {annotation.id}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
-
-export { StandaloneMapComponent };
-export default StandaloneMapComponent;
+};

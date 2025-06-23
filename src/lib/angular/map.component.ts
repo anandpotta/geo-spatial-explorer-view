@@ -55,7 +55,6 @@ try {
 }
 
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
-import type { DrawingData } from '../../utils/drawing-utils';
 
 @Component({
   selector: 'geo-map',
@@ -70,7 +69,19 @@ import type { DrawingData } from '../../utils/drawing-utils';
         <h3>Loading Map...</h3>
       </div>
       <div class="geo-map-canvas" 
-           [style.display]="isReady ? 'block' : 'none'">
+           [style.display]="isReady ? 'block' : 'none'"
+           (click)="onMapClick($event)">
+        <div *ngIf="enableDrawing && isReady" class="geo-map-controls">
+          <button (click)="createDrawing()" class="geo-map-draw-btn">
+            Add Drawing
+          </button>
+        </div>
+        <div *ngIf="annotations.length > 0" class="geo-map-annotations">
+          <h4>Annotations ({{annotations.length}})</h4>
+          <div *ngFor="let annotation of annotations" class="annotation-item">
+            {{annotation.type}}: {{annotation.id}}
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -78,6 +89,9 @@ import type { DrawingData } from '../../utils/drawing-utils';
     .geo-map-container {
       position: relative;
       overflow: hidden;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background-color: #eff6ff;
     }
     
     .geo-map-loading {
@@ -90,14 +104,15 @@ import type { DrawingData } from '../../utils/drawing-utils';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background-color: #f5f5f5;
+      background-color: rgba(243,244,246,0.8);
+      color: #374151;
       z-index: 1000;
     }
     
     .geo-map-spinner {
-      border: 4px solid rgba(0,0,0,0.1);
+      border: 4px solid rgba(59,130,246,0.3);
       border-radius: 50%;
-      border-top: 4px solid #3498db;
+      border-top: 4px solid #3b82f6;
       width: 40px;
       height: 40px;
       animation: spin 1s linear infinite;
@@ -107,6 +122,56 @@ import type { DrawingData } from '../../utils/drawing-utils';
     .geo-map-canvas {
       width: 100%;
       height: 100%;
+      position: relative;
+    }
+    
+    .geo-map-controls {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 8px;
+      z-index: 10;
+    }
+    
+    .geo-map-draw-btn {
+      padding: 6px 12px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .geo-map-draw-btn:hover {
+      background-color: #2563eb;
+    }
+    
+    .geo-map-annotations {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 8px;
+      max-width: 200px;
+      z-index: 10;
+    }
+    
+    .geo-map-annotations h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .annotation-item {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
     }
     
     @keyframes spin {
@@ -132,6 +197,7 @@ export class AngularMapComponent implements AngularLifecycleStub {
   @Output() regionClick = new EventEmitter();
   
   isReady = false;
+  annotations: any[] = [];
   private mapInstance: any = null;
   private resizeObserver?: ResizeObserver;
   
@@ -148,7 +214,7 @@ export class AngularMapComponent implements AngularLifecycleStub {
   ngOnChanges(changes: any) {
     if (this.isReady && this.mapInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
-        this.centerMap(this.selectedLocation.y, this.selectedLocation.x);
+        this.centerOnLocation(this.selectedLocation);
       }
     }
   }
@@ -169,8 +235,9 @@ export class AngularMapComponent implements AngularLifecycleStub {
       setTimeout(() => {
         this.isReady = true;
         this.mapInstance = {
-          center: this.selectedLocation ? [this.selectedLocation.y, this.selectedLocation.x] : [0, 0],
-          zoom: this.options?.initialZoom || 10
+          location: this.selectedLocation,
+          options: this.options || {},
+          annotations: this.annotations
         };
         
         this.ready.emit(this.mapInstance);
@@ -196,29 +263,40 @@ export class AngularMapComponent implements AngularLifecycleStub {
     }
   }
   
-  centerMap(lat: number, lng: number) {
+  centerOnLocation(location: GeoLocation) {
     if (this.mapInstance) {
-      console.log(`AngularMapComponent: Centering map to ${lat}, ${lng}`);
-      this.mapInstance.center = [lat, lng];
+      console.log(`AngularMapComponent: Centering on ${location.label}`);
+      this.mapInstance.location = location;
     }
   }
   
-  addMarker(location: GeoLocation) {
-    if (this.mapInstance) {
-      console.log('AngularMapComponent: Adding marker', location);
+  onMapClick(event: MouseEvent) {
+    if (this.mapContainer?.nativeElement) {
+      const rect = this.mapContainer.nativeElement.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 360 - 180;
+      const y = 90 - ((event.clientY - rect.top) / rect.height) * 180;
+      
+      const location: GeoLocation = {
+        id: `loc-${Date.now()}`,
+        label: `Location at ${y.toFixed(4)}, ${x.toFixed(4)}`,
+        x: x,
+        y: y
+      };
+      
+      this.locationSelect.emit(location);
     }
   }
   
-  onLocationClick(location: GeoLocation) {
-    this.locationSelect.emit(location);
-  }
-  
-  onDrawingCreate(drawing: DrawingData) {
+  createDrawing() {
+    const drawing = {
+      id: `drawing-${Date.now()}`,
+      type: 'polygon',
+      data: { coordinates: [[0, 0], [1, 0], [1, 1], [0, 1]] }
+    };
+    
+    this.annotations.push(drawing);
+    this.annotationsChange.emit(this.annotations);
     this.drawingCreated.emit(drawing);
-  }
-  
-  onRegionClick(drawing: DrawingData) {
-    this.regionClick.emit(drawing);
   }
 }
 
