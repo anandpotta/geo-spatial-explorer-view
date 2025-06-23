@@ -22,7 +22,29 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: [/three\/webgpu/], // Explicitly mark three/webgpu as external
+      external: [
+        /three\/webgpu/, 
+        /@rollup\/rollup-linux-x64-gnu/,
+        /@rollup\/rollup-linux-arm64-gnu/,
+        /@rollup\/rollup-darwin-x64/,
+        /@rollup\/rollup-darwin-arm64/
+      ],
     },
+  },
+  optimizeDeps: {
+    exclude: [
+      '@rollup/rollup-linux-x64-gnu',
+      '@rollup/rollup-linux-arm64-gnu', 
+      '@rollup/rollup-darwin-x64',
+      '@rollup/rollup-darwin-arm64'
+    ],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
+  },
+  define: {
+    global: 'globalThis',
   },
 }));
