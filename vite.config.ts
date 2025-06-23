@@ -23,11 +23,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       external: [
-        /three\/webgpu/, 
-        /@rollup\/rollup-linux-x64-gnu/,
-        /@rollup\/rollup-linux-arm64-gnu/,
-        /@rollup\/rollup-darwin-x64/,
-        /@rollup\/rollup-darwin-arm64/
+        /three\/webgpu/
       ],
     },
   },
