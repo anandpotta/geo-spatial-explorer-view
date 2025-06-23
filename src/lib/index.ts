@@ -49,6 +49,7 @@ try {
   AngularGlobeComponent = angularExports.AngularGlobeComponent;
 } catch (error) {
   // Angular not available - this is expected in non-Angular environments
+  console.log('Angular components not available - this is normal for non-Angular environments');
 }
 
 export { GeospatialExplorerModule, AngularMapComponent, AngularGlobeComponent };
@@ -61,5 +62,10 @@ export { useDrawingFileUpload } from '../hooks/useDrawingFileUpload';
 export { useHandleShapeCreation } from '../hooks/useHandleShapeCreation';
 
 // Version info
-export const VERSION = '0.1.5';
+export const VERSION = '0.1.7';
 export const PACKAGE_NAME = 'geospatial-explorer-lib';
+
+// Angular-specific re-exports for easier importing
+export const ANGULAR_MAP_COMPONENT = AngularMapComponent;
+export const ANGULAR_GLOBE_COMPONENT = AngularGlobeComponent;
+export const GEOSPATIAL_MODULE = GeospatialExplorerModule;

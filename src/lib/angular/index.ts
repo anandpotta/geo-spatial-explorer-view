@@ -3,7 +3,12 @@
 // Import components conditionally
 let AngularMapComponent: any, AngularGlobeComponent: any, GeospatialExplorerModule: any;
 
+let hasAngular = false;
 try {
+  // Check if Angular is available
+  require('@angular/core');
+  hasAngular = true;
+  
   const mapComponent = require('./map.component');
   const globeComponent = require('./globe.component');
   const module = require('./geospatial-explorer.module');
@@ -13,11 +18,25 @@ try {
   GeospatialExplorerModule = module.GeospatialExplorerModule;
 } catch (error) {
   // Angular not available - create stub exports
-  AngularMapComponent = class {};
-  AngularGlobeComponent = class {};
-  GeospatialExplorerModule = class {};
+  AngularMapComponent = class {
+    static ɵcmp = {};
+    static ɵfac = () => {};
+  };
+  AngularGlobeComponent = class {
+    static ɵcmp = {};
+    static ɵfac = () => {};
+  };
+  GeospatialExplorerModule = class {
+    static forRoot() {
+      return {
+        ngModule: GeospatialExplorerModule,
+        providers: []
+      };
+    }
+  };
 }
 
+// Primary exports
 export { AngularMapComponent };
 export { AngularGlobeComponent };
 export { GeospatialExplorerModule };
@@ -36,7 +55,7 @@ export type {
 export type { DrawingData } from '../../utils/drawing-utils';
 
 // Platform-specific utilities
-export const isAngular = true;
+export const isAngular = hasAngular;
 export const isWeb = true;
 export const isReactNative = false;
 export const isReact = false;
@@ -48,6 +67,11 @@ export interface AngularDrawingService {
   setupEventHandlers: (element: Element) => void;
 }
 
-// Legacy exports for backwards compatibility - use the correctly imported components
+// Legacy exports for backwards compatibility
 export const MapComponentAngular = AngularMapComponent;
 export const GlobeComponent = AngularGlobeComponent;
+
+// Public API for Angular applications
+export const GEOSPATIAL_EXPLORER_MODULE = GeospatialExplorerModule;
+export const GEO_MAP_COMPONENT = AngularMapComponent;
+export const GEO_GLOBE_COMPONENT = AngularGlobeComponent;

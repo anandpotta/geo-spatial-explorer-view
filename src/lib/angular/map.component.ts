@@ -37,7 +37,11 @@ try {
   hasAngular = true;
 } catch (error) {
   // Angular not available - create stub decorators and classes
-  Component = () => (target: any) => target;
+  Component = (config: any) => (target: any) => {
+    target.ɵcmp = config;
+    target.ɵfac = () => new target();
+    return target;
+  };
   ElementRef = class implements ElementRefStub { nativeElement?: HTMLElement; };
   ViewChild = () => () => {};
   Input = () => () => {};
@@ -55,6 +59,7 @@ import type { DrawingData } from '../../utils/drawing-utils';
 
 @Component({
   selector: 'geo-map',
+  standalone: false,
   template: `
     <div class="geo-map-container" 
          #mapContainer 
@@ -215,4 +220,11 @@ export class AngularMapComponent implements AngularLifecycleStub {
   onRegionClick(drawing: DrawingData) {
     this.regionClick.emit(drawing);
   }
+}
+
+// Make sure component is exported with proper Angular metadata
+if (hasAngular) {
+  // Ensure the component has Angular compilation metadata
+  (AngularMapComponent as any).ɵcmp = (AngularMapComponent as any).ɵcmp || {};
+  (AngularMapComponent as any).ɵfac = (AngularMapComponent as any).ɵfac || (() => new AngularMapComponent());
 }

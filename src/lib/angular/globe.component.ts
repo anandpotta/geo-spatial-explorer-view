@@ -37,7 +37,11 @@ try {
   hasAngular = true;
 } catch (error) {
   // Angular not available - create stub decorators and classes
-  Component = () => (target: any) => target;
+  Component = (config: any) => (target: any) => {
+    target.ɵcmp = config;
+    target.ɵfac = () => new target();
+    return target;
+  };
   ElementRef = class implements ElementRefStub { nativeElement?: HTMLElement; };
   ViewChild = () => () => {};
   Input = () => () => {};
@@ -54,6 +58,7 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 @Component({
   selector: 'geo-globe',
+  standalone: false,
   template: `
     <div class="geo-globe-container" 
          #globeContainer 
@@ -203,4 +208,11 @@ export class AngularGlobeComponent implements AngularLifecycleStub {
   onLocationClick(location: GeoLocation) {
     this.locationSelect.emit(location);
   }
+}
+
+// Make sure component is exported with proper Angular metadata
+if (hasAngular) {
+  // Ensure the component has Angular compilation metadata
+  (AngularGlobeComponent as any).ɵcmp = (AngularGlobeComponent as any).ɵcmp || {};
+  (AngularGlobeComponent as any).ɵfac = (AngularGlobeComponent as any).ɵfac || (() => new AngularGlobeComponent());
 }
