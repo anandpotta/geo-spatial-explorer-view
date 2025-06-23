@@ -36,10 +36,14 @@ try {
   };
 }
 
-// Primary exports
+// Primary exports with consistent naming
 export { AngularMapComponent };
 export { AngularGlobeComponent };
 export { GeospatialExplorerModule };
+
+// Additional aliases for easier usage
+export { AngularMapComponent as GeoMapComponent };
+export { AngularGlobeComponent as GeoGlobeComponent };
 
 // Default export for easier importing
 export { GeospatialExplorerModule as default };
@@ -51,8 +55,12 @@ export type {
   GlobeOptions
 } from '../geospatial-core/types';
 
-// Drawing types for Angular
-export type { DrawingData } from '../../utils/drawing-utils';
+// Simple DrawingData interface without dependencies
+export interface DrawingData {
+  id: string;
+  type: string;
+  data: any;
+}
 
 // Platform-specific utilities
 export const isAngular = hasAngular;
@@ -60,7 +68,7 @@ export const isWeb = true;
 export const isReactNative = false;
 export const isReact = false;
 
-// Angular-specific drawing utilities (would be implemented as services)
+// Angular-specific drawing utilities (simplified interface)
 export interface AngularDrawingService {
   handleFileUpload: (drawingId: string, file: File) => void;
   handleShapeCreation: (shape: any) => void;
@@ -68,8 +76,9 @@ export interface AngularDrawingService {
 }
 
 // Legacy exports for backwards compatibility
-export const MapComponentAngular = AngularMapComponent;
+export const MapComponent = AngularMapComponent;
 export const GlobeComponent = AngularGlobeComponent;
+export const MapComponentAngular = AngularMapComponent;
 
 // Public API for Angular applications
 export const GEOSPATIAL_EXPLORER_MODULE = GeospatialExplorerModule;

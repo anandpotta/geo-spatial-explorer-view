@@ -1,6 +1,5 @@
 
-import { toast } from 'sonner';
-
+// Simplified hook for library distribution
 export function useShapeCreation(onCreated: (shape: any) => void) {
   const handleCreated = (e: any) => {
     const layer = e.layer;
@@ -56,7 +55,6 @@ export function useShapeCreation(onCreated: (shape: any) => void) {
       }
     } catch (err) {
       console.error('Error creating shape:', err);
-      toast.error('Failed to create shape');
     }
   };
   

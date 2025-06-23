@@ -28,10 +28,12 @@ export type {
   GlobeEventHandlers
 } from './geospatial-core/types';
 
-// Drawing-related type exports
-export type {
-  DrawingData
-} from '../utils/drawing-utils';
+// Simple DrawingData interface without complex dependencies
+export interface DrawingData {
+  id: string;
+  type: string;
+  data: any;
+}
 
 // Default exports for easy importing
 export { StandaloneMapComponent as MapComponent } from './react/StandaloneMapComponent';
@@ -56,10 +58,6 @@ export { GeospatialExplorerModule, AngularMapComponent, AngularGlobeComponent };
 
 // Main GeospatialExplorer export for Angular compatibility
 export const GeospatialExplorer = GeospatialExplorerModule;
-
-// Drawing hooks and utilities for React
-export { useDrawingFileUpload } from '../hooks/useDrawingFileUpload';
-export { useHandleShapeCreation } from '../hooks/useHandleShapeCreation';
 
 // Version info
 export const VERSION = '0.1.7';

@@ -65,4 +65,9 @@ export type {
   GlobeOptions
 } from '../geospatial-core/types';
 
-export type { DrawingData } from '../../utils/drawing-utils';
+// Remove problematic DrawingData export that has dependencies
+export interface DrawingData {
+  id: string;
+  type: string;
+  data: any;
+}
