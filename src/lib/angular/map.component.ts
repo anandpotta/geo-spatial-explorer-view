@@ -278,6 +278,7 @@ export class AngularMapComponent implements AngularLifecycleStub {
       const y = 90 - ((event.clientY - rect.top) / rect.height) * 180;
       
       const location: GeoLocation = {
+        id: `location-${Date.now()}`,
         x: x,
         y: y,
         label: `Location at ${y.toFixed(4)}, ${x.toFixed(4)}`
