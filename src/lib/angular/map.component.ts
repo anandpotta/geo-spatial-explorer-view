@@ -80,10 +80,7 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="geo-map-container" 
-         #mapContainer 
-         [style.width]="width || '100%'" 
-         [style.height]="height || '400px'">
+    <div class="geo-map-container" #mapContainer>
       <div *ngIf="!isReady" class="geo-map-loading">
         <div class="geo-map-spinner"></div>
         <h3>Loading Map...</h3>
@@ -108,6 +105,8 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
   styles: [`
     .geo-map-container {
       position: relative;
+      width: 100%;
+      height: 400px;
       overflow: hidden;
       border: 1px solid #d1d5db;
       border-radius: 8px;

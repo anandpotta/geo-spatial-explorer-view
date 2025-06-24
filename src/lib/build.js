@@ -41,15 +41,37 @@ try {
   // Update the package.json for the dist version - remove prepublishOnly script
   const distPackageJson = {
     ...packageJson,
-    main: "cjs/lib/index.js",
-    module: "esm/lib/index.js", 
-    types: "types/lib/index.d.ts",
+    main: "./cjs/lib/index.js",
+    module: "./esm/lib/index.js", 
+    types: "./types/lib/index.d.ts",
+    exports: {
+      ".": {
+        "import": "./esm/lib/index.js",
+        "require": "./cjs/lib/index.js",
+        "types": "./types/lib/index.d.ts"
+      },
+      "./react": {
+        "import": "./esm/lib/react/index.js",
+        "require": "./cjs/lib/react/index.js",
+        "types": "./types/lib/react/index.d.ts"
+      },
+      "./angular": {
+        "import": "./esm/lib/angular/index.js",
+        "require": "./cjs/lib/angular/index.js",
+        "types": "./types/lib/angular/index.d.ts"
+      },
+      "./react-native": {
+        "import": "./esm/lib/react-native/index.js",
+        "require": "./cjs/lib/react-native/index.js",
+        "types": "./types/lib/react-native/index.d.ts"
+      }
+    },
     scripts: {
       test: "echo \"No tests specified\" && exit 0"
     }
   };
   
-  // Remove prepublishOnly script from dist package.json since build is already done
+  // Remove build-related scripts from dist package.json since build is already done
   delete distPackageJson.scripts.prepublishOnly;
   delete distPackageJson.scripts.build;
   delete distPackageJson.scripts['build:cjs'];
@@ -70,12 +92,44 @@ try {
   const indexDts = `export * from './types/lib/index';`;
   fs.writeFileSync('./dist/index.d.ts', indexDts);
 
+  // Create individual module index files for better path resolution
+  const angularIndexDts = `export * from './types/lib/angular/index';`;
+  fs.mkdirSync('./dist/angular', { recursive: true });
+  fs.writeFileSync('./dist/angular/index.d.ts', angularIndexDts);
+  fs.writeFileSync('./dist/angular/package.json', JSON.stringify({
+    "main": "../cjs/lib/angular/index.js",
+    "module": "../esm/lib/angular/index.js",
+    "types": "../types/lib/angular/index.d.ts"
+  }, null, 2));
+
+  const reactIndexDts = `export * from './types/lib/react/index';`;
+  fs.mkdirSync('./dist/react', { recursive: true });
+  fs.writeFileSync('./dist/react/index.d.ts', reactIndexDts);
+  fs.writeFileSync('./dist/react/package.json', JSON.stringify({
+    "main": "../cjs/lib/react/index.js",
+    "module": "../esm/lib/react/index.js",
+    "types": "../types/lib/react/index.d.ts"
+  }, null, 2));
+
+  const reactNativeIndexDts = `export * from './types/lib/react-native/index';`;
+  fs.mkdirSync('./dist/react-native', { recursive: true });
+  fs.writeFileSync('./dist/react-native/index.d.ts', reactNativeIndexDts);
+  fs.writeFileSync('./dist/react-native/package.json', JSON.stringify({
+    "main": "../cjs/lib/react-native/index.js",
+    "module": "../esm/lib/react-native/index.js",
+    "types": "../types/lib/react-native/index.d.ts"
+  }, null, 2));
+
   console.log('Build completed successfully!');
   console.log('Package is ready for publishing with:');
   console.log('  npm publish ./dist');
   console.log('');
   console.log('For Angular projects, import with:');
   console.log('  import { GeospatialExplorerModule } from "geospatial-explorer-lib/angular"');
+  console.log('For React projects, import with:');
+  console.log('  import { MapComponent } from "geospatial-explorer-lib/react"');
+  console.log('For React Native projects, import with:');
+  console.log('  import { MapComponent } from "geospatial-explorer-lib/react-native"');
 } catch (error) {
   console.error('Build failed:', error.message);
   process.exit(1);

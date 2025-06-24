@@ -81,9 +81,7 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
   imports: [CommonModule],
   template: `
     <div class="geo-globe-container" 
-         #globeContainer 
-         [style.width]="width || '100%'" 
-         [style.height]="height || '600px'">
+         #globeContainer>
       <div *ngIf="!isReady" class="geo-globe-loading">
         <div class="geo-globe-spinner"></div>
         <h3>Loading Globe...</h3>
@@ -96,6 +94,8 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
   styles: [`
     .geo-globe-container {
       position: relative;
+      width: 100%;
+      height: 600px;
       overflow: hidden;
       background-color: #000;
     }

@@ -1,11 +1,11 @@
 
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.2.2",
-  "description": "A comprehensive geospatial exploration library with React components for maps, globes, and spatial data visualization",
-  "main": "dist/cjs/lib/index.js",
-  "module": "dist/esm/lib/index.js",
-  "types": "dist/types/lib/index.d.ts",
+  "version": "0.1.8",
+  "description": "A comprehensive cross-platform geospatial library for React, Angular, and React Native applications",
+  "main": "./dist/cjs/lib/index.js",
+  "module": "./dist/esm/lib/index.js",
+  "types": "./dist/types/lib/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/esm/lib/index.js",
@@ -29,56 +29,59 @@
     }
   },
   "files": [
-    "dist",
-    "LICENSE",
+    "dist/**/*",
     "README.md"
   ],
-  "sideEffects": false,
+  "scripts": {
+    "build": "node build.js",
+    "build:cjs": "tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist/cjs",
+    "build:esm": "tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist/esm",
+    "build:types": "tsc --project ./tsconfig.build.json --declaration --declarationMap --declarationDir ./dist/types --emitDeclarationOnly",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
   "keywords": [
     "geospatial",
     "maps",
     "globe",
-    "gis",
-    "leaflet",
-    "cesium",
-    "three.js",
     "react",
     "angular",
-    "react-native"
+    "react-native",
+    "leaflet",
+    "threejs",
+    "cross-platform"
   ],
-  "author": "Your Name",
+  "author": "Geospatial Explorer Team",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/geospatial-explorer-lib.git"
-  },
-  "bugs": {
-    "url": "https://github.com/yourusername/geospatial-explorer-lib/issues"
-  },
-  "homepage": "https://github.com/yourusername/geospatial-explorer-lib#readme",
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
-  "scripts": {
-    "build": "node ../lib/build.js",
-    "build:cjs": "tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist/cjs",
-    "build:esm": "tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist/esm",
-    "build:types": "tsc --project ./tsconfig.build.json --declaration --emitDeclarationOnly --outDir ./dist/types",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"No tests specified\" && exit 0"
-  },
   "peerDependencies": {
     "react": ">=16.8.0",
-    "react-dom": ">=16.8.0"
+    "react-dom": ">=16.8.0",
+    "@angular/core": ">=12.0.0",
+    "@angular/common": ">=12.0.0",
+    "react-native": ">=0.60.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "@angular/core": {
+      "optional": true
+    },
+    "@angular/common": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
   },
   "dependencies": {
     "leaflet": "^1.9.4",
-    "cesium": "^1.110.0",
     "three": "^0.133.1"
   },
   "devDependencies": {
-    "@types/leaflet": "^1.9.8",
-    "@types/three": "^0.133.0",
     "typescript": "^5.0.0"
   }
 }
