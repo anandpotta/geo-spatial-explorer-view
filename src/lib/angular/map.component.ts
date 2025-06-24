@@ -2,6 +2,7 @@
 // Angular map component - only available when Angular is installed
 let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
 let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
+let CommonModule: any;
 
 // Type interfaces for when Angular is not available
 interface AngularLifecycleStub {
@@ -23,6 +24,7 @@ interface EventEmitterStub<T = any> {
 let hasAngular = false;
 try {
   const angularCore = require('@angular/core');
+  const angularCommon = require('@angular/common');
   Component = angularCore.Component;
   ElementRef = angularCore.ElementRef;
   ViewChild = angularCore.ViewChild;
@@ -34,32 +36,11 @@ try {
   AfterViewInit = angularCore.AfterViewInit;
   OnChanges = angularCore.OnChanges;
   SimpleChanges = angularCore.SimpleChanges;
+  CommonModule = angularCommon.CommonModule;
   hasAngular = true;
 } catch (error) {
   // Angular not available - create stub decorators and classes
-  Component = (config: any) => (target: any) => {
-    target.ɵcmp = {
-      ...config,
-      standalone: true,
-      inputs: {
-        options: 'options',
-        selectedLocation: 'selectedLocation',
-        width: 'width',
-        height: 'height',
-        enableDrawing: 'enableDrawing'
-      },
-      outputs: {
-        ready: 'ready',
-        locationSelect: 'locationSelect',
-        error: 'error',
-        annotationsChange: 'annotationsChange',
-        drawingCreated: 'drawingCreated',
-        regionClick: 'regionClick'
-      }
-    };
-    target.ɵfac = () => new target();
-    return target;
-  };
+  Component = (config: any) => (target: any) => target;
   ElementRef = class implements ElementRefStub { nativeElement?: HTMLElement; };
   ViewChild = () => () => {};
   Input = () => () => {};
@@ -70,6 +51,7 @@ try {
   AfterViewInit = class {};
   OnChanges = class {};
   SimpleChanges = class {};
+  CommonModule = class {};
 }
 
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
@@ -77,6 +59,7 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 @Component({
   selector: 'geo-map',
   standalone: true,
+  imports: hasAngular ? [CommonModule] : [],
   template: `
     <div class="geo-map-container" 
          #mapContainer 
@@ -295,10 +278,9 @@ export class AngularMapComponent implements AngularLifecycleStub {
       const y = 90 - ((event.clientY - rect.top) / rect.height) * 180;
       
       const location: GeoLocation = {
-        id: `loc-${Date.now()}`,
-        label: `Location at ${y.toFixed(4)}, ${x.toFixed(4)}`,
         x: x,
-        y: y
+        y: y,
+        label: `Location at ${y.toFixed(4)}, ${x.toFixed(4)}`
       };
       
       this.locationSelect.emit(location);
@@ -316,11 +298,4 @@ export class AngularMapComponent implements AngularLifecycleStub {
     this.annotationsChange.emit(this.annotations);
     this.drawingCreated.emit(drawing);
   }
-}
-
-// Make sure component is exported with proper Angular metadata
-if (hasAngular) {
-  // Ensure the component has Angular compilation metadata
-  (AngularMapComponent as any).ɵcmp = (AngularMapComponent as any).ɵcmp || {};
-  (AngularMapComponent as any).ɵfac = (AngularMapComponent as any).ɵfac || (() => new AngularMapComponent());
 }

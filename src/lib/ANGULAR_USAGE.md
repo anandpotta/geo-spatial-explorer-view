@@ -1,3 +1,4 @@
+
 # Angular Integration Guide
 
 ## Installation
@@ -111,6 +112,36 @@ import { AppComponent } from './app.component';
 export class AppModule { }
 ```
 
+## Important Notes for Angular Integration
+
+### Required Imports
+Make sure to import the components in your Angular component or module:
+
+```typescript
+// For standalone components
+import { AngularMapComponent, AngularGlobeComponent } from 'geospatial-explorer-lib/angular';
+
+// For module-based approach
+import { GeospatialExplorerModule } from 'geospatial-explorer-lib/angular';
+```
+
+### Component Selectors
+- Use `<geo-map>` for the map component
+- Use `<geo-globe>` for the globe component
+
+### Property Binding
+The components support proper Angular property binding:
+- `[options]` - Configuration options
+- `[selectedLocation]` - Current location
+- `[width]` and `[height]` - Component dimensions
+- `[enableDrawing]` - Enable drawing tools (map only)
+
+### Event Handling
+Both components emit Angular events:
+- `(ready)` - Component initialization complete
+- `(locationSelect)` - Location selected by user
+- `(error)` - Error occurred
+
 ## Component Properties
 
 ### Map Component (`geo-map`)
@@ -180,10 +211,10 @@ Make sure you're using the correct component selectors:
 ### Import errors
 Use the correct import path: `geospatial-explorer-lib/angular`
 
-## Breaking Changes in v0.2.2
-- Components are now standalone by default
-- Better TypeScript support
-- Improved Angular compatibility
+### Build Errors
+1. Rebuild the npm package: `npm run build`
+2. Reinstall in your Angular project: `npm uninstall geospatial-explorer-lib && npm install geospatial-explorer-lib`
+3. Clear Angular cache: `ng cache clean`
 
 ## Example Projects
 

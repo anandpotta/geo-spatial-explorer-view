@@ -2,6 +2,7 @@
 // Angular globe component - only available when Angular is installed
 let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
 let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
+let CommonModule: any;
 
 // Type interfaces for when Angular is not available
 interface AngularLifecycleStub {
@@ -23,6 +24,7 @@ interface EventEmitterStub<T = any> {
 let hasAngular = false;
 try {
   const angularCore = require('@angular/core');
+  const angularCommon = require('@angular/common');
   Component = angularCore.Component;
   ElementRef = angularCore.ElementRef;
   ViewChild = angularCore.ViewChild;
@@ -34,29 +36,11 @@ try {
   AfterViewInit = angularCore.AfterViewInit;
   OnChanges = angularCore.OnChanges;
   SimpleChanges = angularCore.SimpleChanges;
+  CommonModule = angularCommon.CommonModule;
   hasAngular = true;
 } catch (error) {
   // Angular not available - create stub decorators and classes
-  Component = (config: any) => (target: any) => {
-    target.ɵcmp = {
-      ...config,
-      standalone: true,
-      inputs: {
-        options: 'options',
-        selectedLocation: 'selectedLocation',
-        width: 'width',
-        height: 'height'
-      },
-      outputs: {
-        ready: 'ready',
-        flyComplete: 'flyComplete',
-        error: 'error',
-        locationSelect: 'locationSelect'
-      }
-    };
-    target.ɵfac = () => new target();
-    return target;
-  };
+  Component = (config: any) => (target: any) => target;
   ElementRef = class implements ElementRefStub { nativeElement?: HTMLElement; };
   ViewChild = () => () => {};
   Input = () => () => {};
@@ -67,6 +51,7 @@ try {
   AfterViewInit = class {};
   OnChanges = class {};
   SimpleChanges = class {};
+  CommonModule = class {};
 }
 
 import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
@@ -74,6 +59,7 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 @Component({
   selector: 'geo-globe',
   standalone: true,
+  imports: hasAngular ? [CommonModule] : [],
   template: `
     <div class="geo-globe-container" 
          #globeContainer 
@@ -223,11 +209,4 @@ export class AngularGlobeComponent implements AngularLifecycleStub {
   onLocationClick(location: GeoLocation) {
     this.locationSelect.emit(location);
   }
-}
-
-// Make sure component is exported with proper Angular metadata
-if (hasAngular) {
-  // Ensure the component has Angular compilation metadata
-  (AngularGlobeComponent as any).ɵcmp = (AngularGlobeComponent as any).ɵcmp || {};
-  (AngularGlobeComponent as any).ɵfac = (AngularGlobeComponent as any).ɵfac || (() => new AngularGlobeComponent());
 }
