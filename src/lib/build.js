@@ -14,20 +14,31 @@ try {
   // Create dist directories
   fs.mkdirSync('./dist', { recursive: true });
 
+  // Install Angular dev dependencies temporarily for build
+  console.log('Installing Angular dependencies for build...');
+  try {
+    execSync('npm install @angular/core@^17.0.0 @angular/common@^17.0.0 --no-save', { 
+      stdio: 'inherit',
+      cwd: __dirname 
+    });
+  } catch (error) {
+    console.log('Angular dependencies already installed or failed to install, continuing...');
+  }
+
   console.log('Building CommonJS...');
-  execSync('npx tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist/cjs --declaration false --declarationMap false --target es2017 --skipLibCheck --moduleResolution node --noEmit false --strict false --noImplicitAny false', { 
+  execSync('npx tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist/cjs --declaration false --declarationMap false --target es2017 --skipLibCheck --moduleResolution node --noEmit false --strict false --noImplicitAny false --experimentalDecorators --emitDecoratorMetadata', { 
     stdio: 'inherit',
     cwd: __dirname 
   });
 
   console.log('Building ES Modules...');
-  execSync('npx tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist/esm --declaration false --declarationMap false --target es2017 --skipLibCheck --moduleResolution node --noEmit false --strict false --noImplicitAny false', { 
+  execSync('npx tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist/esm --declaration false --declarationMap false --target es2017 --skipLibCheck --moduleResolution node --noEmit false --strict false --noImplicitAny false --experimentalDecorators --emitDecoratorMetadata', { 
     stdio: 'inherit',
     cwd: __dirname 
   });
 
   console.log('Building TypeScript definitions...');
-  execSync('npx tsc --project ./tsconfig.build.json --declaration --declarationMap --declarationDir ./dist/types --emitDeclarationOnly --target es2017 --skipLibCheck --moduleResolution node --strict false --noImplicitAny false', { 
+  execSync('npx tsc --project ./tsconfig.build.json --declaration --declarationMap --declarationDir ./dist/types --emitDeclarationOnly --target es2017 --skipLibCheck --moduleResolution node --strict false --noImplicitAny false --experimentalDecorators --emitDecoratorMetadata', { 
     stdio: 'inherit',
     cwd: __dirname 
   });
@@ -81,6 +92,11 @@ try {
   // Copy README.md to dist
   if (fs.existsSync('./README.md')) {
     fs.copyFileSync('./README.md', './dist/README.md');
+  }
+
+  // Copy integration guide
+  if (fs.existsSync('./ANGULAR_INTEGRATION_GUIDE.md')) {
+    fs.copyFileSync('./ANGULAR_INTEGRATION_GUIDE.md', './dist/ANGULAR_INTEGRATION_GUIDE.md');
   }
 
   // Create subpath package.json files for better module resolution

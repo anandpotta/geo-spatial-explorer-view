@@ -2,35 +2,29 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true,
+    "declarationMap": true,
     "skipLibCheck": true,
-    "noEmitOnError": false,
     "strict": false,
     "noImplicitAny": false,
-    "strictNullChecks": false,
     "moduleResolution": "node",
+    "target": "es2017",
+    "lib": ["es2017", "dom"],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "target": "es2017",
-    "module": "commonjs",
-    "declaration": true,
-    "outDir": "./dist"
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["node"]
   },
   "include": [
-    "./**/*.ts",
-    "./**/*.tsx",
-    "../**/*.ts",
-    "../**/*.tsx",
-    "../types/**/*",
-    "../vite-env.d.ts"
+    "**/*"
   ],
   "exclude": [
-    "./dist/**/*",
-    "./node_modules/**/*",
-    "../../node_modules/**/*",
-    "./**/*.test.*",
-    "./**/*.spec.*",
-    "./build.js",
-    "../../server/**/*",
-    "../../public/**/*"
+    "node_modules",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.test.ts"
   ]
 }
