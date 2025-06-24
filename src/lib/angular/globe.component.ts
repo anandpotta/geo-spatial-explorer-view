@@ -1,78 +1,6 @@
 
-// Conditional Angular imports with proper type handling
-let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
-let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
-let CommonModule: any;
-
-// Type definitions for stub interfaces
-interface StubElementRef {
-  nativeElement?: any;
-}
-
-interface StubEventEmitter<T = any> {
-  emit(value?: T): void;
-}
-
-interface StubSimpleChanges {
-  [key: string]: any;
-}
-
-interface StubOnInit {
-  ngOnInit?(): void;
-}
-
-interface StubOnDestroy {
-  ngOnDestroy?(): void;
-}
-
-interface StubAfterViewInit {
-  ngAfterViewInit?(): void;
-}
-
-interface StubOnChanges {
-  ngOnChanges?(changes: StubSimpleChanges): void;
-}
-
-try {
-  // Only import Angular modules if they're available
-  const angularCore = require('@angular/core');
-  const angularCommon = require('@angular/common');
-  
-  Component = angularCore.Component;
-  ElementRef = angularCore.ElementRef;
-  ViewChild = angularCore.ViewChild;
-  Input = angularCore.Input;
-  Output = angularCore.Output;
-  EventEmitter = angularCore.EventEmitter;
-  OnInit = angularCore.OnInit;
-  OnDestroy = angularCore.OnDestroy;
-  AfterViewInit = angularCore.AfterViewInit;
-  OnChanges = angularCore.OnChanges;
-  SimpleChanges = angularCore.SimpleChanges;
-  CommonModule = angularCommon.CommonModule;
-} catch (error) {
-  // Create stub implementations for non-Angular environments
-  Component = () => (target: any) => target;
-  ElementRef = class StubElementRefClass implements StubElementRef {
-    nativeElement?: any;
-  };
-  ViewChild = () => () => {};
-  Input = () => () => {};
-  Output = () => () => {};
-  EventEmitter = class StubEventEmitterClass<T = any> implements StubEventEmitter<T> {
-    emit(value?: T) {}
-    constructor() {}
-  };
-  OnInit = class StubOnInitClass implements StubOnInit {};
-  OnDestroy = class StubOnDestroyClass implements StubOnDestroy {};
-  AfterViewInit = class StubAfterViewInitClass implements StubAfterViewInit {};
-  OnChanges = class StubOnChangesClass implements StubOnChanges {};
-  SimpleChanges = class StubSimpleChangesClass implements StubSimpleChanges {
-    [key: string]: any;
-  };
-  CommonModule = class StubCommonModuleClass {};
-}
-
+import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 @Component({
@@ -136,18 +64,18 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
     }
   `]
 })
-export class AngularGlobeComponent implements StubOnInit, StubOnDestroy, StubAfterViewInit, StubOnChanges {
-  @ViewChild('globeContainer', { static: true }) globeContainer!: StubElementRef;
+export class AngularGlobeComponent implements OnInit, OnDestroy, AfterViewInit, OnChanges {
+  @ViewChild('globeContainer', { static: true }) globeContainer!: ElementRef;
   
   @Input() options?: Partial<GlobeOptions>;
   @Input() selectedLocation?: GeoLocation | null;
   @Input() width?: string;
   @Input() height?: string;
   
-  @Output() ready = new EventEmitter();
-  @Output() flyComplete = new EventEmitter();
-  @Output() error = new EventEmitter();
-  @Output() locationSelect = new EventEmitter();
+  @Output() ready = new EventEmitter<any>();
+  @Output() flyComplete = new EventEmitter<void>();
+  @Output() error = new EventEmitter<Error>();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
   
   isReady = false;
   private globeInstance: any = null;
@@ -163,7 +91,7 @@ export class AngularGlobeComponent implements StubOnInit, StubOnDestroy, StubAft
     }, 100);
   }
   
-  ngOnChanges(changes: StubSimpleChanges) {
+  ngOnChanges(changes: SimpleChanges) {
     if (this.isReady && this.globeInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.flyToLocation(this.selectedLocation);
