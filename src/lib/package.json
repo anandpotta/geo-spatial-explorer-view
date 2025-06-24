@@ -1,141 +1,84 @@
 
 {
   "name": "geospatial-explorer-lib",
-  "version": "0.1.7",
-  "description": "Cross-platform GeoSpatial Explorer library for React, React Native, and Angular with advanced drawing capabilities",
-  "main": "cjs/lib/index.js",
-  "module": "esm/lib/index.js",
-  "types": "types/lib/index.d.ts",
+  "version": "0.2.2",
+  "description": "A comprehensive geospatial exploration library with React components for maps, globes, and spatial data visualization",
+  "main": "dist/cjs/lib/index.js",
+  "module": "dist/esm/lib/index.js",
+  "types": "dist/types/lib/index.d.ts",
   "exports": {
     ".": {
-      "import": "./esm/lib/index.js",
-      "require": "./cjs/lib/index.js",
-      "types": "./types/lib/index.d.ts"
+      "import": "./dist/esm/lib/index.js",
+      "require": "./dist/cjs/lib/index.js",
+      "types": "./dist/types/lib/index.d.ts"
     },
     "./react": {
-      "import": "./esm/lib/react/index.js",
-      "require": "./cjs/lib/react/index.js",
-      "types": "./types/lib/react/index.d.ts"
-    },
-    "./react-native": {
-      "import": "./esm/lib/react-native/index.js",
-      "require": "./cjs/lib/react-native/index.js",
-      "types": "./types/lib/react-native/index.d.ts"
+      "import": "./dist/esm/lib/react/index.js",
+      "require": "./dist/cjs/lib/react/index.js",
+      "types": "./dist/types/lib/react/index.d.ts"
     },
     "./angular": {
-      "import": "./esm/lib/angular/index.js",
-      "require": "./cjs/lib/angular/index.js",
-      "types": "./types/lib/angular/index.d.ts"
+      "import": "./dist/esm/lib/angular/index.js",
+      "require": "./dist/cjs/lib/angular/index.js",
+      "types": "./dist/types/lib/angular/index.d.ts"
     },
-    "./core": {
-      "import": "./esm/lib/geospatial-core/index.js",
-      "require": "./cjs/lib/geospatial-core/index.js",
-      "types": "./types/lib/geospatial-core/index.d.ts"
+    "./react-native": {
+      "import": "./dist/esm/lib/react-native/index.js",
+      "require": "./dist/cjs/lib/react-native/index.js",
+      "types": "./dist/types/lib/react-native/index.d.ts"
     }
   },
   "files": [
-    "cjs",
-    "esm",
-    "types",
+    "dist",
     "LICENSE",
-    "README.md",
-    "package.json"
+    "README.md"
   ],
   "sideEffects": false,
-  "scripts": {
-    "build": "node ../lib/build.js",
-    "build:cjs": "tsc -p ../lib/tsconfig.build.json --module commonjs --outDir cjs --declaration false --rootDir ../../",
-    "build:esm": "tsc -p ../lib/tsconfig.build.json --module es2015 --outDir esm --declaration false --rootDir ../../",
-    "build:types": "tsc -p ../lib/tsconfig.build.json --declaration --declarationDir types --emitDeclarationOnly --rootDir ../../",
-    "prepublishOnly": "node ../lib/build.js",
-    "test": "echo \"No tests specified\" && exit 0",
-    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
-  },
   "keywords": [
     "geospatial",
-    "map",
+    "maps",
     "globe",
-    "3d",
-    "cross-platform",
-    "react",
-    "react-native",
-    "angular",
+    "gis",
     "leaflet",
     "cesium",
     "three.js",
-    "typescript",
-    "drawing",
-    "annotations",
-    "floor-plans",
-    "svg",
-    "click-handlers",
-    "npm",
-    "library"
+    "react",
+    "angular",
+    "react-native"
   ],
-  "author": "Geospatial Explorer Team",
+  "author": "Your Name",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/geospatial-explorer-lib.git"
+    "url": "https://github.com/yourusername/geospatial-explorer-lib.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/geospatial-explorer-lib/issues"
+    "url": "https://github.com/yourusername/geospatial-explorer-lib/issues"
   },
-  "homepage": "https://github.com/your-org/geospatial-explorer-lib#readme",
+  "homepage": "https://github.com/yourusername/geospatial-explorer-lib#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "node ../lib/build.js",
+    "build:cjs": "tsc --project ./tsconfig.build.json --module commonjs --outDir ./dist/cjs",
+    "build:esm": "tsc --project ./tsconfig.build.json --module es2015 --outDir ./dist/esm",
+    "build:types": "tsc --project ./tsconfig.build.json --declaration --emitDeclarationOnly --outDir ./dist/types",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
   "peerDependencies": {
     "react": ">=16.8.0",
-    "react-dom": ">=16.8.0",
-    "react-native": ">=0.60.0",
-    "react-native-webview": ">=11.0.0",
-    "@angular/core": ">=13.0.0",
-    "@angular/common": ">=13.0.0",
-    "three": ">=0.133.0",
-    "leaflet": ">=1.9.0",
-    "leaflet-draw": ">=1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    },
-    "react-native": {
-      "optional": true
-    },
-    "react-native-webview": {
-      "optional": true
-    },
-    "@angular/core": {
-      "optional": true
-    },
-    "@angular/common": {
-      "optional": true
-    },
-    "leaflet": {
-      "optional": true
-    },
-    "leaflet-draw": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@types/react": ">=16.8.0",
-    "@types/react-dom": ">=16.8.0",
-    "@types/react-native": ">=0.60.0",
-    "@types/three": ">=0.133.0",
-    "@types/leaflet": ">=1.9.0",
-    "@types/leaflet-draw": ">=1.0.0",
-    "typescript": ">=4.5.0",
-    "rimraf": "^3.0.2"
+    "react-dom": ">=16.8.0"
   },
   "dependencies": {
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0",
-    "uuid": "^11.1.0"
+    "leaflet": "^1.9.4",
+    "cesium": "^1.110.0",
+    "three": "^0.133.1"
   },
-  "engines": {
-    "node": ">=14.0.0",
-    "npm": ">=6.0.0"
+  "devDependencies": {
+    "@types/leaflet": "^1.9.8",
+    "@types/three": "^0.133.0",
+    "typescript": "^5.0.0"
   }
 }
