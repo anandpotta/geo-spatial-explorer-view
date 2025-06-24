@@ -17,6 +17,22 @@ interface StubSimpleChanges {
   [key: string]: any;
 }
 
+interface StubOnInit {
+  ngOnInit?(): void;
+}
+
+interface StubOnDestroy {
+  ngOnDestroy?(): void;
+}
+
+interface StubAfterViewInit {
+  ngAfterViewInit?(): void;
+}
+
+interface StubOnChanges {
+  ngOnChanges?(changes: StubSimpleChanges): void;
+}
+
 try {
   // Only import Angular modules if they're available
   const angularCore = require('@angular/core');
@@ -46,10 +62,10 @@ try {
   EventEmitter = class StubEventEmitterClass<T = any> implements StubEventEmitter<T> {
     emit(value?: T) {}
   };
-  OnInit = class StubOnInitClass {};
-  OnDestroy = class StubOnDestroyClass {};
-  AfterViewInit = class StubAfterViewInitClass {};
-  OnChanges = class StubOnChangesClass {};
+  OnInit = class StubOnInitClass implements StubOnInit {};
+  OnDestroy = class StubOnDestroyClass implements StubOnDestroy {};
+  AfterViewInit = class StubAfterViewInitClass implements StubAfterViewInit {};
+  OnChanges = class StubOnChangesClass implements StubOnChanges {};
   SimpleChanges = class StubSimpleChangesClass implements StubSimpleChanges {
     [key: string]: any;
   };
@@ -183,7 +199,7 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
     }
   `]
 })
-export class AngularMapComponent implements typeof OnInit, typeof OnDestroy, typeof AfterViewInit, typeof OnChanges {
+export class AngularMapComponent implements StubOnInit, StubOnDestroy, StubAfterViewInit, StubOnChanges {
   @ViewChild('mapContainer', { static: true }) mapContainer!: StubElementRef;
   
   @Input() options?: Partial<MapViewOptions>;
@@ -192,12 +208,12 @@ export class AngularMapComponent implements typeof OnInit, typeof OnDestroy, typ
   @Input() height?: string;
   @Input() enableDrawing?: boolean = false;
   
-  @Output() ready = new (EventEmitter as any)();
-  @Output() locationSelect = new (EventEmitter as any)<GeoLocation>();
-  @Output() error = new (EventEmitter as any)<Error>();
-  @Output() annotationsChange = new (EventEmitter as any)<any[]>();
-  @Output() drawingCreated = new (EventEmitter as any)<any>();
-  @Output() regionClick = new (EventEmitter as any)<any>();
+  @Output() ready = new EventEmitter();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() error = new EventEmitter<Error>();
+  @Output() annotationsChange = new EventEmitter<any[]>();
+  @Output() drawingCreated = new EventEmitter<any>();
+  @Output() regionClick = new EventEmitter<any>();
   
   isReady = false;
   annotations: any[] = [];

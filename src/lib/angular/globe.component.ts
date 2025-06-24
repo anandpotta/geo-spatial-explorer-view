@@ -17,6 +17,22 @@ interface StubSimpleChanges {
   [key: string]: any;
 }
 
+interface StubOnInit {
+  ngOnInit?(): void;
+}
+
+interface StubOnDestroy {
+  ngOnDestroy?(): void;
+}
+
+interface StubAfterViewInit {
+  ngAfterViewInit?(): void;
+}
+
+interface StubOnChanges {
+  ngOnChanges?(changes: StubSimpleChanges): void;
+}
+
 try {
   // Only import Angular modules if they're available
   const angularCore = require('@angular/core');
@@ -46,10 +62,10 @@ try {
   EventEmitter = class StubEventEmitterClass<T = any> implements StubEventEmitter<T> {
     emit(value?: T) {}
   };
-  OnInit = class StubOnInitClass {};
-  OnDestroy = class StubOnDestroyClass {};
-  AfterViewInit = class StubAfterViewInitClass {};
-  OnChanges = class StubOnChangesClass {};
+  OnInit = class StubOnInitClass implements StubOnInit {};
+  OnDestroy = class StubOnDestroyClass implements StubOnDestroy {};
+  AfterViewInit = class StubAfterViewInitClass implements StubAfterViewInit {};
+  OnChanges = class StubOnChangesClass implements StubOnChanges {};
   SimpleChanges = class StubSimpleChangesClass implements StubSimpleChanges {
     [key: string]: any;
   };
@@ -119,7 +135,7 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
     }
   `]
 })
-export class AngularGlobeComponent implements typeof OnInit, typeof OnDestroy, typeof AfterViewInit, typeof OnChanges {
+export class AngularGlobeComponent implements StubOnInit, StubOnDestroy, StubAfterViewInit, StubOnChanges {
   @ViewChild('globeContainer', { static: true }) globeContainer!: StubElementRef;
   
   @Input() options?: Partial<GlobeOptions>;
@@ -127,10 +143,10 @@ export class AngularGlobeComponent implements typeof OnInit, typeof OnDestroy, t
   @Input() width?: string;
   @Input() height?: string;
   
-  @Output() ready = new (EventEmitter as any)();
-  @Output() flyComplete = new (EventEmitter as any)();
-  @Output() error = new (EventEmitter as any)<Error>();
-  @Output() locationSelect = new (EventEmitter as any)<GeoLocation>();
+  @Output() ready = new EventEmitter();
+  @Output() flyComplete = new EventEmitter();
+  @Output() error = new EventEmitter<Error>();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
   
   isReady = false;
   private globeInstance: any = null;
