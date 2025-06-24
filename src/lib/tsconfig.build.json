@@ -16,7 +16,16 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node"]
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "./node_modules/@angular"],
+    "paths": {
+      "@angular/core": ["./node_modules/@angular/core"],
+      "@angular/common": ["./node_modules/@angular/common"]
+    },
+    "resolveJsonModule": true,
+    "allowUnreachableCode": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": [
     "**/*"
