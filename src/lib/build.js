@@ -14,43 +14,20 @@ try {
   // Create dist directories
   fs.mkdirSync('./dist', { recursive: true });
 
-  // Install Angular dev dependencies temporarily for build
-  console.log('Installing Angular dependencies for build...');
-  try {
-    execSync('npm install @angular/core@^17.0.0 @angular/common@^17.0.0 --no-save --silent', { 
-      stdio: 'inherit',
-      cwd: __dirname 
-    });
-  } catch (error) {
-    console.log('Angular dependencies installation failed, but continuing build...');
-  }
-
-  // Ensure node_modules/@angular exists before building
-  const angularCorePath = path.join(__dirname, 'node_modules', '@angular', 'core');
-  if (!fs.existsSync(angularCorePath)) {
-    console.log('Creating stub Angular modules for build...');
-    fs.mkdirSync(path.join(__dirname, 'node_modules', '@angular', 'core'), { recursive: true });
-    fs.mkdirSync(path.join(__dirname, 'node_modules', '@angular', 'common'), { recursive: true });
-    
-    // Create basic stub files
-    fs.writeFileSync(path.join(__dirname, 'node_modules', '@angular', 'core', 'index.d.ts'), `
-export declare class Component { }
-export declare class NgModule { }
-export declare class Input { }
-export declare class Output { }
-export declare class EventEmitter<T> { }
-export declare class ElementRef { }
-export declare class ViewChild { }
-export declare class OnInit { }
-export declare class OnDestroy { }
-export declare class AfterViewInit { }
-export declare class OnChanges { }
-export declare class SimpleChanges { }
-`);
-    
-    fs.writeFileSync(path.join(__dirname, 'node_modules', '@angular', 'common', 'index.d.ts'), `
-export declare class CommonModule { }
-`);
+  // Check if Angular dependencies exist in parent node_modules
+  const parentAngularCorePath = path.join(__dirname, '../../node_modules', '@angular', 'core');
+  const localAngularCorePath = path.join(__dirname, 'node_modules', '@angular', 'core');
+  
+  if (!fs.existsSync(parentAngularCorePath) && !fs.existsSync(localAngularCorePath)) {
+    console.log('Installing Angular dependencies for build...');
+    try {
+      execSync('npm install @angular/core@^17.0.0 @angular/common@^17.0.0 --no-save --silent', { 
+        stdio: 'inherit',
+        cwd: __dirname 
+      });
+    } catch (error) {
+      console.log('Angular dependencies installation failed, but continuing build...');
+    }
   }
 
   console.log('Building CommonJS...');
