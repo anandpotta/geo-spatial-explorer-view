@@ -38,7 +38,22 @@ try {
 } catch (error) {
   // Angular not available - create stub decorators and classes
   Component = (config: any) => (target: any) => {
-    target.ɵcmp = config;
+    target.ɵcmp = {
+      ...config,
+      standalone: true,
+      inputs: {
+        options: 'options',
+        selectedLocation: 'selectedLocation',
+        width: 'width',
+        height: 'height'
+      },
+      outputs: {
+        ready: 'ready',
+        flyComplete: 'flyComplete',
+        error: 'error',
+        locationSelect: 'locationSelect'
+      }
+    };
     target.ɵfac = () => new target();
     return target;
   };
@@ -58,7 +73,7 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 @Component({
   selector: 'geo-globe',
-  standalone: false,
+  standalone: true,
   template: `
     <div class="geo-globe-container" 
          #globeContainer 

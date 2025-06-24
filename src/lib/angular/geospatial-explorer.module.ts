@@ -43,7 +43,22 @@ try {
     static ɵcmp = {
       type: AngularMapComponent,
       selectors: [['geo-map']],
-      standalone: false
+      standalone: true,
+      inputs: {
+        options: 'options',
+        selectedLocation: 'selectedLocation',
+        width: 'width',
+        height: 'height',
+        enableDrawing: 'enableDrawing'
+      },
+      outputs: {
+        ready: 'ready',
+        locationSelect: 'locationSelect',
+        error: 'error',
+        annotationsChange: 'annotationsChange',
+        drawingCreated: 'drawingCreated',
+        regionClick: 'regionClick'
+      }
     };
     static ɵfac = () => new AngularMapComponent();
   };
@@ -52,7 +67,19 @@ try {
     static ɵcmp = {
       type: AngularGlobeComponent,
       selectors: [['geo-globe']],
-      standalone: false
+      standalone: true,
+      inputs: {
+        options: 'options',
+        selectedLocation: 'selectedLocation',
+        width: 'width',
+        height: 'height'
+      },
+      outputs: {
+        ready: 'ready',
+        flyComplete: 'flyComplete',
+        error: 'error',
+        locationSelect: 'locationSelect'
+      }
     };
     static ɵfac = () => new AngularGlobeComponent();
   };

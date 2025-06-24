@@ -6,22 +6,23 @@
 npm install geospatial-explorer-lib
 ```
 
-## Module Setup
+## Standalone Component Usage (Recommended)
 
-### Option 1: Using the Module (Recommended)
-
-Import and configure the module in your Angular application:
+Since the components are now standalone, you can import them directly:
 
 ```typescript
 // app.component.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GeospatialExplorerModule } from 'geospatial-explorer-lib/angular';
+import { 
+  AngularMapComponent, 
+  AngularGlobeComponent 
+} from 'geospatial-explorer-lib/angular';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, GeospatialExplorerModule],
+  imports: [CommonModule, AngularMapComponent, AngularGlobeComponent],
   template: `
     <div class="app-container">
       <h1>Geospatial Explorer</h1>
@@ -85,28 +86,29 @@ export class AppComponent {
 }
 ```
 
-### Option 2: Using Individual Components
+## Module-Based Usage (Legacy)
+
+If you prefer using the module approach:
 
 ```typescript
-// app.component.ts
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { 
-  AngularMapComponent, 
-  AngularGlobeComponent 
-} from 'geospatial-explorer-lib/angular';
+// app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { GeospatialExplorerModule } from 'geospatial-explorer-lib/angular';
+import { AppComponent } from './app.component';
 
-@Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, AngularMapComponent, AngularGlobeComponent],
-  template: `
-    <!-- Same template as above -->
-  `
+@NgModule({
+  declarations: [
+    AppComponent
+  ],
+  imports: [
+    BrowserModule,
+    GeospatialExplorerModule
+  ],
+  providers: [],
+  bootstrap: [AppComponent]
 })
-export class AppComponent {
-  // Same component logic as above
-}
+export class AppModule { }
 ```
 
 ## Component Properties
@@ -164,11 +166,24 @@ interface GlobeOptions {
 }
 ```
 
-## Common Issues
+## Troubleshooting
 
-1. **Components not recognized**: Make sure you're importing `GeospatialExplorerModule` or the individual components
-2. **Type errors**: Ensure you're using the correct import path: `geospatial-explorer-lib/angular`
-3. **Module errors**: For standalone components, import components directly; for module-based apps, use the module
+### Components not recognized
+- **Standalone components**: Import `AngularMapComponent` and `AngularGlobeComponent` directly
+- **Module-based**: Use `GeospatialExplorerModule`
+
+### Property binding errors
+Make sure you're using the correct component selectors:
+- `<geo-map>` for the map component
+- `<geo-globe>` for the globe component
+
+### Import errors
+Use the correct import path: `geospatial-explorer-lib/angular`
+
+## Breaking Changes in v0.2.2
+- Components are now standalone by default
+- Better TypeScript support
+- Improved Angular compatibility
 
 ## Example Projects
 

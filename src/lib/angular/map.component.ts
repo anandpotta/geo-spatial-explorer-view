@@ -38,7 +38,25 @@ try {
 } catch (error) {
   // Angular not available - create stub decorators and classes
   Component = (config: any) => (target: any) => {
-    target.ɵcmp = config;
+    target.ɵcmp = {
+      ...config,
+      standalone: true,
+      inputs: {
+        options: 'options',
+        selectedLocation: 'selectedLocation',
+        width: 'width',
+        height: 'height',
+        enableDrawing: 'enableDrawing'
+      },
+      outputs: {
+        ready: 'ready',
+        locationSelect: 'locationSelect',
+        error: 'error',
+        annotationsChange: 'annotationsChange',
+        drawingCreated: 'drawingCreated',
+        regionClick: 'regionClick'
+      }
+    };
     target.ɵfac = () => new target();
     return target;
   };
@@ -58,7 +76,7 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 
 @Component({
   selector: 'geo-map',
-  standalone: false,
+  standalone: true,
   template: `
     <div class="geo-map-container" 
          #mapContainer 
