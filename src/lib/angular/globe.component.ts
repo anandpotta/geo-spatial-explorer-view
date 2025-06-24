@@ -1,65 +1,12 @@
 
-// Angular globe component - only available when Angular is installed
-let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
-let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
-let CommonModule: any;
-
-// Type interfaces for when Angular is not available
-interface AngularLifecycleStub {
-  ngOnInit?(): void;
-  ngAfterViewInit?(): void;
-  ngOnDestroy?(): void;
-  ngOnChanges?(changes: any): void;
-}
-
-interface ElementRefStub {
-  nativeElement?: HTMLElement;
-}
-
-interface EventEmitterStub<T = any> {
-  emit(value?: T): void;
-}
-
-// Conditional Angular imports with proper fallback types
-let hasAngular = false;
-try {
-  const angularCore = require('@angular/core');
-  const angularCommon = require('@angular/common');
-  Component = angularCore.Component;
-  ElementRef = angularCore.ElementRef;
-  ViewChild = angularCore.ViewChild;
-  Input = angularCore.Input;
-  Output = angularCore.Output;
-  EventEmitter = angularCore.EventEmitter;
-  OnInit = angularCore.OnInit;
-  OnDestroy = angularCore.OnDestroy;
-  AfterViewInit = angularCore.AfterViewInit;
-  OnChanges = angularCore.OnChanges;
-  SimpleChanges = angularCore.SimpleChanges;
-  CommonModule = angularCommon.CommonModule;
-  hasAngular = true;
-} catch (error) {
-  // Angular not available - create stub decorators and classes
-  Component = (config: any) => (target: any) => target;
-  ElementRef = class implements ElementRefStub { nativeElement?: HTMLElement; };
-  ViewChild = () => () => {};
-  Input = () => () => {};
-  Output = () => () => {};
-  EventEmitter = class implements EventEmitterStub { emit() {} };
-  OnInit = class {};
-  OnDestroy = class {};
-  AfterViewInit = class {};
-  OnChanges = class {};
-  SimpleChanges = class {};
-  CommonModule = class {};
-}
-
+import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 @Component({
   selector: 'geo-globe',
   standalone: true,
-  imports: hasAngular ? [CommonModule] : [],
+  imports: [CommonModule],
   template: `
     <div class="geo-globe-container" 
          #globeContainer 
@@ -117,8 +64,8 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
     }
   `]
 })
-export class AngularGlobeComponent implements AngularLifecycleStub {
-  @ViewChild('globeContainer', { static: true }) globeContainer!: ElementRefStub;
+export class AngularGlobeComponent implements OnInit, OnDestroy, AfterViewInit, OnChanges {
+  @ViewChild('globeContainer', { static: true }) globeContainer!: ElementRef;
   
   @Input() options?: Partial<GlobeOptions>;
   @Input() selectedLocation?: GeoLocation | null;
@@ -127,8 +74,8 @@ export class AngularGlobeComponent implements AngularLifecycleStub {
   
   @Output() ready = new EventEmitter();
   @Output() flyComplete = new EventEmitter();
-  @Output() error = new EventEmitter();
-  @Output() locationSelect = new EventEmitter();
+  @Output() error = new EventEmitter<Error>();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
   
   isReady = false;
   private globeInstance: any = null;
@@ -144,7 +91,7 @@ export class AngularGlobeComponent implements AngularLifecycleStub {
     }, 100);
   }
   
-  ngOnChanges(changes: any) {
+  ngOnChanges(changes: SimpleChanges) {
     if (this.isReady && this.globeInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.flyToLocation(this.selectedLocation);

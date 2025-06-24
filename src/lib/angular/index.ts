@@ -1,75 +1,15 @@
 
 // Angular module and components for Angular environments only
-// Import components conditionally
-let AngularMapComponent: any, AngularGlobeComponent: any, GeospatialExplorerModule: any;
-
-let hasAngular = false;
-try {
-  // Check if Angular is available
-  require('@angular/core');
-  hasAngular = true;
-  
-  const mapComponent = require('./map.component');
-  const globeComponent = require('./globe.component');
-  const module = require('./geospatial-explorer.module');
-  
-  AngularMapComponent = mapComponent.AngularMapComponent;
-  AngularGlobeComponent = globeComponent.AngularGlobeComponent;
-  GeospatialExplorerModule = module.GeospatialExplorerModule;
-} catch (error) {
-  // Angular not available - create proper stub exports with Angular module structure
-  const createAngularComponent = () => {
-    class StubComponent {
-      static ɵcmp = { 
-        type: StubComponent, 
-        selectors: [['stub']], 
-        decls: 0, 
-        vars: 0, 
-        template: function() { return ''; },
-        standalone: false
-      };
-      static ɵfac = function() { return new StubComponent(); };
-    }
-    return StubComponent;
-  };
-  
-  AngularMapComponent = createAngularComponent();
-  AngularGlobeComponent = createAngularComponent();
-  
-  // Create proper Angular module stub
-  class StubModule {
-    static ɵmod = { 
-      type: StubModule,
-      declarations: [],
-      imports: [],
-      exports: []
-    };
-    static ɵinj = { 
-      factory: function() { return new StubModule(); },
-      providers: [],
-      imports: []
-    };
-    static forRoot() {
-      return {
-        ngModule: StubModule,
-        providers: []
-      };
-    }
-  }
-  GeospatialExplorerModule = StubModule;
-}
-
-// Primary exports with consistent naming
-export { AngularMapComponent };
-export { AngularGlobeComponent };
-export { GeospatialExplorerModule };
+export { AngularMapComponent } from './map.component';
+export { AngularGlobeComponent } from './globe.component';
+export { GeospatialExplorerModule } from './geospatial-explorer.module';
 
 // Additional aliases for easier usage
-export { AngularMapComponent as GeoMapComponent };
-export { AngularGlobeComponent as GeoGlobeComponent };
+export { AngularMapComponent as GeoMapComponent } from './map.component';
+export { AngularGlobeComponent as GeoGlobeComponent } from './globe.component';
 
 // Default export for easier importing
-export { GeospatialExplorerModule as default };
+export { GeospatialExplorerModule as default } from './geospatial-explorer.module';
 
 // Core types re-exported for convenience
 export type {
@@ -86,7 +26,7 @@ export interface DrawingData {
 }
 
 // Platform-specific utilities
-export const isAngular = hasAngular;
+export const isAngular = true;
 export const isWeb = true;
 export const isReactNative = false;
 export const isReact = false;
@@ -99,11 +39,11 @@ export interface AngularDrawingService {
 }
 
 // Legacy exports for backwards compatibility
-export const MapComponent = AngularMapComponent;
-export const GlobeComponent = AngularGlobeComponent;
-export const MapComponentAngular = AngularMapComponent;
+export { AngularMapComponent as MapComponent } from './map.component';
+export { AngularGlobeComponent as GlobeComponent } from './globe.component';
+export { AngularMapComponent as MapComponentAngular } from './map.component';
 
 // Public API for Angular applications
-export const GEOSPATIAL_EXPLORER_MODULE = GeospatialExplorerModule;
-export const GEO_MAP_COMPONENT = AngularMapComponent;
-export const GEO_GLOBE_COMPONENT = AngularGlobeComponent;
+export { GeospatialExplorerModule as GEOSPATIAL_EXPLORER_MODULE } from './geospatial-explorer.module';
+export { AngularMapComponent as GEO_MAP_COMPONENT } from './map.component';
+export { AngularGlobeComponent as GEO_GLOBE_COMPONENT } from './globe.component';

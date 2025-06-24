@@ -1,65 +1,12 @@
 
-// Angular map component - only available when Angular is installed
-let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
-let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
-let CommonModule: any;
-
-// Type interfaces for when Angular is not available
-interface AngularLifecycleStub {
-  ngOnInit?(): void;
-  ngAfterViewInit?(): void;
-  ngOnDestroy?(): void;
-  ngOnChanges?(changes: any): void;
-}
-
-interface ElementRefStub {
-  nativeElement?: HTMLElement;
-}
-
-interface EventEmitterStub<T = any> {
-  emit(value?: T): void;
-}
-
-// Conditional Angular imports with proper fallback types
-let hasAngular = false;
-try {
-  const angularCore = require('@angular/core');
-  const angularCommon = require('@angular/common');
-  Component = angularCore.Component;
-  ElementRef = angularCore.ElementRef;
-  ViewChild = angularCore.ViewChild;
-  Input = angularCore.Input;
-  Output = angularCore.Output;
-  EventEmitter = angularCore.EventEmitter;
-  OnInit = angularCore.OnInit;
-  OnDestroy = angularCore.OnDestroy;
-  AfterViewInit = angularCore.AfterViewInit;
-  OnChanges = angularCore.OnChanges;
-  SimpleChanges = angularCore.SimpleChanges;
-  CommonModule = angularCommon.CommonModule;
-  hasAngular = true;
-} catch (error) {
-  // Angular not available - create stub decorators and classes
-  Component = (config: any) => (target: any) => target;
-  ElementRef = class implements ElementRefStub { nativeElement?: HTMLElement; };
-  ViewChild = () => () => {};
-  Input = () => () => {};
-  Output = () => () => {};
-  EventEmitter = class implements EventEmitterStub { emit() {} };
-  OnInit = class {};
-  OnDestroy = class {};
-  AfterViewInit = class {};
-  OnChanges = class {};
-  SimpleChanges = class {};
-  CommonModule = class {};
-}
-
+import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
 
 @Component({
   selector: 'geo-map',
   standalone: true,
-  imports: hasAngular ? [CommonModule] : [],
+  imports: [CommonModule],
   template: `
     <div class="geo-map-container" 
          #mapContainer 
@@ -181,8 +128,8 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
     }
   `]
 })
-export class AngularMapComponent implements AngularLifecycleStub {
-  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRefStub;
+export class AngularMapComponent implements OnInit, OnDestroy, AfterViewInit, OnChanges {
+  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
   
   @Input() options?: Partial<MapViewOptions>;
   @Input() selectedLocation?: GeoLocation | null;
@@ -191,11 +138,11 @@ export class AngularMapComponent implements AngularLifecycleStub {
   @Input() enableDrawing?: boolean = false;
   
   @Output() ready = new EventEmitter();
-  @Output() locationSelect = new EventEmitter();
-  @Output() error = new EventEmitter();
-  @Output() annotationsChange = new EventEmitter();
-  @Output() drawingCreated = new EventEmitter();
-  @Output() regionClick = new EventEmitter();
+  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() error = new EventEmitter<Error>();
+  @Output() annotationsChange = new EventEmitter<any[]>();
+  @Output() drawingCreated = new EventEmitter<any>();
+  @Output() regionClick = new EventEmitter<any>();
   
   isReady = false;
   annotations: any[] = [];
@@ -212,7 +159,7 @@ export class AngularMapComponent implements AngularLifecycleStub {
     }, 100);
   }
   
-  ngOnChanges(changes: any) {
+  ngOnChanges(changes: SimpleChanges) {
     if (this.isReady && this.mapInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.centerOnLocation(this.selectedLocation);
