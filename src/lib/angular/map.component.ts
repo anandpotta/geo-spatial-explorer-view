@@ -61,6 +61,7 @@ try {
   Output = () => () => {};
   EventEmitter = class StubEventEmitterClass<T = any> implements StubEventEmitter<T> {
     emit(value?: T) {}
+    constructor() {}
   };
   OnInit = class StubOnInitClass implements StubOnInit {};
   OnDestroy = class StubOnDestroyClass implements StubOnDestroy {};
@@ -209,11 +210,11 @@ export class AngularMapComponent implements StubOnInit, StubOnDestroy, StubAfter
   @Input() enableDrawing?: boolean = false;
   
   @Output() ready = new EventEmitter();
-  @Output() locationSelect = new EventEmitter<GeoLocation>();
-  @Output() error = new EventEmitter<Error>();
-  @Output() annotationsChange = new EventEmitter<any[]>();
-  @Output() drawingCreated = new EventEmitter<any>();
-  @Output() regionClick = new EventEmitter<any>();
+  @Output() locationSelect = new EventEmitter();
+  @Output() error = new EventEmitter();
+  @Output() annotationsChange = new EventEmitter();
+  @Output() drawingCreated = new EventEmitter();
+  @Output() regionClick = new EventEmitter();
   
   isReady = false;
   annotations: any[] = [];

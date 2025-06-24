@@ -61,6 +61,7 @@ try {
   Output = () => () => {};
   EventEmitter = class StubEventEmitterClass<T = any> implements StubEventEmitter<T> {
     emit(value?: T) {}
+    constructor() {}
   };
   OnInit = class StubOnInitClass implements StubOnInit {};
   OnDestroy = class StubOnDestroyClass implements StubOnDestroy {};
@@ -145,8 +146,8 @@ export class AngularGlobeComponent implements StubOnInit, StubOnDestroy, StubAft
   
   @Output() ready = new EventEmitter();
   @Output() flyComplete = new EventEmitter();
-  @Output() error = new EventEmitter<Error>();
-  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() error = new EventEmitter();
+  @Output() locationSelect = new EventEmitter();
   
   isReady = false;
   private globeInstance: any = null;
