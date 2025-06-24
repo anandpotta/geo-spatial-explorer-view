@@ -1,8 +1,21 @@
 
-// Conditional Angular imports
+// Conditional Angular imports with proper type handling
 let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
 let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
 let CommonModule: any;
+
+// Type definitions for stub interfaces
+interface StubElementRef {
+  nativeElement?: any;
+}
+
+interface StubEventEmitter<T = any> {
+  emit(value?: T): void;
+}
+
+interface StubSimpleChanges {
+  [key: string]: any;
+}
 
 try {
   // Only import Angular modules if they're available
@@ -24,17 +37,23 @@ try {
 } catch (error) {
   // Create stub implementations for non-Angular environments
   Component = () => (target: any) => target;
-  ElementRef = class StubElementRef {};
+  ElementRef = class StubElementRefClass implements StubElementRef {
+    nativeElement?: any;
+  };
   ViewChild = () => () => {};
   Input = () => () => {};
   Output = () => () => {};
-  EventEmitter = class StubEventEmitter { emit() {} };
-  OnInit = class StubOnInit {};
-  OnDestroy = class StubOnDestroy {};
-  AfterViewInit = class StubAfterViewInit {};
-  OnChanges = class StubOnChanges {};
-  SimpleChanges = class StubSimpleChanges {};
-  CommonModule = class StubCommonModule {};
+  EventEmitter = class StubEventEmitterClass<T = any> implements StubEventEmitter<T> {
+    emit(value?: T) {}
+  };
+  OnInit = class StubOnInitClass {};
+  OnDestroy = class StubOnDestroyClass {};
+  AfterViewInit = class StubAfterViewInitClass {};
+  OnChanges = class StubOnChangesClass {};
+  SimpleChanges = class StubSimpleChangesClass implements StubSimpleChanges {
+    [key: string]: any;
+  };
+  CommonModule = class StubCommonModuleClass {};
 }
 
 import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
@@ -164,8 +183,8 @@ import type { GeoLocation, MapViewOptions } from '../geospatial-core/types';
     }
   `]
 })
-export class AngularMapComponent implements OnInit, OnDestroy, AfterViewInit, OnChanges {
-  @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef;
+export class AngularMapComponent implements typeof OnInit, typeof OnDestroy, typeof AfterViewInit, typeof OnChanges {
+  @ViewChild('mapContainer', { static: true }) mapContainer!: StubElementRef;
   
   @Input() options?: Partial<MapViewOptions>;
   @Input() selectedLocation?: GeoLocation | null;
@@ -173,12 +192,12 @@ export class AngularMapComponent implements OnInit, OnDestroy, AfterViewInit, On
   @Input() height?: string;
   @Input() enableDrawing?: boolean = false;
   
-  @Output() ready = new EventEmitter();
-  @Output() locationSelect = new EventEmitter<GeoLocation>();
-  @Output() error = new EventEmitter<Error>();
-  @Output() annotationsChange = new EventEmitter<any[]>();
-  @Output() drawingCreated = new EventEmitter<any>();
-  @Output() regionClick = new EventEmitter<any>();
+  @Output() ready = new (EventEmitter as any)();
+  @Output() locationSelect = new (EventEmitter as any)<GeoLocation>();
+  @Output() error = new (EventEmitter as any)<Error>();
+  @Output() annotationsChange = new (EventEmitter as any)<any[]>();
+  @Output() drawingCreated = new (EventEmitter as any)<any>();
+  @Output() regionClick = new (EventEmitter as any)<any>();
   
   isReady = false;
   annotations: any[] = [];
@@ -195,7 +214,7 @@ export class AngularMapComponent implements OnInit, OnDestroy, AfterViewInit, On
     }, 100);
   }
   
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges(changes: StubSimpleChanges) {
     if (this.isReady && this.mapInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.centerOnLocation(this.selectedLocation);

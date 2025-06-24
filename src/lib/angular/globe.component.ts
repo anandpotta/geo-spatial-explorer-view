@@ -1,8 +1,21 @@
 
-// Conditional Angular imports
+// Conditional Angular imports with proper type handling
 let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
 let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
 let CommonModule: any;
+
+// Type definitions for stub interfaces
+interface StubElementRef {
+  nativeElement?: any;
+}
+
+interface StubEventEmitter<T = any> {
+  emit(value?: T): void;
+}
+
+interface StubSimpleChanges {
+  [key: string]: any;
+}
 
 try {
   // Only import Angular modules if they're available
@@ -24,17 +37,23 @@ try {
 } catch (error) {
   // Create stub implementations for non-Angular environments
   Component = () => (target: any) => target;
-  ElementRef = class StubElementRef {};
+  ElementRef = class StubElementRefClass implements StubElementRef {
+    nativeElement?: any;
+  };
   ViewChild = () => () => {};
   Input = () => () => {};
   Output = () => () => {};
-  EventEmitter = class StubEventEmitter { emit() {} };
-  OnInit = class StubOnInit {};
-  OnDestroy = class StubOnDestroy {};
-  AfterViewInit = class StubAfterViewInit {};
-  OnChanges = class StubOnChanges {};
-  SimpleChanges = class StubSimpleChanges {};
-  CommonModule = class StubCommonModule {};
+  EventEmitter = class StubEventEmitterClass<T = any> implements StubEventEmitter<T> {
+    emit(value?: T) {}
+  };
+  OnInit = class StubOnInitClass {};
+  OnDestroy = class StubOnDestroyClass {};
+  AfterViewInit = class StubAfterViewInitClass {};
+  OnChanges = class StubOnChangesClass {};
+  SimpleChanges = class StubSimpleChangesClass implements StubSimpleChanges {
+    [key: string]: any;
+  };
+  CommonModule = class StubCommonModuleClass {};
 }
 
 import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
@@ -100,18 +119,18 @@ import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
     }
   `]
 })
-export class AngularGlobeComponent implements OnInit, OnDestroy, AfterViewInit, OnChanges {
-  @ViewChild('globeContainer', { static: true }) globeContainer!: ElementRef;
+export class AngularGlobeComponent implements typeof OnInit, typeof OnDestroy, typeof AfterViewInit, typeof OnChanges {
+  @ViewChild('globeContainer', { static: true }) globeContainer!: StubElementRef;
   
   @Input() options?: Partial<GlobeOptions>;
   @Input() selectedLocation?: GeoLocation | null;
   @Input() width?: string;
   @Input() height?: string;
   
-  @Output() ready = new EventEmitter();
-  @Output() flyComplete = new EventEmitter();
-  @Output() error = new EventEmitter<Error>();
-  @Output() locationSelect = new EventEmitter<GeoLocation>();
+  @Output() ready = new (EventEmitter as any)();
+  @Output() flyComplete = new (EventEmitter as any)();
+  @Output() error = new (EventEmitter as any)<Error>();
+  @Output() locationSelect = new (EventEmitter as any)<GeoLocation>();
   
   isReady = false;
   private globeInstance: any = null;
@@ -127,7 +146,7 @@ export class AngularGlobeComponent implements OnInit, OnDestroy, AfterViewInit, 
     }, 100);
   }
   
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges(changes: StubSimpleChanges) {
     if (this.isReady && this.globeInstance) {
       if (changes['selectedLocation'] && this.selectedLocation) {
         this.flyToLocation(this.selectedLocation);
