@@ -1,6 +1,42 @@
 
-import { Component, ElementRef, ViewChild, Input, Output, EventEmitter, OnInit, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+// Conditional Angular imports
+let Component: any, ElementRef: any, ViewChild: any, Input: any, Output: any, EventEmitter: any;
+let OnInit: any, OnDestroy: any, AfterViewInit: any, OnChanges: any, SimpleChanges: any;
+let CommonModule: any;
+
+try {
+  // Only import Angular modules if they're available
+  const angularCore = require('@angular/core');
+  const angularCommon = require('@angular/common');
+  
+  Component = angularCore.Component;
+  ElementRef = angularCore.ElementRef;
+  ViewChild = angularCore.ViewChild;
+  Input = angularCore.Input;
+  Output = angularCore.Output;
+  EventEmitter = angularCore.EventEmitter;
+  OnInit = angularCore.OnInit;
+  OnDestroy = angularCore.OnDestroy;
+  AfterViewInit = angularCore.AfterViewInit;
+  OnChanges = angularCore.OnChanges;
+  SimpleChanges = angularCore.SimpleChanges;
+  CommonModule = angularCommon.CommonModule;
+} catch (error) {
+  // Create stub implementations for non-Angular environments
+  Component = () => (target: any) => target;
+  ElementRef = class StubElementRef {};
+  ViewChild = () => () => {};
+  Input = () => () => {};
+  Output = () => () => {};
+  EventEmitter = class StubEventEmitter { emit() {} };
+  OnInit = class StubOnInit {};
+  OnDestroy = class StubOnDestroy {};
+  AfterViewInit = class StubAfterViewInit {};
+  OnChanges = class StubOnChanges {};
+  SimpleChanges = class StubSimpleChanges {};
+  CommonModule = class StubCommonModule {};
+}
+
 import type { GeoLocation, GlobeOptions } from '../geospatial-core/types';
 
 @Component({
