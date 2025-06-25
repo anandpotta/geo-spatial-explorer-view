@@ -23,14 +23,17 @@
       "./node_modules/@types",
       "./node_modules/@angular"
     ],
+    "baseUrl": "./",
     "paths": {
       "@angular/core": [
         "../../node_modules/@angular/core",
-        "./node_modules/@angular/core"
+        "./node_modules/@angular/core",
+        "./angular-stubs/core"
       ],
       "@angular/common": [
         "../../node_modules/@angular/common",
-        "./node_modules/@angular/common"
+        "./node_modules/@angular/common",
+        "./angular-stubs/common"
       ]
     },
     "resolveJsonModule": true,
