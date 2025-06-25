@@ -21,19 +21,20 @@
       "../../node_modules/@types",
       "../../node_modules/@angular",
       "./node_modules/@types",
-      "./node_modules/@angular"
+      "./node_modules/@angular",
+      "./angular-stubs"
     ],
-    "baseUrl": "./",
+    "baseUrl": ".",
     "paths": {
       "@angular/core": [
         "../../node_modules/@angular/core",
         "./node_modules/@angular/core",
-        "./angular-stubs/core"
+        "./angular-stubs/core/index.d.ts"
       ],
       "@angular/common": [
         "../../node_modules/@angular/common",
         "./node_modules/@angular/common",
-        "./angular-stubs/common"
+        "./angular-stubs/common/index.d.ts"
       ]
     },
     "resolveJsonModule": true,
