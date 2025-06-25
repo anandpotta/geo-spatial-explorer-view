@@ -27,25 +27,96 @@ try {
       });
     } catch (error) {
       console.warn('Angular dependencies installation failed:', error.message);
-      // Create minimal stub modules as fallback
-      console.log('Creating stub Angular modules...');
+      // Create complete stub modules with TypeScript definitions
+      console.log('Creating stub Angular modules with TypeScript definitions...');
       const angularDir = path.join(__dirname, 'node_modules', '@angular');
       fs.mkdirSync(path.join(angularDir, 'core'), { recursive: true });
       fs.mkdirSync(path.join(angularDir, 'common'), { recursive: true });
       
+      // Create @angular/core stub
       fs.writeFileSync(path.join(angularDir, 'core', 'package.json'), JSON.stringify({
         name: '@angular/core',
         version: '17.0.0',
         main: 'index.js',
         types: 'index.d.ts'
-      }));
+      }, null, 2));
       
+      fs.writeFileSync(path.join(angularDir, 'core', 'index.js'), `
+// Stub implementation for @angular/core
+module.exports = {};
+`);
+      
+      fs.writeFileSync(path.join(angularDir, 'core', 'index.d.ts'), `
+// TypeScript definitions stub for @angular/core
+export interface ComponentDecorator {
+  (obj: Component): TypeDecorator;
+  new (obj: Component): Component;
+}
+
+export interface Component {
+  selector?: string;
+  template?: string;
+  templateUrl?: string;
+  styles?: string[];
+  styleUrls?: string[];
+  standalone?: boolean;
+  imports?: any[];
+}
+
+export interface NgModule {
+  declarations?: any[];
+  imports?: any[];
+  exports?: any[];
+  providers?: any[];
+  bootstrap?: any[];
+}
+
+export interface ModuleWithProviders<T> {
+  ngModule: T;
+  providers?: any[];
+}
+
+export interface TypeDecorator {
+  <T extends Type<any>>(type: T): T;
+  (target: Object, propertyKey?: string | symbol, parameterIndex?: number): void;
+}
+
+export interface Type<T> extends Function {
+  new (...args: any[]): T;
+}
+
+export declare const Component: ComponentDecorator;
+export declare const NgModule: any;
+export declare const Injectable: any;
+export declare const Input: any;
+export declare const Output: any;
+export declare const EventEmitter: any;
+export declare const ViewChild: any;
+export declare const ElementRef: any;
+export declare const OnInit: any;
+export declare const OnDestroy: any;
+export declare const AfterViewInit: any;
+export declare const OnChanges: any;
+export declare const SimpleChanges: any;
+`);
+      
+      // Create @angular/common stub
       fs.writeFileSync(path.join(angularDir, 'common', 'package.json'), JSON.stringify({
         name: '@angular/common',
         version: '17.0.0',
         main: 'index.js',
         types: 'index.d.ts'
-      }));
+      }, null, 2));
+      
+      fs.writeFileSync(path.join(angularDir, 'common', 'index.js'), `
+// Stub implementation for @angular/common
+module.exports = {};
+`);
+      
+      fs.writeFileSync(path.join(angularDir, 'common', 'index.d.ts'), `
+// TypeScript definitions stub for @angular/common
+export declare const CommonModule: any;
+`);
     }
   }
 
