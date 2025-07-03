@@ -37,6 +37,10 @@ export interface Type<T> extends Function {
   new (...args: any[]): T;
 }
 
+export interface SimpleChanges {
+  [key: string]: any;
+}
+
 export declare const Component: ComponentDecorator;
 export declare const NgModule: any;
 export declare const Injectable: any;
@@ -49,4 +53,22 @@ export declare const OnInit: any;
 export declare const OnDestroy: any;
 export declare const AfterViewInit: any;
 export declare const OnChanges: any;
-export declare const SimpleChanges: any;
+
+// Default export for module compatibility
+declare const _default: {
+  Component: ComponentDecorator;
+  NgModule: any;
+  Injectable: any;
+  Input: any;
+  Output: any;
+  EventEmitter: any;
+  ViewChild: any;
+  ElementRef: any;
+  OnInit: any;
+  OnDestroy: any;
+  AfterViewInit: any;
+  OnChanges: any;
+  SimpleChanges: any;
+};
+
+export default _default;

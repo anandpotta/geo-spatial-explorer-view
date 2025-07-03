@@ -29,12 +29,12 @@
       "@angular/core": [
         "../../node_modules/@angular/core",
         "./node_modules/@angular/core",
-        "./angular-stubs/core/index.d.ts"
+        "./angular-stubs/core"
       ],
       "@angular/common": [
         "../../node_modules/@angular/common",
         "./node_modules/@angular/common",
-        "./angular-stubs/common/index.d.ts"
+        "./angular-stubs/common"
       ]
     },
     "resolveJsonModule": true,
